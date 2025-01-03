@@ -216,7 +216,7 @@ class OrbSim: public Picker { public:
 
     // choice of linear solver method
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9 };
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10 };
     bool   bApplyResudualForce = true;
     double residualForceFactor = 1.0;
 
@@ -1043,7 +1043,7 @@ class OrbSim: public Picker { public:
                 points[i].f = ps_cor[i];
             }
             // Call user update function if set
-            //if (user_update){ user_update(dt);}
+            if (user_update){ user_update(dt);}
             time += dt;
             //printf( "STEP: %6i time: %16.8f p.y: %16.8f v.y: %16.8f f.y: %16.8f mass: %16.8f\n", iter, time, points[0].y, vel[0].y,  forces[0].y, points[0].w );
         } // for iter ( time stepping )
@@ -1620,7 +1620,7 @@ class OrbSim: public Picker { public:
 
     //void evalEdgeVert( Vec3i b, double c, double K ){
     void evalEdgeVert( int i ){
-        Vec3i b = edgeVertBonds[i].verts;
+        Vec3i  b = edgeVertBonds[i].verts;
         double c = edgeVertBonds[i].c;
         double K = edgeVertBonds[i].K;
         // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth

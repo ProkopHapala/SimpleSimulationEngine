@@ -61,32 +61,19 @@
 
 #include "Lingebra.h"
 
-
-
-// TODO:
-// Collision Detection:
-//   Try Collisions using [kBoxes.h]    tested in    [test_BoxAndSweep.cpp]
-// 
-
 // ======================  Global Variables & Declarations
 
 using namespace SpaceCrafting;
 
-//SpaceCraft craft;
-//Truss      truss;
-
 bool bShipReady = false;
 Mesh::Builder2 mesh2;
-//OrbSim_f sim;
 OrbSim sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 char str_tmp[8096];
 double elementSize  = 5.;
 bool bRun = false;
 
-
 int iFrame = 0;
-
 
 Vec3d wheel_speed       = {0.0,0.0,0.0};
 //Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
@@ -137,56 +124,17 @@ void SpaceCraftControl(double dt){
     }
 }
 
-
 void runSim( OrbSim& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
-        /*
-        for(int itr=0; itr<niter; itr++){
-            sim.cleanForce();   
-            //sim.evalTrussForces_neighs();
-            sim.evalTrussForces_neighs2();
-            //sim.evalTrussForces_bonds();
-            //sim.evalTrussCollisionImpulses_bonds(0.5);
-            //sim.evalTrussCollisionImpulses_bonds(1.0);
-            //sim.evalTrussCollisionImpulses_bonds(0.1);
-            sim.applyForceCentrifug( {0.,0.,0.}, {0.0,0.0,1.0}, 5e-2 );
-            //sim.applyForceRotatingFrame( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
-            //sim.move_GD( 0.00001 );
-            //sim.move_MD( 1e-3, 1e-5 );
-            //sim.move_MD( 1e-3, 1e-8 );
-            sim.move_MD( 1e-3, 1e-8 );
-            //sim.move_GD( 1e-7 );
+        printf( "runSim() linSolveMethod=%i\n", sim.linSolveMethod  );
+        if( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Force ){
+            //sim.run( niter, 1e-3, 1e-8 );
+            sim.run_omp( niter, false, 1e-3, 1e-4 );
+            //sim.run_omp( niter, false, 1e-6, 1e-4 );
+        }else{
+            sim.run_LinSolve( niter );
         }
-        */
-        //sim.run( niter, 1e-3, 1e-8 );
-        //sim.run( niter, 1e-3, 1e-4 );
-        //sim.run_omp( niter, false, 1e-3, 1e-4 );
-        sim.run_omp( niter, false, 1e-6, 1e-4 );
-        //sim.run_omp( niter, true, 1e-3, 1e-5 );
-        //sim.run_omp( niter, true, 1e-3, 1e-4 );
-        //sim.run_omp( niter, true, 1e-3, 1e-6 );
-
-        //sim.prepareLinearizedTruss(linSolver.b);
-        //linSolver.solve_CG( 5, 0 );
-
-        //sim.run_constr_dynamics(  1, 0.1 );
-
-        // if( iFrame % 100 == 0 ){ 
-        //     sim.points[2].f.y -= 0.5;
-        // }else{
-        //     double dlmax = sim.constr_jacobi_neighs2_absolute();
-        //     //printf( "run_constr_dynamics[%i,%i] dlmax=%g \n", i,isolver,  dlmax );
-        //     //sim.apply_dpos( 2.3 );
-        //     sim.apply_dpos( 1.0 );
-        // }
-
-        // for(int i=0; i<sim.nPoint; i++){ 
-        //     Vec3f p = (Vec3f)sim.points[i].f;
-        //     Vec3f v = sim.dpos  [i].f;
-        //     Draw3D::drawArrow( p, p+v, 0.1 );
-        // }
-
         //sim.run_omp( 1, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
         //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
@@ -195,11 +143,7 @@ void runSim( OrbSim& sim, int niter=100 ){
     }
     
     sim.evalBondTension();
-    //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
-    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
-    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
-    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 
     if(sim.pointBBs.ncell>0) updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
     if(sim.edgeBBs .ncell>0) updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
@@ -328,38 +272,7 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
 }
 
 void solveTrussCG(){
-    /*
-    sim.prepareLinearizedTruss_ling(linSolver.b); 
-    Vec3d* f0 =  (Vec3d*)ls.b;
-    f0[2].y += -5.0;
-    printf("kReg: %g\n", sim.kLinRegularize);
-    printf("kFix: ");  VecN::print_vector(sim.nPoint, sim.kFix );
-    printf("kDirs: "); VecN::print_vector(sim.nBonds*3, (double*)sim.kDirs );
-    printf("x:     "); VecN::print_vector(ls.n, ls.x);
-    ((Vec3d*)ls.x)[0].y = 1.0;
-    ((Vec3d*)ls.x)[2].y = 1.0;
-    ((Vec3d*)ls.x)[4].y = 0.5;
-    //ls.dotFunc( ls.n, ls.x, ls.r );
-    sim.dot_Linearized_bonds(ls.n, ls.x, ls.r );
-    printf("f_bo: "); VecN::print_vector(ls.n, ls.r);
-    sim.dot_Linearized_neighs2(ls.n, ls.x, ls.r);
-    printf("f_ng: "); VecN::print_vector(ls.n, ls.r);
-    //exit(0);
-    printf("====================set initial conditions \n");
-    VecN::set( ls.n, 0.0, ls.x );
-    VecN::set( ls.n, 0.0, ls.b );
-    ((Vec3d*)ls.b)[2].y = -5.0;
-    printf("x0: "); VecN::print_vector(ls.n, ls.x);
-    printf("f0: "); VecN::print_vector(ls.n, ls.b);
-    printf("====================SOLVE \n");
-    //ls.solve_CG( 3, 1.e-6 );
-    //ls.solve_CG_( 3, 1.e-6 );
-    // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
-    //exit(0);
-    */
-
     LinSolverOrbSim& ls = linSolver;
-
     int nitr  = 3;
     double dt=0.05;
     sim.cleanVel();
@@ -413,26 +326,6 @@ void makeTestTruss(){
     sim.cleanForce();
     sim.cleanVel();
     sim.forces[2].f.y = -5.0;
-
-    /*
-    LinSolverOrbSim& ls = linSolver;
-    printf("export ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
-    // // ---- Conjugate Gradient ( does not work )
-    ls.realloc( sim.nPoint*3, true );
-    ls.sim = &sim;
-    sim.realloc_lin();
-    sim.kLinRegularize = 5.0;
-    sim.kFix[0] = 50.0;
-    sim.kFix[4] = 50.0;
-    //sim.updateInveriants(true);
-    sim.updateInveriants(false);
-    printf("upInv ps:"); print_vector(sim.nPoint, (double*)sim.points,  4,0,3  );
-    sim.cleanForce();
-    sim.forces[2].f.y = -5.0;
-    solveTrussCG();
-    bShipReady = false;
-    //renderShip();
-    */
 }
 
 
@@ -460,103 +353,77 @@ void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
     }
 }
 
-void reloadShip( const char* fname  ){
-    theSpaceCraft->clear();                  // clear all components
-    //luaL_dofile(theLua, "data/spaceshil1.lua");
-    printf("#### START reloadShip('%s')\n", fname );
-    //Lua::dofile(theLua,fname);
-    if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
-    //printf( "Lua::dofile(%s) DONE \n", fname );
-    theSpaceCraft->checkIntegrity();
-    //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
-    //theSpaceCraft->toTruss();
-    //truss.clear();
-    //toTruss(*theSpaceCraft, truss);
-    long t0;
+void drawSliderBonds( OrbSim& sim ){
+    //glLineWidth(3.0);
+    //glColor3f(0.0,0.5,0.0);
+    // render EdgeVertBonds
+    glBegin(GL_LINES);
+    for(int i=0; i<sim.nEdgeVertBonds; i++){
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        Vec3d a = sim.points[ ev.verts.x ].f;
+        Vec3d b = sim.points[ ev.verts.y ].f;
+        Vec3d c = sim.points[ ev.verts.z ].f;
+        Draw3D::vertex( a );  Draw3D::vertex( c );
+        Draw3D::vertex( b );  Draw3D::vertex( c );
+    }
+    glEnd();
+    // --- draw slider paths
+    //glLineWidth(3.0);
+}
 
-    t0 = getCPUticks();
+void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
+    // --- draw slider bonds
+    //for( const Slider* o: theSpaceCraft->sliders){ 
+    glBegin(GL_LINES);
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        const Slider* o = craft.sliders[i];
+        // glColor3f(0.0,0.5,1.0);
+        // drawSliderPath( o, sim.points, 10 ); 
+        glColor3f(1.0,0.0,1.0);
+        Vec3d p  = sim.getEdgeVertPos( i );
+        Vec3d p0 = sim.points[ o->ivert ].f;
+        //Draw3D::drawLine( p0, p );
+        Draw3D::vertex( p0 ); 
+        Draw3D::vertex( p );
+    }
+    glEnd();
+}
+
+void reloadShip( const char* fname  ){
+    printf("#### START reloadShip('%s')\n", fname );
+    theSpaceCraft->clear();                  // clear all components
+    if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
+    theSpaceCraft->checkIntegrity();
+
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
-    //printf( "BuildCraft_truss() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
-    //mesh2.printSizes();
 
-    t0 = getCPUticks();
     exportSim( sim, mesh2, workshop );
+    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky      ) ||
+        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+        //sim.dt = 0.01;
+        //sim.accel = Quat4d{0.0,0.0,0.0,0.0};
+        sim.prepare_LinearSystem( true, true, true, 256 );
+    }
+    sim.cleanVel();
+    sim.cleanForce();
 
     linSolver.realloc( sim.nPoint*3, true );
     linSolver.sim = &sim;
 
-    // conjugate gradient ( does not work )
-    // sim.prepareLinearizedTruss_ling(linSolver.b);  
-    // //linSolver.solve_CG( 5, 0 );
-    // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); } );
-    //printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
-
-    t0 = getCPUticks();
     makeBBoxes( *theSpaceCraft, sim );
     makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
-    //sim.pointChunks.printCells();
-    //printf( "makeBBoxes() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
 
     sim.user_update = SpaceCraftControl;
-
-
-    /*
-    //printf( "reloadShip().updateSlidersPaths \n" );
-    // update ring slider paths
-    for( Ring* o : theSpaceCraft->rings ){
-        o->updateSlidersPaths( true, true, sim.points );
-    }
-    //printf( "reloadShip().SlidersToEdgeVerts \n" );
-    // ----- Sliders to EdgeVerts
-    sim.nEdgeVertBonds =  theSpaceCraft->sliders.size();
-    sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
-    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
-        Slider* o = theSpaceCraft->sliders[i];
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
-        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
-        ev.verts.z = o->ivert;
-        //ev.K = 1000.0;
-        ev.K = 100000.0;
-        //ev.K = 0.0;
-
-        o->speed = 1.0;
-        //o->speed = 0.1;
-        //o->updateEdgeVerts( sim.points );
-    }
-    */
     sliders2edgeverts( *theSpaceCraft, sim );
-
-    // --- kick to rings
-    // Vec3d v0 = {1.0,0.0,0.0};
-    // for( Ring* o : theSpaceCraft->rings ){
-    //     for(int iv=o->pointRange.a; iv<o->pointRange.b; iv++){
-    //         sim.vel[iv].f = v0; 
-    //     }
-    // }
-
     renderShip();
-
     //sim.updateInveriants(true);
     sim.updateInveriants(false);
     bShipReady = true;
     printf("#### END reloadShip('%s')\n", fname );
 };
 
-/*
-template<typename T>
-class Driver{ public:
-    T* master;
-    T* slave;
-    void bind(T* master_, T* slave_ ){ master=master_; slave=slave_; };
-    void apply(){ slave=master; }
-};
-*/
-
 // ====================== Class Definitions
-
-
-
 
 class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
 
@@ -567,6 +434,8 @@ class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
             return 0;
         }
     };
+
+    int perFrame = 10;
 
 	bool bSmoothLines = 1;
 	bool bWireframe   = 1;
@@ -639,20 +508,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     //std::vector<std::string> luaFiles;
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
-    /*
-    Vec3d pf;
-    Vec3d pd;
-    //pd.set(1.5,1.800001,1.9);
-    pd.set(1.5,1.800000001,1.9);
-    //pd = pf;
-    //pd = (Vec3d)pf;
-    pf = (Vec3d)pd;
-    print(pf);printf(" // pf\n");
-    print(pd);printf(" // pd\n");
-    //exit(0);
-    */
-
-    //camera();
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
+    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Force;
 
     VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
@@ -671,47 +528,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     }
 
     //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
-
-    /*
-    glo_truss = makeTruss(truss);
-
-    glo_capsula = glGenLists(1);
-    glNewList( glo_capsula, GL_COMPILE );
-    //Draw3D::drawCylinderStrip  ( 16, 10, 10, {0.0,0.0,-16.0,}, {0.0,0.0,16} );
-    Draw3D::drawCapsula( (Vec3d){0.0,0.0,-1.0}, (Vec3d){0.0,0.0,1.0}, 2.0, 1.0, 0.7, 0.7, 0.2, 32, false );
-    glEndList();
-    //delete [] ups;
-    */
-
-
-
     printf( "### SpaceCraftEditorApp() DONE\n" );
 }
-
-//void SpaceCraftEditorApp::camera(){
-//    camera_FreeLook( camPos );
-//}
-
-/*
-void SpaceCraftEditorApp::selectCompGui(){
-    if(compGui)compGui->close();
-    switch( (ComponetKind)theSpaceCraft->pickedTyp ){
-        case ComponetKind::Radiator:
-        case ComponetKind::Shield:
-            compGui=plateGui;
-            break;
-        case ComponetKind::Girder:
-            compGui=girderGui;
-            //printf("setGirderGui %li %li \n", girderGui, compGui );
-            break;
-        //case ComponetKind::Rope:
-        default:
-            compGui=0;
-            break;
-    }
-    if(compGui)compGui->open();
-}
-*/
 
 void SpaceCraftEditorApp::draw(){
     //printf( " ==== frame %i \n", frameCount );
@@ -759,42 +577,6 @@ void SpaceCraftEditorApp::draw(){
 
     if(bShipReady)Draw3D::drawMatInPos( Mat3dIdentity, sim.cog, Vec3d{100.,100.,100.} );
 
-    /*
-    glLineWidth(3.0);
-    Draw3D::color( Vec3d{1.0,0.0,1.0} );
-    //drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
-    //drawSpaceCraft_nodes( theSpaceCraft, const Quat4d* ps=0, float sz=10, int i0=0, int i1=-1 );
-    Draw3D::color(Vec3d{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
-    glLineWidth(5.0);
-    Draw3D::color(Vec3d{0.5f,0.5f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, sim.points, 5 );
-    //printf( "nodes.size() = %i \n", theSpaceCraft->nodes.size() );
-    
-    for(SpaceCrafting::Node* nd: theSpaceCraft->nodes ){
-        //printf( "node[%i] %li \n", nd->id, (long)(nd->boundTo) );
-        //printf( "node[%i] \n", nd->id );
-        if(nd->boundTo==0) continue;
-        //printf( "node[%i] %li bt.id=%i\n", nd->id, (long)(nd->boundTo), nd->boundTo->id );
-        if((nd->boundTo->id>1000)||(nd->boundTo->id<0)){ printf("ERROR node[%id]->boundTo->id==%i\n", nd->id, nd->boundTo->id ); exit(0); }
-        //Node* nd = theSpaceCraft->nodes[7];
-        Draw3D::color(Vec3d{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
-        Mat3d rot;
-        nd->boundTo->rotMat( rot );
-        Vec3d pos = nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong;
-        Draw3D::drawMatInPos( rot, pos, Vec3dOne*10.0 );
-        glLineWidth(3.0);
-        Draw3D::color(Vec3d{1.f,1.0f,1.0f});
-        Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
-    }
-    */
-
-    // { // Draw Radiators anchor points
-    //     glPointSize(10);
-    //     const Radiator& o =  *theSpaceCraft->radiators[0];
-    //     const Girder& g1  =  *theSpaceCraft->girders[o.g1];
-    //     const Girder& g2  =  *theSpaceCraft->girders[o.g2];
-    //     Draw3D::color(Vec3d{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
-    //     Draw3D::color(Vec3d{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
-    // }
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
@@ -808,17 +590,10 @@ void SpaceCraftEditorApp::draw(){
 
     // Render simulation
     glLineWidth(1.0); 
-    runSim( sim, bShipReady?100:1 );
+    runSim( sim, bShipReady?perFrame:1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f(0.0,0.0,0.0);
     if(bShipReady==false)renderPoinSizes( sim.nPoint, sim.points, 1.0 );
-
-    // --- render bounding boxes
-    // glColor3f(0.0,0.5,0.0);
-    // for(int i=0; i<sim.nBBs; i++){
-    //     const Quat8T<float> bb = sim.BBs[i];
-    //     Draw3D::drawBBox( bb.lo.f, bb.hi.f );
-    // }
 
     glDisable(GL_DEPTH_TEST);
 
@@ -833,84 +608,23 @@ void SpaceCraftEditorApp::draw(){
         glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
     }
 
-    // --- draw nodes
-    // glPointSize(10);
-    // glColor3f(1.0,0.0,1.0);
-    // glBegin(GL_POINTS);
-    // for(int i=0; i<theSpaceCraft->nodes.size(); i++){ 
-    //     theSpaceCraft->nodes[i]->pos = (Vec3d)sim.points[ theSpaceCraft->nodes[i]->ivert ].f;
-    //     Draw3D::vertex( theSpaceCraft->nodes[i]->pos );
-    //     //Draw3D::vertex( sim.points[i].f ); 
-    // }
-    // for(int i=0; i<theSpaceCraft->nodes.size(); i++){   // labels
-    //     Draw3D::drawText( std::to_string(i).c_str(), (Vec3d)theSpaceCraft->nodes[i]->pos, fontTex, 0.04, 0 );
-    //     //Draw3D::vertex( sim.points[i].f ); 
-    // }
-    // glEnd();
-
-    // --- draw slider bonds
-    glLineWidth(3.0);
-    // glColor3f(0.0,0.5,0.0);
-    // // render EdgeVertBonds
-    // glBegin(GL_LINES);
-    // for(int i=0; i<sim.nEdgeVertBonds; i++){
-    //     EdgeVertBond& ev = sim.edgeVertBonds[i];
-    //     Vec3d a = sim.points[ ev.verts.x ].f;
-    //     Vec3d b = sim.points[ ev.verts.y ].f;
-    //     Vec3d c = sim.points[ ev.verts.z ].f;
-    //     Draw3D::vertex( a );  Draw3D::vertex( c );
-    //     Draw3D::vertex( b );  Draw3D::vertex( c );
-    // }
-    // glEnd();
-    // --- draw slider paths
-    glLineWidth(3.0);
-    
-    //for( const Slider* o: theSpaceCraft->sliders){ 
-    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
-        const Slider* o = theSpaceCraft->sliders[i];
-        // glColor3f(0.0,0.5,1.0);
-        // drawSliderPath( o, sim.points, 10 ); 
-        
-        glColor3f(1.0,0.0,1.0);
-        Vec3d p  = sim.getEdgeVertPos( i );
-        Vec3d p0 = sim.points[ o->ivert ].f;
-        Draw3D::drawLine( p0, p );
-        
-    }
-    //glColor3f(0.0,0.5,1.0); glPointSize(20); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
-    //glPointSize(3000/zoom); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
-
-    //if(glo_truss) glCallList(glo_truss);
-    //if(glo_ship ) glCallList(glo_ship);
-
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
+    glColor3f(0.0,0.5,1.0);
+    drawSliderBonds( sim );
+    drawSliderPaths( *theSpaceCraft, sim  );
 
     Draw3D::color( Vec3d{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
 
-    /*
-    if(ogl_asteroide){
-        glPushMatrix();
-        glScalef(100,100.0,100.0);
-        glCallList(ogl_asteroide);
-        glPopMatrix();
-    }
-    */
 
-    //Mat3d camMat;
-    //qCamera.toMatrix_T(camMat);
-    //Draw3D::drawMatInPos( cam.rot, (Vec3d){0.0,0.0,0.0} );
-
+    // ----------- Picking
     picker.hray = (Vec3d)(cam.rot.c);
     picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
-
     glLineWidth(5.0);
     if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3d p = *(Vec3d*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
     else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( sim.points[b.x].f, sim.points[b.y].f ); } }
-
     //mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
-
     //printf( "%i\n", EDIT_MODE::vertex );
     // if(picked>=0){
     //     switch(edit_mode){
@@ -921,9 +635,6 @@ void SpaceCraftEditorApp::draw(){
     //         case EDIT_MODE::edge  : glColor3f(1.0,1.0,1.0); auto ed = truss.edges[picked]; Draw3D::drawLine( truss.points[ed.a], truss.points[ed.b] ); break;
     //     }
     // }
-
-    //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
-    //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
@@ -947,30 +658,6 @@ void SpaceCraftEditorApp::drawHUD(){
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
     //glPopMatrix();
 }
-
-//void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){ };
-/*
-void SpaceCraftEditorApp::mouseHandling( ){
-    SDL_GetMouseState( &mouseX, &mouseY ); mouseY=HEIGHT-mouseY;
-    mouse_t   = (mouseX-20 )/timeScale + tstart;
-    mouse_val = (mouseY-200)/valScale;
-    sprintf( curCaption, "%f %f\0", mouse_t, mouse_val );
-    int ipoint_ = binSearchFrom<double>(mouse_t,splines.n,splines.ts);
-    if( (splines.ts[ipoint_+1]-mouse_t)<(mouse_t-splines.ts[ipoint_]) ) ipoint_++;
-    if(ipoint_!=ipoint){
-        ipoint=ipoint_;
-        char buff[100];
-        Vec3d r,v;
-        r.set( splines.CPs[0][ipoint],splines.CPs[1][ipoint],splines.CPs[2][ipoint] );
-        v.set( splines.getPointDeriv(ipoint,0), splines.getPointDeriv(ipoint,1), splines.getPointDeriv(ipoint,2) );
-        sprintf(buff, "%i %f r(%3.3f,%3.3f,%3.3f) v(%3.3f,%3.3f,%3.3f)", ipoint, splines.ts[ipoint], r.x,r.y,r.z,   v.x,v.y,v.z );
-        txtStatic.inputText = buff;
-    }
-    //printf("%i %i %3.3f %3.3f \n", mouseX,mouseY, mouse_t, mouse_val );
-}
-*/
-
-
 
 void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     //Mat3d camMat;
@@ -1069,39 +756,43 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
 
 // ===================== MAIN
 
-LambdaDict funcs;
-SpaceCraftEditorApp * app;
+//LambdaDict funcs;
+//SpaceCraftEditorApp * app;
 
 int main(int argc, char *argv[]){
 
-    printf( "argc %i \n", argc );
-
-    // example: use like : ./SpaceCraftEditorApp -s data/ship_ICF_interceptor_1.lua
-    //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
-    funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
-
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
-	//https://wiki.libsdl.org/SDL_GLattr
-	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    //SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    //SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    //SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    //SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
-    glEnable(GL_MULTISAMPLE);
-	//SDL_SetRelativeMouseMode( SDL_TRUE );
-	int junk;
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-	app = new SpaceCraftEditorApp( junk , dm.w-150, dm.h-100, argc, argv );
+    // printf( "argc %i \n", argc );
+    // // example: use like : ./SpaceCraftEditorApp -s data/ship_ICF_interceptor_1.lua
+    // //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
+    // funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	// // https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
+	// //https://wiki.libsdl.org/SDL_GLattr
+    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    // //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
+    // glEnable(GL_MULTISAMPLE);
+	// //SDL_SetRelativeMouseMode( SDL_TRUE );
+	// int junk;
+    // SDL_DisplayMode dm;
+    // SDL_GetDesktopDisplayMode(0, &dm);
+	// app = new SpaceCraftEditorApp( junk , dm.w-150, dm.h-100, argc, argv );
     
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+	int junk;
+	SpaceCraftEditorApp * app = new SpaceCraftEditorApp( junk , dm.w-150, dm.h-100, argc, argv );
+    //app->bindSimulators( &W ); 
+
+    LambdaDict funcs;
+    funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
+    funcs["-perframe"]={1,[&](const char** ss){            sscanf( ss[0], "%i", &app->perFrame );              printf( "COMMAND LINE: -perframe(%i) \n", app->perFrame ); } };
+    funcs["-method"  ]={1,[&](const char** ss){ int im;    sscanf( ss[0], "%i", &im );  sim.linSolveMethod=im; printf( "COMMAND LINE: -method(%i)   \n", im            ); } };
+    funcs["-dt"      ]={1,[&](const char** ss){ float dt;  sscanf( ss[0], "%f", &dt );  sim.dt=dt;             printf( "COMMAND LINE: -dt( dt: %f ) \n", sim.dt        ); } };
+    
+    //funcs["-bmix"    ]={1,[&](const char** ss){ int istart; float bmix;  sscanf( ss[0], "%i,%f", &istart, &bmix ); W.sim.mixer.b_end=bmix; W.sim.mixer.istart=istart; printf( "COMMAND LINE: -bmix( istart:%i bmix: %f ) \n", W.sim.mixer.istart, W.sim.mixer.b_end );    } };
+    //funcs["-fix"     ]={1,[&](const char** ss){ int n =  readlist( ss[0], W.fixPoints); printf("COMMAND LINE: -fix[%i]{%s}\n", n, ss[0] );  } };
+    //funcs["-nsolve"  ]={1,[&](const char** ss){ int nsolv; sscanf( ss[0], "%i", &nsolv ); printf( "COMMAND LINE: -nsolve(%i) \n", nsolv ); W.sim_f.nSolverIters=nsolv; W.sim.nSolverIters=nsolv;  } };    
 
     process_args( argc, argv, funcs );
 
