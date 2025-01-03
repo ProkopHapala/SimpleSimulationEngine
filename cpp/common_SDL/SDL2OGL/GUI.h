@@ -16,13 +16,19 @@
 #include <functional>
 
 /*
-
 TODO:
  - draw small glyph by simple language ... like:
     goto    100.0 100.0
     line    200.0 250.0
     ngon    6 16.5
 */
+
+class GUI_stepper{ public:
+    int x0=0,x1=0;
+    GUI_stepper()=default;
+    GUI_stepper(int n, int l){ x0=n*fontSizeDef; x1=(n+l)*fontSizeDef; }
+    inline void step(int n){ x0=x1; x1=x1+n*fontSizeDef; }
+};
 
 struct Command{
     int id;
@@ -85,7 +91,7 @@ class GUITextInput{ public:
 
     bool     isNumber=true,checkRange=false;
 	float    vmin=0.0f, vmax=1.0f;
-	double   value=0.0d;
+	double   value=0.0;
 	SDL_Keycode num_op = 0;
 
 	bool     modified=true,entered=false;
@@ -94,8 +100,8 @@ class GUITextInput{ public:
 
 	void         applyVal( float f );
 
-    virtual void view3D( const Vec3d& pos, int fontTex, float textSize );
-    virtual void viewHUD( const Vec2i& pos, int fontTex );
+    virtual void view3D ( const Vec3d& pos, int fontTex, float textSize );
+    virtual void viewHUD( const Vec2i& pos, int fontTex, bool bBack=true );
     virtual void onKeyDown( SDL_Event e );
 	virtual void onText   ( SDL_Event e );
 
@@ -107,32 +113,40 @@ class GUITextInput{ public:
 
 class GUIAbstractPanel{ public:
     //int textSz = fontSizeDef;
-	int  xmin=256,xmax=128,ymin=0,ymax=0;
-	bool visible=true, disabled=false;
-
-	uint32_t bgColor=0xA0A0A0, textColor=0x000000;
-
-	bool     redraw=true;
-	int      gllist=0;
+	int  xmin=256,xmax=128,ymin=0,ymax=0;  // // ToDo: perhaps it would be better to Vec2i, or Rect2i ?
+	bool visible=true, disabled=false,redraw=true;
+    int ivalchanged = -1; 
+	uint32_t bgColor=0xA0A0A0, textColor=0x000000; // ToDo: perhaps it would be better to use some style-class
+	int      gllist=0; // rendered shape ( e.g. OpenGL display list )
 
 	//int      fontTex=0;
     //char*    caption=NULL;
     std::string caption;
+	//void (*command)(double,void*) = NULL;
+    //std::function<void(double)> command =0;
+    std::function<void(GUIAbstractPanel*)> command =0; // = [] { return 0; }
 
 	// ==== functions
+
 
     void initPanel( const std::string& caption_, int xmin_, int ymin_, int xmax_, int ymax_ );
 
     GUIAbstractPanel(){};
     GUIAbstractPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax ){ initPanel(caption, xmin,ymin,xmax,ymax); };
-    virtual ~GUIAbstractPanel(){};
+    virtual ~GUIAbstractPanel()=default;
 
+    //virtual int  toggleChanged(){ return -1; };
+    virtual int clearChanged()    { int i=ivalchanged; ivalchanged=-1; return i; };
+    virtual int readChanged()const{ return ivalchanged; };
+    //inline  int  toggleChanged(){ int i=ivalchanged; ivalchanged=-1; return i; };
+    virtual void open(){};
+    virtual void close(){};
 	virtual void moveTo(int x, int y);
 	virtual void moveBy(int dx,int dy);
 
-	virtual void              onKeyDown( const SDL_Event& e, GUI& gui );
-	virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
-    virtual void              onText( const SDL_Event& e );
+	virtual void              onKeyDown(             const SDL_Event& e, GUI& gui );
+	virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& e, GUI& gui );
+    virtual void              onText(                const SDL_Event& e, GUI& gui );
 
     virtual void view  ( );
     //virtual void tryRender();
@@ -142,13 +156,19 @@ class GUIAbstractPanel{ public:
 
     // inline fnctions
 
-    inline void draw      ( ){ tryRender(); view(); };
+    inline void draw      ( ){ 
+        //printf( "GUIAbstractPanel::draw() \n" );
+        tryRender(); 
+        view(); 
+        redraw=false; 
+        //printf( "GUIAbstractPanel::draw() END\n" );
+    };
     inline bool check     ( int  x, int  y ){
         //printf( "check x %i <%i...%i>   y %i <%i...%i>\n", x, xmin, xmax,   y, ymin, ymax );
         return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax);
     }
 	inline void toRelative ( int& x, int& y ){ x-=xmin; y-=ymin; }
-
+    inline GUIAbstractPanel* setCommand( const std::function<void(GUIAbstractPanel* panel)>& command_ ){ command=command_; return this; }
 };
 
 // ==============================
@@ -156,46 +176,159 @@ class GUIAbstractPanel{ public:
 // ==============================
 
 class GUIPanel : public GUIAbstractPanel { public:
-	bool isSlider=true, isButton=false;
+	bool isSlider=true, isButton=false, bCmdOnSlider=false, isInt = false, viewVal=true, valBelow=true;   // ToDo: perhaps it would be better to use bit-mask
 
-	uint32_t barColor=0x00FF00;
+	uint32_t barColor=0x00FF00;  // ToDo: perhaps it would be better to use some style-class
 
 	bool     executed=false;
 	int      curPos=0;
 	std::string inputText;
+    int      ndigits=2;
 
 	float    vmin=0.0f, vmax=1.0f;
-	double   value=0.0d;
-	bool     isInt = false;
-
-	double* master=0;
-
-	void (*command)(double) = NULL;
+	double   value=0.0;
+	double*  master=0;
 
     // ==== functions
 
     GUIPanel()=default;
-    GUIPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax, bool isSlider_, bool isButton_ ){
-        initPanel(caption, xmin,ymin,xmax,ymax); isSlider=isSlider_; isButton=isButton_;
+    GUIPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax, bool isSlider_=true, bool isButton_=true, bool isInt_=false, bool viewVal_=true, bool bCmdOnSlider_=false ){
+        initPanel(caption, xmin,ymin,xmax,ymax); isSlider=isSlider_; isButton=isButton_; isInt=isInt_; viewVal=viewVal_; bCmdOnSlider=bCmdOnSlider_;
         command=0;
     };
 
-    virtual void view();
+    virtual void view() override;
 	//virtual void tryRender();
 	void render();
-    virtual void              onKeyDown( const SDL_Event&  e );
-    virtual void              onText( const SDL_Event&  e );
-    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
+    virtual void              onKeyDown( const SDL_Event&  e, GUI& gui )                  override;
+    virtual void              onText   ( const SDL_Event&  e, GUI& gui )                  override;
+    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui ) override;
 
 	// ===== inline functions
-    inline void   val2text()         { inputText = std::to_string(value); };
-	inline double x2val( float  x   ){ return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
+    inline int    getIntVal()        { return round(value); };
+    //inline void   val2text()         { if(isInt){ inputText = std::to_string(getIntVal()); }else{  inputText = std::doubleToString(value,ndigits); }; };
+    inline void   val2text()         { if(isInt){ inputText = std::to_string(getIntVal()); }else{ char str[20]; sprintf(str, "%.*f", ndigits, value); inputText=str; }; };
+	inline double x2val( float  x   ){  
+        //printf( "GUIPanel::x2val() x(%g) vmax(%g)-vmin(%g) xmax(%g)-xmin(%g) ->  val(%g)\n", x,vmax,vmin,xmax,xmin,  (x*(vmax-vmin)/(xmax-xmin))+ vmin ); 
+        return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; 
+    };
 	inline float  val2x( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
+
+	inline int   x2val_int( float  x   ){ return round( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
+	//inline float val2x_int( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
+
     inline void syncRead (){ if(master)value=*master; }
     inline void syncWrite(){ if(master)*master=value; }
 
-	inline GUIPanel* setRange(float vmin_, float vmax_){ vmin=vmin_; vmax=vmax_; return this; };
+    bool checkRange(bool bExit=false, bool bWarn=true);
+    bool checkValue(bool bExit=false, bool bWarn=true);
+	inline GUIPanel* setRange(float vmin_, float vmax_){ vmin=vmin_; vmax=vmax_; checkRange(); return this; };
+    inline GUIPanel* setValue(float val_){ value=_clamp(val_,vmin,vmax); redraw=true; return this; };
 
+};
+
+// ==============================
+//     class  MultiPanel
+// ==============================
+
+class MultiPanel : public GUIAbstractPanel { public:
+    int nsubs;
+    //GUIPanel ** subs;
+    std::vector<GUIPanel*> subs;
+    bool opened = true;
+    int dy;
+
+    // ==== functions
+
+    void initMulti( const std::string& caption, int xmin_, int ymin_, int xmax_, int dy, int nsubs_=0, bool isSlider=true, bool isButton=true, bool isInt=false, bool viewVal=true, bool bCmdOnSlider=false );
+    MultiPanel(){};
+    MultiPanel(const std::string& caption, int xmin, int ymin, int xmax, int dy, int nsubs=0, bool isSlider=true, bool isButton=true, bool isInt=false, bool viewVal=true, bool bCmdOnSlider=false ){ if(dy==0){dy=2*fontSizeDef;} initMulti( caption, xmin, ymin, xmax, dy, nsubs, isSlider,isButton,isInt,viewVal,bCmdOnSlider); }
+
+    GUIPanel* addPanel( const std::string& label, Vec3d vals, bool isSlider_=true, bool isButton_=true, bool isInt_=false, bool viewVal_=true, bool bCmdOnSlider_=false ){
+        int ns = subs.size();
+        int yi = ymin+dy*ns;
+        //xmin,yi,xmax,yi+dy;
+        //printf( "MultiPanel(%s)::addPanel(%s) pmin(%i,%i) pmax(%i,%i) \n", caption.c_str(), label.c_str(), xmin, yi, xmax, yi+dy,    ymin,ymax,dy );
+        //printf( "MultiPanel(%s)::addPanel(%s) ys(%i,%i) | dy=%i yrange(%i,%i) \n", caption.c_str(), label.c_str(), yi, yi+dy,    dy,ymin,ymax );
+        GUIPanel* p = new GUIPanel( label, xmin, yi, xmax, yi+dy, isSlider_, isButton_, isInt_, viewVal_, bCmdOnSlider_ ); 
+        subs.push_back(p);
+        p->setRange(vals.x,vals.y);
+        p->setValue(vals.z);
+        nsubs = subs.size();
+        redraw = true;
+        return p;
+    };
+
+    virtual int clearChanged()     override{ int j=-1; for(int i=0; i<nsubs; i++){ if( subs[i]->clearChanged()>=0 ){ if(j<0)j=i; } } return  j; };
+    virtual int readChanged()const override{           for(int i=0; i<nsubs; i++){ if( subs[i]-> readChanged()>=0 ){ return i;   } } return -1; };
+
+    virtual void open()override;
+    virtual void close()override;
+    virtual void moveBy(int dx, int dy) override;
+    virtual void view  ( )override;
+    //virtual void tryRender( );
+    virtual void render( )override;
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui )override;
+
+    void toggleOpen();
+
+    //virtual void onKeyDown( SDL_Event e, GUI& gui ){};
+    //virtual void onText   ( SDL_Event e, GUI& gui ){};
+
+};
+
+// ==============================
+//     class  CheckBoxList
+// ==============================
+
+#define _addBox(var)   _.addBox( #var, &var );
+
+struct CheckBox{
+    bool  val   =0; //
+    bool* master=0; // if pointer not NULL, this is the true value
+    std::string label;
+    //bool bChanged=false;
+    // --- functions
+    inline void read (){ if(master)val=*master; }
+    inline void write(){ if(master)*master=val; }
+    inline void flip (){ val=!val; write(); }
+};
+
+class CheckBoxList : public GUIAbstractPanel { public:
+    std::vector<CheckBox> boxes;
+    int dy;
+    uint32_t checkColor=0x00FF00;
+    //int ivalchanged = -1;   // moved to GUIAbstractPanel
+
+    // ==== functions
+
+    CheckBox* addBox(std::string label, bool* ptr){
+        boxes.push_back((CheckBox){*ptr,ptr,label});
+        return &boxes.back(); // Sould we rather return a reference ?
+        //return boxes.back();    // Sould we rather return a pointer ?
+    }
+
+    void initCheckBoxList( int xmin_, int ymin_, int xmax_, int dy=fontSizeDef*2 );
+
+    CheckBoxList(){};
+    CheckBoxList(int xmin, int ymin, int xmax, int dy=fontSizeDef*2, int n=0 ){ 
+        initCheckBoxList( xmin, ymin, xmax, dy); 
+        //for(int i=0; i<n; i++){ addBox( "box"+std::to_string(i), 0 ); }
+    }
+
+    //virtual void  open();
+    //virtual void close();
+    //void    toggleOpen();
+    //virtual void moveBy(int dx, int dy);
+    void update();
+
+    //virtual int  toggleChanged(){ int i=ivalchanged; ivalchanged=-1; return i; };  // moved to GUIAbstractPanel
+    virtual void view  ( )                                                               override;
+    virtual void render( )                                                               override;
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui )  override;
+
+    inline void syncRead (){ for(CheckBox& b: boxes){ b.read (); } }
+    inline void syncWrite(){ for(CheckBox& b: boxes){ b.write(); } }
 };
 
 // ==============================
@@ -214,93 +347,13 @@ class ScisorBox : public GUIAbstractPanel { public:
 
     //virtual void draw     ( );
     //virtual void tryRender( );
-    virtual void render( );
-    virtual GUIAbstractPanel* onMouse ( int x, int y, const SDL_Event&  event, GUI& gui );
+    virtual void render( )                                                                override;
+    virtual GUIAbstractPanel* onMouse ( int x, int y, const SDL_Event&  event, GUI& gui ) override;
 
     //virtual void onKeyDown( SDL_Event e ){};
     //virtual void onText   ( SDL_Event e ){};
 
 };
-
-// ==============================
-//     class  MultiPanel
-// ==============================
-
-class MultiPanel : public GUIAbstractPanel { public:
-    int nsubs;
-    GUIPanel ** subs;
-    bool opened = true;
-    int dy;
-
-    // ==== functions
-
-    void initMulti( const std::string& caption, int xmin_, int ymin_, int xmax_, int dy, int nsubs_ );
-
-    MultiPanel(){};
-    MultiPanel(const std::string& caption, int xmin, int ymin, int xmax, int dy, int nsubs){ initMulti( caption, xmin, ymin, xmax, dy, nsubs ); }
-
-    virtual void open();
-    virtual void close();
-    void toggleOpen();
-
-    virtual void moveBy(int dx, int dy);
-
-    virtual void view  ( );
-    //virtual void tryRender( );
-    virtual void render( );
-    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
-
-    //virtual void onKeyDown( SDL_Event e, GUI& gui ){};
-    //virtual void onText   ( SDL_Event e, GUI& gui ){};
-
-};
-
-// ==============================
-//     class  CheckBoxList
-// ==============================
-
-#define _addBox(var)   _.addBox( #var, &var );
-
-struct CheckBox{
-    bool  val   =0; //
-    bool* master=0; // if not zero, this is the true value
-    std::string label;
-    inline void read (){ if(master)val=*master; }
-    inline void write(){ if(master)*master=val; }
-    inline void flip (){ printf("flip  %i %i ", val,*master ); val=!val; write(); printf("-> %i %i \n", val,*master); }
-};
-
-class CheckBoxList : public GUIAbstractPanel { public:
-    std::vector<CheckBox> boxes;
-    int dy;
-    uint32_t checkColor=0x00FF00;
-
-
-    // ==== functions
-
-    void addBox(std::string label, bool* ptr){
-        boxes.push_back((CheckBox){false,ptr,label});
-    }
-
-    void initCheckBoxList( int xmin_, int ymin_, int xmax_, int dy=fontSizeDef*2 );
-
-    CheckBoxList(){};
-    CheckBoxList(int xmin, int ymin, int xmax, int dy=fontSizeDef*2){ initCheckBoxList( xmin, ymin, xmax, dy); }
-
-    //virtual void  open();
-    //virtual void close();
-    //void    toggleOpen();
-    //virtual void moveBy(int dx, int dy);
-    void update();
-
-    virtual void view  ( );
-    virtual void render( );
-    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
-
-    inline void syncRead (){ for(CheckBox& b: boxes){ b.read (); } }
-    inline void syncWrite(){ for(CheckBox& b: boxes){ b.write(); } }
-};
-
 
 // ==============================
 //     class  CommandList
@@ -326,12 +379,11 @@ class CommandList : public GUIAbstractPanel { public:
 
     bool     getKeyb(int key);
     void         update( );
-    virtual void view  ( );
-    virtual void render( );
-    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
+    virtual void view  ( )                                                              override;
+    virtual void render( )                                                              override;
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui ) override;
 
 };
-
 
 // ==============================
 //     class  KeyTree
@@ -359,7 +411,7 @@ should look like this:
 //static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
 
 class DropDownList : public GUIAbstractPanel { public:
-    bool bOpened = true;
+    bool bOpened = false;
     int nSlots=5;
     //int iSlot0=0;
 
@@ -368,8 +420,7 @@ class DropDownList : public GUIAbstractPanel { public:
     //int nItems = 0;
     //char** labels = (char**)exampleDropDownListItems;
     std::vector<std::string> labels;
-
-    GUIEventCallback* onSelect = 0;
+    //GUIEventCallback* onSelect = 0;
 
     //int nsubs;
     //GUIPanel ** subs;
@@ -383,16 +434,16 @@ class DropDownList : public GUIAbstractPanel { public:
     DropDownList(){}
     DropDownList( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){ initList(caption,xmin,ymin,xmax,nSlots); }
 
-    virtual void open();
-    virtual void close();
+    virtual void open() override;
+    virtual void close() override;
 
     //virtual void view ( );
     //virtual void tryRender( );
-    virtual void render( );
-    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
+    virtual void render( )                                                                override;
+    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui ) override;
 
-    //virtual void onKeyDown( SDL_Event e ){};
-    //virtual void onText   ( SDL_Event e ){};
+    //virtual void onKeyDown( SDL_Event e )override{};
+    //virtual void onText   ( SDL_Event e )override{};
 
 };
 
@@ -426,10 +477,11 @@ class TreeView : public GUIAbstractPanel { public:
     std::vector<TreeViewTree*> lines;
 
 
-    virtual void view();
-    virtual void render();
-    void updateLines( TreeViewTree& node, int level );
+    virtual void view()                                                                   override;
+    virtual void render()                                                                 override;
+    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui ) override;
 
+    void updateLines( TreeViewTree& node, int level );
     inline void updateLines(){ lines.clear(); updateLines(root,0); };
 
     void initTreeView( const std::string& caption, int xmin_, int ymin_, int xmax_, int nSlots_ );
@@ -439,7 +491,6 @@ class TreeView : public GUIAbstractPanel { public:
         initTreeView(caption,xmin,ymin,xmax,nSlots);
     }
 
-    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
     //virtual void onKeyDown( SDL_Event e ){};
     //virtual void onText   ( SDL_Event e ){};
 };
@@ -448,7 +499,6 @@ class TreeView : public GUIAbstractPanel { public:
 //     TableView
 // ==============================
 
-//static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
 class TableView : public GUIAbstractPanel { public:
     //typedef Tree<TreeViewItem> TreeT;
     Table* table=0;
@@ -458,117 +508,23 @@ class TableView : public GUIAbstractPanel { public:
     std::vector<int> nchs;
     std::vector<int> xs;
 
-    //virtual void view();
-    //virtual void render();
-    //void updateLines( TreeViewTree& node, int level );
-    //inline void updateLines(){ lines.clear(); updateLines(root,0); };
+    GUITextInput* input=0;
 
-    void initTableView( Table* table_, const std::string& caption_, int xmin_, int ymin_, int i0_, int j0_, int imax_, int jmax_ ){
-        table = table_;
-        caption=caption_;
-        xmin=xmin_,ymin=ymin_,
-        //xmax=xmax_,ymax=ymax_;
-        i0=i0_; j0=j0_; imax=imax_; jmax=jmax_;
-
-        int nch    = 8;
-        int nchpix = nch*fontSizeDef;
-        nchs.resize( table->columns.size() );
-        xs  .resize( table->columns.size()+1 );
-        int x=0;
-        xs[0]=0;
-        for(int i=0; i<nchs.size(); i++){ nchs[i]=nch; x+=nchpix; xs[i+1]=x; }
-        xmax = xmin + nchpix       *(jmax-j0);
-        ymax = ymin + fontSizeDef*2*(imax-i0);
-
-        printf( " i (%i,%i) j (%i,%i) \n", i0, imax,    j0, jmax   );
-        printf( " x (%i,%i) y (%i,%i) \n", xmin, xmax,  ymin, ymax );
-
-        redraw = true;
-    };
+    void initTableView( Table* table_, const std::string& caption_, int xmin_, int ymin_, int i0_, int j0_, int imax_, int jmax_ );
+    virtual void render()                                                               override;
+    virtual void onKeyDown( const SDL_Event& e, GUI& gui )                              override;
+    virtual void onText   ( const SDL_Event& e, GUI& gui )                              override;
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui ) override;
 
     TableView()=default;
     TableView( Table* table_, const std::string& caption_, int xmin_, int ymin_, int i0_, int j0_, int imax_, int jmax_ ){
         initTableView( table_, caption_, xmin_, ymin_, i0_, j0_, imax_, jmax_ );
     }
-    //TreeView( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){
-    //    initTreeView(caption,xmin,ymin,xmax,nSlots);
-    //}
 
-    //virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
-    //virtual void onKeyDown( SDL_Event e ){};
-    //virtual void onText   ( SDL_Event e ){};
-
-    // Implementaation
-
-    //virtual void view();
-    virtual void render(){
-        glDisable( GL_LIGHTING );
-        glDisable( GL_DEPTH_TEST);
-        glShadeModel( GL_FLAT );
-        Draw  ::setRGB( bgColor );
-        Draw2D::drawRectangle( xmin, ymin, xmax, ymax, true );
-        //int ncol = table->columns.size();
-        //int ncol=jmax-j0;
-        // ==== lines
-        glBegin(GL_LINES);
-        glColor3f(0,0,0);
-        int t=0;
-        printf(  "TableView Render %i %i %i %i \n", i0, j0, imax, jmax );
-        t=ymin; for(int i=i0; i<imax;i++){ glVertex3f(xmin,t,0); glVertex3f(xmax,t,0); t+=fontSizeDef*2; }
-        t=xmin; for(int j=j0; j<jmax;j++){ glVertex3f(t,ymin,0); glVertex3f(t,ymax,0); t+=fontSizeDef*nchs[j-j0]; }
-        glEnd();
-        //
-        glColor3f(0,1.0,0);
-        //int x=fontSizeDef*2;
-        //int y=fontSizeDef*2;
-        if( (i>=i0)&&(i<imax)&&(j>=j0)&&(j<jmax) ){
-            Draw2D::drawRectangle( xmin+xs[j]-xs[j0], ymax+(i0-i)*2*fontSizeDef, xmin+xs[j+1]-xs[j0], ymax+(i0-i-1)*2*fontSizeDef, false );
-        }
-        // ==== text
-        Draw  ::setRGB( textColor );
-        char stmp[1024];
-        for(int i=i0; i<imax;i++){
-            int ch0 = 0;
-            for(int j=j0; j<jmax;j++){
-                int nch = table->toStr(i,j,stmp)-stmp;
-                Draw2D::drawText( stmp, nch, {xmin+ch0*fontSizeDef, ymax-(i-i0+1)*fontSizeDef*2}, 0.0,  GUI_fontTex, fontSizeDef );
-                ch0+=nchs[j];
-            }
-        }
-    }
-
-    void view ( ){
-        // Draw2D::drawPointCross({xmin,ymax},5);
+    inline void view ( ){
         glCallList( gllist );
-        //int xcur = xmin + curPos*fontSizeDef;
-        //Draw2D::drawLine   ( {xcur, ymin}, {xcur, ymin+fontSizeDef*2} );
-    };
-
-    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui ){
-        if( check( x, y ) ){
-            //printf( "DropDownList::onMouse inside \n" );
-            //if( event.type == SDL_MOUSEBUTTONUP ){
-            if( event.type == SDL_MOUSEBUTTONDOWN ){
-                int j_,i_ = i0 + (ymax-y)/(fontSizeDef*2);
-                int dx=(x-xmin)+xs[j0];
-                for(int j=j0;j<jmax;j++){ if(dx<xs[j+1]){ j_=j; break; } }
-                if(event.button.button == SDL_BUTTON_LEFT){
-                    i=i_; j=j_;
-                    printf( "TableView mouse select i,j %i %i\n", i, j );
-                    redraw = true;
-                }
-            }else if( event.type == SDL_MOUSEWHEEL ){
-                //printf( " SDL_MOUSEWHEEL \n" );
-                int ni = imax-i0;
-                if     (event.wheel.y < 0){ i0 = _min( i0+1, table->n-ni ); }
-                else if(event.wheel.y > 0){ i0 = _max( i0-1, 0           ); }
-                imax=i0+ni;
-                redraw = true;
-            }
-            return this;
-        }
-        return 0;
-    };
+        if(input)input->viewHUD( {xmin+xs[j+1]-xs[j0],xmax+((i0-i)*2*fontSizeDef)}, fontSizeDef, true );
+    }
 
 };
 
@@ -627,11 +583,14 @@ class BoundGUI:public MultiPanel,public BindLoader{ public:
     }
 };
 
+
 // ==============================
 //    class GUI
 // ==============================
 
 class GUI{ public:
+    bool bKeyEvents  = true;
+    bool bTextEvents = false;
     GUIAbstractPanel* focused = 0;
     GUIAbstractPanel* dragged = 0;
     std::vector<GUIAbstractPanel*> panels;
@@ -642,6 +601,8 @@ class GUI{ public:
 
     //void layoutRow( int xmin, int xmax );
     void layoutRow( int xmin, int ymin, int xspace=0 );
+
+    int clear(int i0=0){ int n=0; for(int i=i0; i<panels.size(); i++){  if(panels[i]){ n++; delete panels[i];} } panels.resize(i0); return n; }
 
     inline ~GUI(){ for(GUIAbstractPanel* panel: panels){ delete panel; } }
 

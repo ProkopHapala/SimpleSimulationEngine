@@ -587,8 +587,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     //truss.loadXYZ(  "data/octShip.xyz" );
     //DropDownList* lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
     lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
-    //lstLuaFiles->onSelect = new OnSelectLuaShipScript();
-    lstLuaFiles->onSelect = &onSelectLuaShipScript;
+    lstLuaFiles->setCommand([this](GUIAbstractPanel* panel){ onSelectLuaShipScript.GUIcallback(panel); });
 
     TreeView* tvDir      = new TreeView    ( "DirView",20,HEIGHT_-400,200,20 ); gui.addPanel(tvDir);
     dir2tree(tvDir->root, "data" );
@@ -1079,19 +1078,3 @@ int main(int argc, char *argv[]){
 	app->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

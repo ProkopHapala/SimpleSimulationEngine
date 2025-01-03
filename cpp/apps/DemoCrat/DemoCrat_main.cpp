@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -158,7 +157,10 @@ DemoCratApp::DemoCratApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
     lstDemos  = new DropDownList( "lua files",20,HEIGHT_-100,200,5);
     gui.addPanel(lstDemos);
     listDirContaining( "data", ".cpp", lstDemos->labels );
-    onSelectDemo.app = this; lstDemos->onSelect = &onSelectDemo;
+    lstDemos->setCommand([this](GUIAbstractPanel* panel){
+        DropDownList* list = (DropDownList*)panel;
+        onSelectDemo.GUIcallback(list);
+    });
 
     //printf( "default_font_texture :  %i \n", default_font_texture );
 }
@@ -226,19 +228,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

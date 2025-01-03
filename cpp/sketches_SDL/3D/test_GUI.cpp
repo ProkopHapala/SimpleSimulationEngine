@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,8 +38,10 @@ struct TestStruct{
     Vec3d  dvec = (Vec3d){ 1.1545, 2.166, 3.1545};
 };
 
-void command_example( double value ){
-    printf( "I'm writting value : %6.6f \n", value );
+void command_example(GUIAbstractPanel* panel){
+    // We can cast to GUIPanel* since we know this is used with GUIPanel
+    GUIPanel* gpanel = (GUIPanel*)panel;
+    printf( "I'm writing value : %6.6f \n", gpanel->value );
 }
 
 class TestAppGUI : public AppSDL2OGL_3D {
@@ -123,7 +124,7 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
     gui.addPanel( &panel );
     */
     ((GUIPanel*)gui.addPanel( new GUIPanel( "rotation [Rad]", 5,5,105,35, true, true ) ))
-        ->command = &command_example;
+        ->setCommand([](GUIAbstractPanel* panel){ command_example(panel); });
 
     gui.addPanel( new MultiPanel( "MultiPanel_1", 120,5,200,fontSizeDef*4, 4 ) )
         ->bgColor = 0x9090A0;
@@ -214,19 +215,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
