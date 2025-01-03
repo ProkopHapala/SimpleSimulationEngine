@@ -169,7 +169,7 @@ class OrbSim: public Picker { public:
     //double omega = 0.05;
     Quat4d accel{ 0.0,-9.81 , 0.0 , 0.0 };    // acceleration
     Quat4d rot0 { 0.0, 0.0  , 0.0 , 0.0 };    // center of rotation
-    Quat4d omega{ 0.0, 0.0  , 1.0 , 0.0 };    // angular velocity
+    Quat4d omega{ 0.0, 0.0  , 1.0 , 0.05 };    // angular velocity
 
     //double dt      = 2e-3; //double kGlobal = 1e+6;
     double dt      = 2e-3;    double kGlobal = 1e+7;
@@ -1560,7 +1560,7 @@ class OrbSim: public Picker { public:
             double imp = 0;
 
             f.f.add_mul( d.f, ( imp + fl )*invL );
-            //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
+            //printf( "p[%i,ij=%i,j=%i] fl: %10.2e dl: %10.2e l: %10.2e l0: %10.2e k: %10.2e \n", iG,ij,j, fl, l-par.x, l, par.x, k );
         }
         forces[iG] = f; // we may need to do += in future
     }
@@ -1855,6 +1855,7 @@ class OrbSim: public Picker { public:
 
 int run( int niter, double dt, double damp  ){
     double f2 = -1;
+    niter=2;
     for(int itr=0; itr<niter; itr++){
         cleanForce();   
         //evalTrussForces_neighs();
@@ -1866,8 +1867,9 @@ int run( int niter, double dt, double damp  ){
         //move_MD( 1e-3, 1e-5 );
         //move_GD( 1e-7 );
         f2 = move_MD( dt, damp );
-        //printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
+        printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
     }
+    exit(0);
     return niter;
 }
 

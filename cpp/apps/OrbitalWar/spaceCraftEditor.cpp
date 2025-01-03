@@ -161,31 +161,30 @@ void runSim( OrbSim& sim, int niter=100 ){
         */
         //sim.run( niter, 1e-3, 1e-8 );
         //sim.run( niter, 1e-3, 1e-4 );
-        //sim.run_omp( niter, false, 1e-3, 1e-4 );
+        sim.run_omp( niter, false, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-5 );
         //sim.run_omp( niter, true, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-6 );
-
 
         //sim.prepareLinearizedTruss(linSolver.b);
         //linSolver.solve_CG( 5, 0 );
 
         //sim.run_constr_dynamics(  1, 0.1 );
 
-        if( iFrame % 100 == 0 ){ 
-            sim.points[2].f.y -= 0.5;
-        }else{
-            double dlmax = sim.constr_jacobi_neighs2_absolute();
-            //printf( "run_constr_dynamics[%i,%i] dlmax=%g \n", i,isolver,  dlmax );
-            //sim.apply_dpos( 2.3 );
-            sim.apply_dpos( 1.0 );
-        }
+        // if( iFrame % 100 == 0 ){ 
+        //     sim.points[2].f.y -= 0.5;
+        // }else{
+        //     double dlmax = sim.constr_jacobi_neighs2_absolute();
+        //     //printf( "run_constr_dynamics[%i,%i] dlmax=%g \n", i,isolver,  dlmax );
+        //     //sim.apply_dpos( 2.3 );
+        //     sim.apply_dpos( 1.0 );
+        // }
 
-        for(int i=0; i<sim.nPoint; i++){ 
-            Vec3f p = (Vec3f)sim.points[i].f;
-            Vec3f v = sim.dpos  [i].f;
-            Draw3D::drawArrow( p, p+v, 0.1 );
-        }
+        // for(int i=0; i<sim.nPoint; i++){ 
+        //     Vec3f p = (Vec3f)sim.points[i].f;
+        //     Vec3f v = sim.dpos  [i].f;
+        //     Draw3D::drawArrow( p, p+v, 0.1 );
+        // }
 
         //sim.run_omp( 1, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
@@ -435,6 +434,31 @@ void makeTestTruss(){
     */
 }
 
+
+void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
+    //printf( "reloadShip().updateSlidersPaths \n" );
+    // update ring slider paths
+    for( Ring* o : craft.rings ){
+        o->updateSlidersPaths( true, true, sim.points );
+    }
+    //printf( "reloadShip().SlidersToEdgeVerts \n" );
+    // ----- Sliders to EdgeVerts
+    sim.nEdgeVertBonds = craft.sliders.size();
+    sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        Slider* o = craft.sliders[i];
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
+        ev.verts.z = o->ivert;
+        //ev.K = 1000.0;
+        ev.K = 100000.0;
+        //ev.K = 0.0;
+        o->speed = 1.0;
+        //o->speed = 0.1;
+        //o->updateEdgeVerts( sim.points );
+    }
+}
+
 void reloadShip( const char* fname  ){
     theSpaceCraft->clear();                  // clear all components
     //luaL_dofile(theLua, "data/spaceshil1.lua");
@@ -475,6 +499,8 @@ void reloadShip( const char* fname  ){
 
     sim.user_update = SpaceCraftControl;
 
+
+    /*
     //printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
     for( Ring* o : theSpaceCraft->rings ){
@@ -497,6 +523,8 @@ void reloadShip( const char* fname  ){
         //o->speed = 0.1;
         //o->updateEdgeVerts( sim.points );
     }
+    */
+    sliders2edgeverts( *theSpaceCraft, sim );
 
     // --- kick to rings
     // Vec3d v0 = {1.0,0.0,0.0};

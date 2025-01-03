@@ -93,15 +93,14 @@ public:
         if(_sim) picker.picker = _sim;
         picker.Rmax = 10.0;
 
+        // Initialize workshop (materials)
+        init_workshop();
+
         // Initialize Lua and load default ship
         initSpaceCraftingLua();
         if(argc <= 1) {
-            const char* fname = "data/test_materials.lua";
-            if(Lua::dofile(theLua, fname)) {
-                printf("ERROR in reloadShip() Lua::dofile(%s)\n", fname);
-                exit(0);
-            }
-            zoom = 10.0;
+            simulator->reloadShip("data/ship_ICF_marksman_2.lua");
+            simulator->initSimulators();
         }
 
         // Bind simulator to editor
