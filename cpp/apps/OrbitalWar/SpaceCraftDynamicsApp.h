@@ -28,6 +28,7 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     double Estrain = 0.0;
 
+    // === View Options
     bool bDouble            = true;
     bool bRun               = false;
     bool bViewPointLabels   = false;
@@ -36,20 +37,22 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     bool bViewStrainNumbers = true;
     bool bViewMassNumbers   = true;
     bool bViewBondStiffness = false;
-
     bool bViewResudualForces = false;
     bool bViewVelocities     = false;
+
     double scale_force       = 0.01;
     double scale_velocity    = 1.0;
     float fontSize3D         = 0.014;
-
-    // if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
-    // if(bViewVelocitie    s){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
-
     int perFrame = 1;
     //int perFrame = 10;
     //int perFrame = 100;
-    // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
+
+    // === GUI
+    GUI gui;
+    CheckBoxList* panel_view=0;
+    MultiPanel*   panel_sim=0;
+
+    // === Functions
 
 	virtual void draw   () override;
 	virtual void drawHUD() override;
@@ -57,6 +60,7 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 	//virtual void camera();
 	virtual void eventHandling   ( const SDL_Event& event  ) override;
 	virtual void keyStateHandling( const Uint8 *keys ) override;
+    virtual void initGUI();
     //virtual void mouseHandling( );
 
     virtual void bindSimulators( SpaceCraftSimulator* simulator_ ){
@@ -72,7 +76,31 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
 	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
 
+    
+
 };
+
+void SpaceCraftDynamicsApp::initGUI(){
+    // === View Options Panel
+    panel_view = new CheckBoxList(5, 5, 200, fontSizeDef*2);
+    gui.addPanel(panel_view);
+    panel_view->addBox("Point Labels",     &bViewPointLabels);
+    panel_view->addBox("Fixed Points",     &bViewFixedPoints);
+    panel_view->addBox("Trajectories",     &bDrawTrj);
+    panel_view->addBox("Strain Numbers",   &bViewStrainNumbers);
+    panel_view->addBox("Mass Numbers",     &bViewMassNumbers);
+    panel_view->addBox("Bond Stiffness",   &bViewBondStiffness);
+    panel_view->addBox("Residual Forces",  &bViewResudualForces);
+    panel_view->addBox("Velocities",       &bViewVelocities);
+
+    // === Simulation Parameters Panel
+    panel_sim = new MultiPanel("Simulation", 210, 5, 400, fontSizeDef*2, 4);
+    gui.addPanel(panel_sim);
+    panel_sim->subs[0]->setValue(scale_force)->setRange(0.001, 0.1);
+    panel_sim->subs[1]->setValue(scale_velocity)->setRange(0.1, 10.0);
+    panel_sim->subs[2]->setValue(fontSize3D)->setRange(0.001, 0.1);
+    panel_sim->subs[3]->setValue(perFrame)->setRange(1, 100);
+}
 
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
@@ -103,6 +131,7 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_) 
     initSpaceCraftingLua();
     VIEW_DEPTH = 10000.0;
     zoom = 10.0;
+    initGUI();
 }
 
 void SpaceCraftDynamicsApp::draw(){
@@ -146,7 +175,7 @@ void SpaceCraftDynamicsApp::draw(){
 void SpaceCraftDynamicsApp::drawHUD(){
     glDisable( GL_LIGHTING );
     glDisable(GL_DEPTH_TEST);
-    //gui.draw();
+    gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
     //glPopMatrix();
 }
@@ -172,6 +201,7 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
     //    if     (event.wheel.y > 0){ zoom*=VIEW_ZOOM_STEP; }
     //    else if(event.wheel.y < 0){ zoom/=VIEW_ZOOM_STEP; }
     //}
+    if( gui.onEvent( mouseX, mouseY, event ) )return;
 
     if(event.type == SDL_MOUSEWHEEL){
         if     (event.wheel.y > 0){ zoom/=VIEW_ZOOM_STEP; }
@@ -201,7 +231,6 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
             break;
     };
     AppSDL2OGL::eventHandling( event );
-
 }
 
 }
