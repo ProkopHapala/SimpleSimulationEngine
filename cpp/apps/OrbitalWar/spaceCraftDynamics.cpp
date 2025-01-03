@@ -7,6 +7,8 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#include "globals.h"
 #include "Draw2D.h"
 #include "Draw3D.h"
 #include "SDL_utils.h"
@@ -17,7 +19,7 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
-int verbosity = 0;
+//int verbosity = 0;
 
 //#include "Truss.h"
 #include "SpaceCraft.h"

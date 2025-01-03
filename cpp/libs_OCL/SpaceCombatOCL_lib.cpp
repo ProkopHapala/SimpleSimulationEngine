@@ -5,7 +5,8 @@
 
 //#define CL_TARGET_OPENCL_VERSION 200
 
-int verbosity = 0;
+#include "globals.h"
+//int verbosity = 0;
 #include "SpaceCombatOCL.h"
  
 //OCL_PP oclfft;

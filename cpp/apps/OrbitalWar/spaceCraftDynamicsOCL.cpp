@@ -7,11 +7,13 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#include "globals.h"
 #include "Draw2D.h"
 #include "Draw3D.h"
 #include "SDL_utils.h"
 
-int verbosity = 0;
+//int verbosity = 0;
 
 #include "fastmath.h"
 #include "Vec3.h"

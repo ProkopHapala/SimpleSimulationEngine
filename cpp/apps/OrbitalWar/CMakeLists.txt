@@ -56,6 +56,15 @@ add_executable( spaceCraftEditor
 )
 target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
+add_executable( spaceCraftEditorNew
+    SpaceCraftEditorNew.cpp
+    $<TARGET_OBJECTS:SDL2OGL>
+    $<TARGET_OBJECTS:Truss>
+    $<TARGET_OBJECTS:SoftBody>
+    $<TARGET_OBJECTS:DynamicOpt>
+)
+target_link_libraries( spaceCraftEditorNew  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
+
 add_executable( spaceCraftDynamics
     spaceCraftDynamics.cpp
     $<TARGET_OBJECTS:SDL2OGL>
