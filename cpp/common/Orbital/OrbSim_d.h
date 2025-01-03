@@ -934,13 +934,20 @@ class OrbSim: public Picker { public:
         double dt2 = dt * dt;
         double inv_dt = 1/dt;
         cleanForce();
+
+        
+
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
-            //evalForces();
             
+            cleanForce();
+            //evalForces();
+            if (user_update){ user_update(dt);}
+            evalEdgeVerts();
+
             //  Predictor step
             for (int i=0;i<nPoint;i++){ 
-                forces[i].f = getPointForce( i );
+                forces[i].f.add( getPointForce( i ) );
                 //forces[i].f.add_mul( Gravity, points[i].w ); // Grafivity
                 //forces[i].f.add_mul( vel[i].f, Cdrag ); // Drag force
                 ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*(dt2/points[i].w); 
@@ -1042,9 +1049,7 @@ class OrbSim: public Picker { public:
                 vel[i].f = v;
                 // update positions
                 points[i].f = ps_cor[i];
-            }
-            // Call user update function if set
-            if (user_update){ user_update(dt);}
+            }            
             time += dt;
             //printf( "STEP: %6i time: %16.8f p.y: %16.8f v.y: %16.8f f.y: %16.8f mass: %16.8f\n", iter, time, points[0].y, vel[0].y,  forces[0].y, points[0].w );
         } // for iter ( time stepping )

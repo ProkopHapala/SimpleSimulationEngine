@@ -458,8 +458,8 @@ void SpaceCraftEditorApp::draw(){
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
     glColor3f(0.0,0.5,1.0);
-    drawSliderBonds( sim );
-    drawSliderPaths( *theSpaceCraft, sim  );
+    //drawSliderBonds( sim );  // draw the lines connected to the two endpoints of the actual active edge of she slider path
+    drawSliderPaths( *theSpaceCraft, sim  ); // Draw Line connected to interpolated position of slider on its path 
 
     Draw3D::color( Vec3d{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
