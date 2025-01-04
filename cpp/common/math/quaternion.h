@@ -88,6 +88,7 @@ class Quat4T {
 	inline void set_add    ( const QUAT& a, const QUAT& b         ){ x =a.x+b.x;      y =a.y+b.y;     z =a.z+b.z;     w =a.w+b.w;      };
 	inline void set_sub    ( const QUAT& a, const QUAT& b         ){ x =a.x-b.x;      y =a.y-b.y;     z =a.z-b.z;     w =a.w-b.w;      };
 	inline void set_mul    ( const QUAT& a, const QUAT& b         ){ x =a.x*b.x;      y =a.y*b.y;     z =a.z*b.z;     w =a.w*b.w;      };
+    inline void set_mul    ( const QUAT& a, T           f         ){ x =a.x*f;        y =a.y*f;       z =a.z*f;       w =a.w*f;        };
 	inline void add_mul    ( const QUAT& a, T f                ){ x+=a.x*f;        y+=a.y*f;       z+=a.z*f;       w+=a.w*f;        };
 	inline void set_add_mul( const QUAT& a, const QUAT& b, T f ){ x =a.x + f*b.x;  y =a.y + f*b.y; z =a.z + f*b.z; w =a.w + f*b.w;  };
 

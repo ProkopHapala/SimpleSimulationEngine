@@ -9,6 +9,12 @@ class AnyControler{ public:
     virtual void update(double dt)=0;
 };
 
+template<typename T>
+class Solver{ public:
+    //virtual void control(void* obj, double dt)=0;
+    virtual void solve(int n, T* x, T* b)=0;
+};
+
 // Interf
 /**
  * @brief The BindLoader class is an abstract base class that defines the interface for objects that can bind another object and load data from it

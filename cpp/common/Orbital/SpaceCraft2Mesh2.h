@@ -96,6 +96,13 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         sim.points[e.y].w += mass*0.5;
         Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
 
+
+        // if mat.name begin with "rope"  
+        if( strncmp( mat.name, "rope", 4 )==0 ){
+            sim.damped_bonds.push_back( i );
+            sim.damped_points.insert( e.x );
+            sim.damped_points.insert( e.y );
+        }
         l0Range   .enclose( param.x );
         kPushRange.enclose( param.y );
         kPullRange.enclose( param.z );
@@ -195,6 +202,8 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
         if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
+
+
         // l0, kPress, kPull, damping
         //double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
         double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm() * ( 1.f - mat.preStrain );

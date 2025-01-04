@@ -33,7 +33,7 @@ export LD_PRELOAD
 #./$name.x -s data/ship_ICF_interceptor_1.lua
 #./$name.x -s data/ship_ICF_marksman_1.lua
 #./$name.x -perframe 100 -method 10   -s data/ship_ICF_marksman_2.lua
-./$name.x -dt 0.005 -method 2         -s data/ship_ICF_marksman_2.lua 
+./$name.x -dt 0.002 -method 2         -s data/ship_ICF_marksman_2.lua  -perframe 50
 
 #./$name.x -s data/ship_NFPP_pendulum_1.lua
 #./$name.x -s data/ship_NTR_marksman_1.lua

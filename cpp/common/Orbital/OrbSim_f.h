@@ -135,6 +135,7 @@ class OrbSim_f : public Picker { public:
     Quat4f* forces=0;  // force and energy
     Quat4f* vel   =0;  // velocity
     Quat4f* impuls=0;  // accumulated impulse from corrector
+    Quat4f* bvec  =0;
 
     float* kFix=0;   // force constant for fixed points
     float  kLinRegularize = 1.0;
@@ -168,8 +169,8 @@ class OrbSim_f : public Picker { public:
     int linSolveMethod = 0;
     enum class LinSolveMethod{ CG,CGsparse,Cholesky,CholeskySparse };
 
-    Vec3f*  ps_cor      =0; // new Vec3d[nPoint];
-    Vec3f*  ps_pred     =0; // new Vec3d[nPoint];
+    Quat4f* ps_cor      =0; // new Vec3d[nPoint];
+    Quat4f* ps_pred     =0; // new Vec3d[nPoint];
     Vec3f*  linsolve_b  =0; // new Vec3d[nPoint];
     Vec3f*  linsolve_yy =0; // new Vec3d[nPoint];
 
@@ -264,6 +265,7 @@ class OrbSim_f : public Picker { public:
         _realloc( points, nPoint    );
         _realloc( forces, nPoint    );
         _realloc( vel,    nPoint    );
+        _realloc( bvec,   nPoint    );
         _realloc( impuls, nPoint    );
         _realloc( params, nNeighTot );
         _realloc( kngs,   nNeighTot );
@@ -386,6 +388,80 @@ class OrbSim_f : public Picker { public:
         //return  bparams[ib].y;  //k = kPress;
         return  bparams[ib].z;  //k = kTens;  
     }
+
+    void updatePD_RHS( const Vec3f* pnew, Quat4f* bvec ){  // RHS for projective dynamics
+        for(int i=0; i<nPoint; i++){
+            const Vec3f    pi = pnew[i];
+            const float idt2 = 1.0 / (dt * dt);
+            double         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3f bi; bi.set_mul(pi, Ii );   // b_i    =  M_i/dt^2 p'_i   +  \sum_j ( K_{ij} d_{ij} )         
+            double Aii = Ii;                 // A_{ii} =  M_i/dt^2        +  \sum_j   K_{ij} 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                const Quat4f par = params[j];
+                const Vec3f  pj  = pnew[jG];
+                const Vec3f  dij = pi - pj;
+                const float  l   = dij.norm();
+                const float  k   = par.z;
+                bi   .add_mul( dij, k*par.x/l );   // RHS      bi  = \sum_j K_{ij} d_{ij} (+ inertial term M_i/dt^2 p'_i )
+                Aii  += k;                         // diagonal Aii =  \sum_j k_{ij}       (+ inertial term M_i/dt^2      )
+            }
+            bvec[i].f = bi;  // use forces array to store RHS vector
+            bvec[i].w = Aii;
+        }
+    }
+
+    // evaluate f = A p
+    void dotPD( const Vec3f* p, Vec3f* f ){  // RHS for projective dynamics
+        for(int i=0; i<nPoint; i++){
+            const Vec3f    pi = p[i];
+            const float idt2 = 1.0 / (dt * dt);
+            float         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3f fi           = Vec3fZero;   // sum_j  =  \sum_j ( K_{ij} p_j} )   + Aii * pi        
+            float Aii  = Ii;                 // A_{ii} =  \sum_j   K_{ij}          + M_i/dt^2 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                const Quat4f par = params[j];
+                const Vec3f  pj  = p[jG];
+                const float  k   = par.z;
+                fi.add_mul( pj, -k ); 
+                Aii  += k;                  
+            }
+            fi .add_mul( pi, Aii );
+            f[i] = fi;
+        }
+    }
+
+    void updateJacobi_lin( Quat4f* ps_in, Quat4f* ps_out, Quat4f* bvec, Quat4f* rs=0 ){
+        //printf( "OrbSim_f::updateJacobi_lin() \n" );
+        for(int i=0; i<nPoint; i++){
+            const int j0 = i * nNeighMax;
+            Quat4f sum_j  = Quat4fZero;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                sum_j.add_mul( ps_in[jG],  params[j].z );   // kPull
+            }
+            const Quat4f bi     = bvec[i];  // forces array stores RHS vector
+            if(ps_out ) ps_out[i] = (bi + sum_j       )*(1/bi.w);
+            if(rs     ) rs    [i] = (bi + sum_j - ps_in[i]*bi.w );
+        }
+    }
+
+    // Implements Solver<float>::solve
+    //virtual void solve(int n, float* x, float* b) override { };
+    //virtual void solve(int n, double* x, double* b) override { };
+
+    
     __attribute__((hot)) 
     void make_PD_Matrix( float* A, float dt ) {
         printf( "OrbSim_f::make_PD_Matrix() dt=%g\n", dt );
@@ -486,13 +562,13 @@ class OrbSim_f : public Picker { public:
     // }
 
     __attribute__((hot)) 
-    void rhs_ProjectiveDynamics(const Vec3f* pnew, Vec3f* b) {
+    void rhs_ProjectiveDynamics(const Quat4f* pnew, Quat4f* b) {
         printf("OrbSim_f::rhs_ProjectiveDynamics() nPoint=%i nNeighMax=%i @nNeighMaxLDLT=%i @pnew=%p b=%p\n", nPoint, nNeighMax, nNeighMaxLDLT, pnew, b );
         float idt2 = 1.0 / (dt * dt);
         for (int i=0; i<nPoint; i++) {
             float    Ii  = points[i].w*idt2; 
             if(kFix) Ii += kFix[i];
-            Vec3f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
+            Quat4f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
             int2* ngi = neighBs + (i*nNeighMax);
             int ni = 0;
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -504,8 +580,8 @@ class OrbSim_f : public Picker { public:
                 int2   b = bonds[ib];
                 int j    = (b.x == i) ? b.y : b.x;
                 //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
-                Vec3f d = pnew[i] -  pnew[j];
-                bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+                Vec3f d = pnew[i].f -  pnew[j].f;
+                bi.f.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
                 ni++;
             }
             //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
@@ -514,11 +590,11 @@ class OrbSim_f : public Picker { public:
     }
 
     __attribute__((hot)) 
-    Vec3f rhs_ProjectiveDynamics_i(int i, const Vec3f* pnew) {
+    Quat4f rhs_ProjectiveDynamics_i(int i, const Quat4f* pnew) {
         float  idt2  = 1.0 / (dt * dt);
         float    Ii  = points[i].w*idt2; 
         if(kFix) Ii += kFix[i];
-        Vec3f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
+        Quat4f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
         int2* ngi = neighBs + (i*nNeighMax);
         int ni = 0;
         for( int ing=0; ing<nNeighMax; ing++ ){
@@ -530,8 +606,8 @@ class OrbSim_f : public Picker { public:
             int2  b  = bonds[ib];
             int j    = (b.x == i) ? b.y : b.x;
             //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
-            Vec3f d = pnew[i] -  pnew[j];
-            bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+            Vec3f d = pnew[i].f -  pnew[j].f;
+            bi.f.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
             ni++;
         }
         //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
@@ -539,7 +615,7 @@ class OrbSim_f : public Picker { public:
     }
 
     __attribute__((hot)) 
-    void rhs_ProjectiveDynamics_(const Vec3f* pnew, Vec3f* b) {
+    void rhs_ProjectiveDynamics_(const Quat4f* pnew, Quat4f* b) {
         float idt2 = 1.0 / (dt * dt);
         for (int i=0; i<nPoint; i++) {
             b[i] = rhs_ProjectiveDynamics_i(i,pnew);
@@ -552,8 +628,8 @@ class OrbSim_f : public Picker { public:
         int n2 = nPoint*nPoint;
         // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
         if(bDens){ _realloc0( PDmat      ,n2    , 0.0f      ); }
-        _realloc0( ps_cor     ,nPoint, Vec3fZero );
-        _realloc0( ps_pred    ,nPoint, Vec3fZero );
+        _realloc0( ps_cor     ,nPoint, Quat4fZero );
+        _realloc0( ps_pred    ,nPoint, Quat4fZero );
         _realloc0( linsolve_b ,nPoint, Vec3fZero );
         if(bCholesky){
             _realloc0(  linsolve_yy,nPoint, Vec3fZero);
@@ -635,14 +711,15 @@ class OrbSim_f : public Picker { public:
             //evalForces();
             // Predict step
             for (int i=0;i<nPoint;i++){ 
-                ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; 
+                ps_pred[i].f = points[i].f + vel[i].f*dt + forces[i].f*dt2; 
                 //printf( "ps_pred[%3i](%10.6f,%10.6f,%10.6f) v(%10.6f,%10.6f,%10.6f) p(%10.6f,%10.6f,%10.6f) dt=%g \n", i, ps_pred[i].x,ps_pred[i].y,ps_pred[i].z, vel[i].x,vel[i].y,vel[i].z, points[i].x,points[i].y,points[i].z, dt );
             }
 
             // Apply fixed constraints
-            if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
+            if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i].f = points[i].f; } }
             // Compute right-hand side
-            rhs_ProjectiveDynamics(ps_pred, linsolve_b );
+            rhs_ProjectiveDynamics(ps_pred, ps_cor );
+            for(int i=0; i<nPoint; i++){ linsolve_b[i] = ps_cor[i].f; }
 
             long t0 = getCPUticks();
             switch( (LinSolveMethod)linSolveMethod ){
@@ -670,12 +747,12 @@ class OrbSim_f : public Picker { public:
                 // To-Do : We need more rigorous approach how to update velocity
                 // position-based velocity update
                 float vr2 = vel[i].norm2();
-                Vec3f v    = (ps_cor[i] - points[i].f);
+                Vec3f v    = (ps_cor[i].f - points[i].f);
                 v.mul(inv_dt);
                 if(kFix){ if( kFix[i] > 1e-8){ v=Vec3fZero; } }
                 vel[i].f = v;
                 // update positions
-                points[i].f = ps_cor[i];
+                points[i].f = ps_cor[i].f;
             }
             // Call user update function if set
             //if (user_update){ user_update(dt);}
@@ -693,19 +770,19 @@ class OrbSim_f : public Picker { public:
         int iter=0;
         for (iter = 0; iter < niter; iter++) {
             #pragma omp simd
-            for (int i=0;i<nPoint;i++){ ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2;  }
+            for (int i=0;i<nPoint;i++){ ps_pred[i].f = points[i].f + vel[i].f*dt + forces[i].f*dt2;  }
             #pragma omp simd
-            for (int i=0;i<nPoint;i++){ linsolve_b[i] = rhs_ProjectiveDynamics_i(i,ps_pred); }
+            for (int i=0;i<nPoint;i++){ linsolve_b[i] = rhs_ProjectiveDynamics_i(i,ps_pred).f; }
             Lsparse.fwd_subs_m( m,  (float*)linsolve_b,  (float*)linsolve_yy );            
             #pragma omp simd
             for(int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
             LsparseT.fwd_subs_T_m( m,  (float*)linsolve_yy,  (float*)ps_cor );
             #pragma omp simd
             for (int i=0;i<nPoint;i++) {
-                Vec3f    v   = (ps_cor[i] - points[i].f) * inv_dt;
+                Vec3f    v   = (ps_cor[i].f - points[i].f) * inv_dt;
                 if(kFix){ if( kFix[i] > 1e-8){ v=Vec3fZero; } }
                 vel[i].f    = v;
-                points[i].f = ps_cor[i];
+                points[i].f = ps_cor[i].f;
             }
         }
     }

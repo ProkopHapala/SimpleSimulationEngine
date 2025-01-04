@@ -94,7 +94,7 @@ void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, sim, (doubl
 void runSim( OrbSim& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
-        printf( "runSim() linSolveMethod=%i\n", sim.linSolveMethod  );
+        //printf( "runSim() linSolveMethod=%i\n", sim.linSolveMethod  );
         if( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Force ){
             //sim.run( niter, 1e-3, 1e-8 );
             sim.run_omp( niter, false, 1e-3, 1e-4 );
@@ -439,6 +439,22 @@ void SpaceCraftEditorApp::draw(){
     glLineWidth(1.0); 
     runSim( sim, bShipReady?perFrame:1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+    glLineWidth(3.0); glColor3f(0.0,0.5,0.0);
+    //printf( "sim.damped_bonds.size() %i \n", sim.damped_bonds.size() );
+    for(int i: sim.damped_bonds){
+        int2 b = sim.bonds[i];
+        Draw3D::drawLine( sim.points[b.x].f, sim.points[b.y].f );
+    }
+    glLineWidth(1.0);
+
+    glPointSize(5.0);
+    glBegin(GL_POINTS);
+    for(int i: sim.damped_points){ Draw3D::vertex( sim.points[i].f ); }
+    glEnd();
+    glPointSize(1.0);
+
+    
     glColor3f(0.0,0.0,0.0);
     if(bShipReady==false)renderPoinSizes( sim.nPoint, sim.points, 1.0 );
 

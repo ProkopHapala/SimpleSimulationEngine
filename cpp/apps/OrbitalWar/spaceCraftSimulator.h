@@ -55,6 +55,7 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
     sim.cleanVel();
     sim.cleanForce();
+    sim.addAngularVelocity( sim.pos0, sim.omega.f*sim.omega.w );   
     //if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
     //sim.addAngularVelocity( p0, Vec3dZ*0.01 );   
     //sim.addAngularVelocity2( p0, Vec3dZ*0.000001 ); // accelerate more the end

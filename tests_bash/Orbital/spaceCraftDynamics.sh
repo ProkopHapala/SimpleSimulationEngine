@@ -38,7 +38,10 @@ export LD_PRELOAD
 #./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 2 -perframe 100  -G 0.0,-9.81,0.0
 
 #./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 4  -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
-./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 11 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 11 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 12 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,50 -method 12 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 10
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,50 -method 2  -perframe 10  -G 0.0,-9.81,0.0  
 
 #./$name.x -dt 0.05 -double -fix 2 -shape 2,10 -method 2 -perframe 100   -G 0.0,-9.81,0.0
 
@@ -56,6 +59,11 @@ export LD_PRELOAD
 #./$name.x -s data/ship_ICF_interceptor_1.lua
 #./$name.x -s data/ship_ICF_marksman_1.lua
 #./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua
+
+#./$name.x -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -method 12 -perframe 10  -nsolve 10
+./$name.x -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -method 2 -perframe 10  
+
+
 #./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua   -method  6   -nsolve 50 -bmix 3,0.95
 #./$name.x -s data/ship_NFPP_pendulum_1.lua
 #./$name.x -s data/ship_NTR_marksman_1.lua

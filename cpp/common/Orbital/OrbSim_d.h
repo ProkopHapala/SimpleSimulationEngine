@@ -163,16 +163,16 @@ struct SmartMixer{
 
 class OrbSim: public Picker { public:
     double time=0;
-    double Cdrag = -10.1;
+    double Cdrag   = 0.0;
     //Vec3d Gravity = {0,-9.81,0};
     // Rotating frame
-    //Vec3d p0{0.,0.,0.};
-    //Vec3d ax{0.0,0.0,1.0};
+    Vec3d pos0{0.,0.,0.};
+    Vec3d ax{0.0,0.0,1.0};
     //double omega = 0.05;
     //Quat4d accel{ 0.0,-9.81 , 0.0 , 0.0 };    // acceleration
-    Quat4d accel{ 0.0, 0.0 , 0.0 , 0.0 };    // acceleration
-    Quat4d rot0 { 0.0, 0.0  , 0.0 , 0.0 };    // center of rotation
-    Quat4d omega{ 0.0, 0.0  , 1.0 , 0.05 };    // angular velocity
+    Quat4d accel{ 0.0, 0.0 , 0.0 , 0.0  };    // acceleration
+    Quat4d rot0 { 0.0, 0.0 , 0.0 , 0.0  };    // center of rotation
+    Quat4d omega{ 0.0, 0.0 , 0.0 , 0.05 };    // angular velocity
 
     //double dt      = 2e-3; //double kGlobal = 1e+6;
     //double dt      = 2e-3;    double kGlobal = 1e+7;
@@ -181,15 +181,26 @@ class OrbSim: public Picker { public:
     double damping  = 0.05;
     int nSolverIters = 10;
 
+    std::vector<int> damped_bonds;
+    std::unordered_set<int> damped_points;
+
+
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
     Quat4d* points=0;  // position and mass
     Quat4d* forces=0;  // force and energy
     Quat4d* vel   =0;  // velocity
+    Quat4d* vel0 = 0;
     //Quat4d* impuls=0;  // accumulated impulse from corrector
     Quat4d* bvec  =0;  // right hand side of linear system Ap=b ( it has meaning of internal force due to projective dybamics matrix A = K + D + I ) 
     Vec3d * bvec0 =0;
 
+    //Solver<float>* solver_f = 0;
+    
+    // Binding to external linear solver of system Ap=b ( where A is matrix of projective dynamics )
+    Quat4f* extern_b = 0;
+    Quat4f* extern_x = 0;
+    void (*extern_solve)();   // function pointer extern_solve
 
     double* kFix=0;   // force constant for fixed points
     double  kLinRegularize = 1.0;
@@ -221,7 +232,7 @@ class OrbSim: public Picker { public:
 
     // choice of linear solver method
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10, JacobiDiff=11 };
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10, JacobiDiff=11, ExternDiff=12 };
     bool   bApplyResudualForce = true;
     double residualForceFactor = 1.0;
 
@@ -315,25 +326,26 @@ class OrbSim: public Picker { public:
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
-        _realloc( points, nPoint    );
-        _realloc( forces, nPoint    );
-        _realloc( vel,    nPoint    );
-        _realloc( bvec,   nPoint    );
-        _realloc( bvec0,  nPoint    );
-        _realloc( ps_0,   nPoint    );
-        //_realloc( impuls, nPoint    );
-        _realloc( params, nNeighTot );
-        _realloc( neighs, nNeighTot );
-        _realloc( neighBs,nNeighTot );
-        _realloc( neighB2s,nNeighTot );
+        _realloc0( points, nPoint   , Quat4dZero );
+        _realloc0( forces, nPoint   , Quat4dZero );
+        _realloc0( vel,    nPoint   , Quat4dZero );
+        _realloc0( vel0,    nPoint   , Quat4dZero );
+        _realloc0( bvec,   nPoint   , Quat4dZero );
+        _realloc0( bvec0,  nPoint   , Vec3dZero  );
+        _realloc0( ps_0,   nPoint   , Vec3dZero  );
+        //_realloc( impuls, nPoint  , Quat4dZero ); );
+        _realloc0( params, nNeighTot , Quat4dZero );
+        _realloc0( neighs, nNeighTot , 0 );
+        _realloc0( neighBs,nNeighTot , {0,0} );
+        _realloc0( neighB2s,nNeighTot, 0 );
 
         if(nBonds_>0){
             nBonds=nBonds_;
-            _realloc( bonds,     nBonds );
-            _realloc( strain,    nBonds );
+            _realloc0( bonds,     nBonds, {0,0} );
+            _realloc0( strain,    nBonds, 0.0 );
             //_realloc( l0s,       nBonds );
-            _realloc( maxStrain, nBonds );
-            _realloc( bparams,   nBonds );
+            _realloc0( maxStrain, nBonds, {0.0,0.0} );
+            _realloc0( bparams,   nBonds, Quat4dZero );
         }
     }
 
@@ -357,6 +369,24 @@ class OrbSim: public Picker { public:
         if(bEdge  &&(nBonds>0) ){ edgeBBs .realloc( nBBs, nBonds, true ); if(bClean)pointBBs.clean(); }
         if(bFace  &&(nFaces>0) ){ faceBBs .realloc( nBBs, nFaces, true ); if(bClean)pointBBs.clean(); }
          //_realloc( , nBBs, nPoint );
+    }
+
+
+    double norm_butFixed( Vec3d* ps ){
+        double r2 = 0.0;
+        for (int i=0; i<nPoint; i++){ 
+            if(kFix){ if(kFix[i]>1e-8) continue; }
+            r2 += ps[i].norm2();
+        }
+        return sqrt(r2);;
+    }
+    double norm_butFixed( Quat4d* ps ){
+        double r2 = 0.0;
+        for (int i=0; i<nPoint; i++){ 
+            if(kFix){ if(kFix[i]>1e-8) continue; }
+            r2 += ps[i].f.norm2();
+        }
+        return sqrt(r2);;
     }
 
     // ================= Bounding Boxes
@@ -815,43 +845,36 @@ class OrbSim: public Picker { public:
         }
     }
 
-    double norm_butFixed( Vec3d* ps ){
-        double r2 = 0.0;
-        for (int i=0; i<nPoint; i++){ 
-            if(kFix){ if(kFix[i]>1e-8) continue; }
-            r2 += ps[i].norm2();
-        }
-        return sqrt(r2);;
-    }
-    double norm_butFixed( Quat4d* ps ){
-        double r2 = 0.0;
-        for (int i=0; i<nPoint; i++){ 
-            if(kFix){ if(kFix[i]>1e-8) continue; }
-            r2 += ps[i].f.norm2();
-        }
-        return sqrt(r2);;
-    }
-
     // Here we replace Ap=b   by    A(p-p0) = b-Ap0
     void updateIterativeJacobiDiff( Vec3d* psa, Vec3d* psb ){
         dotPD       ( psa, bvec0 );     // b0 = Ap0
         updatePD_RHS( psa, bvec  );     // b = Kd + Ip'
         // Debug:
-            double p0_norm  = norm_butFixed( psa );
-            double b_norm   = norm_butFixed( bvec );
-            double b0_norm  = norm_butFixed( bvec0 );
+        //    double p0_norm  = norm_butFixed( psa );
+        //    double b_norm   = norm_butFixed( bvec );
+        //    double b0_norm  = norm_butFixed( bvec0 );
         for (int i=0; i<nPoint; i++){ bvec[i].f.sub(bvec0[i]);  }           //  db = b - b0 
         for (int i=0; i<nPoint; i++){ ps_0[i]=psa[i]; psa[i]=Vec3dZero; }   //  dp = p - p0   
         // Debug:
-            double db_norm  = norm_butFixed( bvec );
+        //    double db_norm  = norm_butFixed( bvec );
         for (int i = 0; i < nSolverIters; i++) {  
             updateJacobi_lin( psa, psb, bvec );
             for (int i=0; i<nPoint; i++){ psa[i]=psb[i]; }
         }
         for (int i=0; i<nPoint; i++){ psb[i].add(ps_0[i]); }   //  p = p0 + dp 
         // Debug:
-            double dp_norm  = norm_butFixed( psa );
-            printf( "updateIterativeJacobiDiff() p0_norm: %g b0_norm: %g b_norm: %g db_norm: %g dp_norm: %g \n", p0_norm, b0_norm, b_norm, db_norm, dp_norm );
+        //    double dp_norm  = norm_butFixed( psa );
+        //    printf( "updateIterativeJacobiDiff() p0_norm: %g b0_norm: %g b_norm: %g db_norm: %g dp_norm: %g \n", p0_norm, b0_norm, b_norm, db_norm, dp_norm );
+    }
+
+    // Here we replace Ap=b   by    A(p-p0) = b-Ap0
+    void updateIterativeExternDiff( Vec3d* psa, Vec3d* psb ){
+        dotPD       ( psa, bvec0 );     // b0 = Ap0
+        updatePD_RHS( psa, bvec  );     // b = Kd + Ip'
+        for (int i=0; i<nPoint; i++){ Quat4d b=bvec[i]; b.f.sub(bvec0[i]); extern_b[i]=(Quat4f)b; }   //  db = b - b0 
+        for (int i=0; i<nPoint; i++){ extern_x[i] = Quat4fZero;           }       //  dp = p - p0   
+        extern_solve();
+        for (int i=0; i<nPoint; i++){ psb[i] = (Vec3d)extern_x[i].f + psa[i]; }   //  p = p0 + dp 
     }
 
     /*    double run_updateJacobi_smart( int psa, int psb, int itr ) {
@@ -883,6 +906,7 @@ class OrbSim: public Picker { public:
     //     _realloc0(  linsolve_b ,nPoint, Vec3dZero );
     //     _realloc0(  linsolve_yy,nPoint, Vec3dZero);
     // }
+
 
     void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
         printf( "OrbSim_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
@@ -1005,6 +1029,16 @@ class OrbSim: public Picker { public:
         return (vel[i].f*Cdrag) + (accel.f*points[i].w);
     }
 
+    void dampPoints( double Vdamping ){
+        for (int i : damped_points){
+            Vec3d vi  = vel [i].f;
+            Vec3d vi0 = vel0[i].f;
+            Vec3d acc = (vi0-vi) * Vdamping;
+            vel0[i].f.add_mul( acc, -dt );
+            forces[i].f.add_mul( acc, points[i].w );
+        }
+    }
+
     __attribute__((hot)) 
     void run_LinSolve(int niter) {
         //printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i \n", linSolveMethod, nSolverIters  );
@@ -1014,8 +1048,6 @@ class OrbSim: public Picker { public:
         double inv_dt = 1/dt;
         cleanForce();
 
-        
-
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
             
@@ -1023,6 +1055,8 @@ class OrbSim: public Picker { public:
             //evalForces();
             if (user_update){ user_update(dt);}
             evalEdgeVerts();
+
+            dampPoints( 2.5 );   // Damping - this is not rigorous - it does not perfectly preserve momentum / angular momentum, resp. points have like double the mass
 
             //  Predictor step
             for (int i=0;i<nPoint;i++){ 
@@ -1045,7 +1079,10 @@ class OrbSim: public Picker { public:
                     updateIterativeJacobi( ps_pred, ps_cor  );
                 } break;
                 case LinSolveMethod::JacobiDiff:{
-                    updateIterativeJacobiDiff( ps_pred, ps_cor  );
+                    updateIterativeJacobiDiff( ps_pred, ps_cor );
+                } break;
+                case LinSolveMethod::ExternDiff:{
+                    updateIterativeExternDiff( ps_pred, ps_cor );
                 } break;
                 case LinSolveMethod::GaussSeidel:{
                     //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
