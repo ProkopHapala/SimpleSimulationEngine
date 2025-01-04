@@ -7,6 +7,8 @@
 #include "Mat3.h"
 #include "quaternion.h"
 //#include "datatypes.h"  
+#include "VecN.h"
+
 
 #include "Buckets.h"
 
@@ -186,6 +188,8 @@ class OrbSim: public Picker { public:
     Quat4d* vel   =0;  // velocity
     //Quat4d* impuls=0;  // accumulated impulse from corrector
     Quat4d* bvec  =0;  // right hand side of linear system Ap=b ( it has meaning of internal force due to projective dybamics matrix A = K + D + I ) 
+    Vec3d * bvec0 =0;
+
 
     double* kFix=0;   // force constant for fixed points
     double  kLinRegularize = 1.0;
@@ -217,7 +221,7 @@ class OrbSim: public Picker { public:
 
     // choice of linear solver method
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10 };
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10, JacobiDiff=11 };
     bool   bApplyResudualForce = true;
     double residualForceFactor = 1.0;
 
@@ -225,6 +229,7 @@ class OrbSim: public Picker { public:
     Vec3d*  ps_pred     =0; // new Vec3d[nPoint]; 
     Vec3d*  linsolve_b  =0; // new Vec3d[nPoint];
     Vec3d*  linsolve_yy =0; // new Vec3d[nPoint];
+    Vec3d*  ps_0        =0;
 
     int     nBonds  =0;    // number of bonds
     Quat4d* bparams =0;    // bond parameters (l0,kPress,kTens,damp)
@@ -314,6 +319,8 @@ class OrbSim: public Picker { public:
         _realloc( forces, nPoint    );
         _realloc( vel,    nPoint    );
         _realloc( bvec,   nPoint    );
+        _realloc( bvec0,  nPoint    );
+        _realloc( ps_0,   nPoint    );
         //_realloc( impuls, nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
@@ -612,6 +619,31 @@ class OrbSim: public Picker { public:
         }
     }
 
+    // evaluate f = A p
+    void dotPD( const Vec3d* p, Vec3d* f ){  // RHS for projective dynamics
+        for(int i=0; i<nPoint; i++){
+            const Vec3d    pi = p[i];
+            const double idt2 = 1.0 / (dt * dt);
+            double         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3d fi           = Vec3dZero;   // sum_j  =  \sum_j ( K_{ij} p_j} )   + Aii * pi        
+            double Aii  = Ii;                 // A_{ii} =  \sum_j   K_{ij}          + M_i/dt^2 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                const Quat4d par = params[j];
+                const Vec3d  pj  = p[jG];
+                const double k   = par.z;
+                fi.add_mul( pj, -k ); 
+                Aii  += k;                  
+            }
+            fi .add_mul( pi, Aii );
+            f[i] = fi;
+        }
+    }
+
     void updateJacobi_lin( Vec3d* ps_in, Vec3d* ps_out, Quat4d* bvec, Vec3d* rs=0 ){
         for(int i=0; i<nPoint; i++){
             const int j0 = i * nNeighMax;
@@ -773,6 +805,53 @@ class OrbSim: public Picker { public:
         }
 
         for (int i=0; i<nPoint; i++){ psb[i]=psa[i]; }
+    }
+
+    void updateIterativeJacobi( Vec3d* psa, Vec3d* psb ){
+        updatePD_RHS(psa, bvec );
+        for (int i = 0; i < nSolverIters; i++) {  
+            updateJacobi_lin( psa, psb, bvec ); 
+            for (int i=0; i<nPoint; i++){ psa[i]=psb[i]; }
+        }
+    }
+
+    double norm_butFixed( Vec3d* ps ){
+        double r2 = 0.0;
+        for (int i=0; i<nPoint; i++){ 
+            if(kFix){ if(kFix[i]>1e-8) continue; }
+            r2 += ps[i].norm2();
+        }
+        return sqrt(r2);;
+    }
+    double norm_butFixed( Quat4d* ps ){
+        double r2 = 0.0;
+        for (int i=0; i<nPoint; i++){ 
+            if(kFix){ if(kFix[i]>1e-8) continue; }
+            r2 += ps[i].f.norm2();
+        }
+        return sqrt(r2);;
+    }
+
+    // Here we replace Ap=b   by    A(p-p0) = b-Ap0
+    void updateIterativeJacobiDiff( Vec3d* psa, Vec3d* psb ){
+        dotPD       ( psa, bvec0 );     // b0 = Ap0
+        updatePD_RHS( psa, bvec  );     // b = Kd + Ip'
+        // Debug:
+            double p0_norm  = norm_butFixed( psa );
+            double b_norm   = norm_butFixed( bvec );
+            double b0_norm  = norm_butFixed( bvec0 );
+        for (int i=0; i<nPoint; i++){ bvec[i].f.sub(bvec0[i]);  }           //  db = b - b0 
+        for (int i=0; i<nPoint; i++){ ps_0[i]=psa[i]; psa[i]=Vec3dZero; }   //  dp = p - p0   
+        // Debug:
+            double db_norm  = norm_butFixed( bvec );
+        for (int i = 0; i < nSolverIters; i++) {  
+            updateJacobi_lin( psa, psb, bvec );
+            for (int i=0; i<nPoint; i++){ psa[i]=psb[i]; }
+        }
+        for (int i=0; i<nPoint; i++){ psb[i].add(ps_0[i]); }   //  p = p0 + dp 
+        // Debug:
+            double dp_norm  = norm_butFixed( psa );
+            printf( "updateIterativeJacobiDiff() p0_norm: %g b0_norm: %g b_norm: %g db_norm: %g dp_norm: %g \n", p0_norm, b0_norm, b_norm, db_norm, dp_norm );
     }
 
     /*    double run_updateJacobi_smart( int psa, int psb, int itr ) {
@@ -963,11 +1042,10 @@ class OrbSim: public Picker { public:
             switch( (LinSolveMethod)linSolveMethod ){
                 case LinSolveMethod::Jacobi:{
                     //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
-                    updatePD_RHS(ps_pred, bvec );
-                    for (int i = 0; i < nSolverIters; i++) {  
-                        updateJacobi_lin( ps_pred, ps_cor, bvec ); 
-                        for (int i=0; i<nPoint; i++){ ps_pred[i]=ps_cor[i]; }
-                    }
+                    updateIterativeJacobi( ps_pred, ps_cor  );
+                } break;
+                case LinSolveMethod::JacobiDiff:{
+                    updateIterativeJacobiDiff( ps_pred, ps_cor  );
                 } break;
                 case LinSolveMethod::GaussSeidel:{
                     //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );

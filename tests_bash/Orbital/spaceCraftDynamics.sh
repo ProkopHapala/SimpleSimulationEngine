@@ -35,7 +35,11 @@ export LD_PRELOAD
 #./$name.x -dt 0.1 -double -shape 2,20 -method 2 -perframe 10
 #./$name.x -dt 0.01 -double -fix 0 -shape 2,10 -method 2 -perframe 10
 #./$name.x -dt 0.0025 -double -fix 2 -shape 2,10 -method 2 -perframe 400
-./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 2 -perframe 100  -G 0.0,-9.81,0.0
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 2 -perframe 100  -G 0.0,-9.81,0.0
+
+#./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 4  -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
+./$name.x -dt 0.01 -double -fix 2 -shape 2,10 -method 11 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 30
+
 #./$name.x -dt 0.05 -double -fix 2 -shape 2,10 -method 2 -perframe 100   -G 0.0,-9.81,0.0
 
 
