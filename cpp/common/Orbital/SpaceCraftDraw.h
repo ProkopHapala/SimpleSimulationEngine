@@ -206,7 +206,7 @@ void drawSliderBonds( OrbSim& sim ){
     //glLineWidth(3.0);
 }
 
-void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
+void drawSliders( SpaceCraft& craft, OrbSim& sim  ){
     // --- draw slider bonds
     //for( const Slider* o: theSpaceCraft->sliders){ 
     glBegin(GL_LINES);
@@ -214,7 +214,6 @@ void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
         const Slider* o = craft.sliders[i];
         // glColor3f(0.0,0.5,1.0);
         // drawSliderPath( o, sim.points, 10 ); 
-        glColor3f(1.0,0.0,1.0);
         Vec3d p  = sim.getEdgeVertPos( i );
         Vec3d p0 = sim.points[ o->ivert ].f;
         //Draw3D::drawLine( p0, p );
@@ -224,13 +223,14 @@ void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
     glEnd();
 }
 
-
-
-
-
-
-
-
+void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
+    //Draw3D::color(Vec3d{1.0f,0.0f,1.0f});
+    for(int i=0; i<craft.sliders.size(); i++){
+        const Slider& o = *craft.sliders[i];
+        Draw3D::drawLineStrip( o.path.n, o.path.ps, sim.points, o.path.closed );
+    }
+}
+    
 
 
 // ========================   Asteroid

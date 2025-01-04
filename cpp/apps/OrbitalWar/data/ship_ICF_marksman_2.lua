@@ -49,8 +49,8 @@ gUp = Girder( n0, nUp, xvec, 20, 2, {Rg1,Rg1}, "Steel", g1_st )
 gLf  = Girder( n0, nLf, zvec, 10, 2, {Rg2,Rg2}, "Steel", g1_st )
 gRt  = Girder( n0, nRt, zvec, 10, 2, {Rg2,Rg2}, "Steel", g1_st )
 
-gWdw = Girder( nDw, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
-gWup = Girder( nUp, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
+--gWdw = Girder( nDw, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
+--gWup = Girder( nUp, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
 
 Weld( gFw, gUp, 10.0, st4 )
 Weld( gFw, gDw, 10.0, st4 )
@@ -74,9 +74,12 @@ Rope(nFw,nLf, 25.,4, preS1, "Kevlar" )
 Rope(nBk,nRt, 25.,4, preS1, "Kevlar" );
 Rope(nFw,nRt, 25.,4, preS1, "Kevlar" )
 Rope(nBk,nDw, 25.,4, preS1, "Kevlar" );
---Rope(nFw,nDw, 25.,4, preS1, "Kevlar" )
+
 Rope(nBk,nUp, 25.,4, preS1, "Kevlar");
---Rope(nFw,nUp, 25.,4, preS1, "Kevlar" )
+
+
+Rope(nFw,nUp, 25.,4, preS1, "Kevlar" )
+Rope(nFw,nDw, 25.,4, preS1, "Kevlar" )
 
 Rope(nLf,nDw, 25.,4, preS1, "Kevlar");
 Rope(nLf,nUp, 25.,4, preS1, "Kevlar");
@@ -99,6 +102,9 @@ Rope2( {gFw,gLf}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gRt}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gDw}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gUp}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
+
+--Rope2( {gFw,gDw}, {0.9,2.0}, 25.,4, preS2, "Kevlar");
+--Rope2( {gFw,gUp}, {0.9,2.0}, 25.,4, preS2, "Kevlar");
 
 print( "#------ Lua:BoundNodes and Girders" )
 
@@ -123,8 +129,8 @@ print( "#------ Lua:Rings & Sliders" )
 
 -- r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st )
 
-r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
-r_pitch = Ring2( {gBk,gUp,gDw,-1}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
+r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.5,0.22,0.22,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
+r_pitch = Ring2( {gFw,gUp,gDw,-1}, {0.15,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
 
 -- r_roll  = Ring2( {gLf,gUp,gDw,gRt}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
 -- r_pitch = Ring2( {gBk,gUp,gDw,gFw}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )

@@ -110,6 +110,18 @@ void drawLineStrip( int n, const int* inds, const Quat4f * ps, bool closed ){   
     for(int i=0; i<n; i++){ 
         Vec3f p=ps[inds[i]].f;
         //printf( "drawLineStrip[%i] ind=%i p(%g,%g,%g)\n", i, inds[i], p.x,p.y,p.z ); 
+        glVertex3f( p.x, p.y, p.z ); 
+    
+    };
+    glEnd();
+};
+
+void drawLineStrip( int n, const int* inds, const Quat4d * ps, bool closed ){   // closed=false
+    //printf( "Draw3d::drawLineStrip(n=%i) \n", n );
+    if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
+    for(int i=0; i<n; i++){ 
+        Vec3d p=ps[inds[i]].f;
+        //printf( "drawLineStrip[%i] ind=%i p(%g,%g,%g)\n", i, inds[i], p.x,p.y,p.z ); 
         glVertex3d( p.x, p.y, p.z ); 
     
     };

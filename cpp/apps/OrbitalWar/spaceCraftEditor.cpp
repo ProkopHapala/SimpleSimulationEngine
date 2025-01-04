@@ -150,6 +150,8 @@ void renderShip(){
     glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
 
+    //drawSliderPaths( *theSpaceCraft, sim  );
+
     /*
     Draw3D::color(Vec3d{1.0f,0.0f,1.0f});
     for(int i=0; i<theSpaceCraft->sliders.size(); i++){
@@ -263,7 +265,7 @@ void reloadShip( const char* fname  ){
 
     sim.user_update = SpaceCraftControl;
     sliders2edgeverts( *theSpaceCraft, sim );
-    renderShip();
+    //renderShip();
     //sim.updateInveriants(true);
     sim.updateInveriants(false);
     bShipReady = true;
@@ -378,6 +380,22 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     printf( "### SpaceCraftEditorApp() DONE\n" );
 }
 
+void renderPickedBBox( int picked_block, OrbSim& sim ){
+    // picking bounding boxes
+    // picked_block = sim.pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
+    if(picked_block>=0){
+        glPointSize(5);
+        glLineWidth(3);
+        Quat8d bb = sim.BBs[picked_block];
+        glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+        glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
+        glColor3f( 1.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointChunks,         sim.points );
+        glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
+    }
+    glLineWidth(1);
+    glLineWidth(1);
+}
+
 void SpaceCraftEditorApp::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -440,44 +458,35 @@ void SpaceCraftEditorApp::draw(){
     runSim( sim, bShipReady?perFrame:1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
-    glLineWidth(3.0); glColor3f(0.0,0.5,0.0);
-    //printf( "sim.damped_bonds.size() %i \n", sim.damped_bonds.size() );
-    for(int i: sim.damped_bonds){
-        int2 b = sim.bonds[i];
-        Draw3D::drawLine( sim.points[b.x].f, sim.points[b.y].f );
-    }
-    glLineWidth(1.0);
-
-    glPointSize(5.0);
-    glBegin(GL_POINTS);
-    for(int i: sim.damped_points){ Draw3D::vertex( sim.points[i].f ); }
-    glEnd();
-    glPointSize(1.0);
-
-    
-    glColor3f(0.0,0.0,0.0);
-    if(bShipReady==false)renderPoinSizes( sim.nPoint, sim.points, 1.0 );
-
     glDisable(GL_DEPTH_TEST);
 
-    picked_block = sim.pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
+    // ---- Draw Damped Points 
+    // glLineWidth(3.0); glColor3f(0.0,0.5,0.0);
+    // for(int i: sim.damped_bonds){  int2 b = sim.bonds[i];   Draw3D::drawLine( sim.points[b.x].f, sim.points[b.y].f );}
+    // glLineWidth(1.0);
+    // glPointSize(5.0);
+    // glBegin(GL_POINTS);
+    // for(int i: sim.damped_points){ Draw3D::vertex( sim.points[i].f ); }
+    // glEnd();
+    // glPointSize(1.0);
 
-    if(picked_block>=0){
-        glPointSize(5);
-        Quat8d bb = sim.BBs[picked_block];
-        glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
-        glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
-        glColor3f( 1.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointChunks,         sim.points );
-        glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
-    }
+    // ---- Draw Picked BBoxes
+    //picked_block = sim.pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
+    //renderPickedBBox( picked_block, sim );
+    
+    //glColor3f(0.0,0.0,0.0);if(bShipReady==false)renderPoinSizes( sim.nPoint, sim.points, 1.0 );
 
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
-    glColor3f(0.0,0.5,1.0);
-    //drawSliderBonds( sim );  // draw the lines connected to the two endpoints of the actual active edge of she slider path
-    drawSliderPaths( *theSpaceCraft, sim  ); // Draw Line connected to interpolated position of slider on its path 
+    // ---- Draw Sliders
+    glLineWidth(5.0);
+    glColor3f(0.0,0.5,1.0); drawSliderBonds( sim );                  // draw the lines connected to the two endpoints of the actual active edge of she slider path
+    glColor3f(1.0,0.0,1.0); drawSliders    ( *theSpaceCraft, sim  ); // Draw Line connected to interpolated position of slider on its path 
+    glLineWidth(3.0);
+    glColor3f(0.0,0.5,0.0); drawSliderPaths( *theSpaceCraft, sim  );
+    glLineWidth(1.0);
 
-    Draw3D::color( Vec3d{0.0,0.0,1.0} );
+    //Draw3D::color( Vec3d{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
 
 

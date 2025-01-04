@@ -1737,9 +1737,9 @@ class OrbSim: public Picker { public:
 
     //void evalEdgeVert( Vec3i b, double c, double K ){
     void evalEdgeVert( int i ){
-        Vec3i  b = edgeVertBonds[i].verts;
-        double c = edgeVertBonds[i].c;
-        double K = edgeVertBonds[i].K;
+        Vec3i  b = edgeVertBonds[i].verts; // vert indexes (edge.a,edge.b,ivert);
+        double c = edgeVertBonds[i].c;     //  interpolation parameter
+        double K = edgeVertBonds[i].K;     //  stiffness constant 
         // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
         // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
         // ToDo: Damping ( collision damping )
@@ -1761,9 +1761,9 @@ class OrbSim: public Picker { public:
         d.mul( K + imp*invL ); 
         edgeVertBonds[i].f = d;
         //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   
-        forces[b.x].f.add_mul(d,mc);
-        forces[b.y].f.add_mul(d, c);
-        forces[b.z].f.sub(d);
+        forces[b.x].f.add_mul(d,mc);  // edge vert 1
+        forces[b.y].f.add_mul(d, c);  // edge vert 2
+        forces[b.z].f.sub(d);         // vert
 
         // Force
         // const Quat4d& pa = points[b.x];

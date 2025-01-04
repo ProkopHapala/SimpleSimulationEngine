@@ -323,25 +323,26 @@ int l_Ring2    (lua_State * L){
 
     // Make nodes bound to nodes to attach ring to girders
     Slider* nd[4];
-    for(int i=0; i<4; i++){ 
+    for(int i=0; i<4; i++){    // max 4 anchor points
         if(gs[i]<0) continue;
         nd[i] = new Slider();
         nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
         if(cs[i]>0){
             nd[i]->calong = cs[i];
-            nd[i]->updateBound( p0 );
+            nd[i]->updateBound( p0 );   // find the nearest side of the girder to which the node is attached
             //printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
         }else{
             nd[i]->calong = -1.0;  // to be calculated later
         }
         nd[i]->id = theSpaceCraft->nodes.size(); 
-        theSpaceCraft->nodes.push_back( nd[i] ); 
+        theSpaceCraft->nodes  .push_back( nd[i] ); 
         theSpaceCraft->sliders.push_back( nd[i] );
         nd[i]->icontrol = icontrol;
         ((Slider**)&(o->nodes))[i] = nd[i];
     }
     // Warrning 1: what if nodes->pos are not yet defined (which is the case for BoundNodes)
-    o->R = circle_3point( nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b );   o->pose.rot.c.set_cross( o->pose.rot.b, o->pose.rot.a );
+    o->R = circle_3point( nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b );   // find the pos, rot, and radius of the ring from 3 points nd[1,2,3].pos
+    o->pose.rot.c.set_cross( o->pose.rot.b, o->pose.rot.a );
     //printf("o->pose.pos");   print( o->pose.pos );
     //printf("o->pose.rot.c"); print( o->pose.rot.c );
     //printf("o->pose.rot.b"); print( o->pose.rot.b );
@@ -350,7 +351,7 @@ int l_Ring2    (lua_State * L){
         if(gs[i]<0) continue;
         if(cs[i]<0){
             nd[i]->calong = intersect_RingGirder( o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true );
-            nd[i]->updateBound( p0 );
+            nd[i]->updateBound( p0 );   // find the nearest side of the girder to which the node is attached
             //printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
         }
     }
