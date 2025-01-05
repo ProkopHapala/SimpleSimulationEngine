@@ -312,6 +312,8 @@ class SpaceBody : public RigidBody  { public:
     }
 
     inline Vec3d getTrjPos( int iTrj, double du )const {
+        //if(iTrj <1) return trjPos[0];
+        //if(iTrj >= trj_n-2) return trjPos[trj_n-1];
         Vec3d p; Spline_Hermite::curve_point( du,trjPos[iTrj-1],trjPos[iTrj],trjPos[iTrj+1],trjPos[iTrj+2], p); return p;
     };
 

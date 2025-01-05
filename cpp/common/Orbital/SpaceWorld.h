@@ -218,6 +218,10 @@ class SpaceWorld : public ODEderivObject { public:
         }
     }
 
+    int validTrjIndex(int i){
+        if(i<1){ return 1; }else if (i>trj_n-2){ return trj_n-2; }else{ return i; }
+    }
+
     void objects2ode(){
         Vec3d  * pvs =  (Vec3d*)(ode.Y);
         double * ms  = masses;

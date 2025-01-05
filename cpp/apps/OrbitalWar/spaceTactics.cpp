@@ -252,6 +252,60 @@ class SpaceTactics : public AppSDL2OGL_3D { public:
 
 };
 
+
+void weapon_tests( SpaceWorld& world, ProjectedTarget& tg1 ){
+    double wavelenght = 1e-6;  // [m]
+    double aperture   = 30;    // [m]
+    double distance   = 1e+8;  // [m]
+    double power      = 1e+11; // [W]
+    print_Laser( wavelenght, aperture, distance, power );
+    double v0         = 20e+3; // [m/s]
+    double mass       = 1.0;   // [kg]
+    double shieldMass = 0.2;   // [kg]
+    double standOff   = 20.0;  // [m]
+    print_WibleShield( v0, mass, shieldMass, standOff );
+    //
+    double length      = 100;   // [m]
+    double maxPressure = 2e+9;  // [Pa]
+    double caliber     = 0.2;   // [m]
+    double thickness   = 0.01;  // [m]
+    double dens        = 18000; // [kg/m^3]
+    double molarMass   = 0.006; // [kg/mol]
+    double temperature = 50000; // [K]
+    print_AblationRocket( length, maxPressure, caliber, thickness, dens, molarMass, temperature );
+    //exit(0);
+    //                                                            mass   caliber );
+    world.projectileTypes.insert({"150g120mm",new ProjectileType("0.15   0.12")});
+    //                                                           length  maxForce maxPower scatter  fireRate  );
+    world.gunTypes       .insert({"rail800m",new SpaceGunType  ("800     60000    1e+9     2e-4     10")});
+    {
+        //ProjectileType pt;
+        //SpaceGunType   sg;
+        SpaceCombatant  ship;
+        SpaceGun        g;
+        //               mass   caliber );
+        //pt1.fromString( "0.15   0.12" );
+        //               length  maxForce maxPower scatter  fireRate  );
+        //sg1.fromString( "800     60000    1e+9     2e-4     10"       );
+        //SpaceGun g1( 1, &sg1, &pt1 );
+        //ship.guns.push_back( SpaceGun(1,world.gunTypes.get) );
+        //ship.guns.push_back( SpaceGun(1,) );
+        world.makeGun( g, 1, "rail800m", "150g120mm" );
+        ship.faction = 1;
+        for(int i=0; i<3; i++){
+            ship.body = &world.ships[i];
+            world.combatants.push_back( ship );
+        }
+    }
+    SpaceCombatant target;
+    target.faction = 2;
+    target.body = &world.ships[0];    // Initialize target.body to point to the first ship
+    target.targets.push_back( tg1 );
+    double dmg = world.evalDamage( target, 10.0, 1, 0 );
+    printf( "dmg %g \n", dmg );
+    
+}
+
 SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //    "%i %lf %lf %lf", &n, &layerDens, &spacing, &critEdens
@@ -360,72 +414,9 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     */
     zoom = 5;
 
-
-
-
-
-    double wavelenght = 1e-6;  // [m]
-    double aperture   = 30;    // [m]
-    double distance   = 1e+8;  // [m]
-    double power      = 1e+11; // [W]
-    print_Laser( wavelenght, aperture, distance, power );
-
-
-    double v0         = 20e+3; // [m/s]
-    double mass       = 1.0;   // [kg]
-    double shieldMass = 0.2;   // [kg]
-    double standOff   = 20.0;  // [m]
-    print_WibleShield( v0, mass, shieldMass, standOff );
-
-    //
-    double length      = 100;   // [m]
-    double maxPressure = 2e+9;  // [Pa]
-    double caliber     = 0.2;   // [m]
-    double thickness   = 0.01;  // [m]
-    double dens        = 18000; // [kg/m^3]
-    double molarMass   = 0.006; // [kg/mol]
-    double temperature = 50000; // [K]
-    print_AblationRocket( length, maxPressure, caliber, thickness, dens, molarMass, temperature );
-
+    weapon_tests( world, tg1 );
     //exit(0);
-
-
-    //                                                            mass   caliber );
-    world.projectileTypes.insert({"150g120mm",new ProjectileType("0.15   0.12")});
-    //                                                           length  maxForce maxPower scatter  fireRate  );
-    world.gunTypes       .insert({"rail800m",new SpaceGunType  ("800     60000    1e+9     2e-4     10")});
-
-    {
-        //ProjectileType pt;
-        //SpaceGunType   sg;
-        SpaceCombatant  ship;
-        SpaceGun        g;
-
-        //               mass   caliber );
-        //pt1.fromString( "0.15   0.12" );
-        //               length  maxForce maxPower scatter  fireRate  );
-        //sg1.fromString( "800     60000    1e+9     2e-4     10"       );
-        //SpaceGun g1( 1, &sg1, &pt1 );
-        //ship.guns.push_back( SpaceGun(1,world.gunTypes.get) );
-        //ship.guns.push_back( SpaceGun(1,) );
-
-        world.makeGun( g, 1, "rail800m", "150g120mm" );
-
-        ship.faction = 1;
-        for(int i=0; i<3; i++){
-            ship.body = &world.ships[i];
-            world.combatants.push_back( ship );
-        }
-
-    }
-
-    SpaceCombatant target;
-    target.faction = 2;
-    target.targets.push_back( tg1 );
-    double dmg = world.evalDamage( target, 10.0, 1, 0 );
-    printf( "dmg %g \n", dmg );
-    //exit(0);
-
+    
 }
 
 void SpaceTactics::draw(){
@@ -461,7 +452,10 @@ void SpaceTactics::draw(){
 
     for( BodyInteraction& bi : interactions ){ SpaceDraw::interactionTrj( bi, world ); }
 
-    for(SpaceBody& b : world.planets ){ b.getTrjPos(SpaceDraw::iTrjMin,0); };
+    //printf(  "@trjPos=%p SpaceDraw::iTrjMin=%i \n", b.trjPos, SpaceDraw::iTrjMin );
+    for(SpaceBody& b : world.planets ){ 
+        b.getTrjPos( world.validTrjIndex( SpaceDraw::iTrjMin),0); 
+    };
     glColor3f(0.0f,0.0f,1.0f); for(SpaceBody& b : world.ships   ){ SpaceDraw::bodyTrj( b ); }
 
 };
@@ -606,19 +600,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
