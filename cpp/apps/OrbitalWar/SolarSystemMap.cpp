@@ -96,7 +96,8 @@ class PlanetView : public ScreenSDL2OGL_3D { public:
     }
 
     virtual void draw(){
-        glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+        //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+        glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
         glEnable(GL_DEPTH_TEST);
@@ -108,7 +109,7 @@ class PlanetView : public ScreenSDL2OGL_3D { public:
         //printf("cam.zoom %g \n", cam.zoom  );
 
         double r = asteroid->radius;
-        Draw3D::drawBBox( {0.0f,0.0f,0.0f}, asteroid->radius );
+        //Draw3D::drawBBox( {0.0f,0.0f,0.0f}, asteroid->radius );
 
         //asteroid->relaxBoulders(0.25,1);
 
@@ -117,8 +118,11 @@ class PlanetView : public ScreenSDL2OGL_3D { public:
         //printf( "PlanetView::draw \n"  );
         //Draw3D::drawAxis( 1.0 );
 
-        glColor3f(0.48f,0.48f,0.48f); Draw3D::drawRectGridLines( {20,20}, {-10000.0 ,-10000.0},  {1000.0,0.0,0.0},  {0.0,1000.0,0.0} );
-        glColor3f(0.52f,0.52f,0.52f); Draw3D::drawRectGridLines( {20,20}, {-100000.0,-100000.0}, {10000.0,0.0,0.0}, {0.0,10000.0,0.0} );
+        //glColor3f(0.48f,0.48f,0.48f); Draw3D::drawRectGridLines( {20,20}, {-10000.0 ,-10000.0},  {1000.0,0.0,0.0},  {0.0,1000.0,0.0} );
+        //glColor3f(0.52f,0.52f,0.52f); Draw3D::drawRectGridLines( {20,20}, {-100000.0,-100000.0}, {10000.0,0.0,0.0}, {0.0,10000.0,0.0} );
+
+        glColor3f(0.95f,0.95f,0.95f); Draw3D::drawRectGridLines( {20,20}, {-10000.0 ,-10000.0},  {1000.0,0.0,0.0},  {0.0,1000.0,0.0} );
+        glColor3f(0.90f,0.90f,0.90f); Draw3D::drawRectGridLines( {20,20}, {-100000.0,-100000.0}, {10000.0,0.0,0.0}, {0.0,10000.0,0.0} );
 
         glColor3f(0.0f,0.0f,0.0f);
         //glTranslatef( asteroid->radius , asteroid->radius , asteroid->radius );
@@ -281,7 +285,8 @@ SolarSystemMap::SolarSystemMap( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
 
 void SolarSystemMap::draw(){
     //printf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glEnable(GL_DEPTH_TEST);
 
@@ -294,7 +299,8 @@ void SolarSystemMap::draw(){
 	SpaceDraw::asPoints( world.planets.size(), &world.planets[0], epoch );
 	SpaceDraw::asCrosses( 10, &world.planets[0], epoch, 0.1 );
 
-	glColor3f(0.52f,0.52f,0.52f);
+	//glColor3f(0.52f,0.52f,0.52f);
+    glColor3f(0.95f,0.95f,0.95f);
 	Draw3D::drawRectGridLines( {40,40}, {-5.0,-5.0}, {0.25,0.0,0.0}, {0.0,0.25,0.0} );
 
 	glColor3f(0.5f,0.7f,0.5f);

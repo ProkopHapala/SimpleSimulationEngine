@@ -131,6 +131,7 @@ void ScreenSDL2OGL::update( ){
 
 void ScreenSDL2OGL::draw   (){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+    //glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 };
 
@@ -162,8 +163,8 @@ void ScreenSDL2OGL::eventHandling( const SDL_Event& event ){
                 case SDL_WINDOWEVENT_CLOSE:
                     //SDL_Log("Window %d closed", event->window.windowID);
                     printf( "window[%i] SDL_WINDOWEVENT_CLOSE \n", id );
+                    //printf( "window[%i] delete this done \n", id );
                     delete this;
-                    printf( "window[%i] delete this done \n", id );
                     return;
                     break;
             } break;
