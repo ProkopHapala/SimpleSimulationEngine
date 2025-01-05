@@ -44,15 +44,15 @@ void init_workshop(){
 }
 
 void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
-    printf("#### ==== SpaceCraftSimulator::to_OrbSim() \n");
+    printf("#### ==== SpaceCraftSimulator::to_OrbSim() sim.linSolveMethod=%i \n", sim.linSolveMethod );
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
-    sim.prepare_LinearSystem( true, true, true, 256 );
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
-    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky       ) ||
+        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+        sim.prepare_LinearSystem( true, true, true, 256 );
+    }
     sim.cleanVel();
     sim.cleanForce();
     sim.addAngularVelocity( sim.pos0, sim.omega.f*sim.omega.w );   
@@ -62,12 +62,15 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 
 };
 
 void to_OrbSim_f(OrbSim_f& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
-    printf("#### ==== SpaceCraftSimulator::to_OrbSim_f() \n");
+    printf("#### ==== SpaceCraftSimulator::to_OrbSim_f() sim.linSolveMethod=%i \n", sim.linSolveMethod);
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim_f() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
-    sim.prepare_LinearSystem( true, true, true, 256 );
+    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky       ) ||
+        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+        sim.prepare_LinearSystem( true, true, true, 256 );
+    }
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
     sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;

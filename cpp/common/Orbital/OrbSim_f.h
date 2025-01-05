@@ -166,7 +166,7 @@ class OrbSim_f : public Picker { public:
     double time_LinSolver     = 0;
 
     int nSolverIters   = 10;
-    int linSolveMethod = 0;
+    int linSolveMethod = 2; // 0=CG, 1=CGsparse, 2=Cholesky
     enum class LinSolveMethod{ CG,CGsparse,Cholesky,CholeskySparse };
 
     Quat4f* ps_cor      =0; // new Vec3d[nPoint];

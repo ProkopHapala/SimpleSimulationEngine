@@ -231,8 +231,8 @@ class OrbSim: public Picker { public:
     double time_cg_dot        = 0;
 
     // choice of linear solver method
-    int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10, JacobiDiff=11, ExternDiff=12 };
+    int linSolveMethod = 2; // 0=CG, 1=CGsparse, 2=Cholesky
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9, Force=10, JacobiDiff=11, MomentumDiff=12, ExternDiff=13 };
     bool   bApplyResudualForce = true;
     double residualForceFactor = 1.0;
 
@@ -333,11 +333,14 @@ class OrbSim: public Picker { public:
         _realloc0( bvec,   nPoint   , Quat4dZero );
         _realloc0( bvec0,  nPoint   , Vec3dZero  );
         _realloc0( ps_0,   nPoint   , Vec3dZero  );
+        _realloc0( ps_cor       ,nPoint, Vec3dZero );
+        _realloc0( ps_pred      ,nPoint, Vec3dZero );
+        _realloc0( linsolve_yy , nPoint, Vec3dZero ); // used also to store momentum in MomentumDiff solver
         //_realloc( impuls, nPoint  , Quat4dZero ); );
-        _realloc0( params, nNeighTot , Quat4dZero );
-        _realloc0( neighs, nNeighTot , 0 );
-        _realloc0( neighBs,nNeighTot , {0,0} );
-        _realloc0( neighB2s,nNeighTot, 0 );
+        _realloc0( params,  nNeighTot , Quat4dZero );
+        _realloc0( neighs,  nNeighTot , 0 );
+        _realloc0( neighBs, nNeighTot , {0,0} );
+        _realloc0( neighB2s,nNeighTot , 0 );
 
         if(nBonds_>0){
             nBonds=nBonds_;
@@ -346,6 +349,23 @@ class OrbSim: public Picker { public:
             //_realloc( l0s,       nBonds );
             _realloc0( maxStrain, nBonds, {0.0,0.0} );
             _realloc0( bparams,   nBonds, Quat4dZero );
+        }
+    }
+
+    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
+        printf( "OrbSim_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
+        nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
+        int n2 = nPoint*nPoint;
+        // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
+        if(bDens){ _realloc0( PDmat,  n2,     0.0 ); }
+        _realloc0( linsolve_b ,nPoint, Vec3dZero );
+        if(bCholesky){
+            _realloc0( LDLT_L,      n2,     0.0             );
+            _realloc0( LDLT_D,      nPoint, 0.0             );
+            _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
+        }
+        if(bCG){
+            cgSolver.realloc(nPoint,3);
         }
     }
 
@@ -674,6 +694,40 @@ class OrbSim: public Picker { public:
         }
     }
 
+    void updatePD_dRHS( const Vec3d* pnew, Quat4d* bvec ){  // RHS for projective dynamics
+        // Calculates db = b - A p0 ( i.e. combines dotPD and updatePD_RHS into a single loop) 
+        for(int i=0; i<nPoint; i++){
+            const Vec3d    pi = pnew[i];
+            const double idt2 = 1.0 / (dt * dt);
+            double         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3d bi = Vec3dZero; 
+            //bi.set_mul(pi,  Ii );   // b_i    =  M_i/dt^2 p'_i   +  \sum_j ( K_{ij} d_{ij} )   
+            //bi.add_mul(pi, -Ii ); 
+            double Aii = Ii;                 // A_{ii} =  M_i/dt^2        +  \sum_j   K_{ij} 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                const Quat4d par = params[j];
+                const Vec3d  pj  = pnew[jG];
+                const Vec3d  dij = pi - pj;
+                const double l   = dij.norm();
+                const double k   = par.z;
+                //bi   .add_mul( pi, -k ); 
+                //bi   .add_mul( pj,  k ); 
+                //bi   .add_mul( dij,-k );
+                //bi   .add_mul( dij, k*par.x/l );   // RHS      bi  = \sum_j K_{ij} d_{ij} (+ inertial term M_i/dt^2 p'_i )
+                bi   .add_mul( dij, k*(par.x/l - 1) ); 
+                Aii  += k;                         // diagonal Aii =  \sum_j k_{ij}       (+ inertial term M_i/dt^2      )
+            }
+            //bi .add_mul( pi, -Aii );
+            bvec[i].f = bi;  // use forces array to store RHS vector
+            bvec[i].w = Aii;
+        }
+    }
+
     void updateJacobi_lin( Vec3d* ps_in, Vec3d* ps_out, Quat4d* bvec, Vec3d* rs=0 ){
         for(int i=0; i<nPoint; i++){
             const int j0 = i * nNeighMax;
@@ -847,24 +901,50 @@ class OrbSim: public Picker { public:
 
     // Here we replace Ap=b   by    A(p-p0) = b-Ap0
     void updateIterativeJacobiDiff( Vec3d* psa, Vec3d* psb ){
-        dotPD       ( psa, bvec0 );     // b0 = Ap0
-        updatePD_RHS( psa, bvec  );     // b = Kd + Ip'
-        // Debug:
-        //    double p0_norm  = norm_butFixed( psa );
-        //    double b_norm   = norm_butFixed( bvec );
-        //    double b0_norm  = norm_butFixed( bvec0 );
-        for (int i=0; i<nPoint; i++){ bvec[i].f.sub(bvec0[i]);  }           //  db = b - b0 
-        for (int i=0; i<nPoint; i++){ ps_0[i]=psa[i]; psa[i]=Vec3dZero; }   //  dp = p - p0   
-        // Debug:
-        //    double db_norm  = norm_butFixed( bvec );
+        //printf( "updateIterativeJacobiDiff() \n" );
+        const bool bUse_dRHS = true; 
+        //const bool bUse_dRHS = false; 
+        if(bUse_dRHS){
+            updatePD_dRHS( psa, bvec  );    // b = Kd - Ap' = \sum_j{ k_{ij} ( l0_{ij}/l_{ij} - 1 ) ( p_i - p_j )
+        }else{
+            dotPD       ( psa, bvec0 );     // b0 = Ap0
+            updatePD_RHS( psa, bvec  );     // b = Kd + Ip'
+            for (int i=0; i<nPoint; i++){ bvec[i].f.sub(bvec0[i]);  }       //  db = b - b0 
+        }
+    //    updatePD_RHS( psa, bvec  );    // b = Kd + Ip'
+    //    dotPD       ( psa, bvec0 );     // b0 = Ap0
+    //    for (int i=0; i<nPoint; i++){ bvec0[i]= bvec[i].f - bvec0[i];  } 
+    //    updatePD_dRHS( psa, bvec  ); 
+    //    for (int i=0; i<nPoint; i++){ printf( "bvec %i |dr|: %12.6e b(%12.6e,%12.6e,%12.6e) b0(%12.6e,%12.6e,%12.6e)\n", i, (bvec[i].f-bvec0[i]).norm(), bvec[i].x, bvec[i].y, bvec[i].z, bvec0[i].x, bvec0[i].y, bvec0[i].z ); } 
+    //    exit(0);
+        for (int i=0; i<nPoint; i++){ ps_0[i]=psa[i]; psa[i]=Vec3dZero; }   //  dp = p - p0      
         for (int i = 0; i < nSolverIters; i++) {  
             updateJacobi_lin( psa, psb, bvec );
             for (int i=0; i<nPoint; i++){ psa[i]=psb[i]; }
         }
         for (int i=0; i<nPoint; i++){ psb[i].add(ps_0[i]); }   //  p = p0 + dp 
         // Debug:
+        //    double db_norm  = norm_butFixed( bvec );
         //    double dp_norm  = norm_butFixed( psa );
         //    printf( "updateIterativeJacobiDiff() p0_norm: %g b0_norm: %g b_norm: %g db_norm: %g dp_norm: %g \n", p0_norm, b0_norm, b_norm, db_norm, dp_norm );
+    }
+
+    void updateIterativeMomentumDiff( Vec3d* psa, Vec3d* psb ){
+        const bool bUse_dRHS = true; 
+        updatePD_dRHS( psa, bvec  );    // b = Kd - Ap' = \sum_j{ k_{ij} ( l0_{ij}/l_{ij} - 1 ) ( p_i - p_j )
+        for (int i=0; i<nPoint; i++){ ps_0[i]=psa[i]; psa[i]=Vec3dZero; }   //  dp = p - p0 , start with zero      
+        for (int i = 0; i < nSolverIters; i++) {  
+            updateJacobi_lin( psa, psb, bvec );
+            double bmix = mixer.get_bmix( i );       //    bmix_k = bmix(k)
+            if( (i==0) || (i>=(nSolverIters-1) ) ) bmix = 0.0; // make sure we stop momentum mixing for the last iteration      
+            for(int j=0; j<nPoint; j++){ 
+                Vec3d p = psb[j]; 
+                p.add_mul( linsolve_yy[j], bmix );   //    p_{k+1} = p'_k + bmix d_k
+                linsolve_yy[j] = p - psa[j];         //    d_{k+1} = p_{k+1} - p_k
+                psa[j]         = p;
+            }
+        }
+        for (int i=0; i<nPoint; i++){ psb[i].add(ps_0[i]); }   //  p = p0 + dp 
     }
 
     // Here we replace Ap=b   by    A(p-p0) = b-Ap0
@@ -890,43 +970,6 @@ class OrbSim: public Picker { public:
        return bmix.y;
     }
     */
-
-    // void realloc_Cholesky( int nNeighMaxLDLT_  ){
-    //     printf( "OrbSim_d::realloc_Cholesky() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT, nNeighMax );
-    //     nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-    //     int n2 = nPoint*nPoint;
-    //     // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
-    //     _realloc0( PDmat,  n2,     0.0 );
-    //     _realloc0( LDLT_L, n2,     0.0 );
-    //     _realloc0( LDLT_D, nPoint, 0.0 );
-    //     _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
-    //     // ---- Temporary Work arrays
-    //     _realloc0(  ps_cor     ,nPoint, Vec3dZero );
-    //     _realloc0(  ps_pred    ,nPoint, Vec3dZero );
-    //     _realloc0(  linsolve_b ,nPoint, Vec3dZero );
-    //     _realloc0(  linsolve_yy,nPoint, Vec3dZero);
-    // }
-
-
-    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
-        printf( "OrbSim_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
-        nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-        int n2 = nPoint*nPoint;
-        // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
-        if(bDens){ _realloc0( PDmat,  n2,     0.0 ); }
-        _realloc0( ps_cor     ,nPoint, Vec3dZero );
-        _realloc0( ps_pred    ,nPoint, Vec3dZero );
-        _realloc0( linsolve_b ,nPoint, Vec3dZero );
-        if(bCholesky){
-            _realloc0(  linsolve_yy,nPoint, Vec3dZero);
-            _realloc0( LDLT_L, n2,     0.0 );
-            _realloc0( LDLT_D, nPoint, 0.0 );
-            _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
-        }
-        if(bCG){
-            cgSolver.realloc(nPoint,3);
-        }
-    }
 
     void prepare_LinearSystem( bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
         double dt = this->dt;
@@ -1041,7 +1084,7 @@ class OrbSim: public Picker { public:
 
     __attribute__((hot)) 
     void run_LinSolve(int niter) {
-        //printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i \n", linSolveMethod, nSolverIters  );
+        //printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i ps_cor=%p points=%p \n", linSolveMethod, nSolverIters, ps_cor, points  );
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
@@ -1051,11 +1094,11 @@ class OrbSim: public Picker { public:
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
             
+            // ---- Update Forces
             cleanForce();
             //evalForces();
             if (user_update){ user_update(dt);}
             evalEdgeVerts();
-
             dampPoints( 2.5 );   // Damping - this is not rigorous - it does not perfectly preserve momentum / angular momentum, resp. points have like double the mass
 
             //  Predictor step
@@ -1070,8 +1113,7 @@ class OrbSim: public Picker { public:
             // Apply fixed constraints
             if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
             // Compute right-hand side
-            rhs_ProjectiveDynamics(ps_pred, linsolve_b );
-
+            
             long t0 = getCPUticks();
             switch( (LinSolveMethod)linSolveMethod ){
                 case LinSolveMethod::Jacobi:{
@@ -1081,6 +1123,9 @@ class OrbSim: public Picker { public:
                 case LinSolveMethod::JacobiDiff:{
                     updateIterativeJacobiDiff( ps_pred, ps_cor );
                 } break;
+                case LinSolveMethod::MomentumDiff:{
+                    updateIterativeMomentumDiff( ps_pred, ps_cor );
+                }break;
                 case LinSolveMethod::ExternDiff:{
                     updateIterativeExternDiff( ps_pred, ps_cor );
                 } break;
@@ -1101,6 +1146,7 @@ class OrbSim: public Picker { public:
                 case LinSolveMethod::CholeskySparse:{
                     // Solve using LDLT decomposition (assuming you have this method)
                     //solve_LDLT_sparse(b, ps_cor);
+                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
                     Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, neighsLDLT, nNeighMaxLDLT );
                     for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
                     Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMaxLDLT );
@@ -1109,6 +1155,7 @@ class OrbSim: public Picker { public:
                     //Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
                     //Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)ps_cor );
                     //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
+                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
                     Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );
                     for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
                     LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
@@ -1118,14 +1165,13 @@ class OrbSim: public Picker { public:
                 } break;
                 case LinSolveMethod::CG:{
                     //printf("OrbSim_d::run_LinSolve()  LinSolveMethod::CG \n");
+                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
                     for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
                     cg_tol = 1e-2;
                     cgSolver_niterdone += cgSolver.solve( cg_tol );
                     
                 } break;
-                case LinSolveMethod::CGsparse:{
-                
-                } break;
+                case LinSolveMethod::CGsparse:{} break;
             }
             time_LinSolver += (getCPUticks()-t0)*1e-6;
             //mat2file<double>( "points.log",  nPoint,4, (double*)points      );
