@@ -386,7 +386,15 @@ class Node : public Object{ public:
     //Node(Vec3d pos):pos(pos){};
 
     virtual ~Node(){};
-    int updateBound(Vec3d p0=Vec3dZero){ if(boundTo){ if(along.y<0)along.y=boundTo->nearSide(p0); along.x = boundTo->pointAlong( calong, along.y, &pos); }else{ along.x=-1; } return along.x; } 
+    int updateBound(Vec3d p0=Vec3dZero){ 
+        if(boundTo){ 
+            if(along.y<0)along.y=boundTo->nearSide(p0); 
+            along.x = boundTo->pointAlong( calong, along.y, &pos); 
+        }else{ 
+            along.x=-1; 
+        } 
+        return along.x; 
+    } 
     virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
         printf("Node(id=%i) iv=%i pos(%g,%g,%g) \n", id, ivert, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
     }
@@ -464,10 +472,10 @@ class Girder : public NodeLinker { public:
         Vec3d d = p - nodes.x->pos;
         double ca = rot->a.dot(d);
         double cb = rot->b.dot(d);
-        //printf( "Girder::nearSide() ca,cb(%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", ca, cb,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
         int side;
         if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }  // height
         else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
+        printf( "Girder(id=%i).nearSide() side: %i ca,cb(%g,%g) p(%g,%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", id, side, ca, cb, p.x,p.y,p.z,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
         return side;
     };
     virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{

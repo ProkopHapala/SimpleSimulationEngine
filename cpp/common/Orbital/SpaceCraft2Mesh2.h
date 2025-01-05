@@ -112,7 +112,7 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         //if( param.z>1e+7) param.z=1e+7;   // This Makes it converge
         if( (param.z<1e+6) || (param.z>1e+8) )
         {
-            printf( "exportSim ib: %6i typ: %2i %-10s l0[m]: %6.2f m[kg]: %6.2f k[N/m]: %.3e %.3e \n", i, e.w, mat.name, mass, param.x, param.y, param.z, param.w );
+            //printf( "exportSim ib: %6i typ: %2i %-10s l0[m]: %6.2f m[kg]: %6.2f k[N/m]: %.3e %.3e \n", i, e.w, mat.name, mass, param.x, param.y, param.z, param.w );
             //printf( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] kPush: %.3e [kN/\%] kPull: %.3e [kN/\%] \n", i,  e.w, mat.name,  l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
             //( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] m/l %6.2f [kg/m] k: %.3e [N/m] k/l: %.3e [10kN/\%] \n", i,  e.w, mat.name, l0, mass, mat.linearDensity, param.z, mat.Kpull*1e-6 );
         //    const Material& M = *shop.materials.vec[mat.materialId];

@@ -351,7 +351,8 @@ int l_Ring2    (lua_State * L){
         if(gs[i]<0) continue;
         if(cs[i]<0){
             nd[i]->calong = intersect_RingGirder( o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true );
-            nd[i]->updateBound( p0 );   // find the nearest side of the girder to which the node is attached
+            nd[i]->updateBound( p0 );
+            //nd[i]->updateBound( nd[i]->pos );   // find the nearest side of the girder to which the node is attached
             //printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
         }
     }
