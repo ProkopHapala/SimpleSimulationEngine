@@ -180,7 +180,7 @@ void runSim( OrbSim& sim, int niter=100 ){
     }
     
     sim.evalBondTension();
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
 
     if(sim.pointBBs.ncell>0) updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
     if(sim.edgeBBs .ncell>0) updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
@@ -512,7 +512,7 @@ void SpaceCraftEditorApp::draw(){
 
     //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3d){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
 
-    if(bShipReady)Draw3D::drawMatInPos( Mat3dIdentity, sim.cog, Vec3d{100.,100.,100.} );
+    //if(bShipReady)Draw3D::drawMatInPos( Mat3dIdentity, sim.cog, Vec3d{100.,100.,100.} );
 
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
@@ -625,20 +625,20 @@ void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
 
     wheel_speed = Vec3dZero;
-	// if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
-    // if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
-    // if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
-	// if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
-	// if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
-	// if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
+	if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
 
-    float speed = 5.0;
-    if( keys[ SDL_SCANCODE_KP_5 ] ){ p_debug.y+=-speed; }
-    if( keys[ SDL_SCANCODE_KP_8 ] ){ p_debug.y+= speed; }
-    if( keys[ SDL_SCANCODE_KP_4 ] ){ p_debug.x+=-speed; }
-	if( keys[ SDL_SCANCODE_KP_6 ] ){ p_debug.x+= speed; }
-	if( keys[ SDL_SCANCODE_KP_7 ] ){ p_debug.z+=-speed; }
-	if( keys[ SDL_SCANCODE_KP_9 ] ){ p_debug.z+= speed; }
+    // float speed = 5.0;
+    // if( keys[ SDL_SCANCODE_KP_5 ] ){ p_debug.y+=-speed; }
+    // if( keys[ SDL_SCANCODE_KP_8 ] ){ p_debug.y+= speed; }
+    // if( keys[ SDL_SCANCODE_KP_4 ] ){ p_debug.x+=-speed; }
+	// if( keys[ SDL_SCANCODE_KP_6 ] ){ p_debug.x+= speed; }
+	// if( keys[ SDL_SCANCODE_KP_7 ] ){ p_debug.z+=-speed; }
+	// if( keys[ SDL_SCANCODE_KP_9 ] ){ p_debug.z+= speed; }
 
 };
 

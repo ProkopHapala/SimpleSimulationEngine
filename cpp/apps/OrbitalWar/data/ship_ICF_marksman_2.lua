@@ -66,8 +66,12 @@ print( "#------ Lua:Ropes" )
 
 -- ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
 
+--preS2 = 0.01
+--preS1 = 0.01
 
-preS1 = 0.001*0
+preS2 = 0.002
+preS1 = 0.002
+
 --          type     thick[mm]
 Rope(nBk,nLf, 25.,4, preS1,  "Kevlar" );
 Rope(nFw,nLf, 25.,4, preS1, "Kevlar" )
@@ -86,7 +90,7 @@ Rope(nLf,nUp, 25.,4, preS1, "Kevlar");
 Rope(nRt,nDw, 25.,4, preS1, "Kevlar");
 Rope(nRt,nUp, 25.,4, preS1, "Kevlar");
 
-preS2 = 0.01*0
+
 
 Rope2( {gFw,gLf}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gRt}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
