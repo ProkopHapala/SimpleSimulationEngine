@@ -129,7 +129,7 @@ print( "#------ Lua:Rings & Sliders" )
 
 -- r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st )
 
-r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.5,0.22,0.22,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
+r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.5,0.22,0.22,-1.0}, {0.0,0.0,1000.0},    64, { 4.0,4.0}, "Steel", g1_st, 0 )
 r_pitch = Ring2( {gFw,gUp,gDw,-1}, {0.15,0.4,0.4,-1.0},  {1000.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
 
 -- r_roll  = Ring2( {gLf,gUp,gDw,gRt}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )

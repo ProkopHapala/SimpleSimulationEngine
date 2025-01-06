@@ -75,8 +75,11 @@ bool bRun = false;
 
 int iFrame = 0;
 
-Vec3d wheel_speed       = {0.0,0.0,0.0};
-Vec3d wheel_speed_setup = { 5.0, 5.0, 5.0 };
+Vec3d wheel_speed      {0.0,0.0,0.0};
+Vec3d wheel_speed_setup{ 5.0, 5.0, 5.0 };
+
+
+Vec3d p_debug{ 100.0, 0.0,0.0 };
 
 
 class LinSolverOrbSim : public LinSolver{ public:
@@ -90,6 +93,73 @@ class LinSolverOrbSim : public LinSolver{ public:
 LinSolverOrbSim linSolver;
 
 void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, sim, (double*)&wheel_speed ); }
+
+void view_debug_slider_attach( Slider* o ){
+    o->print(); printf(" - boundTo:");
+    o->boundTo->print();
+    int side = o->boundTo->nearSide(p_debug);
+    printf(" - side: %i \n", side );
+
+    //                      blue       green       red         yellow
+    uint32_t colors[4]{ 0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00};
+
+    glBegin(GL_LINES);
+    Draw::setRGB( colors[side] );
+    for(int i=0; i<5; i++){
+        Vec3d p;
+        o->boundTo->pointAlong( 0.2*i+0.1, side, &p );
+        glVertex3d( p.x, p.y, p.z );
+        glVertex3d( p_debug.x, p_debug.y, p_debug.z  );
+    }
+    glEnd();
+
+    for(int side=0; side<4; side++ ){
+        glBegin(GL_LINE_STRIP);
+        Draw::setRGB( colors[side] );
+        for(int i=0; i<5; i++){
+            Vec3d p;
+            o->boundTo->pointAlong( 0.2*i+0.1, side, &p );
+            glVertex3d( p.x, p.y, p.z );
+        }
+        glEnd();
+    }
+
+
+    
+
+        // if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }  // height
+        // else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
+
+    // if(gs[i]<0) continue;
+    // nd[i] = new Slider();
+    // nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
+    // if(cs[i]>0){
+    //     nd[i]->calong = cs[i];
+    //     nd[i]->updateBound( p0 );   // find the nearest side of the girder to which the node is attached
+    //     //printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
+    // }else{
+    //     nd[i]->calong = -1.0;  // to be calculated later
+    // }
+    // nd[i]->id = theSpaceCraft->nodes.size(); 
+    // theSpaceCraft->nodes  .push_back( nd[i] ); 
+    // theSpaceCraft->sliders.push_back( nd[i] );
+    // nd[i]->icontrol = icontrol;
+    // ((Slider**)&(o->nodes))[i] = nd[i];
+}
+
+void debug_sliders(){
+    printf( "============= debug_sliders() \n" );
+    glLineWidth(5.0);
+    Draw3D::drawPointCross( p_debug, 30.0 );
+    for( Slider* o: theSpaceCraft->sliders){
+        view_debug_slider_attach( o );
+    }
+    glLineWidth(1.0);
+}
+
+
+
+
 
 void runSim( OrbSim& sim, int niter=100 ){
     long t0 = getCPUticks();
@@ -273,24 +343,6 @@ void reloadShip( const char* fname  ){
 };
 
 
-
-
-void renderNearSide(){
-
-    // virtual int nearSide( Vec3d p, const Mat3d* rot=0)const override{
-    //     Mat3d rot_;
-    //     if(rot==0){ rotMat(rot_); rot=&rot_; }
-    //     Vec3d d = p - nodes.x->pos;
-    //     double ca = rot->a.dot(d);
-    //     double cb = rot->b.dot(d);
-    //     //printf( "Girder::nearSide() ca,cb(%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", ca, cb,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
-    //     int side;
-    //     if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }  // height
-    //     else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
-    //     return side;
-    // };
-}
-
 // ====================== Class Definitions
 
 class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
@@ -434,6 +486,7 @@ void SpaceCraftEditorApp::draw(){
     //glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     iFrame = frameCount;
 
+
 	/*
     // to make nice antialiased lines without supersampling buffer
     // see  https://www.opengl.org/discussion_boards/showthread.php/176559-GL_LINE_SMOOTH-produces-bold-lines-%28big-width%29
@@ -478,6 +531,8 @@ void SpaceCraftEditorApp::draw(){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
     glDisable(GL_DEPTH_TEST);
+
+    //debug_sliders();
 
     // ---- Draw Damped Points 
     // glLineWidth(3.0); glColor3f(0.0,0.5,0.0);
@@ -570,12 +625,20 @@ void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
 
     wheel_speed = Vec3dZero;
-	if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
-	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
+	// if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
+    // if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
+    // if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
+	// if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
+	// if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
+	// if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
+
+    float speed = 5.0;
+    if( keys[ SDL_SCANCODE_KP_5 ] ){ p_debug.y+=-speed; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ p_debug.y+= speed; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ p_debug.x+=-speed; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ p_debug.x+= speed; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ p_debug.z+=-speed; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ p_debug.z+= speed; }
 
 };
 

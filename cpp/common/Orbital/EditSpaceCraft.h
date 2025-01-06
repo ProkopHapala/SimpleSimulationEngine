@@ -321,6 +321,8 @@ int l_Ring2    (lua_State * L){
               Lua::getVec4i(L,7, o->st );    //printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
     int icontrol = Lua::getInt (L,8);        //printf( "l_Ring2() icontrol %i\n", icontrol );
 
+    printf( "l_Ring2() p0(%g,%g,%g) gs %i,%i,%i,%i cs %g,%g,%g,%g \n", p0.x, p0.y, p0.z, gs[0], gs[1], gs[2], gs[3], cs[0], cs[1], cs[2], cs[3] );
+
     // Make nodes bound to nodes to attach ring to girders
     Slider* nd[4];
     for(int i=0; i<4; i++){    // max 4 anchor points
