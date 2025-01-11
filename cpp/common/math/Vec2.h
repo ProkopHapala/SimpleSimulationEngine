@@ -115,6 +115,7 @@ class Vec2T{
 	inline void pre_mul_cmplx ( const VEC& a               ){                            T x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
 	inline void set_mul_cmplx ( const VEC& a, const VEC& b ){                            T x_ =  a.x*b.x - a.y*b.y;         y =  a.y*b.x + a.x*b.y;       x=x_;  }
 	inline void set_udiv_cmplx( const VEC& a, const VEC& b ){                            T x_ =  a.x*b.x + a.y*b.y;         y =  a.y*b.x - a.x*b.y;       x=x_;  }
+    inline void add_udiv_cmplx( const VEC& a, const VEC& b ){                            T x_ = a.x*b.x + a.y*b.y;          y += a.y*b.x - a.x*b.y;       x+=x_; }
 	inline void set_div_cmplx ( const VEC& a, const VEC& b ){ T ir2 = 1/b.norm2();  T x_ = (a.x*b.x + a.y*b.y)*ir2;    y = (a.y*b.x - a.x*b.y)*ir2;    x=x_;  }
 
 	inline void fromAngle        ( T phi ){	x = cos( phi );	y = sin( phi );	    }

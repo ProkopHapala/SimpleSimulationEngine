@@ -12,6 +12,8 @@
 
 #define  fontSizeDef 7
 
+static int  fontTex = 0;
+
 namespace Draw{
 
 

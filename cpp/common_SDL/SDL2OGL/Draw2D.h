@@ -5,6 +5,7 @@
 #include "fastmath.h"
 #include "Vec2.h"
 #include "geom2D.h"
+#include "Draw.h"
 
 namespace Draw2D{
 

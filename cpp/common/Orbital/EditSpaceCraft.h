@@ -17,7 +17,7 @@
 namespace SpaceCrafting{
 
 char str[4096];
-int fontTex = 0;
+//int fontTex = 0;
 lua_State  * theLua=0;
 SpaceCraft * theSpaceCraft=0;
 

@@ -16,10 +16,12 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
-#include "testUtils.h"
-
-#include "MeshBuilder.h"
 #include "datatypes.h"
+
+#include "testUtils.h"
+#include "MeshBuilder.h"
+
+//#include "datatypes.h"
 
 namespace Mesh{
 

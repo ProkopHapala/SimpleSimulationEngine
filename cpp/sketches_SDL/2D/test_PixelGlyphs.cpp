@@ -39,7 +39,7 @@ class TestAppPixelGlyphs : public AppSDL2OGL{
 	public:
 
     Plot2D plot1;
-    int fontTex;
+    //int fontTex;
 
     SDL_Surface * surf;
 

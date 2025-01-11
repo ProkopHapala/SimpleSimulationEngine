@@ -21,7 +21,7 @@
 
 using namespace CommodityNetwork;
 
-int fontTex=0;
+//int fontTex=0;
 char strtemp[1024];
 
 class TestAppCommodityNetwork : public AppSDL2OGL { public:

@@ -95,6 +95,7 @@ void drawDouble( const Vec3d& pos, double f, int fontTex, float sz=0.02, const c
 void pointLabels( int n, const Vec3d* ps, int fontTex, float sz=0.02 );
 
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
+void drawBox( Vec3d p, Vec3d ls, Mat3d rot=Mat3dIdentity );
 void drawBBox        ( const Vec3f& p0, const Vec3f& p1 );
 void drawBBox        ( const Vec3f& p, float r );
 void drawTriclinicBox( const Mat3f& lvec_, const Vec3f& c0_, const Vec3f& c1_ );

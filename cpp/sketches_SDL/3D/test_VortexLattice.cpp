@@ -205,7 +205,7 @@ class TestAppVortexLattice : public AppSDL2OGL_3D {
     MultipoleGrid grid;
 
     Plot2D plot1;
-    int fontTex;
+    //int fontTex;
 
 	virtual void draw   ();
 	virtual void drawHUD();

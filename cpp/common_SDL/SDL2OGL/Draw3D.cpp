@@ -1569,6 +1569,25 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 	glEnd();
 }
 
+void drawBox( Vec3d p, Vec3d ls, Mat3d rot ){
+	glBegin(GL_LINES);
+    double as[4]{-1.0,-1.0, 1.0,1.0};
+    double bs[4]{-1.0, 1.0,-1.0,1.0};
+    for(int i=0; i<4; i++){
+        Vec3d p;
+        // z
+        rot.dot_to_T( {ls.a*as[i],ls.b*bs[i], 0.0}, p );
+		vertex( p-rot.c*ls.z ); vertex( p+rot.c*ls.z );
+        // y
+        rot.dot_to_T( {ls.a*as[i],0.0,ls.c*bs[i]}, p );
+		vertex( p-rot.b*ls.y ); vertex( p+rot.b*ls.y );
+        // x
+        rot.dot_to_T( {0.0,ls.b*as[i],ls.c*bs[i]}, p );
+		vertex( p-rot.a*ls.x ); vertex( p+rot.a*ls.x );
+    }
+	glEnd();
+}
+
 void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 	glBegin(GL_LINES);
 		glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p0.y, p0.z );

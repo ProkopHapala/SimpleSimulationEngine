@@ -44,7 +44,7 @@
 //using namespace Painter;
 
 
-int fontTex = 0 ;
+//int fontTex = 0 ;
 
 class PainterGUI : public AppSDL2OGL_3D { public:
 

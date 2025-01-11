@@ -45,7 +45,7 @@ Vec3d curPos = (Vec3d){5.0,0.0,0.0};
 
 
 char str[2048];
-int  fontTex;
+//int  fontTex;
 
 class TestAppSphereSampling : public AppSDL2OGL_3D {
 	public:

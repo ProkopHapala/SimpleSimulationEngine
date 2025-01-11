@@ -33,7 +33,7 @@
 #include "Projectile3D.h"
 #include "Shooter.h"
 
-int fontTex;
+//int fontTex;
 #include "TankHelpers.h"
 
 class Tanks_single : public AppSDL2OGL_3D {

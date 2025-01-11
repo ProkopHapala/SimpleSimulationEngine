@@ -17,6 +17,12 @@ add_executable( spaceTactics
 )
 target_link_libraries( spaceTactics ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable( constructionBlockApp
+    constructionBlockApp.cpp
+	$<TARGET_OBJECTS:SDL2OGL>
+)
+target_link_libraries( constructionBlockApp ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable( SolarSystemMap
 	SolarSystemMap.cpp
 	$<TARGET_OBJECTS:Body>

@@ -69,7 +69,7 @@ void drawBurst( Burst3d& burst, int nseg, float shotSz, bool bBox, double dt ){
 
 class AppFlightView : public AppSDL2OGL_3D { public:
 
-    int fontTex   = 0;
+    //int fontTex   = 0;
     int txGround  = 0;
     int gloTarget = 0;
     AeroCraft *myCraft = 0;

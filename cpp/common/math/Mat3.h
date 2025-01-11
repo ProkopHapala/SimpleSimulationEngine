@@ -36,6 +36,11 @@ class Mat3T{
 
 // ====== initialization
 
+    Mat3T()=default;
+    constexpr Mat3T  (const T& xx_, const T& xy_, const T& xz_, const T& yx_, const T& yy_, const T& yz_, const T& zx_, const T& zy_, const T& zz_): xx(xx_),xy(xy_),xz(xz_),yx(yx_),yy(yy_),yz(yz_),zx(zx_),zy(zy_),zz(zz_){};
+    constexpr Mat3T  (const T* a){ for(int i=0; i<9; i++)array[i]=a[i]; }
+    constexpr Mat3T  (const VEC& a_, const VEC& b_, const VEC& c_): a(a_), b(b_), c(c_){};
+
 	inline explicit operator Mat3T<double>()const{ return (Mat3T<double>){ (double)xx,(double)xy,(double)xz, (double)yx,(double)yy,(double)yz, (double)zx,(double)zy,(double)zz }; }
 	inline explicit operator Mat3T<float >()const{ return (Mat3T<float >){ (float)xx,(float)xy,(float)xz,    (float)yx,(float)yy,(float)yz,    (float)zx,(float)zy,(float)zz }; }
 	inline explicit operator Mat3T<int >()  const{ return (Mat3T<int   >){ (int)xx,(int)xy,(int)xz,          (int)yx,(int)yy,(int)yz,          (int)zx,(int)zy,(int)zz }; }
@@ -44,7 +49,7 @@ class Mat3T{
 	//inline Mat3T<float > toFloat ()const{ return (Mat3T<float >){ (float)xx,(float)xy,(float)xz,    (float)yx,(float)yy,(float)yz,    (float)zx,(float)zy,(float)zz }; }
 	//inline Mat3T<int >   toInt   ()const{ return (Mat3T<int   >){ (int)xx,(int)xy,(int)xz,          (int)yx,(int)yy,(int)yz,          (int)zx,(int)zy,(int)zz }; }
 
-	inline void setOne(        ){ xx=yy=zz=1; xy=xz=yx=yz=zx=zy=0; };
+	inline void setOne(     ){ xx=yy=zz=1; xy=xz=yx=yz=zx=zy=0; };
 	inline void set   ( T f ){ xx=yy=zz=f; xy=xz=yx=yz=zx=zy=0; };
 
 	inline void set  ( const VEC& va, const VEC& vb, const VEC& vc ){ a.set(va); b.set(vb); c.set(vc); }
@@ -54,7 +59,7 @@ class Mat3T{
 		zx=M.zx; zy=M.zy; zz=M.zz;
 	};
 
-    inline void add_outer( const VEC& a, const VEC& b, T f ){
+    inline void add_outer( const VEC& a, const VEC& b, T f=1.0 ){
         xx+=a.x*b.x*f; xy+=a.x*b.y*f; xz+=a.x*b.z*f;
         yx+=a.y*b.x*f; yy+=a.y*b.y*f; yz+=a.y*b.z*f;
         zx+=a.z*b.x*f; zy+=a.z*b.y*f; zz+=a.z*b.z*f;

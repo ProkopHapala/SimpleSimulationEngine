@@ -65,7 +65,7 @@ class TestAppSphereTree2D : public AppSDL2OGL{
 	public:
 
     SphereTreeND store;
-    int fontTex;
+    //int fontTex;
 
 	virtual void draw   ();
     virtual void eventHandling( const SDL_Event& event );

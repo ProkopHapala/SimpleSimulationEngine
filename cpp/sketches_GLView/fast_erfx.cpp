@@ -36,7 +36,7 @@ erfx_e9(x)      : 4.154 ticks/call ( 4.15412e+07 1e+07 ) | 3.7214e+06
 // ===== Globals
 
 Plot2D plot1;
-int fontTex;
+//int fontTex;
 
 void my_draw(){
 

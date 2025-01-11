@@ -84,7 +84,7 @@ void drawEifelTower(){
 
 class PlanetView : public ScreenSDL2OGL_3D { public:
     RublePile* asteroid = 0;
-    int fontTex;
+    //int fontTex;
 
     PlanetView( int& id, int WIDTH_, int HEIGHT_ ): ScreenSDL2OGL_3D( id, WIDTH_, HEIGHT_ ){}
 
@@ -376,7 +376,7 @@ void SolarSystemMap::mouseHandling( ){
             if(!planetView){
                 printf( " new PlanetView \n" );
                 planetView = new PlanetView( junk, 800, 600 );
-                planetView->fontTex = fontTex;
+                //planetView->fontTex = fontTex;
                 planetView->parent    = this;
                 planetView->iinparent = child_windows.size();
                 child_windows.push_back(planetView);

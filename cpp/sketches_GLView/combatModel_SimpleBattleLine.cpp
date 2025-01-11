@@ -22,7 +22,7 @@
 // ===== Globals
 
 Plot2D plot1;
-int fontTex;
+//int fontTex;
 
 //std::unordered_map<std::string,WeaponType*> weaponTypes;
 //std::unordered_map<std::string,UnitType*> unitTypes;

@@ -38,7 +38,7 @@ double * data;
 class TestAppPlotting : public AppSDL2OGL{   public:
 
     Plot2D plot1;
-    int fontTex;
+    //int fontTex;
 
     GLint ogl_samples=0;
 

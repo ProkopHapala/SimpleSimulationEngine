@@ -49,7 +49,7 @@ class TestAppCamera : public AppSDL2OGL_3D {
 
     Camera cam;
 
-    int fontTex=0;
+    //int fontTex=0;
 
     int defaultObjectShape, defaultObjectHitShape;
 

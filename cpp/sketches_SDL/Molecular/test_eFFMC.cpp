@@ -62,7 +62,7 @@ int i_DEBUG = 0;
 #include "DynamicOpt.h"
 //#include "approximation.h"
 
-int  fontTex=0;
+//int  fontTex=0;
 
 
 EFF    eff;

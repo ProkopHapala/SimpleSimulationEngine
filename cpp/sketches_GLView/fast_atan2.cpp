@@ -43,7 +43,7 @@ atan2_nvidia()  : 16.877 ticks/call ( 1.68767e+07 1e+06 ) | -25546.7
 // ===== Globals
 
 Plot2D plot1;
-int fontTex;
+//int fontTex;
 
 void my_draw(){
 

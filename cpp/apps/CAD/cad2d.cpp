@@ -46,7 +46,7 @@
 using namespace CAD;
 
 
-int fontTex = 0 ;
+//int fontTex = 0 ;
 
 class CAD2DGUI : public AppSDL2OGL_3D { public:
 
