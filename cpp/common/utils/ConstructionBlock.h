@@ -163,12 +163,14 @@ namespace Mesh{
                 //Draw3D::drawLine( p0, p0+rot.c*Ls.x      );
             }break;  
             case 2:{ // fork 2 edges
-                if( f.rot ){ mesh.prismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
-                else       { mesh.prismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
+                //if( f.rot ){ mesh.prismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
+                //else       { mesh.prismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
+                if( f.rot ){ mesh.snapPrismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
+                else       { mesh.snapPrismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
             }break;
             case 3: {
-                if( f.rot ){ mesh.frustrumFace( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
-                else       { mesh.frustrumFace( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
+                if( f.rot ){ mesh.snapFrustrumFace( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
+                else       { mesh.snapFrustrumFace( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
             }break;// fork 3 edges
 
             case 5: {}break;// fork 5 edges
@@ -178,7 +180,9 @@ namespace Mesh{
     void drawBlock( Builder2& mesh, const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){
         //for(int i=0; i<6; i++){
         const Vec3d& L = block.Ls;
+        int i0 = mesh.verts.size();
         mesh.box( block.pos, L, rot );
+        mesh.selectVertRange( i0, mesh.verts.size() );
         
         drawFace( mesh, block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
         //drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );

@@ -60,7 +60,13 @@ class Builder2{ public:
     std::vector<Quat4i> tris;    // {a,b,c|type}={f|e}   => we can store type of the face in the 4th component
     std::vector<Quat4i> chunks;  // {istrip0, by_type, } can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
-    
+
+    // Edit settings
+    bool bExitError = true;
+    double R_snapVert = 0.1;   // tolerance for snapping vertices used in findVert()
+    //int selection_mode = 0;  // 0-none, 1-vert, 2-edge, 3-face
+    std::vector<int>    selection; // indices of selected vertices (eventually edges, faces ? )
+
     int draw_mode = TRIANGLES;
     Vec3f  penColor;
     
@@ -75,10 +81,37 @@ class Builder2{ public:
         return imin;
     }
 
+    int findVert(const Vec3d& p0, double Rmax, int n=-1, int* sel=0 ){
+        //printf( "Mesh::Builder2::findVert() p(%g,%g,%g) Rmax: %g  \n", p0.x,p0.y,p0.z, Rmax );
+        if(n==-1){
+            n  =selection.size();
+            sel=selection.data();
+        }
+        double r2min=Rmax;
+        int imin=-1;
+        for(int ii=0;ii<n;ii++){ 
+            int i = sel[ii];
+            double r2=(verts[i].pos-p0).norm2(); if(r2<r2min){r2min=r2; imin=i;} 
+        }
+        if( bExitError && (imin<0)){ 
+            printf( "ERROR in findVert() imin=%i cannot find vert near p(%g,%g,%g) within Rmax: %g => Exit() \n", imin, p0.x,p0.y,p0.z, Rmax );
+            printSelectedVerts(); 
+            exit(0); 
+        };
+        return imin;
+    }
+
+    int selectVertRange(int i0, int iend){
+        for(int i=i0;i<iend;i++){ selection.push_back(i); }
+        return selection.size();
+    }
 
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
-    inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; }
+    inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ 
+        //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
+        verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
+    }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
@@ -92,8 +125,6 @@ class Builder2{ public:
         int ib = vert(b);
         return edge(ia,ib,t); 
     }
-
-
 
     inline int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 ){
         double R2max = Rmax*Rmax;
@@ -227,15 +258,8 @@ class Builder2{ public:
         */
     }
 
-
     void frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah ){
         printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
-        //Lbh=0;
-        // Quat4d ps[4];
-        // ps[0].w=Lb;     ps[0].f = p0+rot.a* La;
-        // ps[1].w=Lb-Lbh; ps[1].f = p0+rot.a* (La-Lah) + rot.c*h;
-        // ps[2].w=Lb-Lbh; ps[2].f = p0+rot.a*-(La-Lah) + rot.c*h;
-        // ps[3].w=Lb;     ps[3].f = p0+rot.a*-La;
         int i0 = verts.size();
         Vec3d p;
         p=p0+rot.a* La       + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
@@ -252,21 +276,25 @@ class Builder2{ public:
                 edge(i1+1,i1+3);
             }
         }
-        // for(int ii=0; ii<4; ii++){
-        //     const Quat4d& q = ps[i];
-        //     Vec3d p1 = q.f + rot.b* q.w;
-        //     Vec3d p2 = q.f + rot.b*-q.w;
-        //     i=vert( p1 ); j=vert( p2 ); edge(i,j);
-        //     if(ii<3){
-        //         const Quat4d& q2 = ps[ii+1];
-        //         i=vert( p1 ); j=vert( q2.f+rot.b* q2.w );   edge(i,j);
-        //         i=vert( p2 ); j=vert( q2.f+rot.b*-q2.w );   edge(i,j);
-        //     }
-        // }
+    }
+
+    void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah ){
+        //printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
+        int iv[8];
+        Vec3d p;
+        p=p0+rot.a* La                ; iv[0]=findVert( p+rot.b*Lb, R_snapVert       ); iv[1]= findVert( p-rot.b*Lb, R_snapVert       );
+        p=p0+rot.a* (La-Lah) + rot.c*h; iv[2]=   vert( p+rot.b*(Lb-Lbh) );              iv[3]=     vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-(La-Lah) + rot.c*h; iv[4]=   vert( p+rot.b*(Lb-Lbh) );              iv[5]=     vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-La                ; iv[6]=findVert( p+rot.b*Lb, R_snapVert       ); iv[7]= findVert( p-rot.b*Lb, R_snapVert       );
+        edge(iv[0],iv[2]); edge(iv[1],iv[3]);
+        edge(iv[2],iv[3]);
+        edge(iv[2],iv[4]); edge(iv[3],iv[5]);
+        edge(iv[4],iv[5]);
+        edge(iv[4],iv[6]); edge(iv[5],iv[7]);
     }
 
     void prismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh ){
-        //printf("drawPrismFace: La: %f Lb: %f h: %f Lbh: %f  \n", La,Lb,h,Lbh);
+        //printf("prismFace: La: %f Lb: %f h: %f Lbh: %f  \n", La,Lb,h,Lbh);
         // ToDo: We must find the points on cube where to attach the edges, not to create a new vertexes.
         int i0 = verts.size();
         Vec3d p;
@@ -285,6 +313,22 @@ class Builder2{ public:
         }
     }
 
+    void snapPrismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh ){
+        //prismFace( p0, rot, La, Lb, h, Lbh );
+        printf("snapPrismFace: La: %f Lb: %f h: %f Lbh: %f  \n", La,Lb,h,Lbh);
+        // ToDo: We must find the points on cube where to attach the edges, not to create a new vertexes.
+        //int i0 = verts.size();
+        int iv[6];
+        Vec3d p;
+        //p=p0+rot.a* La + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+        p=p0+rot.a* La; iv[0]=findVert( p+rot.b*Lb,  R_snapVert ); iv[1]=findVert( p-rot.b*Lb , R_snapVert ); 
+        p=p0+rot.c* h;  iv[2]=    vert( p+rot.b*(Lb-Lbh) );        iv[3]=    vert( p-rot.b*(Lb-Lbh) );
+        //p=p0+rot.a*-La + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+        p=p0+rot.a*-La; iv[4]=findVert( p+rot.b*Lb,  R_snapVert ); iv[5]=findVert( p-rot.b*Lb , R_snapVert ); 
+        edge(iv[0],iv[2]); edge(iv[1],iv[3]);
+        edge(iv[2],iv[3]);
+        edge(iv[2],iv[4]); edge(iv[3],iv[5]);
+    }
 
     inline int edgst(int v,int t=-1){  int i=edge(ov,v,t); ov=v;         return i; };
     inline int trist(int v,int t=-1){  int i=tri (ov,v,t); oov=ov; ov=v; return i; };
@@ -496,6 +540,14 @@ class Builder2{ public:
     int export_tris( Quat4i* tri, int i0=0, int i1=-1 ){  if(i1<0){ i1=edges.size()-i1; };
         for(int i=i0; i<=i1; i++){ tri[i]=tris[i]; }
         return i1-i0+1;
+    }
+
+    void printSelectedVerts(){
+        printf( "Mesh::Builder2::printSelectedVerts() n=%i\n", selection.size() );
+        for(int ii=0; ii<selection.size(); ii++){
+            int i=selection[ii];
+            printf( "%i -> %i pos: %16.10f %16.10f %16.10f\n", ii, i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
+        }
     }
 
 
