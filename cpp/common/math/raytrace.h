@@ -329,18 +329,43 @@ inline int pickPoinMinDist( const Vec3d &ray0, const Vec3d &hRay, int n, const V
 inline int pickBondCenter( int nb, const Vec2i* bonds, const Vec3d* ps, const Vec3d& ray0, const Vec3d& hRay, double R ){
     double tmin =  1e+300;
     int imin    = -1;
-
-    printf( "ray0(%g,%g,%g) hRay(%g,%g,%g) \n", ray0.x,ray0.y,ray0.z, hRay.x,hRay.y,hRay.z );
+    //printf( "ray0(%g,%g,%g) hRay(%g,%g,%g) \n", ray0.x,ray0.y,ray0.z, hRay.x,hRay.y,hRay.z );
     for(int i=0; i<nb; i++){
         const Vec2i& b = bonds[i];
         Vec3d p = (ps[b.a]+ps[b.b])*0.5;
         double ti = raySphere( ray0, hRay, R, p );
-        printf( "ti[%i] %g  p(%g,%g,%g)\n", i, ti, p.x,p.y,p.z );
+        //printf( "ti[%i] %g  p(%g,%g,%g)\n", i, ti, p.x,p.y,p.z );
         if(ti<tmin){ imin=i; tmin=ti; }
     }
-    printf( ">>>> imin %i tmin %g \n", imin, tmin );
+    //printf( ">>>> imin %i tmin %g \n", imin, tmin );
     return imin;
 }
+
+template<typename Func>
+int rayPickBond( const Vec3d& ray0, const Vec3d& hRay, int nb, Func func, const double Rmax=0.5, const bool byCenter=false ){
+    //printf( "rayPickBond() byCenter=%i Rmax=%g ray0(%g,%g,%g)\n", byCenter, Rmax, ray0.x,ray0.y,ray0.z );
+    double R2max = Rmax*Rmax;
+    double dist_min =  1e+300;
+    int    imin = -1;
+    for(int i=0; i<nb; i++){
+        Vec3d pa,pb; func(i,pa,pb);
+        if(byCenter){
+            double ti = raySphere( ray0, hRay, Rmax, (pa+pb)*0.5 );
+            if(ti<dist_min){ imin=i; dist_min=ti; }
+        }else{
+            double t1,t2;
+            Vec3d hb = pb-pa; double l = hb.normalize();
+            double dist = rayLine( ray0, hRay, pa, hb, t1, t2 );
+            //printf( "rayPickBond()[%i] dist=%g rs(%g,%g)\n", i, dist, t1, t2 );
+            if( (dist<Rmax) && (t2>0) && (t2<l) ){
+                //printf( "rayPickBond() picked %i dist=%g dist_min=%g\n", i, dist, dist_min  );
+                imin=i; dist_min=dist;
+            }
+        }
+    }
+    return imin;
+}
+
 
 /*
 inline bool pointInRect( const Vec3d& p, const Mat3d& rot, Vec2d ){

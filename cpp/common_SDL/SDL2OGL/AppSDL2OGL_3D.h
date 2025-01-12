@@ -25,6 +25,12 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	//Vec3d  camPos;
 	Camera cam;
 
+    bool   bDragging = false;
+    Vec3f  ray0_start;
+    Vec3f  ray0;
+    int perFrame =  100;
+    Quat4f qCamera0;
+
 	float camDist = 50.0;
 	Vec2i spinning_start;
 
@@ -51,9 +57,14 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	//void orthoCamera      ( );
 	//void perspectiveCamera( );
 
+	inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y + cam.pos; }
+    inline Vec3f updateRay0(){ ray0 = mouseRay0(); return ray0; }
+    //ray0 = (Vec3d)(  cam.rot.a*mouse_begin_x  +  cam.rot.b*mouse_begin_y  +  cam.pos );
+    inline void mouseStartSelectionBox(){ ray0_start = ray0;  bDragging = true; }
 
-	inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y; }
+	//inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y; }
 	void drawCrosshair( float sz );
+    void drawMuseSelectionBox();
 
 	AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_, const char* name=0 );
 

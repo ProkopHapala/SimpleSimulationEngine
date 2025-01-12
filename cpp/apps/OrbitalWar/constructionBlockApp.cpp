@@ -49,8 +49,9 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
     GUI gui;
 
     //EDIT_MODE edit_mode = EDIT_MODE::component;
-    int picked = -1;
-    Vec3d mouse_ray0;
+    //int picked = -1;
+    //Vec3d hray; //= (Vec3d)(cam.rot.c);
+    //Vec3d ray0; //= (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
 
     int picked_block = -1;
 
@@ -106,8 +107,8 @@ void ConstructionBlockApp::draw(){
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-    glLineWidth(3.0);
-    glColor3f(0.0,0.0,0.0);
+    
+    
 
 
 
@@ -118,6 +119,9 @@ void ConstructionBlockApp::draw(){
 
     //Draw3D::drawBlock( block );
 
+    // Draw All Edges
+    glColor3f(0.0,0.0,0.0);
+    glLineWidth(1.0);
     glBegin(GL_LINES);
     for(int i=0;i<mesh2.edges.size();i++){
         Vec2i e = mesh2.edges[i].lo;
@@ -125,20 +129,24 @@ void ConstructionBlockApp::draw(){
     }
     glEnd();
 
+    // Draw selected edges
+    if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
+        glColor3f(0.0,0.7,0.0);
+        glLineWidth(5.0);
+        glBegin(GL_LINES);
+        for(int ie: mesh2.selset){
+            Vec2i e = mesh2.edges[ie].lo;
+            Draw3D::drawLine( mesh2.verts[e.i].pos, mesh2.verts[e.j].pos );
+        }
+        glEnd();
+    }
+
+    glLineWidth(5.0);
     Draw3D::drawAxis(10.0);
 
-    // ----------- Picking
-    //picker.hray = (Vec3d)(cam.rot.c);
-    //picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
-    //glLineWidth(5.0);
-    //if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3d p = *(Vec3d*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
-    //else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( sim.points[b.x].f, sim.points[b.y].f ); } }
-    // glDisable(GL_DEPTH_TEST);
-    // glDisable(GL_LIGHTING);
-    // if( (picker.picked>=0) && (edit_mode==EDIT_MODE::component) ){
-    //     glColor3f(0,1.0,0);
-    //     drawPicked( *theSpaceCraft, picked );
-    // }
+    glLineWidth(1.0);
+    glColor3f(0.0,0.7,0.0);
+    if(bDragging){ drawMuseSelectionBox(); }
 };
 
 void ConstructionBlockApp::drawHUD(){
@@ -187,38 +195,40 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
     }
     gui.onEvent(mouseX,mouseY,event);
     switch( event.type ){
-        case SDL_KEYDOWN :
-            switch( event.key.keysym.sym ){
-                //case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
-                //case SDLK_LEFTBRACKET  : circ_inc(picked_block, sim.edgeBBs.ncell ); break;
-                //case SDLK_RIGHTBRACKET : circ_dec(picked_block, sim.edgeBBs.ncell ); break;
-                //case SDLK_m: picker.switch_mode(); break;
-                //case SDLK_h:  warrior1->tryJump(); break;
-                case SDLK_l:
-                    //reloadShip( );
-                    //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
-                    break;
-                //case SDLK_SPACE: bRun = !bRun; break;
-                //case SDLK_KP_0:  sim.cleanVel(); break;
-            }
-            break;
+
+         // ========  Mouse events  ========
+
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
-                case SDL_BUTTON_LEFT: break;
+                case SDL_BUTTON_LEFT:{
+                    //printf("SDL_BUTTON_LEFT: mouse_ray0 %g %g %g mouse_begin %g %g \n", ray0.x, ray0.y, ray0.z, mouse_begin_x, mouse_begin_y); 
+                    mouseStartSelectionBox(); 
+                    
                     //picker.pick();
-                case SDL_BUTTON_RIGHT: break;
+                } break;
+
+                case SDL_BUTTON_RIGHT:{} break;
             }
             break;
+
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    /*
-                    switch(edit_mode){
-                        case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
-                        //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
-                    }; break;
-                    */
-                case SDL_BUTTON_RIGHT:break;
+                    if( ray0.dist2(ray0_start)<0.1 ){ // too small for selection box 
+                        mesh2.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
+                    }else{
+                        mesh2.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
+                    }
+                    bDragging=false;
+                case SDL_BUTTON_RIGHT: { } break;
+            }
+            break;
+
+        // ========  Keyboard events ========
+        
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_l:{} break;
             }
             break;
     };

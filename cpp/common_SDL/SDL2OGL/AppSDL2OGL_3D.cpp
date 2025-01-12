@@ -209,6 +209,7 @@ void AppSDL2OGL_3D::mouseHandling( ){
         Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
         qCamera.qmul_T( q );
     }
+    updateRay0();
     //qCamera.qmul( q );
 }
 
@@ -219,6 +220,17 @@ void AppSDL2OGL_3D::drawCrosshair( float sz ){
     glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
     glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
     glEnd();
+}
+
+void AppSDL2OGL_3D::drawMuseSelectionBox(){
+    //glLineWidth(3.0);
+    //glColor3f(1.0,0.5,0.0); Draw3D::drawPointCross( ray0_start, 0.1 );    
+    //glLineWidth(1.0);
+    Vec3f ray0_;        cam.rot.dot_to( (Vec3f)ray0, ray0_);
+    Vec3f ray0_start_;  cam.rot.dot_to( (Vec3f)ray0_start, ray0_start_);
+    //glColor3f(1.0,0.5,0.0); 
+    Draw3D::drawTriclinicBoxT(cam.rot, (Vec3f)ray0_start_, (Vec3f)ray0_ );   // Mouse Selection Box
+    //glColor3f(0.0,0.5,1.0); Draw3D::drawTriclinicBox (cam.rot, (Vec3f)ray0_start_, (Vec3f)ray0_ ); // Mouse Selection Box
 }
 
 AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_, const char* name ) : AppSDL2OGL( id, WIDTH_, HEIGHT_, name ) {

@@ -8,6 +8,9 @@
 
 
 #include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -17,9 +20,12 @@
 #include "raytrace.h"
 
 #include "datatypes.h"
+#include "Slots.h"
 
 #include "testUtils.h"
 #include "MeshBuilder.h"
+
+using LoopDict = std::unordered_map<int,Slots<int,2>>;
 
 //#include "datatypes.h"
 
@@ -53,25 +59,117 @@ class Builder2{ public:
     Vec2i edge_type=Vec2i{0,0}; // uv edges
     int ov,oov; // previous edge indexes;
 
-
     std::vector<Quat4i> blocks;  // {ivert,iedge,itri,ichunk}   // blocks of data, drawing of some complex object create one block
     std::vector<Vert>   verts;   // {pos,nor,uv}
     std::vector<Quat4i> edges;   // {a,b, ?, type}={f|e} or  {a,b, f1, f2} => we can store type of the edge in the 4rd component, or adjacent faces
     std::vector<Quat4i> tris;    // {a,b,c|type}={f|e}   => we can store type of the face in the 4th component
-    std::vector<Quat4i> chunks;  // {istrip0, by_type, } can represent polygons, lines_strips, triangles_strips 
+    std::vector<Quat4i> chunks;  // {i0,n,?, type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
 
     // Edit settings
     bool bExitError = true;
     double R_snapVert = 0.1;   // tolerance for snapping vertices used in findVert()
-    //int selection_mode = 0;  // 0-none, 1-vert, 2-edge, 3-face
-    std::vector<int>    selection; // indices of selected vertices (eventually edges, faces ? )
+    int selection_mode = 2;  // 0-none, 1-vert, 2-edge, 3-face
+    enum class SelectionMode{ vert=1, edge=2, face=3 };
+    std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
+    std::unordered_set<int> selset;    // edge index for vert
 
     int draw_mode = TRIANGLES;
     Vec3f  penColor;
     
     void clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
     void printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
+
+    bool sortEdgeLoop( int n, int* iedges){
+        // sort edges by shared points so that they for edge loop
+        LoopDict point2edge;
+        for(int i=0; i<n; i++){
+            int ie = iedges[i];
+            Quat4i& e = edges[ie];
+            point2edge[e.x].add(ie);
+            point2edge[e.y].add(ie);
+        }
+        //std::vector<int> sortedPoints;
+        //std::vector<int> sortedEdges;
+        int ie0    = iedges[0];
+        Quat4i& e0 = edges[ie0];
+        int iv    = e0.y;
+        int ov    = e0.x;
+        int oe    = ie0; 
+        for(int i=1; i<n; i++){
+            //point2edge[iv].remove(ie0);
+            auto& s = point2edge[iv];
+            int ie;
+            if( s.data[0]==oe ){ ie = s.data[1]; }
+            else               { ie = s.data[0]; }
+            if( ie==-1 ){ return false; } // edge loop ends
+            iedges[i] = ie;
+            int oe = ie;
+        }
+    }
+
+    // void inserPolygonEdges( int n, int* edges, bool bOrder=false ){
+    //     if(bOrder){
+    //     }
+    // }
+
+    int pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax ){
+        //printf( "pickEdge() ro(%g, %g, %g) rh(%g, %g, %g) \n", ro.x, ro.y, ro.z, rh.x, rh.y, rh.z );
+        return rayPickBond( ro, rh, edges.size(), [&](int ib,Vec3d&pa,Vec3d&pb){ 
+            Vec2i b = edges[ib].lo; pa=verts[b.i].pos; pb=verts[b.j].pos;
+        }, Rmax, false );
+    }
+
+    int toggleSelSet(  int i ){
+        if( selset.find(i)!=selset.end() ){ selset.erase(i); return -1; }else{ selset.insert(i); return 1; }; return 0;
+    }
+    
+    int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){ int i=pickEdge( ro, rh, Rmax ); if(i>=0){  toggleSelSet( i ); } return i; }
+
+    void pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
+        //printf( "pickSelect() selection_mode %i  \n", selection_mode);
+        switch( (SelectionMode)selection_mode ){
+            case SelectionMode::edge: pickEdgeSelect( ro, rh, Rmax ); break;
+        }
+    }
+
+    int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){ 
+        //printf( "Mesh::Builder2::selectRectEdge() p0(%g,%g,%g) p1(%g,%g,%g) \n", p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
+        Vec3d Tp0,Tp1;
+        //Mat3d rot = (Mat3d)cam.rot;
+        rot.dot_to(p0,Tp0);
+        rot.dot_to(p1,Tp1);
+        _order(Tp0.x,Tp1.x);
+        _order(Tp0.y,Tp1.y);
+        Tp0.z=-1e+300;
+        Tp1.z=+1e+300;
+        int nfound=0;
+        for(int i=0; i<edges.size(); i++ ){
+            Vec2i b = edges[i].lo;
+            Vec3d pa,pb;
+            rot.dot_to( verts[b.i].pos,pa);
+            rot.dot_to( verts[b.j].pos,pb);
+            if( pa.isBetween(Tp0,Tp1) && pb.isBetween(Tp0,Tp1) ){
+                selset.insert( i );
+                nfound++;
+            }
+        }
+        return nfound;
+    }
+
+    void selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
+        selset.clear();
+        //printf( "pickSelect() selection_mode %i  \n", selection_mode);
+        switch( (SelectionMode)selection_mode ){
+            case SelectionMode::edge: selectRectEdge( p0, p1, rot ); break;
+        }
+    }
+
+    void makeSelectrionUnique(){
+        std::sort( selection.begin(), selection.end() );
+        auto it = std::unique( selection.begin(), selection.end() );
+        selection.resize( std::distance(selection.begin(), it) );
+    }
 
     int findClosestVert(const Vec3d& p0,int i0=0,int n=-1){
         if(n==-1) n=verts.size();
