@@ -180,6 +180,111 @@ class Builder2{ public:
     }
     */
 
+   void box( Vec3d p, Vec3d ls, Mat3d rot ){
+        int i000 = vert(p+rot.dotT({ ls.x, ls.y, ls.z}) );
+        int i100 = vert(p+rot.dotT({-ls.x, ls.y, ls.z}) );
+        int i010 = vert(p+rot.dotT({ ls.x,-ls.y, ls.z}) );
+        int i110 = vert(p+rot.dotT({-ls.x,-ls.y, ls.z}) );
+        int i001 = vert(p+rot.dotT({ ls.x, ls.y,-ls.z}) );
+        int i101 = vert(p+rot.dotT({-ls.x, ls.y,-ls.z}) );
+        int i011 = vert(p+rot.dotT({ ls.x,-ls.y,-ls.z}) );
+        int i111 = vert(p+rot.dotT({-ls.x,-ls.y,-ls.z}) );
+        // x
+        edge(i000,i100);
+        edge(i001,i101);
+        edge(i010,i110);
+        edge(i011,i111);
+        // y
+        edge(i000,i010);
+        edge(i001,i011);
+        edge(i100,i110);
+        edge(i101,i111);
+        // z
+        edge(i000,i001);
+        edge(i010,i011);
+        edge(i100,i101);
+        edge(i110,i111);
+
+        /*
+        double as[4]{-1.0,-1.0, 1.0,1.0};
+        double bs[4]{-1.0, 1.0,-1.0,1.0};
+        for(int ii=0; ii<4; ii++){
+            Vec3d p;
+            int i,j;
+            // z
+            rot.dot_to_T( {ls.a*as[ii],ls.b*bs[ii], 0.0}, p );
+            i=vert( p-rot.c*ls.z ); j=vert( p+rot.c*ls.z );
+            edge(i,j);
+            // y
+            rot.dot_to_T( {ls.a*as[ii],0.0,ls.c*bs[ii]}, p );
+            i=vert( p-rot.b*ls.y ); j=vert( p+rot.b*ls.y );
+            edge(i,j);
+            // x
+            rot.dot_to_T( {0.0,ls.b*as[ii],ls.c*bs[ii]}, p );
+            i=vert( p-rot.a*ls.x ); j=vert( p+rot.a*ls.x );
+            edge(i,j);
+        }
+        */
+    }
+
+
+    void frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah ){
+        printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
+        //Lbh=0;
+        // Quat4d ps[4];
+        // ps[0].w=Lb;     ps[0].f = p0+rot.a* La;
+        // ps[1].w=Lb-Lbh; ps[1].f = p0+rot.a* (La-Lah) + rot.c*h;
+        // ps[2].w=Lb-Lbh; ps[2].f = p0+rot.a*-(La-Lah) + rot.c*h;
+        // ps[3].w=Lb;     ps[3].f = p0+rot.a*-La;
+        int i0 = verts.size();
+        Vec3d p;
+        p=p0+rot.a* La       + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+        p=p0+rot.a* (La-Lah) + rot.c*h;   vert( p+rot.b*(Lb-Lbh) ); vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-(La-Lah) + rot.c*h;   vert( p+rot.b*(Lb-Lbh) ); vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-La       + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+
+        int i,j;
+        for(int ii=0; ii<4; ii++){
+            int i1=i0+ii*2;
+            edge(i1,i1+1);
+            if(ii<3){
+                edge(i1  ,i1+2);
+                edge(i1+1,i1+3);
+            }
+        }
+        // for(int ii=0; ii<4; ii++){
+        //     const Quat4d& q = ps[i];
+        //     Vec3d p1 = q.f + rot.b* q.w;
+        //     Vec3d p2 = q.f + rot.b*-q.w;
+        //     i=vert( p1 ); j=vert( p2 ); edge(i,j);
+        //     if(ii<3){
+        //         const Quat4d& q2 = ps[ii+1];
+        //         i=vert( p1 ); j=vert( q2.f+rot.b* q2.w );   edge(i,j);
+        //         i=vert( p2 ); j=vert( q2.f+rot.b*-q2.w );   edge(i,j);
+        //     }
+        // }
+    }
+
+    void prismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh ){
+        //printf("drawPrismFace: La: %f Lb: %f h: %f Lbh: %f  \n", La,Lb,h,Lbh);
+        // ToDo: We must find the points on cube where to attach the edges, not to create a new vertexes.
+        int i0 = verts.size();
+        Vec3d p;
+        p=p0+rot.a* La + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+        p=p0+rot.c* h;              vert( p+rot.b*(Lb-Lbh) ); vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-La + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
+
+        int i,j;
+        for(int ii=0; ii<3; ii++){
+            int i1=i0+ii*2;
+            edge(i1,i1+1);
+            if(ii<2){
+                edge(i1  ,i1+2);
+                edge(i1+1,i1+3);
+            }
+        }
+    }
+
 
     inline int edgst(int v,int t=-1){  int i=edge(ov,v,t); ov=v;         return i; };
     inline int trist(int v,int t=-1){  int i=tri (ov,v,t); oov=ov; ov=v; return i; };

@@ -141,6 +141,24 @@ class Mat3T{
 
 // ====== dot product with vector
 
+    // inline VEC dot( const VEC&  v ) const {
+    //     T vx=v.x,vy=v.y,vz=v.z; // to make it safe use inplace
+    //     return VEC{
+    //         xx*vx + xy*vy + xz*vz,
+    //         yx*vx + yy*vy + yz*vz,
+    //         zx*vx + zy*vy + zz*vz
+    //     };
+	// };
+
+	// inline VEC dot_T( const VEC&  v ) const {
+    //     T vx=v.x,vy=v.y,vz=v.z; // to make it safe use inplace
+    //     return VEC{
+    //         xx*vx + yx*vy + zx*vz,
+    //         xy*vx + yy*vy + zy*vz,
+    //         xz*vx + yz*vy + zz*vz
+    //     };
+	// };
+    
 	inline VEC dot( const VEC&  v ) const {
 		VEC vout;
 		vout.x = xx*v.x + xy*v.y + xz*v.z;
@@ -171,6 +189,8 @@ class Mat3T{
 		vout.y = xy*vx + yy*vy + zy*vz;
 		vout.z = xz*vx + yz*vy + zz*vz;
 	};
+
+
 
     inline bool tryOrthoNormalize( double errMax, int ia, int ib, int ic ){
         VEC& a = vecs[ia];

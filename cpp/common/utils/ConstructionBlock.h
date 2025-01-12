@@ -151,6 +151,49 @@ class BlockBuilder{ public:
 
 };
 
+//#ifdef MeshBuilder2_h
+#include "MeshBuilder2.h"
+//namespace Mesh{
+namespace Mesh{
+
+    void drawFace( Builder2& mesh, const ConstructionBlock& block, int iface, const Vec3d& p0, const Mat3d& rot, Vec2d Ls ){
+        const BlockFace& f = block.faces[iface];
+        switch(f.typ){
+            case 1:{ // single edge
+                //Draw3D::drawLine( p0, p0+rot.c*Ls.x      );
+            }break;  
+            case 2:{ // fork 2 edges
+                if( f.rot ){ mesh.prismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
+                else       { mesh.prismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
+            }break;
+            case 3: {
+                if( f.rot ){ mesh.frustrumFace( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
+                else       { mesh.frustrumFace( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
+            }break;// fork 3 edges
+
+            case 5: {}break;// fork 5 edges
+        }
+    }
+
+    void drawBlock( Builder2& mesh, const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){
+        //for(int i=0; i<6; i++){
+        const Vec3d& L = block.Ls;
+        mesh.box( block.pos, L, rot );
+        
+        drawFace( mesh, block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
+        //drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
+
+        //drawFace( mesh, block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
+        //drawFace( mesh, block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
+        
+        //drawFace( mesh, block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
+        //drawFace( mesh, block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+    }
+
+};
+
+//#endif
+
 // Draw Blocks
 //#ifdef Draw3D_h
 
@@ -239,8 +282,6 @@ void drawFace(const ConstructionBlock& block, int iface, const Vec3d& p0, const 
 
         case 5: {}break;// fork 5 edges
     }
-
-
 }
 
 void drawBlock(const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){

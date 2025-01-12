@@ -73,6 +73,13 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
+    //block.faces[0].typ=1;
+    block.Ls=Vec3d{1.1,1.0,0.9};
+    for(int i=0;i<6;i++){
+        //block.faces[i].typ=2;
+        block.faces[i].typ=3;
+    }
+    drawBlock( mesh2, block );
 
     //plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     //girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -102,19 +109,21 @@ void ConstructionBlockApp::draw(){
     glLineWidth(3.0);
     glColor3f(0.0,0.0,0.0);
 
-    //block.faces[0].typ=1;
-    block.Ls=Vec3d{1.1,1.0,0.9};
-    for(int i=0;i<6;i++){
-        //block.faces[i].typ=2;
-        block.faces[i].typ=3;
-    }
+
 
     //block.faces[2].typ=2;
 
     //block.faces[0].rot=1;
     //block.faces[1].typ=3;
 
-    Draw3D::drawBlock( block );
+    //Draw3D::drawBlock( block );
+
+    glBegin(GL_LINES);
+    for(int i=0;i<mesh2.edges.size();i++){
+        Vec2i e = mesh2.edges[i].lo;
+        Draw3D::drawLine( mesh2.verts[e.i].pos, mesh2.verts[e.j].pos );
+    }
+    glEnd();
 
     Draw3D::drawAxis(10.0);
 
