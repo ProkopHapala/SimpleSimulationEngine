@@ -28,7 +28,9 @@
 
 #include "ConstructionBlock.h"
 #include "MeshBuilder2.h"
+#include "MeshBuilder2Draw.h"
 #include "argparse.h"
+
 
 //#include "testUtils.h"
 
@@ -100,46 +102,32 @@ void ConstructionBlockApp::draw(){
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
-	glColor3f(1.0,0.5,1.0);
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
+
+    glColor3f( 1.0,1.0,1.0 );
+    drawFaces( mesh2 );
 
     glDisable(GL_LIGHTING);
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-    
-    
-
-
-
-    //block.faces[2].typ=2;
-
-    //block.faces[0].rot=1;
-    //block.faces[1].typ=3;
-
-    //Draw3D::drawBlock( block );
-
     // Draw All Edges
     glColor3f(0.0,0.0,0.0);
     glLineWidth(1.0);
-    glBegin(GL_LINES);
-    for(int i=0;i<mesh2.edges.size();i++){
-        Vec2i e = mesh2.edges[i].lo;
-        Draw3D::drawLine( mesh2.verts[e.i].pos, mesh2.verts[e.j].pos );
-    }
-    glEnd();
+    drawEdges( mesh2 );
 
     // Draw selected edges
     if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
         glColor3f(0.0,0.7,0.0);
         glLineWidth(5.0);
-        glBegin(GL_LINES);
-        for(int ie: mesh2.selset){
-            Vec2i e = mesh2.edges[ie].lo;
-            Draw3D::drawLine( mesh2.verts[e.i].pos, mesh2.verts[e.j].pos );
-        }
-        glEnd();
+        drawSelectedEdges( mesh2 );
+        drawSelectedEdgeLabels( mesh2, 0.02 );
     }
+
+    glColor3f(0.f,0.f,0.f);
+    drawPointLabels       ( mesh2, 0.02 );
+    //drawEdgeLabels        ( mesh2, 0.02 );
+    //drawSelectedEdgeLabels( mesh2, 0.02 );
 
     glLineWidth(5.0);
     Draw3D::drawAxis(10.0);
@@ -225,10 +213,13 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             break;
 
         // ========  Keyboard events ========
-        
+
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_l:{} break;
+                //case SDLK_l:{} break;
+                case SDLK_f:{
+                    mesh2.selToFace();
+                } break;
             }
             break;
     };

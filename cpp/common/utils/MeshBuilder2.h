@@ -63,13 +63,15 @@ class Builder2{ public:
     std::vector<Vert>   verts;   // {pos,nor,uv}
     std::vector<Quat4i> edges;   // {a,b, ?, type}={f|e} or  {a,b, f1, f2} => we can store type of the edge in the 4rd component, or adjacent faces
     std::vector<Quat4i> tris;    // {a,b,c|type}={f|e}   => we can store type of the face in the 4th component
-    std::vector<Quat4i> chunks;  // {i0,n,?, type} can represent polygons, lines_strips, triangles_strips 
+    std::vector<Quat4i> chunks;  // {iv0,ie0,n,type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
 
     // Edit settings
-    bool bExitError = true;
-    double R_snapVert = 0.1;   // tolerance for snapping vertices used in findVert()
+    bool bExitError    = true;
+    int ngon_max       = 16;
+    double R_snapVert  = 0.1;   // tolerance for snapping vertices used in findVert()
     int selection_mode = 2;  // 0-none, 1-vert, 2-edge, 3-face
+    enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
     std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
     std::unordered_set<int> selset;    // edge index for vert
@@ -80,7 +82,12 @@ class Builder2{ public:
     void clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
     void printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
 
-    bool sortEdgeLoop( int n, int* iedges){
+    int getOtherEdgeVert(int ie, int iv){
+        Quat4i& e = edges[ie];
+        return e.x==iv ? e.y : e.x;
+    }
+
+    bool sortEdgeLoop( int n, int* iedges, int* iverts=0 ){
         // sort edges by shared points so that they for edge loop
         LoopDict point2edge;
         for(int i=0; i<n; i++){
@@ -89,23 +96,58 @@ class Builder2{ public:
             point2edge[e.x].add(ie);
             point2edge[e.y].add(ie);
         }
-        //std::vector<int> sortedPoints;
-        //std::vector<int> sortedEdges;
+        //for( auto& p : point2edge ){ printf( "sortEdgeLoop() point2edge[%i]: (%i,%i) \n", p.first, p.second.data[0], p.second.data[1] ); }
         int ie0    = iedges[0];
         Quat4i& e0 = edges[ie0];
         int iv    = e0.y;
-        int ov    = e0.x;
         int oe    = ie0; 
+        if( iverts ){ iverts[0] = iv; }
         for(int i=1; i<n; i++){
             //point2edge[iv].remove(ie0);
-            auto& s = point2edge[iv];
+            auto& v = point2edge[iv];
             int ie;
-            if( s.data[0]==oe ){ ie = s.data[1]; }
-            else               { ie = s.data[0]; }
+            if( v.data[0]==oe ){ ie = v.data[1]; }
+            else               { ie = v.data[0]; }
             if( ie==-1 ){ return false; } // edge loop ends
             iedges[i] = ie;
-            int oe = ie;
+            oe = ie;
+            iv = getOtherEdgeVert(ie,iv);
+            if( iverts ){ iverts[i] = iv; }
         }
+        return true;
+    }
+
+    int selToFace(){
+        //printf( "selToFace() n=%i \n", selection.size() );
+        //int sel[selset.size()];
+        int n = selset.size();
+        if(n>ngon_max){
+            printf( "WARRNING: selToFace() n(%i) > ngon_max(%i) => return \n", n, ngon_max );
+            return 0;
+        }
+        selection.clear();
+        for( int i : selset ){ selection.push_back(i);}
+        //printf( "selToFace().before SORT \n" );
+        // for(int i=0; i<n; i++){
+        //     int ie = selection[i];
+        //     Vec2i b = edges[ie].lo;
+        //     printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
+        // }
+        //printf( "selToFace().SORT \n" );
+        int ivs[n];
+        sortEdgeLoop( n, selection.data(), ivs );
+        //printf( "selToFace().after SORT \n" );
+        int i0 = strips.size();
+        chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+        for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
+        for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
+        for(int i=0; i<n; i++){
+            //int ie = selection[i];
+            //Vec2i b = edges[ie].lo;
+            //printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
+            //printf( "%i edge %3i vert %3i \n", i, selection[i], ivs[i] );
+        }
+        return 0;
     }
 
     // void inserPolygonEdges( int n, int* edges, bool bOrder=false ){

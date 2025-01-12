@@ -23,11 +23,46 @@
 #include "SpaceCraft.h"
 #include "EditSpaceCraft.h"
 #include "MeshBuilder.h"
+#include "MeshBuilder2.h"
 #include "Buckets.h"
 
 namespace SpaceCrafting{
 
 int ogl_asteroide=0, ogl_geoSphere=0;
+
+// ======================== MeshBuilder2
+
+void pointLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
+    for(int i=0; i<mesh.verts.size(); i++){
+        Draw3D::drawInt( mesh.verts[i].pos, i, fontTex, sz );
+    }
+}
+
+void edgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
+    for(int i=0; i<mesh.edges.size(); i++){
+        Vec2i e =  mesh.edges[i].lo;
+        Vec3d p = (mesh.verts[e.x].pos + mesh.verts[e.y].pos)*0.5;
+        Draw3D::drawInt( p, i, fontTex, sz );
+    }
+}
+
+void drawSelectedEdges( const Mesh::Builder2& mesh ){
+    glBegin(GL_LINES);
+    for(int ie: mesh.selset){
+        Vec2i e = mesh.edges[ie].lo;
+        Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+    }
+    glEnd();
+}
+
+void drawEdges( const Mesh::Builder2& mesh ){
+    glBegin(GL_LINES);
+    for(int i=0;i<mesh.edges.size();i++){
+        Vec2i e = mesh.edges[i].lo;
+        Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+    }
+    glEnd();
+}
 
 // ========================   Single-precision
 
