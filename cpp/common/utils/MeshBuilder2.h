@@ -66,6 +66,9 @@ class Builder2{ public:
     std::vector<Quat4i> chunks;  // {iv0,ie0,n,type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
 
+    bool use_vert2edge = false;
+    std::unordered_map<uint64_t,int> vert2edge; // map from pair of vert index to vert index in verts
+
     // Edit settings
     bool bExitError    = true;
     int ngon_max       = 16;
@@ -117,36 +120,79 @@ class Builder2{ public:
         return true;
     }
 
-    int selToFace(){
+    int findEdgeByVerts_brute( Vec2i verts ){
+        // todo: we can speed this up by using unordered_map<uint64_t,int> point2edge;
+        verts.order();
+        for( int i=0; i<edges.size(); i++ ){
+            Vec2i e = edges[i].lo;
+            e.order();
+            if( e==verts ){ return i; }
+        }
+        return -1;
+    }
+
+    int findEdgeByVerts_map( const Vec2i verts ){
+        uint64_t key = symetric_id( verts );
+        auto it = vert2edge.find(key);
+        if( it==vert2edge.end() ){ return -1; }
+        return it->second;
+    }
+    int findEdgeByVerts( const Vec2i verts ){
+        int ie= (use_vert2edge) ? findEdgeByVerts_map(verts) : findEdgeByVerts_brute(verts);
+        if( bExitError) if( ie==-1 ){ printf( "ERROR: findEdgeByVerts() edge(%i,%i) not found => exit() \n", verts.x, verts.y ); exit(0); }
+        return ie;
+    }
+
+    void buildVerts2Edge(){
+        vert2edge.clear();
+        for( int i=0; i<edges.size(); i++ ){
+            Vec2i e = edges[i].lo;
+            uint64_t key = symetric_id( e );
+            vert2edge[key] = i;
+        }
+    }
+
+    bool polygon( int n, int* iedges ){
+        int ivs[n];
+        if( !sortEdgeLoop( n, iedges, ivs ) ) return false;
+        int i0 = strips.size();
+        chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+        for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
+        for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
+        return true;
+    }
+
+    int selectionToFace(){
         //printf( "selToFace() n=%i \n", selection.size() );
         //int sel[selset.size()];
         int n = selset.size();
         if(n>ngon_max){
-            printf( "WARRNING: selToFace() n(%i) > ngon_max(%i) => return \n", n, ngon_max );
+            printf( "WARRNING: selectionToFace() n(%i) > ngon_max(%i) => return \n", n, ngon_max );
             return 0;
         }
         selection.clear();
         for( int i : selset ){ selection.push_back(i);}
-        //printf( "selToFace().before SORT \n" );
+        //printf( "selectionToFace().before SORT \n" );
         // for(int i=0; i<n; i++){
         //     int ie = selection[i];
         //     Vec2i b = edges[ie].lo;
         //     printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
         // }
-        //printf( "selToFace().SORT \n" );
-        int ivs[n];
-        sortEdgeLoop( n, selection.data(), ivs );
-        //printf( "selToFace().after SORT \n" );
-        int i0 = strips.size();
-        chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
-        for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
-        for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
-        for(int i=0; i<n; i++){
-            //int ie = selection[i];
-            //Vec2i b = edges[ie].lo;
-            //printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
-            //printf( "%i edge %3i vert %3i \n", i, selection[i], ivs[i] );
-        }
+        //printf( "selectionToFace().SORT \n" );
+        // int ivs[n];
+        // sortEdgeLoop( n, selection.data(), ivs );
+        // //printf( "selectionToFace().after SORT \n" );
+        // int i0 = strips.size();
+        // chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+        // for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
+        // for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
+        // for(int i=0; i<n; i++){
+        //     //int ie = selection[i];
+        //     //Vec2i b = edges[ie].lo;
+        //     //printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
+        //     //printf( "%i edge %3i vert %3i \n", i, selection[i], ivs[i] );
+        // }
+        polygon( n, selection.data() );
         return 0;
     }
 
@@ -398,7 +444,7 @@ class Builder2{ public:
         */
     }
 
-    void frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah ){
+    void frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah  ){
         printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
         int i0 = verts.size();
         Vec3d p;
@@ -418,19 +464,44 @@ class Builder2{ public:
         }
     }
 
-    void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah ){
+    // void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah, bool bFace=true ){
+    //     //printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
+    //     int iv[8];
+    //     Vec3d p;
+    //     p=p0+rot.a* La                ; iv[0]=findVert( p+rot.b*Lb, R_snapVert       ); iv[1]= findVert( p-rot.b*Lb, R_snapVert       );
+    //     p=p0+rot.a* (La-Lah) + rot.c*h; iv[2]=   vert( p+rot.b*(Lb-Lbh) );              iv[3]=     vert( p-rot.b*(Lb-Lbh) );
+    //     p=p0+rot.a*-(La-Lah) + rot.c*h; iv[4]=   vert( p+rot.b*(Lb-Lbh) );              iv[5]=     vert( p-rot.b*(Lb-Lbh) );
+    //     p=p0+rot.a*-La                ; iv[6]=findVert( p+rot.b*Lb, R_snapVert       ); iv[7]= findVert( p-rot.b*Lb, R_snapVert       );
+    //     edge(iv[0],iv[2]); edge(iv[1],iv[3]); //  |   |
+    //     edge(iv[2],iv[3]);                    //   ---
+    //     edge(iv[2],iv[4]); edge(iv[3],iv[5]); //  |   |
+    //     edge(iv[4],iv[5]);                    //   ---
+    //     edge(iv[4],iv[6]); edge(iv[5],iv[7]); //  |   |
+    //     if(bFace){
+    //         // AI: implement this 
+    //     }
+    // }
+
+    void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah, bool bFace=true ){
         //printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
         int iv[8];
         Vec3d p;
-        p=p0+rot.a* La                ; iv[0]=findVert( p+rot.b*Lb, R_snapVert       ); iv[1]= findVert( p-rot.b*Lb, R_snapVert       );
-        p=p0+rot.a* (La-Lah) + rot.c*h; iv[2]=   vert( p+rot.b*(Lb-Lbh) );              iv[3]=     vert( p-rot.b*(Lb-Lbh) );
-        p=p0+rot.a*-(La-Lah) + rot.c*h; iv[4]=   vert( p+rot.b*(Lb-Lbh) );              iv[5]=     vert( p-rot.b*(Lb-Lbh) );
-        p=p0+rot.a*-La                ; iv[6]=findVert( p+rot.b*Lb, R_snapVert       ); iv[7]= findVert( p-rot.b*Lb, R_snapVert       );
-        edge(iv[0],iv[2]); edge(iv[1],iv[3]);
-        edge(iv[2],iv[3]);
-        edge(iv[2],iv[4]); edge(iv[3],iv[5]);
-        edge(iv[4],iv[5]);
-        edge(iv[4],iv[6]); edge(iv[5],iv[7]);
+        p=p0+rot.a* La                ; iv[0]=findVert( p+rot.b*Lb, R_snapVert ); iv[1]= findVert( p-rot.b*Lb, R_snapVert );
+        p=p0+rot.a* (La-Lah) + rot.c*h; iv[2]=    vert( p+rot.b*(Lb-Lbh) );       iv[3]=     vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-(La-Lah) + rot.c*h; iv[4]=    vert( p+rot.b*(Lb-Lbh) );       iv[5]=     vert( p-rot.b*(Lb-Lbh) );
+        p=p0+rot.a*-La                ; iv[6]=findVert( p+rot.b*Lb, R_snapVert ); iv[7]= findVert( p-rot.b*Lb, R_snapVert );
+        int ie_v01 = edge(iv[0], iv[2]); int ie_v02 = edge(iv[1], iv[3]); //  |   |
+        int ie_h1  = edge(iv[2], iv[3]);                                  //   ---
+        int ie_v11 = edge(iv[2], iv[4]); int ie_v12 = edge(iv[3], iv[5]); //  |   |
+        int ie_h2  = edge(iv[4], iv[5]);                                  //   ---
+        int ie_v21 = edge(iv[4], iv[6]); int ie_v22 = edge(iv[5], iv[7]); //  |   |
+        if(bFace){
+            { int ies[4]{ie_h1, ie_v11, ie_h2, ie_v12};  polygon(4, ies); } // Front face (quad)
+            { int ies[4]{ findEdgeByVerts({iv[0], iv[1]}),  ie_v01, ie_h1,  ie_v02  };  polygon(4, ies); } // top
+            { int ies[4]{ findEdgeByVerts({iv[0], iv[6]}),  ie_v01, ie_v11, ie_v21  };  polygon(4, ies); } // left
+            { int ies[4]{ findEdgeByVerts({iv[1], iv[7]}),  ie_v02, ie_v12, ie_v22  };  polygon(4, ies); } // right            
+            { int ies[4]{ findEdgeByVerts({iv[6], iv[7]}),  ie_v21, ie_h2,  ie_v22  };  polygon(4, ies); }  // botton
+        }
     }
 
     void prismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh ){
@@ -453,7 +524,7 @@ class Builder2{ public:
         }
     }
 
-    void snapPrismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh ){
+    void snapPrismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, bool bFace=true ){
         //prismFace( p0, rot, La, Lb, h, Lbh );
         printf("snapPrismFace: La: %f Lb: %f h: %f Lbh: %f  \n", La,Lb,h,Lbh);
         // ToDo: We must find the points on cube where to attach the edges, not to create a new vertexes.
@@ -465,9 +536,15 @@ class Builder2{ public:
         p=p0+rot.c* h;  iv[2]=    vert( p+rot.b*(Lb-Lbh) );        iv[3]=    vert( p-rot.b*(Lb-Lbh) );
         //p=p0+rot.a*-La + rot.c*0.1; vert( p+rot.b*Lb       ); vert( p-rot.b*Lb       );
         p=p0+rot.a*-La; iv[4]=findVert( p+rot.b*Lb,  R_snapVert ); iv[5]=findVert( p-rot.b*Lb , R_snapVert ); 
-        edge(iv[0],iv[2]); edge(iv[1],iv[3]);
-        edge(iv[2],iv[3]);
-        edge(iv[2],iv[4]); edge(iv[3],iv[5]);
+        int ie_h1 =findEdgeByVerts({iv[0],iv[1]});
+        int ie_v11=edge(iv[0],iv[2]); int ie_v12=edge(iv[1],iv[3]);  //   |   |
+        int ie_h2 =edge(iv[2],iv[3]);                                //    ---
+        int ie_v21=edge(iv[2],iv[4]); int ie_v22=edge(iv[3],iv[5]);  //   |   |
+        int ie_h3 =findEdgeByVerts({iv[4],iv[5]});
+        if(bFace){
+            { int ies1[4]{ie_h1,ie_v11,ie_h2,ie_v12};  polygon( 4, ies1 ); }
+            { int ies2[4]{ie_h2,ie_v21,ie_h3,ie_v22};  polygon( 4, ies2 ); }
+        }
     }
 
     inline int edgst(int v,int t=-1){  int i=edge(ov,v,t); ov=v;         return i; };

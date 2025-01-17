@@ -185,13 +185,13 @@ namespace Mesh{
         mesh.selectVertRange( i0, mesh.verts.size() );
         
         drawFace( mesh, block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
-        //drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
+        drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
 
-        //drawFace( mesh, block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
-        //drawFace( mesh, block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
+        drawFace( mesh, block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
+        drawFace( mesh, block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
         
-        //drawFace( mesh, block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
-        //drawFace( mesh, block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+        drawFace( mesh, block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
+        drawFace( mesh, block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
         mesh.selection.clear();
     }
 

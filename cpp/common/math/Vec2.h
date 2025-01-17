@@ -25,6 +25,8 @@ class Vec2T{
 	inline explicit operator Vec2T<double>()const{ return (Vec2T<double>){(double)x,(double)y}; }
 	inline explicit operator Vec2T<int   >()const{ return (Vec2T<int   >){(int)x,(int)y}; }
 
+    inline bool operator==(const VEC& v)const{ return (x==v.x)&&(y==v.y); }
+
 
 	inline void set( T f            ) { x=f;   y=f;   };
     inline void set( T fx, T fy  ) { x=fx;  y=fy;  };

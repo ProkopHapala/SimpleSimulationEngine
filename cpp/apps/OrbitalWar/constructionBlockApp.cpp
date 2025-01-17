@@ -218,7 +218,7 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 //case SDLK_l:{} break;
                 case SDLK_f:{
-                    mesh2.selToFace();
+                    mesh2.selectionToFace();
                 } break;
             }
             break;
