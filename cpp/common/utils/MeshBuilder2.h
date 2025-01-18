@@ -135,6 +135,13 @@ class Builder2{ public:
     }
 
     // ======= Functions
+
+
+
+
+
+
+
     void clear();
     void printSizes();
 
@@ -187,6 +194,18 @@ class Builder2{ public:
     int  export_edges( Vec2i* eds, int i0=0, int i1=-1 );
     int  export_tris( Quat4i* tri, int i0=0, int i1=-1 );
     void printSelectedVerts();
+
+
+
+    int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false );
+    int triangle_strip( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, int stickType, bool bCaps=false );
+    int plateOnGriders( Vec2i ns, Vec2i prange1, Vec2i prange2, Vec2i byN, Vec2i offs, Vec2d span1, Vec2d span2, Quat4i stickTypes );
+    int girder1_caps( int ip0, int ip1, int kind );
+    int girder1( int ip0, int ip1, Vec3d up, int n, double width, Quat4i stickTypes );
+    int wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes );
+    int ngon( Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType );
+    int rope( Vec3d p0, Vec3d p1, int n,  int stickType );
+    int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes );
 
 }; // class Mesh::Builder2
 
