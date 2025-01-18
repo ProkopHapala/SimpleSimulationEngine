@@ -134,23 +134,31 @@ class Builder2{ public:
         return selection.size();
     }
 
+    inline int* getChunkStrip( int ich ){
+        Quat4i ch = chunks[ich];
+        return strips.data() + ch.x;
+    };
+
     // ======= Functions
 
-
-
-
+    int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask );
+    int extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bFace, bool bTris, bool bSort );
+    int loadChunk( int ich, int* iedges=0, int* iverts=0 );
+    Vec3d getChunkNormal( int ich );
 
 
 
     void clear();
     void printSizes();
 
+    bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts );
     bool sortEdgeLoop( int n, int* iedges, int* iverts=0 );
     int findEdgeByVerts_brute( Vec2i verts );
     int findEdgeByVerts_map( const Vec2i verts );
     int findEdgeByVerts( const Vec2i verts );
     void buildVerts2Edge();
 
+    int polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris );
     int polygon( int n, int* iedges );
     int polygonToTris( int i );
     int selectionToFace();

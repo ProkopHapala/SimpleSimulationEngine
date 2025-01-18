@@ -85,6 +85,16 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     }
     drawBlock( mesh2, block );
 
+    int ivs[4];
+    int ich=2;
+    int n    = mesh2.loadChunk( ich, ivs );
+    Vec3d nr = mesh2.getChunkNormal( ich ); 
+    //mesh2.extrudeVertLoop( n, ivs, nr, true, false, false );
+    int ich2 = mesh2.extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
+    //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,0} );
+    //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,1} );
+    mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {1,1,1,1} );
+
     //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
 
     //plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -109,6 +119,8 @@ void ConstructionBlockApp::draw(){
 
     glColor3f( 1.0,1.0,1.0 );
     drawFaces( mesh2 );
+    glColor3f( 0.0,0.5,1.0 );
+    drawFaceNormals( mesh2 );
 
     glDisable(GL_LIGHTING);
     glDisable(GL_CULL_FACE);
@@ -128,6 +140,11 @@ void ConstructionBlockApp::draw(){
         };
     }
 
+    glLineWidth(10.0);
+    glColor3f(1.0,0.0,1.0);
+    int ivs[]{32,33,34,35};
+    drawVertLoop( mesh2, 4, ivs, GL_LINE_LOOP );
+
     // Draw selected edges
     if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
         glColor3f(0.0,0.7,0.0);
@@ -140,13 +157,14 @@ void ConstructionBlockApp::draw(){
     drawPointLabels       ( mesh2, 0.02 );
     //drawEdgeLabels        ( mesh2, 0.02 );
     //drawSelectedEdgeLabels( mesh2, 0.02 );
-
-    glLineWidth(5.0);
-    Draw3D::drawAxis(10.0);
+    glColor3f(1.f,0.f,0.f); drawFaceLabels        ( mesh2, 0.02 );
+    glColor3f(0.f,0.5f,0.f); drawTriLabels         ( mesh2, 0.02 );
 
     glLineWidth(1.0);
     glColor3f(0.0,0.7,0.0);
     if(bDragging){ drawMuseSelectionBox(); }
+
+    //glLineWidth(5.0); Draw3D::drawAxis(10.0);
 };
 
 void ConstructionBlockApp::drawHUD(){

@@ -10,6 +10,45 @@ void Builder2::printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%
 //     return e.x==iv ? e.y : e.x;
 // }
 
+bool Builder2::sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts ){
+    // sort edges by shared points so that they for edge loop
+    LoopDict point2edge;
+    for(int i=0; i<n; i++){
+        //edges[i].order();    // for comparison
+        printf( "sortPotentialEdgeLoop() edges[%i]=%i,%i \n", i, edges[i].x, edges[i].y );
+        Vec2i& e = edges[i];
+        point2edge[e.x].add(i);
+        point2edge[e.y].add(i);
+    }
+    for( auto & p : point2edge ){ printf( "sortPotentialEdgeLoop() point2edge[%i]=(%i,%i) \n", p.first, p.second.data[0], p.second.data[1] ); }
+    //for( auto& p : point2edge ){ printf( "sortEdgeLoop() point2edge[%i]: (%i,%i) \n", p.first, p.second.data[0], p.second.data[1] ); }
+    int iedges[n];
+    int oe    = 0; 
+    Vec2i& e0 = edges[oe];
+    int iv    = e0.y;
+    if( iverts ){ 
+        printf( "sortPotentialEdgeLoop() i: %i iv=%i ie=%i \n", 0, iv, oe );
+        iverts[0] = iv; 
+    }
+    for(int i=1; i<n; i++){
+        auto& v = point2edge[iv];
+        int ie;
+        if( v.data[0]==oe ){ ie = v.data[1]; }
+        else               { ie = v.data[0]; }
+        if( ie==-1 ){
+            printf( "sortPotentialEdgeLoop() no edge found for iv=%i \n", iv ); 
+            return false; 
+        } // edge loop ends
+        iedges[i] = ie;
+        iv = edges[ie].other(iv);
+        oe = ie;
+        printf( "sortPotentialEdgeLoop() i: %i iv=%i ie=%i \n", i, iv, ie );
+        if( iverts ){ iverts[i] = iv; }
+    }
+
+    return true;
+}
+
 bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts ){
     // sort edges by shared points so that they for edge loop
     LoopDict point2edge;
@@ -20,10 +59,9 @@ bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts ){
         point2edge[e.y].add(ie);
     }
     //for( auto& p : point2edge ){ printf( "sortEdgeLoop() point2edge[%i]: (%i,%i) \n", p.first, p.second.data[0], p.second.data[1] ); }
-    int ie0    = iedges[0];
-    Quat4i& e0 = edges[ie0];
+    int oe    = iedges[0];
+    Quat4i& e0 = edges[oe];
     int iv    = e0.y;
-    int oe    = ie0; 
     if( iverts ){ iverts[0] = iv; }
     for(int i=1; i<n; i++){
         //point2edge[iv].remove(ie0);
@@ -72,15 +110,19 @@ void Builder2::buildVerts2Edge(){
     }
 }
 
+int Builder2::polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris ){
+    int i0 = strips.size();
+    int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+    for(int i=0; i<n; i++){ strips.push_back( ivs[i]    ); } // store verts
+    for(int i=0; i<n; i++){ strips.push_back( iedges[i] ); } // store edges
+    if( bPolygonToTris){ polygonToTris( ich ); }
+    return ich;
+}
+
 int Builder2::polygon( int n, int* iedges ){
     int ivs[n];
     if( !sortEdgeLoop( n, iedges, ivs ) ) return false;
-    int i0 = strips.size();
-    int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
-    for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
-    for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
-    if( bPolygonToTris){ polygonToTris( ich ); }
-    return ich;
+    return polygonChunk( n, iedges, ivs, bPolygonToTris );
 }
 
 int Builder2::polygonToTris( int i ){
@@ -676,6 +718,148 @@ void Builder2::printSelectedVerts(){
     }
 }
 
+
+
+
+int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask ){
+
+    Vec3d A1 = verts[q1.x].pos; Vec3d A2 = verts[q2.x].pos;
+    Vec3d B1 = verts[q1.y].pos; Vec3d B2 = verts[q2.y].pos;
+    Vec3d C1 = verts[q1.z].pos; Vec3d C2 = verts[q2.z].pos;
+    Vec3d D1 = verts[q1.w].pos; Vec3d D2 = verts[q2.w].pos;
+
+    int dnp = 4;
+    int i00start = verts.size();
+    int i00      = i00start;
+    double dc = 1.0/((double)n);
+    int oA=q1.x,oB=q1.y,oC=q1.z,oD=q1.w;
+    for (int i=0; i<=n; i++){
+
+        int iA,iB,iC,iD;
+        if( i<(n-1) ){
+            // vertices
+            double c  = (i+1)*dc;
+            double mc = 1-c;
+            iA = vert( A1*mc + A2*c );
+            iB = vert( B1*mc + B2*c );
+            iC = vert( C1*mc + C2*c );
+            iD = vert( D1*mc + D2*c );
+            // ring edges
+            edge( iA,iB, stickTypes.y );
+            edge( iB,iC, stickTypes.y );
+            edge( iC,iD, stickTypes.y );
+            edge( iD,iA, stickTypes.y );
+        }else{ // i==n-1
+            iA=q2.x;
+            iB=q2.y;
+            iC=q2.z;
+            iD=q2.w;
+        }
+        // longitudinal edges
+        edge( oA,iA,stickTypes.x );
+        edge( oB,iB,stickTypes.x );
+        edge( oC,iC,stickTypes.x );
+        edge( oD,iD,stickTypes.x );
+        // spiral edges
+        if(mask.x){
+            edge( oA,iB, stickTypes.z );
+            edge( oB,iC, stickTypes.z );
+            edge( oC,iD, stickTypes.z );
+            edge( oD,iA, stickTypes.z );
+        }
+        if(mask.y){
+            edge( oB,iA, stickTypes.z );
+            edge( oC,iB, stickTypes.z );
+            edge( oD,iC, stickTypes.z );
+            edge( oA,iD, stickTypes.z );
+        }
+        // internal edges
+        if(mask.z){
+            edge( oA,iC, stickTypes.z );
+            edge( oB,iD, stickTypes.z );
+        }
+        if(mask.w){
+            edge( oC,iA, stickTypes.z );
+            edge( oD,iB, stickTypes.z );
+        }
+        oA=iA;
+        oB=iB;
+        oC=iC;
+        oD=iD;
+        // i00+=dnp;
+
+    }
+
+    //return ibloc;
+    return i00;
+}
+
+int Builder2::extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bFace, bool bTris, bool bSort ){
+    int iv0=verts.size();
+    int ie0=edges.size();
+    // if(bEdges || bFace){
+    // }
+    int   ivs[n];
+    Vec2i es [n]; 
+    int   ies[n];
+    for( int i=0; i<n; i++ ){
+        if( bSort ){ 
+            es[i]=Vec2i{ iverts[i], iverts[(i+1)%n] }; // old verts ( already created )
+        }else{
+            ivs[i] = iverts[i];
+            es[i]=Vec2i{iv0+i,iv0+((i+1)%n) };    // new verts ( not yet created )
+        }
+        //printf( "extrudeVertLoop() es[%i]=%i %i \n", i, es[i].x, es[i].y );
+    }
+    if(bSort){ sortPotentialEdgeLoop( n, es, ivs ); };
+    for( int i=0; i<n; i++ ){
+        //printf( "extrudeVertLoop() ivs[%i]=%i verts.size() %i \n", i, ivs[i], verts.size() );
+        int iv = ivs[i];
+        ivs[i] = vert( verts[iv].pos+d );
+    }
+    if(bEdges){
+        for( int i=0; i<n; i++ ){
+            ies[i] = edge( es[i].x, es[i].y );
+        }
+    }
+    if(bFace){
+        //polygonChunk( n, int* igs, ivs, bTris );
+        //int ich = chunk( Quat4i{is0, is0+n, n, (int)ChunkType::face} );
+        int i0 = strips.size();
+        int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+        for(int i=0; i<n; i++){ strips.push_back( ivs[i] ); } // store verts
+        for(int i=0; i<n; i++){ strips.push_back( ies[i] ); } // store edges
+        if( bPolygonToTris){ polygonToTris( ich ); }
+        return ich;
+    }
+    return iv0;
+}
+
+int Builder2::loadChunk( int ich, int* iedges, int* iverts ){
+    Quat4i ch = chunks[ich];
+    if( ch.w==(int)ChunkType::face ){
+        for(int i=0; i<ch.z; i++){
+            if(iedges){ iedges[i]=strips[ch.x+i     ]; }
+            if(iverts){ iverts[i]=strips[ch.x+ch.z+i]; }
+        }
+        return ch.z;
+    }
+    return 0;
+};
+
+//Vec3d getChunkNormal( Quat4i ch ){
+Vec3d Builder2::getChunkNormal( int ich ){
+    Quat4i ch = chunks[ich];
+    if( ch.w==(int)ChunkType::face ){
+        const Vec3d& a = verts[strips[ch.x  ]].pos;
+        const Vec3d& b = verts[strips[ch.x+1]].pos;
+        const Vec3d& c = verts[strips[ch.x+2]].pos;
+        Vec3d nr = cross(b-a, c-a); 
+        nr.normalize(); 
+        return nr;
+    }
+    return Vec3dZero;
+}
 
 
 // ============== From  SpaceCraft2Mesh2.h

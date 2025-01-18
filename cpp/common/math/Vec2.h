@@ -20,12 +20,14 @@ class Vec2T{
 
 	inline bool order       (){ if(a>b){ SWAP(a,b,T); return true; }; return false; }
 	inline bool orderReverse(){ if(a<b){ SWAP(a,b,T); return true; }; return false; }
+    inline T    other( T f )const{ return (f==a)?b:a; }
 
     inline explicit operator Vec2T<float >()const{ return (Vec2T<float >){(float)x,(float)y}; }
 	inline explicit operator Vec2T<double>()const{ return (Vec2T<double>){(double)x,(double)y}; }
 	inline explicit operator Vec2T<int   >()const{ return (Vec2T<int   >){(int)x,(int)y}; }
 
     inline bool operator==(const VEC& v)const{ return (x==v.x)&&(y==v.y); }
+    
 
 
 	inline void set( T f            ) { x=f;   y=f;   };
