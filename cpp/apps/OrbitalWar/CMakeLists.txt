@@ -20,6 +20,7 @@ target_link_libraries( spaceTactics ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LI
 add_executable( constructionBlockApp
     constructionBlockApp.cpp
 	$<TARGET_OBJECTS:SDL2OGL>
+    $<TARGET_OBJECTS:MeshBuilder2>
 )
 target_link_libraries( constructionBlockApp ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -28,6 +29,7 @@ add_executable( SolarSystemMap
 	$<TARGET_OBJECTS:Body>
 	$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:Splines>
+    #$<TARGET_OBJECTS:MeshBuilder2>
 )
 target_link_libraries( SolarSystemMap ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -59,6 +61,7 @@ add_executable( spaceCraftEditor
     $<TARGET_OBJECTS:Truss>
     $<TARGET_OBJECTS:SoftBody>
     $<TARGET_OBJECTS:DynamicOpt>
+    $<TARGET_OBJECTS:MeshBuilder2>
 )
 target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
@@ -68,6 +71,7 @@ add_executable( spaceCraftEditorNew
     $<TARGET_OBJECTS:Truss>
     $<TARGET_OBJECTS:SoftBody>
     $<TARGET_OBJECTS:DynamicOpt>
+    $<TARGET_OBJECTS:MeshBuilder2>
 )
 target_link_libraries( spaceCraftEditorNew  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
@@ -77,6 +81,7 @@ add_executable( spaceCraftDynamics
     $<TARGET_OBJECTS:Truss>
     $<TARGET_OBJECTS:SoftBody>
     $<TARGET_OBJECTS:DynamicOpt>
+    $<TARGET_OBJECTS:MeshBuilder2>
 )
 target_link_libraries( spaceCraftDynamics  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
