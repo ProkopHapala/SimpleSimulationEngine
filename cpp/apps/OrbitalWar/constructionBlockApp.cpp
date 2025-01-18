@@ -122,16 +122,9 @@ void ConstructionBlockApp::draw(){
     if(ipick>=0){
         //printf( "ipick %i \n", ipick );
         if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
-            Quat4i ch = mesh2.chunks[ipick];
             glLineWidth(5.0);
             glColor3f(0.0,0.7,0.0);
-            glBegin(GL_LINE_LOOP);
-            for(int i=0;i<ch.z;i++){
-                int iv = mesh2.strips[ch.x+i];
-                //printf( " %i ", i, ch.x+i, iv );
-                Draw3D::vertex( mesh2.verts[iv].pos );
-            }
-            glEnd();
+            drawPolygonBorder( mesh2, ipick );
         };
     }
 
@@ -223,7 +216,7 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_LEFT:
                     if( ray0.dist2(ray0_start)<0.1 ){ // too small for selection box 
                         ipick = mesh2.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
-                        printf( "ipick %i \n", ipick );
+                        //printf( "ipick %i \n", ipick );
                     }else{
                         //ipick=-1;
                         mesh2.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );

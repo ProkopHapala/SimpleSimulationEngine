@@ -140,11 +140,16 @@ inline double capsulaIntersect( const Vec3d& ro, const Vec3d&  rd, const Vec3d& 
 
 inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& normal, const Vec3d& point ){
 	double nh = normal.dot( hRay  );
-	double np = normal.dot( point );
-	double n0 = normal.dot( ray0  );
-	//printf( "rayPlane %g | %g %g %g\n", ( np - n0 ) / nh, nh, np, n0 );
+    if( nh*nh < 1.e-300 ){ return t_inf; }; // hRay and normal are perpendicular, they cannot intersect
+	//double np = normal.dot( point );
+	//double n0 = normal.dot( ray0  );
+    //double t  = ( np - n0 ) / nh;
+    // printf( "rayPlane t: %g | <n|h>: %g <n|p>: %g <n|o> %g\n", t, nh, np, n0 );
+    Vec3d  d = point - ray0;
+    double t = normal.dot( d ) / nh;
+	//printf( "rayPlane t: %g | <n|h>: %g <n|d> %g \n", t, nh, d );
 	//return ( n0 + np ) / nh;
-	return ( np - n0 ) / nh;
+	return t;
 }
 
 // =========== Triangle
@@ -159,7 +164,6 @@ inline bool pointInTriangleEdges( const Vec3d& pa, const Vec3d& pb, const Vec3d&
 	//printf( " sgn1, sgn2 %f, %f \n", sgn1, sgn2 );
 	return ( sgn1>0 )&&( sgn2>0 );
 }
-
 
 inline double rayTriangle(
 	const Vec3d &ray0, const Vec3d &hRay,

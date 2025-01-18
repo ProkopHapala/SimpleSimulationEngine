@@ -197,7 +197,7 @@ class Builder2{ public:
         return 0;
     }
 
-    inline int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ){
+    int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ){
         double tmin =  1e+300;
         int imin    = -1;
         for(int i=0; i<verts.size(); i++){
@@ -220,9 +220,10 @@ class Builder2{ public:
     }
     
     int pickTriangle( const Vec3d& ro, const Vec3d& rh, bool bReturnFace=false ){
-        printf( "pickTriangle() ro(%g,%g,%g) rh(%g,%g,%g) n", ro.x, ro.y, ro.z, rh.x, rh.y, rh.z );
+        //printf( "pickTriangle() ro(%g,%g,%g) rh(%g,%g,%g) n", ro.x, ro.y, ro.z, rh.x, rh.y, rh.z );
         Vec3d hX,hY;
         rh.getSomeOrtho(hX,hY);
+        //printf( "pickTriangle() hX(%g,%g,%g) hY(%g,%g,%g) \n", hX.x, hX.y, hX.z, hY.x, hY.y, hY.z );
         double Lmin = 1e+300;
         int    imin = -1;
         for( int i=0; i<tris.size(); i++ ){
@@ -231,18 +232,18 @@ class Builder2{ public:
             double L = rayTriangle2( ro, rh, hX, hY, verts[t.x].pos, verts[t.y].pos, verts[t.z].pos, normal );
             //printf( "pickTriangle() i=%i L=%g imin=%i Lmin=%g \n", i, L, imin, Lmin );
             if( L<Lmin ){ 
-                printf( "pickTriangle() i=%i L=%g imin=%i Lmin=%g \n", i, L, imin, Lmin );
+                //printf( "pickTriangle() i=%i L=%g imin=%i Lmin=%g \n", i, L, imin, Lmin );
                 Lmin=L; imin=i; 
             }
         }
-        if(bReturnFace){ return tris[imin].w; }
+        if(bReturnFace && (imin>=0) ){ return tris[imin].w; }
         return imin;
     }
 
     int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){ int i=pickEdge( ro, rh, Rmax ); if(i>=0){  toggleSelSet( i ); } return i; }
 
     int pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
-        printf( "pickSelect() selection_mode %i  \n", selection_mode);
+        //printf( "pickSelect() selection_mode %i  \n", selection_mode);
         switch( (SelectionMode)selection_mode ){
             case SelectionMode::vert: return pickVertex    ( ro, rh, Rmax ); break;
             case SelectionMode::edge: return pickEdgeSelect( ro, rh, Rmax ); break;
