@@ -56,6 +56,7 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
     //Vec3d ray0; //= (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
 
     int picked_block = -1;
+    int ipick = -1;
 
 	virtual void draw   () override;
 	virtual void drawHUD() override;
@@ -83,6 +84,8 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         block.faces[i].typ=3;
     }
     drawBlock( mesh2, block );
+
+    //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
 
     //plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     //girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -115,6 +118,22 @@ void ConstructionBlockApp::draw(){
     glColor3f(0.0,0.0,0.0);
     glLineWidth(1.0);
     drawEdges( mesh2 );
+
+    if(ipick>=0){
+        //printf( "ipick %i \n", ipick );
+        if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
+            Quat4i ch = mesh2.chunks[ipick];
+            glLineWidth(5.0);
+            glColor3f(0.0,0.7,0.0);
+            glBegin(GL_LINE_LOOP);
+            for(int i=0;i<ch.z;i++){
+                int iv = mesh2.strips[ch.x+i];
+                //printf( " %i ", i, ch.x+i, iv );
+                Draw3D::vertex( mesh2.verts[iv].pos );
+            }
+            glEnd();
+        };
+    }
 
     // Draw selected edges
     if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
@@ -203,12 +222,17 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     if( ray0.dist2(ray0_start)<0.1 ){ // too small for selection box 
-                        mesh2.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
+                        ipick = mesh2.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
+                        printf( "ipick %i \n", ipick );
                     }else{
+                        //ipick=-1;
                         mesh2.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
                     }
                     bDragging=false;
-                case SDL_BUTTON_RIGHT: { } break;
+                    break;
+                case SDL_BUTTON_RIGHT: { 
+                    ipick=-1;
+                } break;
             }
             break;
 

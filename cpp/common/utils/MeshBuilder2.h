@@ -66,14 +66,15 @@ class Builder2{ public:
     std::vector<Quat4i> chunks;  // {iv0,ie0,n,type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
 
-    bool use_vert2edge = false;
+    bool use_vert2edge  = false;
+    bool bPolygonToTris = true;
     std::unordered_map<uint64_t,int> vert2edge; // map from pair of vert index to vert index in verts
 
     // Edit settings
     bool bExitError    = true;
     int ngon_max       = 16;
     double R_snapVert  = 0.1;   // tolerance for snapping vertices used in findVert()
-    int selection_mode = 2;  // 0-none, 1-vert, 2-edge, 3-face
+    int selection_mode = 3;  // 0-none, 1-vert, 2-edge, 3-face
     enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
     std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
@@ -152,19 +153,39 @@ class Builder2{ public:
         }
     }
 
-    bool polygon( int n, int* iedges ){
+    int chunk( const Quat4i ch ){
+        chunks.push_back( ch );
+        return chunks.size()-1;
+    }
+
+    int polygon( int n, int* iedges ){
         int ivs[n];
         if( !sortEdgeLoop( n, iedges, ivs ) ) return false;
         int i0 = strips.size();
-        chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
+        int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
         for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
         for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
-        return true;
+        if( bPolygonToTris){ polygonToTris( ich ); }
+        return ich;
+    }
+
+    int polygonToTris( int i ){
+        Quat4i ch = chunks[i];
+        int n = ch.z;
+        int i0 = ch.x;
+        int* ivs = &strips[i0];
+        //int* ies = &strips[i0+n];
+        //int i1 = strips.size();
+        //int i2 = i1 + n-2;
+        //chunks[i] = Quat4i{i1, i2, n-2, (int)ChunkType::face};
+        for(int j=1; j<n-1; j++){
+            tris.push_back( Quat4i{ivs[0], ivs[j], ivs[j+1], i} );
+        }
+        return n;
     }
 
     int selectionToFace(){
         //printf( "selToFace() n=%i \n", selection.size() );
-        //int sel[selset.size()];
         int n = selset.size();
         if(n>ngon_max){
             printf( "WARRNING: selectionToFace() n(%i) > ngon_max(%i) => return \n", n, ngon_max );
@@ -172,34 +193,20 @@ class Builder2{ public:
         }
         selection.clear();
         for( int i : selset ){ selection.push_back(i);}
-        //printf( "selectionToFace().before SORT \n" );
-        // for(int i=0; i<n; i++){
-        //     int ie = selection[i];
-        //     Vec2i b = edges[ie].lo;
-        //     printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
-        // }
-        //printf( "selectionToFace().SORT \n" );
-        // int ivs[n];
-        // sortEdgeLoop( n, selection.data(), ivs );
-        // //printf( "selectionToFace().after SORT \n" );
-        // int i0 = strips.size();
-        // chunks.push_back( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
-        // for(int i=0; i<n; i++){ strips.push_back( ivs[i]       ); } // store verts
-        // for(int i=0; i<n; i++){ strips.push_back( selection[i] ); } // store edges
-        // for(int i=0; i<n; i++){
-        //     //int ie = selection[i];
-        //     //Vec2i b = edges[ie].lo;
-        //     //printf( "%3i edge %3i verts %i %i \n", i, ie, b.i, b.j );
-        //     //printf( "%i edge %3i vert %3i \n", i, selection[i], ivs[i] );
-        // }
         polygon( n, selection.data() );
         return 0;
     }
 
-    // void inserPolygonEdges( int n, int* edges, bool bOrder=false ){
-    //     if(bOrder){
-    //     }
-    // }
+    inline int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ){
+        double tmin =  1e+300;
+        int imin    = -1;
+        for(int i=0; i<verts.size(); i++){
+            //if(ignore)if(ignore[i])continue;
+            double ti = raySphere( ray0, hRay, R, verts[i].pos );
+            if(ti<tmin){ imin=i; tmin=ti; }
+        }
+        return imin;
+    }
 
     int pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax ){
         //printf( "pickEdge() ro(%g, %g, %g) rh(%g, %g, %g) \n", ro.x, ro.y, ro.z, rh.x, rh.y, rh.z );
@@ -212,13 +219,36 @@ class Builder2{ public:
         if( selset.find(i)!=selset.end() ){ selset.erase(i); return -1; }else{ selset.insert(i); return 1; }; return 0;
     }
     
+    int pickTriangle( const Vec3d& ro, const Vec3d& rh, bool bReturnFace=false ){
+        printf( "pickTriangle() ro(%g,%g,%g) rh(%g,%g,%g) n", ro.x, ro.y, ro.z, rh.x, rh.y, rh.z );
+        Vec3d hX,hY;
+        rh.getSomeOrtho(hX,hY);
+        double Lmin = 1e+300;
+        int    imin = -1;
+        for( int i=0; i<tris.size(); i++ ){
+            Vec3d normal;
+            Quat4i t = tris[i];
+            double L = rayTriangle2( ro, rh, hX, hY, verts[t.x].pos, verts[t.y].pos, verts[t.z].pos, normal );
+            //printf( "pickTriangle() i=%i L=%g imin=%i Lmin=%g \n", i, L, imin, Lmin );
+            if( L<Lmin ){ 
+                printf( "pickTriangle() i=%i L=%g imin=%i Lmin=%g \n", i, L, imin, Lmin );
+                Lmin=L; imin=i; 
+            }
+        }
+        if(bReturnFace){ return tris[imin].w; }
+        return imin;
+    }
+
     int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){ int i=pickEdge( ro, rh, Rmax ); if(i>=0){  toggleSelSet( i ); } return i; }
 
-    void pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
-        //printf( "pickSelect() selection_mode %i  \n", selection_mode);
+    int pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
+        printf( "pickSelect() selection_mode %i  \n", selection_mode);
         switch( (SelectionMode)selection_mode ){
-            case SelectionMode::edge: pickEdgeSelect( ro, rh, Rmax ); break;
+            case SelectionMode::vert: return pickVertex    ( ro, rh, Rmax ); break;
+            case SelectionMode::edge: return pickEdgeSelect( ro, rh, Rmax ); break;
+            case SelectionMode::face: return pickTriangle  ( ro, rh, true ); break;
         }
+        return -1;
     }
 
     int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){ 
@@ -767,6 +797,9 @@ class Builder2{ public:
         }
     }
 
+    // void printSizes(){
+    //     printf( "Mesh::Builder2::printSizes() verts: %i edges: %i tris: %i chunks: %i \n", verts.size(), edges.size(), tris.size(), chunks.size() );
+    // }
 
 
 /*
