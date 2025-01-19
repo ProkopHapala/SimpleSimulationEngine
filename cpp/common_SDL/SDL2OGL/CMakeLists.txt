@@ -10,7 +10,7 @@ add_library( TiledView      OBJECT TiledView.cpp    )
 
 add_library( SDL2OGL      OBJECT AppSDL2OGL_3D.cpp AppSDL2OGL.cpp PlotScreen2D.cpp ScreenSDL2OGL_3D.cpp ScreenSDL2OGL.cpp  Plot2D.cpp Draw.cpp Draw2D.cpp Draw3D.cpp GUI.cpp 
 #$<TARGET_OBJECTS:Mesh> 
-${COMMON_SRCS}/math/Mesh.cpp
+${COMMON_SRCS}/geometry/Mesh.cpp
 )
 
 #add_library( GLView      OBJECT GLView.cpp Plot2D.cpp Draw.cpp Draw2D.cpp Draw3D.cpp GUI.cpp ${COMMON_SRCS}/math/Mesh.cpp )

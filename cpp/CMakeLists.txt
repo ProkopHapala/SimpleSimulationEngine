@@ -79,20 +79,15 @@ SET( COMMON_SHADERS   "${MY_SRC_DIR}/common_resources/shaders" )
 include_directories(
         ${COMMON_SRCS}
         ${COMMON_SRCS}/algorithms
+        ${COMMON_SRCS}/dataStructures
         ${COMMON_SRCS}/math
+        ${COMMON_SRCS}/geometry
         ${COMMON_SRCS}/dynamics
-	    ${COMMON_SRCS}/CombatModels
         ${COMMON_SRCS}/maps
         #${COMMON_SRCS}/optimization
         ${COMMON_SRCS}/utils
-        ${COMMON_SRCS}/dataStructures
+        ${COMMON_SRCS}/CombatModels
         ${COMMON_SRCS}/engine
-        #${COMMON_SDL_SRCS}
-        #${COMMON_SDL_SRCS}/network
-        #${COMMON_SDL_SRCS}/SDL2
-        #${COMMON_SDL_SRCS}/SDL2OGL
-        #${COMMON_SDL_SRCS}/SDL2OGL3
-        #${MY_SRC_DIR}/engines
 )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )

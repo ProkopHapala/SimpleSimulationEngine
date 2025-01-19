@@ -20,7 +20,7 @@ add_library( GLView SHARED GLView.cpp
         ${COMMON_SDL_SRCS}/SDL2OGL/Draw2D.cpp
         ${COMMON_SDL_SRCS}/SDL2OGL/Draw3D.cpp
         ${COMMON_SDL_SRCS}/SDL2OGL/GUI.cpp
-        ${COMMON_SRCS}/math/Mesh.cpp
+        ${COMMON_SRCS}/geometry/Mesh.cpp
 )
 
 #add_library( GLView SHARED GLView.cpp $<TARGET_OBJECTS:SDL2OGL> ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
