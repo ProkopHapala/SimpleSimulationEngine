@@ -87,7 +87,9 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         //block.faces[i].typ=2;
         //block.faces[i].typ=3;
     }
-    drawBlock( mesh2, block );
+    Mesh::ConstructionBlockToMeshBuilder cbm;
+    cbm.mesh = &mesh2;
+    cbm.drawBlock( block );
 
     printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
 

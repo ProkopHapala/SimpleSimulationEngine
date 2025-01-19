@@ -144,41 +144,41 @@ inline int mapFaces( Vec2i fc1, Vec2i fc2, const int* inds, const Vec3d* points,
 
 
 struct BlockFace{
-    static const int nedge_max = 9;
+    static const int nid_max = 9;
     int typ;
     int rot; // is the face rotated by 90 degrees?
-    int nedge;
-    int edges[nedge_max];
+    int nid;
+    int ids[nid_max];
     Vec3d Lhs;
-    BlockFace(): typ(0), rot(0), nedge(0), edges{-1,-1,-1, -1,-1,-1, -1,-1,-1}, Lhs{0.5,0.5,0.5} {};
+    BlockFace(): typ(0), rot(0), nid(0), ids{-1,-1,-1, -1,-1,-1, -1,-1,-1}, Lhs{0.5,0.5,0.5} {};
 
-    bool addEdge( int id, int iedge ){
-        if( iedge>=nedge_max ) return false;
-        if( edges[iedge]>=0  ) return false;
-        edges[iedge] = id;
-        nedge++;
+    bool addId( int id, int i ){
+        if( i>=nid_max ) return false;
+        if( ids[i]>=0  ) return false;
+        ids[i] = id;
+        nid++;
         return true;
     }
 
-    int removeEdge( int iedge ){
-        if( iedge>=nedge_max ) return -1;
-        int id = edges[iedge];
-        edges[iedge] = -1;
-        nedge--;
+    int removeIdAt( int i ){
+        if( i>=nid_max ) return -1;
+        int id = ids[i];
+        ids[i] = -1;
+        nid--;
         return id;
     }
 
-    int findEdge( int id ){
-        for(int i=0; i<nedge_max; i++){
-            if( edges[i]==id ){ return i; }
+    int findId( int id ){
+        for(int i=0; i<nid_max; i++){
+            if( ids[i]==id ){ return i; }
         }
         return -1;
     }
 
-    int removeEdgeById( int id ){
-        int iedge = findEdge(id);
-        if( iedge<0 ) return -1;
-        return removeEdge(iedge);
+    int removeId( int id ){
+        int i = findId(id);
+        if( i<0 ) return -1;
+        return removeIdAt(i);
     }
 
     /// TODO: find edge by dir
@@ -194,30 +194,34 @@ class ConstructionBlock{ public:
     BlockFace faces[nfaces]; 
     // block orientation is 
 
-    Vec2i findEdge( int id ){
+    Vec2i findId( int id ){
         for(int i=0; i<nfaces; i++){
-            int iedge = faces[i].findEdge(id);
-            if( iedge>=0 ){ return Vec2i{i,iedge}; }
+            int j = faces[i].findId(id);
+            if( j>=0 ){ return Vec2i{i,j}; }
         }
         return Vec2i{-1,-1};
     }
 
-    bool addEdge( int id, Vec2i where ){
-        if( where.x>=nfaces ) return false;
-        if( !faces[where.x].addEdge(id,where.y) ) return false;
+    bool addId( int id, Vec2i where ){
+        if( where.i>=nfaces ) return false;
+        if( !faces[where.i].addId(id,where.j) ) return false;
         return true;
     }
 
-    int removeEdge( Vec2i where ){
-        int iedge = faces[where.x].findEdge(where.y);
-        if( iedge<0 ) return -1;
-        return faces[where.x].removeEdge(iedge);
+    int replaceId( int id, Vec2i where ){
+        int oid = faces[where.i].ids[where.j];
+        if( oid<0 ) faces[where.i].nid++;
+        return oid;
     }
 
-    Vec2i removeEdge( int id ){
-        Vec2i where = findEdge(id);
+    int removeIdAt( Vec2i where ){
+        return faces[where.i].removeIdAt(where.j);
+    }
+
+    Vec2i removeId( int id ){
+        Vec2i where = findId(id);
         if( where.x<0 ) return Vec2i{-1,-1};
-        removeEdge( where );
+        removeIdAt( where );
         return where;
     }
 
@@ -234,48 +238,93 @@ class BlockBuilder{ public:
 //namespace Mesh{
 namespace Mesh{
 
-    void drawFace( Builder2& mesh, const ConstructionBlock& block, int iface, const Vec3d& p0, const Mat3d& rot, Vec2d Ls ){
+    class ConstructionBlockToMeshBuilder{ public:
+        Builder2* mesh=0;
+        std::unordered_map<int,int> edge2chunk;  // todo: later we perhaps need to use slots
+        Quat4i stickTypes{-1,-1,-1,-1};
+        Quat4i stickMaks{1,1,1,1};
+
+
+    int replace_chunk( ConstructionBlock& block, Vec2i where, int ich=-1 ){
+        if(ich<0){ ich = mesh->chunks.size()+ich; };
+        int id = block.replaceId( ich, where );
+        edge2chunk[id] = ich;
+        return id;
+    }
+
+    void drawFace( ConstructionBlock& block, int iface, const Vec3d& p0, const Mat3d& rot, Vec2d Ls, bool bStoreFaceIds=false ){
+        Builder2& mesh = *this->mesh;
         const BlockFace& f = block.faces[iface];
         printf("drawFace: iface=%i p0(%g,%g,%g)\n", iface, p0.x, p0.y, p0.z );
         switch(f.typ){
             case 1:{ // single edge
-                if( f.rot ){ mesh.snapBoxFace  ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x ); } // is the face rotated by 90 degrees?
-                else       { mesh.snapBoxFace  ( p0, rot,                      Ls.x, Ls.y ); }
+                if( f.rot ){ mesh.snapBoxFace     ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x ); } // is the face rotated by 90 degrees?
+                else       { mesh.snapBoxFace     ( p0, rot,                      Ls.x, Ls.y ); }
+                if(bStoreFaceIds){ replace_chunk( block, {iface,0}, -1 ); }
             }break;  
             case 2:{ // fork 2 edges
-                //if( f.rot ){ mesh.prismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
-                //else       { mesh.prismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
-                if( f.rot ){ mesh.snapPrismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
+                if( f.rot ){ mesh.snapPrismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x ); }
                 else       { mesh.snapPrismFace   ( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x ); }
+                if(bStoreFaceIds){ 
+                    replace_chunk( block, {iface,1}, -2 ); 
+                    replace_chunk( block, {iface,2}, -1 ); 
+                    //block.addId( mesh.chunks.size()-1, {iface,0} ); 
+                }
             }break;
             case 3: {
                 if( f.rot ){ mesh.snapFrustrumFace( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
                 else       { mesh.snapFrustrumFace( p0, rot,                      Ls.x, Ls.y, f.Lhs.z, f.Lhs.x, f.Lhs.y ); }
+                if(bStoreFaceIds){ 
+                    replace_chunk( block, {iface,0}, -5 ); // Front face (quad)
+                    replace_chunk( block, {iface,1}, -4 ); // top
+                    replace_chunk( block, {iface,3}, -3 ); // left
+                    replace_chunk( block, {iface,4}, -2 ); // right 
+                    replace_chunk( block, {iface,2}, -1 ); // botton
+                }
             }break;// fork 3 edges
 
             case 5: {}break;// fork 5 edges
         }
     }
 
-    void drawBlock( Builder2& mesh, const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){
+    void drawBlock( ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity, bool bStoreFaceIds=false ){
+        Builder2& mesh = *this->mesh;
         //for(int i=0; i<6; i++){
         const Vec3d& L = block.Ls;
         int i0 = mesh.verts.size();
         mesh.box( block.pos, L, rot );
         mesh.selectVertRange( i0, mesh.verts.size() );
-
         //mesh.printSelectedVerts();
-        
-        drawFace( mesh, block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
-        drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
-
-        drawFace( mesh, block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
-        drawFace( mesh, block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
-        
-        drawFace( mesh, block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
-        drawFace( mesh, block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+        drawFace( block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
+        drawFace( block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
+        drawFace( block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
+        drawFace( block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
+        drawFace( block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
+        drawFace( block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
         mesh.selection.clear();
     }
+
+    void drawBlockBuilder( BlockBuilder& skelet, int nseg=4 ){
+        Builder2& mesh = *this->mesh;
+        edge2chunk.clear();
+        for(int i=0; i<skelet.blocks.size(); i++){
+            drawBlock( skelet.blocks[i], Mat3dIdentity, true );
+        }
+        for(int i=0; i<skelet.edges.size(); i++){
+            Quat4i e = skelet.edges[i];
+            ConstructionBlock& b1 = skelet.blocks[e.x];
+            ConstructionBlock& b2 = skelet.blocks[e.y];
+            int ich1   = edge2chunk[e.z];
+            int ich2   = edge2chunk[e.w];
+            //Vec2i fe1 = b1.findId( if1 );
+            //Vec2i fe2 = b2.findId( if2 );
+            Quat4i q1 = *(Quat4i*)mesh.getChunkStrip( ich1 );
+            Quat4i q2 = *(Quat4i*)mesh.getChunkStrip( ich2 );
+            mesh.bridge_quads( q1, q2, nseg, stickTypes, stickMaks );
+        }
+    }
+
+    }; // ConstructionBlockToMeshBuilder
 
 };
 

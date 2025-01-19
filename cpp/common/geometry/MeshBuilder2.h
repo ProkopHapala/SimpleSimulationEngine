@@ -149,15 +149,6 @@ class Builder2{ public:
 
     int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
 
-    // inline int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} ){
-    //     int ivs[4];
-    //     int n    = loadChunk( ich, ivs );
-    //     Vec3d nr = getChunkNormal( ich ); 
-    //     int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
-    //     bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
-    //     return ich2;
-    // }
-
     // ======= Functions
 
     int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask );
