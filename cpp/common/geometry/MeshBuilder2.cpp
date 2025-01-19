@@ -101,6 +101,12 @@ int Builder2::findEdgeByVerts( const Vec2i verts ){
     return ie;
 }
 
+int Builder2::findOrAddEdges( const Vec2i verts, int t, int t2 ){
+    int ie = findEdgeByVerts( verts );
+    if( ie==-1 ){ ie = edge(verts.x, verts.y, t, t2); }
+    return ie;
+}
+
 void Builder2::buildVerts2Edge(){
     vert2edge.clear();
     for( int i=0; i<edges.size(); i++ ){
@@ -474,23 +480,21 @@ void Builder2::frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, doubl
     }
 }
 
-// void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah, bool bFace=true ){
-//     //printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
-//     int iv[8];
-//     Vec3d p;
-//     p=p0+rot.a* La                ; iv[0]=findVert( p+rot.b*Lb, R_snapVert       ); iv[1]= findVert( p-rot.b*Lb, R_snapVert       );
-//     p=p0+rot.a* (La-Lah) + rot.c*h; iv[2]=   vert( p+rot.b*(Lb-Lbh) );              iv[3]=     vert( p-rot.b*(Lb-Lbh) );
-//     p=p0+rot.a*-(La-Lah) + rot.c*h; iv[4]=   vert( p+rot.b*(Lb-Lbh) );              iv[5]=     vert( p-rot.b*(Lb-Lbh) );
-//     p=p0+rot.a*-La                ; iv[6]=findVert( p+rot.b*Lb, R_snapVert       ); iv[7]= findVert( p-rot.b*Lb, R_snapVert       );
-//     edge(iv[0],iv[2]); edge(iv[1],iv[3]); //  |   |
-//     edge(iv[2],iv[3]);                    //   ---
-//     edge(iv[2],iv[4]); edge(iv[3],iv[5]); //  |   |
-//     edge(iv[4],iv[5]);                    //   ---
-//     edge(iv[4],iv[6]); edge(iv[5],iv[7]); //  |   |
-//     if(bFace){
-//         // AI: implement this 
-//     }
-// }
+void Builder2::snapBoxFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb ){
+    //printf("snapBoxFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
+    int i00=findVert( p0-rot.a*La-rot.b*Lb, R_snapVert );
+    int i01=findVert( p0-rot.a*La+rot.b*Lb, R_snapVert );
+    int i10=findVert( p0+rot.a*La-rot.b*Lb, R_snapVert );
+    int i11=findVert( p0+rot.a*La+rot.b*Lb, R_snapVert );
+    printf("snapBoxFace: ivs: %i %i %i %i \n", i00,i01,i10,i11 );
+    int ies[4];
+    ies[0]=findOrAddEdges( {i00,i01} );
+    ies[1]=findOrAddEdges( {i01,i11} );
+    ies[2]=findOrAddEdges( {i11,i10} );
+    ies[3]=findOrAddEdges( {i10,i00} );
+    printf("snapBoxFace: ies: %i %i %i %i \n", ies[0],ies[1],ies[2],ies[3] );
+    polygon(4, ies); // top
+}
 
 void Builder2::snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah, bool bFace ){
     //printf("frustrumFace: La: %f Lb: %f h: %f Lbh: %f Lah: %f \n", La,Lb,h,Lbh);
@@ -510,7 +514,7 @@ void Builder2::snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, d
         { int ies[4]{ findEdgeByVerts({iv[0], iv[1]}),  ie_v01, ie_h1,  ie_v02  };  polygon(4, ies); } // top
         { int ies[4]{ findEdgeByVerts({iv[0], iv[6]}),  ie_v01, ie_v11, ie_v21  };  polygon(4, ies); } // left
         { int ies[4]{ findEdgeByVerts({iv[1], iv[7]}),  ie_v02, ie_v12, ie_v22  };  polygon(4, ies); } // right            
-        { int ies[4]{ findEdgeByVerts({iv[6], iv[7]}),  ie_v21, ie_h2,  ie_v22  };  polygon(4, ies); }  // botton
+        { int ies[4]{ findEdgeByVerts({iv[6], iv[7]}),  ie_v21, ie_h2,  ie_v22  };  polygon(4, ies); } // botton
     }
 }
 
@@ -766,6 +770,20 @@ void Builder2::printSelectedVerts(){
     }
 }
 
+void Builder2::printVerts(){
+    printf( "Mesh::Builder2::printVerts() n=%i\n", verts.size() );
+    for(int i=0; i<verts.size(); i++){
+        printf( "%3i pos: %16.10f %16.10f %16.10f\n", i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
+    }
+}
+
+void Builder2::printEdges(){
+    printf( "Mesh::Builder2::printEdges() n=%i\n", edges.size() );
+    for(int i=0; i<edges.size(); i++){
+        printf( "%3i -> ivs: %3i %3i t: %i t2: %i \n", i, edges[i].x, edges[i].y, edges[i].z, edges[i].z  );
+    }
+}
+
 
 
 
@@ -881,6 +899,15 @@ int Builder2::extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bF
         return ich;
     }
     return iv0;
+}
+
+int Builder2::extrudeFace( int ich, double L, Quat4i stickTypes, Quat4i maks ){
+    int ivs[4];
+    int n    = loadChunk( ich, ivs );
+    Vec3d nr = getChunkNormal( ich ); 
+    int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
+    bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
+    return ich2;
 }
 
 int Builder2::loadChunk( int ich, int* iedges, int* iverts ){

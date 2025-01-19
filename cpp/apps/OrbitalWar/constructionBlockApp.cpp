@@ -83,24 +83,37 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //block.faces[0].typ=1;
     block.Ls=Vec3d{1.1,1.0,0.9};
     for(int i=0;i<6;i++){
+        block.faces[i].typ=1;
         //block.faces[i].typ=2;
-        block.faces[i].typ=3;
+        //block.faces[i].typ=3;
     }
     drawBlock( mesh2, block );
 
-    int ivs[4];
-    int ich=2;
-    int n    = mesh2.loadChunk( ich, ivs );
-    Vec3d nr = mesh2.getChunkNormal( ich ); 
-    //mesh2.extrudeVertLoop( n, ivs, nr, true, false, false );
-    int ich2 = mesh2.extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
-    //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,0} );
-    //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,1} );
-    mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {1,1,1,1} );
+    printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
+
+    mesh2.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
+
+    // int ivs[4];
+    // int ich=2;
+    // int n    = mesh2.loadChunk( ich, ivs );
+    // Vec3d nr = mesh2.getChunkNormal( ich ); 
+    // //mesh2.extrudeVertLoop( n, ivs, nr, true, false, false );
+    // int ich2 = mesh2.extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
+    // //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,0} );
+    // //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,1} );
+    // mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {1,1,1,1} );
+
+    printf( "ConstructionBlockApp::ConstructionBlockApp() .bridge_quads() DONE \n" );
 
     Vec3d hdir{ -pivot_point.z, 0.0, pivot_point.x }; hdir.normalize();
 
     mesh2.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
+
+    printf( "ConstructionBlockApp::ConstructionBlockApp() .make_anchor_point() DONE \n" );
+
+    mesh2.printSizes();
+    //mesh2.printVerts();
+    //mesh2.printEdges();
 
 
     //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
@@ -148,10 +161,10 @@ void ConstructionBlockApp::draw(){
         };
     }
 
-    glLineWidth(10.0);
-    glColor3f(1.0,0.0,1.0);
-    int ivs[]{32,33,34,35};
-    drawVertLoop( mesh2, 4, ivs, GL_LINE_LOOP );
+    // glLineWidth(10.0);
+    // glColor3f(1.0,0.0,1.0);
+    // int ivs[]{32,33,34,35};
+    // drawVertLoop( mesh2, 4, ivs, GL_LINE_LOOP );
 
     // Draw selected edges
     if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
@@ -265,6 +278,18 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
                 case SDLK_f:{
                     mesh2.selectionToFace();
                 } break;
+
+                case SDLK_e:{
+                    if( (ipick>=0) && ( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ) ){
+                        mesh2.extrudeFace( ipick, 5.0 );    
+                    }
+                } break;
+
+                // ---- Selection mode  I, O, P
+                case SDLK_i: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; break;
+                case SDLK_o: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::face; break;
+                case SDLK_p: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::vert; break;
+
             }
             break;
     };

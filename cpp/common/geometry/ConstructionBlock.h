@@ -44,6 +44,20 @@ inline int cubeIndex3D( uint8_t code ){
     return -1; // invalid code
 }
 
+inline int iface( Vec3d p ){
+    double xx = p.x*p.x;
+    double yy = p.y*p.y;
+    double zz = p.z*p.z;
+    // which axis is the longest? - triple sort
+    //int iax;
+    if( xx > yy ){
+        if( xx > zz ){ return 0 + (p.x>0); }  // x is longest
+        else         { return 4 + (p.z>0); }  // z is longest
+    }else{
+        if( yy > zz ){ return 2 + (p.y>0); }  // y is longest
+        else         { return 4 + (p.z>0); }  // z is longest
+    }
+}
 
 
 /// @TODO: Geometry-topological connectivity on Platonic Solids (Convex Polyhedron):   We can take any Convex Polyhedron as a node and take its faces as bond interfaces. 
@@ -78,6 +92,7 @@ inline Mat3d getFaceRot( int n, const int* inds, const Vec3d* points, Vec3d* cog
     return rot;
 }
 
+// WTF does this function do?
 inline int mapFaces( Vec2i fc1, Vec2i fc2, const int* inds, const Vec3d* points, Vec2i* out_edges ){
     // fc1, fc2 are faces ranges in the index buffer {i0,n} 
     if( fc1.y!=fc2.y ){
@@ -129,26 +144,89 @@ inline int mapFaces( Vec2i fc1, Vec2i fc2, const int* inds, const Vec3d* points,
 
 
 struct BlockFace{
+    static const int nedge_max = 9;
     int typ;
-    int rot;
+    int rot; // is the face rotated by 90 degrees?
     int nedge;
-    int edges[9];
+    int edges[nedge_max];
     Vec3d Lhs;
     BlockFace(): typ(0), rot(0), nedge(0), edges{-1,-1,-1, -1,-1,-1, -1,-1,-1}, Lhs{0.5,0.5,0.5} {};
+
+    bool addEdge( int id, int iedge ){
+        if( iedge>=nedge_max ) return false;
+        if( edges[iedge]>=0  ) return false;
+        edges[iedge] = id;
+        nedge++;
+        return true;
+    }
+
+    int removeEdge( int iedge ){
+        if( iedge>=nedge_max ) return -1;
+        int id = edges[iedge];
+        edges[iedge] = -1;
+        nedge--;
+        return id;
+    }
+
+    int findEdge( int id ){
+        for(int i=0; i<nedge_max; i++){
+            if( edges[i]==id ){ return i; }
+        }
+        return -1;
+    }
+
+    int removeEdgeById( int id ){
+        int iedge = findEdge(id);
+        if( iedge<0 ) return -1;
+        return removeEdge(iedge);
+    }
+
+    /// TODO: find edge by dir
+
+
 };
 
 /// @brief class ConstructionBlock use case cube do describe topology and geometry of attached edges into truss  
 class ConstructionBlock{ public:
-   Vec3d pos=Vec3dZero;
-   Vec3d Ls=Vec3dOne;
-   BlockFace faces[6]; // 
+    static const int nfaces = 6;
+    Vec3d pos=Vec3dZero;
+    Vec3d Ls=Vec3dOne;
+    BlockFace faces[nfaces]; 
+    // block orientation is 
+
+    Vec2i findEdge( int id ){
+        for(int i=0; i<nfaces; i++){
+            int iedge = faces[i].findEdge(id);
+            if( iedge>=0 ){ return Vec2i{i,iedge}; }
+        }
+        return Vec2i{-1,-1};
+    }
+
+    bool addEdge( int id, Vec2i where ){
+        if( where.x>=nfaces ) return false;
+        if( !faces[where.x].addEdge(id,where.y) ) return false;
+        return true;
+    }
+
+    int removeEdge( Vec2i where ){
+        int iedge = faces[where.x].findEdge(where.y);
+        if( iedge<0 ) return -1;
+        return faces[where.x].removeEdge(iedge);
+    }
+
+    Vec2i removeEdge( int id ){
+        Vec2i where = findEdge(id);
+        if( where.x<0 ) return Vec2i{-1,-1};
+        removeEdge( where );
+        return where;
+    }
+
 }; 
 
 
 class BlockBuilder{ public:
     std::vector<ConstructionBlock> blocks;
-    std::vector<Vec2i> edges;
-
+    std::vector<Quat4i> edges;
 };
 
 //#ifdef MeshBuilder2_h
@@ -158,9 +236,11 @@ namespace Mesh{
 
     void drawFace( Builder2& mesh, const ConstructionBlock& block, int iface, const Vec3d& p0, const Mat3d& rot, Vec2d Ls ){
         const BlockFace& f = block.faces[iface];
+        printf("drawFace: iface=%i p0(%g,%g,%g)\n", iface, p0.x, p0.y, p0.z );
         switch(f.typ){
             case 1:{ // single edge
-                //Draw3D::drawLine( p0, p0+rot.c*Ls.x      );
+                if( f.rot ){ mesh.snapBoxFace  ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x ); } // is the face rotated by 90 degrees?
+                else       { mesh.snapBoxFace  ( p0, rot,                      Ls.x, Ls.y ); }
             }break;  
             case 2:{ // fork 2 edges
                 //if( f.rot ){ mesh.prismFace   ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x, f.Lhs.z, f.Lhs.x); }
@@ -183,6 +263,8 @@ namespace Mesh{
         int i0 = mesh.verts.size();
         mesh.box( block.pos, L, rot );
         mesh.selectVertRange( i0, mesh.verts.size() );
+
+        //mesh.printSelectedVerts();
         
         drawFace( mesh, block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
         drawFace( mesh, block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );

@@ -147,45 +147,15 @@ class Builder2{ public:
     int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
     int make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l );
 
-    // inline int conected_vertex( const Vec3d& p, int stickType, int n, int* iverts ){
-    //     int iv = vert( p );
-    //     for(int i=0;i<n;i++){ edge(iv,iverts[i],stickType); }
-    //     return iv;
-    // };
+    int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
 
-    // inline int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l ){
-    //     int n=0;
-    //     for(int i=0;i<verts.size();i++){
-    //         Vec3d  d =  verts[i].pos-p0;
-    //         double cH = fw.dot(d);
-    //         if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
-    //         double cR = d.norm2() - cH*cH; //
-    //         if( cR>r*r ) continue;         // check bounds in the plane
-    //         selection.push_back(i);
-    //         n++;
-    //     }
-    //     return n;
-    // }
-
-    // inline int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax ){
-    //     Vec3d lf = cross(fw,up);
-    //     lf.normalize();
-    //     int n=0;
-    //     for(int i=0;i<verts.size();i++){
-    //         Vec3d  d  =  verts[i].pos-p0;
-    //         Vec3d  Td{ lf.dot(d), up.dot(d), fw.dot(d) }; 
-    //         if( Td.isBetween( Lmin, Lmax ) ){ 
-    //             selection.push_back(i);
-    //             n++;
-    //         }
-    //     }
-    //     return n;
-    // }
-
-    // inline int make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l ){
-    //     selection.clear();
-    //     select_in_cylinder( p, fw, r, l );
-    //     return conected_vertex( p, stickType, selection.size(), selection.data() );
+    // inline int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} ){
+    //     int ivs[4];
+    //     int n    = loadChunk( ich, ivs );
+    //     Vec3d nr = getChunkNormal( ich ); 
+    //     int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
+    //     bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
+    //     return ich2;
     // }
 
     // ======= Functions
@@ -195,16 +165,15 @@ class Builder2{ public:
     int loadChunk( int ich, int* iedges=0, int* iverts=0 );
     Vec3d getChunkNormal( int ich );
 
-
-
     void clear();
-    void printSizes();
+
 
     bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts );
     bool sortEdgeLoop( int n, int* iedges, int* iverts=0 );
     int findEdgeByVerts_brute( Vec2i verts );
     int findEdgeByVerts_map( const Vec2i verts );
     int findEdgeByVerts( const Vec2i verts );
+    int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
 
     int polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris );
@@ -226,6 +195,7 @@ class Builder2{ public:
     int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 );
     int fstrip( int ip0, int ip1, int n, int ft=-1, Vec2i et={-1,-1} );
     void box( Vec3d p, Vec3d ls, Mat3d rot );
+    void snapBoxFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb );
     void frustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah  );
     void snapFrustrumFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, double Lah, bool bFace=true );
     void prismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh );
@@ -251,6 +221,10 @@ class Builder2{ public:
     int  export_edges( Vec2i* eds, int i0=0, int i1=-1 );
     int  export_tris( Quat4i* tri, int i0=0, int i1=-1 );
     void printSelectedVerts();
+
+    void printSizes();
+    void printVerts();
+    void printEdges();
 
 
 
