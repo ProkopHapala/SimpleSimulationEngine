@@ -23,7 +23,7 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     SpaceCraftSimulator* simulator=0;
     Mesh::Builder2* _mesh=0;
-    OrbSim*         _sim =0;
+    TrussDynamics_d*         _sim =0;
     OrbSim_f*       _sim_f=0;
 
     double Estrain = 0.0;
@@ -70,7 +70,7 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
         _sim_f = simulator->getOrbSim_f();
     }
 
-    void drawSim  ( OrbSim&   sim );
+    void drawSim  ( TrussDynamics_d&   sim );
     void drawSim_f( OrbSim_f& sim );
     //virtual void initSimDefault();
 
@@ -102,7 +102,7 @@ void SpaceCraftDynamicsApp::initGUI(){
     panel_sim->subs[3]->setValue(perFrame)->setRange(1, 100);
 }
 
-void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
+void SpaceCraftDynamicsApp::drawSim( TrussDynamics_d& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );
     //if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }

@@ -23,7 +23,7 @@ using namespace SpaceCrafting;
 
 namespace Mesh{
 
-void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop, int nneighmax_min=0 ){
+void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop, int nneighmax_min=0 ){
     // {
     //     printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
     //     //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
@@ -247,7 +247,7 @@ int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=1
     return nBuck;
 }
 
-void applySliders2sim( SpaceCraft& craft, OrbSim& sim, double* control_speed ){
+void applySliders2sim( SpaceCraft& craft, TrussDynamics_d& sim, double* control_speed ){
     double dt = sim.dt;
     for( int i=0; i<craft.sliders.size(); i++ ){
         Slider* o = craft.sliders[i];
@@ -267,7 +267,7 @@ void applySliders2sim( SpaceCraft& craft, OrbSim& sim, double* control_speed ){
     }
 }
 
-void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
+void sliders2edgeverts( SpaceCraft& craft, TrussDynamics_d& sim ){
     //printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
     for( Ring* o : craft.rings ){
@@ -291,7 +291,7 @@ void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
     }
 }
 
-void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
+void makeBBoxes( const SpaceCraft& craft, TrussDynamics_d& sim ){
     // // --- Bounding boxes
     int nbuck  = exportBuckets( craft,             0, 16, true );
     //printf( "nbuck %i \n", nbuck );

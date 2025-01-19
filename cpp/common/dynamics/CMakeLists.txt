@@ -13,6 +13,9 @@ add_library( AeroCraft  OBJECT AeroCraft.cpp  )
 
 add_library( DynamicOpt OBJECT DynamicOpt.cpp )
 add_library( SoftBody   OBJECT SoftBody.cpp   )
+add_library( TrussDynamics_d OBJECT TrussDynamics_d.cpp )
+#add_library( TrussDynamics_f OBJECT TrussDynamics_f.cpp )
+
 add_library( Truss      OBJECT Truss.cpp      )
 add_library( ShockWaves OBJECT Shock1D.cpp    )
 

@@ -43,14 +43,14 @@ void init_workshop(){
     workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
 }
 
-void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
+void to_OrbSim( TrussDynamics_d& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
     printf("#### ==== SpaceCraftSimulator::to_OrbSim() sim.linSolveMethod=%i \n", sim.linSolveMethod );
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
-    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky       ) ||
-        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+    if( ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::Cholesky       ) ||
+        ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::CholeskySparse ) ){
         sim.prepare_LinearSystem( true, true, true, 256 );
     }
     sim.cleanVel();
@@ -67,13 +67,13 @@ void to_OrbSim_f(OrbSim_f& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim_f() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
-    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky       ) ||
-        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+    if( ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::Cholesky       ) ||
+        ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::CholeskySparse ) ){
         sim.prepare_LinearSystem( true, true, true, 256 );
     }
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
-    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+    //sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::CG;
+    sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::Cholesky;
+    //sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::CholeskySparse;
     sim.cleanVel();
     sim.cleanForce();
     //if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
@@ -85,7 +85,7 @@ void to_OrbSim_f(OrbSim_f& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints
 class SpaceCraftSimulator { public:
 
     Mesh::Builder2 mesh;
-    OrbSim         sim;
+    TrussDynamics_d sim;
     OrbSim_f       sim_f;
 
     std::vector<int> fixPoints;
@@ -99,12 +99,12 @@ class SpaceCraftSimulator { public:
     virtual void initSimulators( double dt=0.1, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero );
     virtual void initSimDefault();
 
-    virtual OrbSim*         getOrbSim  (){ return &sim;   };
+    virtual TrussDynamics_d*         getOrbSim  (){ return &sim;   };
     virtual OrbSim_f*       getOrbSim_f(){ return &sim_f; };
     virtual Mesh::Builder2* getMesh(){ return &mesh; };
 
     //virtual void mouseHandling( );
-    //void drawSim  ( OrbSim&   sim );
+    //void drawSim  ( TrussDynamics_d&   sim );
     //void drawSim_f( OrbSim_f& sim );
 	//SpaceCraftSimulator();
 

@@ -1,6 +1,7 @@
+#pragma once
 
-#ifndef  CG_h
-#define  CG_h
+//#ifndef  CG_h
+//#define  CG_h
 
 #include <math.h>
 #include <cstdlib>
@@ -30,7 +31,7 @@ inline void dot_ax_(int n,int m, const T* A, const T* b, T* sum ){
     }
 }
 
-void dotM_ax( int n, int m, const double* A, const double* x, double* out ){
+inline void dotM_ax( int n, int m, const double* A, const double* x, double* out ){
     for (int i=0; i<n; i++ ){
         //printf( "dotM_ax[%i] nm[%i,%i] \n", i, n,m );
         dot_ax_(n,m, A+i*n, x, out+i*m );
@@ -451,5 +452,5 @@ class CGsolver{ public:
 };
 
 
-#endif
+//#endif
 

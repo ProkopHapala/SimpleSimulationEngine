@@ -195,7 +195,7 @@ std::vector<double> apply_preconditioner(const std::vector<double>& G, const std
 }
 
 
-    void CGNE( int n, double* A, double* g_i, double* b, int niter=100 ){
+inline void CGNE( int n, double* A, double* g_i, double* b, int niter=100 ){
 
         // // Step 3: Solve the least squares problem using Conjugate Gradient Normal Equation (CGNE)
         // std::vector<double> g_i(pattern_size, 0.0);
@@ -250,7 +250,7 @@ std::vector<double> apply_preconditioner(const std::vector<double>& G, const std
     }
 
 
-void sparse_fsai( const SparseMatrix& A, int niter=100 ) {
+inline void sparse_fsai( const SparseMatrix& A, int niter=100 ) {
     int n = A.n;
     std::vector<double> G(n*n, 0.0);  // Initialize G as a dense matrix for simplicity
 

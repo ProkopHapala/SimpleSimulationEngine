@@ -223,7 +223,7 @@ void renderPointBox( int ib, Buckets& buckets, Quat4d* points){
 }
 
 
-void drawSliderBonds( OrbSim& sim ){
+void drawSliderBonds( TrussDynamics_d& sim ){
     //glLineWidth(3.0);
     //glColor3f(0.0,0.5,0.0);
     // render EdgeVertBonds
@@ -241,7 +241,7 @@ void drawSliderBonds( OrbSim& sim ){
     //glLineWidth(3.0);
 }
 
-void drawSliders( SpaceCraft& craft, OrbSim& sim  ){
+void drawSliders( SpaceCraft& craft, TrussDynamics_d& sim  ){
     // --- draw slider bonds
     //for( const Slider* o: theSpaceCraft->sliders){ 
     glBegin(GL_LINES);
@@ -258,7 +258,7 @@ void drawSliders( SpaceCraft& craft, OrbSim& sim  ){
     glEnd();
 }
 
-void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
+void drawSliderPaths( SpaceCraft& craft, TrussDynamics_d& sim  ){
     //Draw3D::color(Vec3d{1.0f,0.0f,1.0f});
     for(int i=0; i<craft.sliders.size(); i++){
         const Slider& o = *craft.sliders[i];

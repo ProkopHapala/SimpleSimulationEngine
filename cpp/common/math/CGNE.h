@@ -1,6 +1,8 @@
+#pragma once
 
-#ifndef  CGNE_h
-#define  CGNE_h
+//#ifndef  CGNE_h
+//#define  CGNE_h
+
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -34,7 +36,7 @@ This method allows us to solve the least squares problem efficiently while maint
 
 */
 
-void CGNE(int n, double* A, double* g_i, double* b, int niter=100) {
+inline void CGNE(int n, double* A, double* g_i, double* b, int niter=100) {
     std::vector<double> r(n);
     std::vector<double> p(n);
     std::vector<double> Ap(n);
@@ -88,7 +90,7 @@ void CGNE(int n, double* A, double* g_i, double* b, int niter=100) {
 }
 
 
-void CGNE_bak( int n, double* A, double* g_i, double* b, int niter=100 ){
+inline void CGNE_bak( int n, double* A, double* g_i, double* b, int niter=100 ){
 
     // // Step 3: Solve the least squares problem using Conjugate Gradient Normal Equation (CGNE)
     // std::vector<double> g_i(pattern_size, 0.0);
@@ -143,5 +145,5 @@ void CGNE_bak( int n, double* A, double* g_i, double* b, int niter=100 ){
 }
 
 
-#endif
+//#endif
 

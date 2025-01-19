@@ -67,7 +67,7 @@ using namespace SpaceCrafting;
 
 bool bShipReady = false;
 Mesh::Builder2 mesh2;
-OrbSim sim;
+TrussDynamics_d sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 char str_tmp[8096];
 double elementSize  = 5.;
@@ -82,15 +82,15 @@ Vec3d wheel_speed_setup{ 5.0, 5.0, 5.0 };
 Vec3d p_debug{ 100.0, 0.0,0.0 };
 
 
-class LinSolverOrbSim : public LinSolver{ public:
-    OrbSim* sim=0;
+class LinSolverTrussDynamics : public LinSolver{ public:
+    TrussDynamics_d* sim=0;
     virtual void dotFunc( int n, double * x, double * Ax ) override {
-        //printf( "LinSolverOrbSim::dotFunc(n=%i) \n", n );
+        //printf( "LinSolverTrussDynamics_d::dotFunc(n=%i) \n", n );
         //sim->dot_Linearized_neighs2(n, x, Ax);
         sim->dot_Linearized_bonds(n, x, Ax);
     }
 };
-LinSolverOrbSim linSolver;
+LinSolverTrussDynamics linSolver;
 
 void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, sim, (double*)&wheel_speed ); }
 
@@ -161,11 +161,11 @@ void debug_sliders(){
 
 
 
-void runSim( OrbSim& sim, int niter=100 ){
+void runSim( TrussDynamics_d& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
         //printf( "runSim() linSolveMethod=%i\n", sim.linSolveMethod  );
-        if( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Force ){
+        if( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::Force ){
             //sim.run( niter, 1e-3, 1e-8 );
             sim.run_omp( niter, false, 1e-3, 1e-4 );
             //sim.run_omp( niter, false, 1e-6, 1e-4 );
@@ -255,7 +255,7 @@ void renderShip(){
 }
 
 void solveTrussCG(){
-    LinSolverOrbSim& ls = linSolver;
+    LinSolverTrussDynamics& ls = linSolver;
     int nitr  = 3;
     double dt=0.05;
     sim.cleanVel();
@@ -318,8 +318,8 @@ void reloadShip( const char* fname  ){
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
 
     exportSim( sim, mesh2, workshop );
-    if( ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::Cholesky      ) ||
-        ( sim.linSolveMethod == (int)OrbSim::LinSolveMethod::CholeskySparse ) ){
+    if( ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::Cholesky      ) ||
+        ( sim.linSolveMethod == (int)TrussDynamics_d::LinSolveMethod::CholeskySparse ) ){
         //sim.dt = 0.01;
         //sim.accel = Quat4d{0.0,0.0,0.0,0.0};
         sim.prepare_LinearSystem( true, true, true, 256 );
@@ -428,8 +428,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     //std::vector<std::string> luaFiles;
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
-    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Force;
+    //sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::Cholesky;
+    sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::Force;
 
     VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
@@ -451,7 +451,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     printf( "### SpaceCraftEditorApp() DONE\n" );
 }
 
-void renderPickedBBox( int picked_block, OrbSim& sim ){
+void renderPickedBBox( int picked_block, TrussDynamics_d& sim ){
     // picking bounding boxes
     // picked_block = sim.pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
     if(picked_block>=0){

@@ -132,7 +132,7 @@ class SparseMatrix { public:
 };
 
 
-void sparse_fsai( const SparseMatrix<double>& A, SparseMatrix<double>& G, double tol=1e-16, int niter=100 ) {
+inline void sparse_fsai( const SparseMatrix<double>& A, SparseMatrix<double>& G, double tol=1e-16, int niter=100 ) {
     int n = A.n;
     //std::vector<double> G(n*n, 0.0);  // Initialize G as a dense matrix for simplicity
 
