@@ -139,6 +139,55 @@ class Builder2{ public:
         return strips.data() + ch.x;
     };
 
+
+    // ======= Functions
+
+    int conected_vertex( const Vec3d& p, int stickType, int n, int* iverts );
+    int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l );
+    int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
+    int make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l );
+
+    // inline int conected_vertex( const Vec3d& p, int stickType, int n, int* iverts ){
+    //     int iv = vert( p );
+    //     for(int i=0;i<n;i++){ edge(iv,iverts[i],stickType); }
+    //     return iv;
+    // };
+
+    // inline int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l ){
+    //     int n=0;
+    //     for(int i=0;i<verts.size();i++){
+    //         Vec3d  d =  verts[i].pos-p0;
+    //         double cH = fw.dot(d);
+    //         if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
+    //         double cR = d.norm2() - cH*cH; //
+    //         if( cR>r*r ) continue;         // check bounds in the plane
+    //         selection.push_back(i);
+    //         n++;
+    //     }
+    //     return n;
+    // }
+
+    // inline int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax ){
+    //     Vec3d lf = cross(fw,up);
+    //     lf.normalize();
+    //     int n=0;
+    //     for(int i=0;i<verts.size();i++){
+    //         Vec3d  d  =  verts[i].pos-p0;
+    //         Vec3d  Td{ lf.dot(d), up.dot(d), fw.dot(d) }; 
+    //         if( Td.isBetween( Lmin, Lmax ) ){ 
+    //             selection.push_back(i);
+    //             n++;
+    //         }
+    //     }
+    //     return n;
+    // }
+
+    // inline int make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l ){
+    //     selection.clear();
+    //     select_in_cylinder( p, fw, r, l );
+    //     return conected_vertex( p, stickType, selection.size(), selection.data() );
+    // }
+
     // ======= Functions
 
     int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask );

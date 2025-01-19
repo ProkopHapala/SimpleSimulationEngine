@@ -38,6 +38,9 @@
 Mesh::Builder2 mesh2;
 ConstructionBlock block;
 
+
+Vec3d pivot_point{ 5.0, 0.0, 3.0 };
+
 // ====================== Class Definitions
 
 class ConstructionBlockApp : public AppSDL2OGL_3D { public:
@@ -94,6 +97,11 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,0} );
     //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,1} );
     mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {1,1,1,1} );
+
+    Vec3d hdir{ -pivot_point.z, 0.0, pivot_point.x }; hdir.normalize();
+
+    mesh2.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
+
 
     //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
 
@@ -163,6 +171,8 @@ void ConstructionBlockApp::draw(){
     glLineWidth(1.0);
     glColor3f(0.0,0.7,0.0);
     if(bDragging){ drawMuseSelectionBox(); }
+
+    Draw3D::drawPointCross( pivot_point, 0.5 );
 
     //glLineWidth(5.0); Draw3D::drawAxis(10.0);
 };
