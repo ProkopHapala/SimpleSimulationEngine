@@ -16,8 +16,8 @@
 #include "MeshBuilder2.h"
 //#include "MeshBuilderDraw.h"
 #include "SpaceCraft.h"
-#include "OrbSim_f.h"
-#include "OrbSim_d.h"
+#include "TrussDynamics_f.h"
+#include "TrussDynamics_d.h"
 
 using namespace SpaceCrafting;
 

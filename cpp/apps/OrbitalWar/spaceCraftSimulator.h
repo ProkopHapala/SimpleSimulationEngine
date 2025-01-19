@@ -11,8 +11,8 @@
 #include "SpaceCraft.h"
 #include "SpaceCraft2Mesh2.h"
 #include "SpaceCraftDraw.h"
-#include "OrbSim_d.h"
-#include "OrbSim_f.h"
+#include "TrussDynamics_d.h"
+#include "TrussDynamics_f.h"
 //#include "OCL_Orb.h"
 
 namespace SpaceCrafting {

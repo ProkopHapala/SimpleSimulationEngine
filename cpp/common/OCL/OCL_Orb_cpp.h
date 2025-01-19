@@ -14,7 +14,7 @@
 #include "datatypes.h"
 #include "datatypes2cl.h"
 #include "Vec3.h"
-#include "OrbSim_f.h"
+#include "TrussDynamics_f.h"
 
 #include <memory>
 #include <string>

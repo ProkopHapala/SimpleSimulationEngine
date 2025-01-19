@@ -6,7 +6,7 @@
 #include "OCL.h"
 #include "Vec3.h"
 //#include "Mat3.h"
-#include "OrbSim_f.h"
+#include "TrussDynamics_f.h"
 
 
 size_t roundUp( size_t size, size_t alignment ) { 

@@ -9,7 +9,7 @@
 //#include "Radiosity.h"
 
 #include "SpaceCraft.h"
-#include "OrbSim_d.h"
+#include "TrussDynamics_d.h"
 
 #include "GUI.h"
 

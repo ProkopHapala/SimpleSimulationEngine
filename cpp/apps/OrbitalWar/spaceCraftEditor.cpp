@@ -43,8 +43,8 @@
 
 #include "EditSpaceCraft.h"
 
-#include "OrbSim_f.h"
-#include "OrbSim_d.h"
+#include "TrussDynamics_f.h"
+#include "TrussDynamics_d.h"
 #include "TriangleRayTracer.h"
 #include "Radiosity.h"
 

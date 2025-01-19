@@ -45,7 +45,7 @@
 #include "Tree.h"
 
 #include "spaceCraftEditorUtils.h"
-#include "OrbSim_d.h"
+#include "TrussDynamics_d.h"
 
 using namespace SpaceCrafting;
 
