@@ -1,6 +1,15 @@
 import sys
 import re
 
+CPP_KEYWORDS = {
+    'if', 'else', 'while', 'for', 'switch', 'case', 'return',
+    'break', 'continue', 'do', 'sizeof', 'typedef'
+}
+
+def is_not_function(return_type, name):
+    return (  return_type.strip() in CPP_KEYWORDS 
+           or name       .strip() in CPP_KEYWORDS)
+
 comment_pattern = re.compile(r'//.*?$|/\*.*?\*/', re.MULTILINE | re.DOTALL)
 
 function_pattern = r'''
@@ -33,6 +42,7 @@ def find_function_headers(filepath, bNoComments=True):
     headers = []
     for match in matches:
         return_type, func_name, args = match.groups()
+        if is_not_function(return_type, func_name): continue
         header = ( return_type, func_name, args )
         headers.append(header)
     return headers
