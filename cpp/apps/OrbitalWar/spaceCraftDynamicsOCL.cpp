@@ -65,7 +65,7 @@
 using namespace SpaceCrafting;
 
 // Mesh::Builder2 mesh;
-// OrbSim         sim2;   // CPU double precision
+// TrussDynamics_d         sim2;   // CPU double precision
 // OCL_Orb        sim_cl; // single precision both CPU and GPU
 
 // // make list of fixed points containing following indices : [0]
@@ -106,9 +106,9 @@ using namespace SpaceCrafting;
 //         mat2file<float>( "PDmat_f.log",  n,n, sim.PDmat  );
 //         mat2file<float>( "LDLT_L_f.log", n,n, sim.LDLT_L );
 //         mat2file<float>( "LDLT_D_f.log", n,1, sim.LDLT_D );
-//         //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
-//         sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
-//         //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+//         //sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::CholeskySparse;
+//         sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::Cholesky;
+//         //sim.linSolveMethod = (int)TrussDynamics_d::LinSolveMethod::CG;
 //     }
 //     if(bGPU){
 //         printf("###### OpenCL initialization\n");
@@ -135,15 +135,15 @@ using namespace SpaceCrafting;
 
 class SpaceCraftDynamicsOCLapp : public SpaceCraftDynamicsApp { public:
     //Mesh::Builder2* _mesh=0;
-    //OrbSim*         _sim =0;
+    //TrussDynamics_d*         _sim =0;
     OCL_Orb*          _sim_cl=0;
     PickerUI          picker;
     //bool bDouble = true;
     bool bGPU    = true;
     // ==== function declarations
 
-    //void drawSim( OrbSim& sim );
-    //void drawSim_f( OrbSim_f& sim );
+    //void drawSim( TrussDynamics_d& sim );
+    //void drawSim_f( TrussDynamics_d_f& sim );
     //void drawSim( OCL_Orb& sim );
     //void initSim( Mesh::Builder2& mesh );
 
@@ -154,8 +154,8 @@ class SpaceCraftDynamicsOCLapp : public SpaceCraftDynamicsApp { public:
     virtual void bindSimulators( SpaceCraftSimulator* simulator_ ){
         simulator=simulator_;
         _mesh  = simulator->getMesh();
-        _sim   = simulator->getOrbSim();
-        _sim_f = simulator->getOrbSim_f();
+        _sim   = simulator->getTrussSim();
+        _sim_f = simulator->getTrussSim_f();
         _sim_cl= &((SpaceCraftSimulatorOCL*)simulator)->sim_cl;
     }
 
@@ -168,8 +168,8 @@ class SpaceCraftDynamicsOCLapp : public SpaceCraftDynamicsApp { public:
 // }
 
 // void SpaceCraftDynamicsOCLapp::initSim( Mesh::Builder2& mesh ){
-//     to_OrbSim  ( *_sim,  mesh );
-//     to_OrbSim_f( *_sim_cl, mesh );
+//     to_TrussDynamics_d  ( *_sim,  mesh );
+//     to_TrussDynamics_d_f( *_sim_cl, mesh );
 //     //to_OCL_Orb( *_sim_cl, mesh );
 // }
 

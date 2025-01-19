@@ -16,10 +16,10 @@ size_t roundUp( size_t size, size_t alignment ) {
 
 
 //=======================================================================
-class OCL_Orb: public OCLsystem, public OrbSim_f { public:
+class OCL_Orb: public OCLsystem, public TrussDynamics_f { public:
     cl_program program1=0;
 
-    // ===== From OrbSim_f
+    // ===== From TrussDynamics_f
     //int nPoint=0, nNeighMax=0, nNeighTot=0; 
     //float4* points=0;
     //float4* forces=0;

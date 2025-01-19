@@ -146,7 +146,7 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
 }
 
 
-void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+void exportSim( TrussDynamics_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
     // {
     //     printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
     //     //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
@@ -500,7 +500,7 @@ void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, doubl
         case 4: mesh.rope          ( p0, (p1-p0).normalized()*r*nseg   ,     nseg,             stickTypes.x       ); break;
     }
     mesh.printSizes();
-    //if(bDouble){ to_OrbSim ( sim2,   mesh,        p0,         ax      ); }
+    //if(bDouble){ to_TrussDynamics ( sim2,   mesh,        p0,         ax      ); }
     //if(bSingle){ to_OCL_Orb( sim_cl, mesh, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
     //distort_points( sim_cl.nPoint, sim_cl.points, sim_cl.points, 1.0, Vec3fOne, 15454 ); 
 };

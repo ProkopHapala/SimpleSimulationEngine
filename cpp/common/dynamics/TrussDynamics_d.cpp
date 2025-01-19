@@ -143,7 +143,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     }
 
     void TrussDynamics_d::realloc_LinearSystem( bool bCG, bool bCholesky, int nNeighMaxLDLT_, bool bDens ){
-        printf( "OrbSim_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
+        printf( "TrussDynamics_d_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in TrussDynamics_d::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
         int n2 = nPoint*nPoint;
         // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
@@ -287,7 +287,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     __attribute__((hot)) 
     void TrussDynamics_d::make_PD_Matrix( double* A, double dt ) {
-        printf( "OrbSim_d::make_PD_Matrix() dt=%g\n", dt );
+        printf( "TrussDynamics_d_d::make_PD_Matrix() dt=%g\n", dt );
         //for(int i=0; i<nPoint; i++){ printf("mass[%i] %g\n", points[i].w ); }; // debug
         //for(int i=0; i<nBonds; i++){ printf("ks[%i] %g\n",   params[i].y ); }; // debug
         int n = nPoint;
@@ -303,7 +303,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 int2  ng = ngi[ing];
                 int   ib = ng.y;
                 if(ib<0) break;
-                //if(ib<0){ printf("ERROR int OrbSim_d::make_PD_Matrix() invalid neighbor [i=%i,ing=%i] ng(%i,%i) neigh=%i\n", i, ing, ib, ng.x, neighs[i*nNeighMax+ing] ); exit(0); }  
+                //if(ib<0){ printf("ERROR int TrussDynamics_d_d::make_PD_Matrix() invalid neighbor [i=%i,ing=%i] ng(%i,%i) neigh=%i\n", i, ing, ib, ng.x, neighs[i*nNeighMax+ing] ); exit(0); }  
                 //printf( "make_PD_Matrix()[i=%i,ing=%i] ng(%i,%i)\n", i, ing, ib, ng.x );
                 int2   b = bonds[ib];
                 //int j  = neighs[b.x];
@@ -332,7 +332,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     __attribute__((hot)) 
     void TrussDynamics_d::make_PDmat_sparse( SparseMatrix<double>& A, double dt, bool bRealloc ) {
-        printf( "OrbSim_d::make_PDmat_sparse() dt=%g nNeighMax=%i \n", dt, nNeighMax );
+        printf( "TrussDynamics_d_d::make_PDmat_sparse() dt=%g nNeighMax=%i \n", dt, nNeighMax );
         double idt2 = 1.0 / (dt * dt);
         // --- count neighbors
         if( bRealloc ){ A.realloc( nPoint, nNeighMax+1 ); }
@@ -752,7 +752,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     void TrussDynamics_d::prepare_LinearSystem( bool bRealloc, bool bCG, bool bCholesky, int nNeighMaxLDLT_, bool bDens ){ 
         double dt = this->dt;
-        printf( "OrbSim_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
+        printf( "TrussDynamics_d_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
 
@@ -769,7 +769,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
         if(bDens){
             timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
-            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
+            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in TrussDynamics_d_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
         }
 
         // { // Check M.dot(vec) sparse
@@ -940,7 +940,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
                 } break;
                 case LinSolveMethod::CG:{
-                    //printf("OrbSim_d::run_LinSolve()  LinSolveMethod::CG \n");
+                    //printf("TrussDynamics_d_d::run_LinSolve()  LinSolveMethod::CG \n");
                     rhs_ProjectiveDynamics(ps_pred, linsolve_b );
                     for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
                     cg_tol = 1e-2;
@@ -1167,7 +1167,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     }
 
     void TrussDynamics_d::dot_Linearized_bonds(int n, double* x, double * Ax){
-        //printf( "OrbSim_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
+        //printf( "TrussDynamics_d_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
         Vec3d* dpos  = (Vec3d*)x;
         Vec3d* fdpos = (Vec3d*)Ax;
         int nG = n/3;
@@ -1194,7 +1194,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     }
 
     void TrussDynamics_d::dot_Linearized_neighs2(int n, double* x, double * Ax){
-        //printf( "OrbSim_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
+        //printf( "TrussDynamics_d_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
         Vec3d * dpos  = (Vec3d*)x;
         Vec3d * fdpos = (Vec3d*)Ax;
         int nG = n/3;
@@ -1547,58 +1547,6 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         } 
     }
 
-    Vec3d TrussDynamics_d::getEdgeVertPos( int i ){
-        Vec3i b = edgeVertBonds[i].verts;
-        const Quat4d& pa = points[b.x];
-        const Quat4d& pb = points[b.y];
-        const Quat4d& pc = points[b.z];
-        double c = edgeVertBonds[i].c;
-        double mc = 1-c;
-        return pa.f*mc + pb.f*c;
-    }
-
-    //void evalEdgeVert( Vec3i b, double c, double K ){
-    void TrussDynamics_d::evalEdgeVert( int i ){
-        Vec3i  b = edgeVertBonds[i].verts; // vert indexes (edge.a,edge.b,ivert);
-        double c = edgeVertBonds[i].c;     //  interpolation parameter
-        double K = edgeVertBonds[i].K;     //  stiffness constant 
-        // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
-        // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
-        // ToDo: Damping ( collision damping )
-        
-        // fit vert to edge
-        const Quat4d& pa = points[b.x];
-        const Quat4d& pb = points[b.y];
-        const Quat4d& pc = points[b.z];
-        double mc = 1-c;
-        Vec3d d = pc.f - (pa.f*mc + pb.f*c);
-        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d, pc.f*1.0 );
-        
-        double invL = 1./d.norm();
-        double dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
-        double mab  = pa.w*mc + pb.w*c;
-        double imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
-        //imp/=dt; 
-
-        d.mul( K + imp*invL ); 
-        edgeVertBonds[i].f = d;
-        //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   
-        forces[b.x].f.add_mul(d,mc);  // edge vert 1
-        forces[b.y].f.add_mul(d, c);  // edge vert 2
-        forces[b.z].f.sub(d);         // vert
-
-        // Force
-        // const Quat4d& pa = points[b.x];
-        // const Quat4d& pc = points[b.z];
-        // Vec3d d = pc.f - pa.f;          
-        // // Damping
-        // //double dv   = d.dot( vel[b.x].f + vel[b.y].f - vel[b.z].f );
-        // d.mul( K );
-        // forces[b.x].f.add(d);
-        // //forces[b.y].f.add_mul(d, c);
-        // forces[b.z].f.sub(d);
-    }
-
     void TrussDynamics_d::evalEdgeVerts(){
         //for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( edgeVertBonds[i].verts, edgeVertBonds[i].c, edgeVertBonds[i].K ); }
         for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( i ); }
@@ -1658,29 +1606,6 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         return E;
     }
 
-    void TrussDynamics_d::applyForceRotatingFrame_i( int i, Vec3d p0, Vec3d ax, double omega ){
-        const Quat4d& p = points[i];
-        const Quat4d& v = vel   [i];
-        Vec3d d,f;
-        // Coriolis force     = 2*m*omega*v
-        f.set_cross(ax,v.f);        
-        f.mul( 2.0*omega );
-        // centrifugal force  = r*m*omega^2
-        d.set_sub(p.f,p0);
-        d.makeOrthoU(ax);
-        f.add_mul( d, omega*omega );     
-        // apply force
-        forces[i].f.add_mul(f, p.w );
-    }
-
-    void TrussDynamics_d::applyForceCentrifug_i( int i, Vec3d p0, Vec3d ax, double omega ){
-        const Quat4d& p = points[i];
-        Vec3d d;
-        d.set_sub(p.f,p0);
-        d.makeOrthoU(ax);   
-        forces[i].f.add_mul(d, p.w*omega*omega );
-    }
-
     void TrussDynamics_d::applyForceRotatingFrame( Vec3d p0, Vec3d ax, double omega ){
         double omega2 = omega*omega;
         Vec3d omega_ax = ax*omega*2.0;
@@ -1726,7 +1651,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         for(int i=0;i<n;i++){
             int ip = fixPoints[i]; 
             if(ip>nPoint){ printf("ERROR in TrussDynamics_d::setFixPoints fixing point %i > sim.nPoint(%i) \n", ip, nPoint); exit(0); }
-            printf("OrbSim_d::setFixPoints()[%3i]: %6i \n", i, ip ); 
+            printf("TrussDynamics_d_d::setFixPoints()[%3i]: %6i \n", i, ip ); 
             kFix[ip] = Kfix ; 
         }
     }
@@ -1803,7 +1728,7 @@ int TrussDynamics_d::run( int niter, double dt, double damp  ){
         //move_MD( 1e-3, 1e-5 );
         //move_GD( 1e-7 );
         f2 = move_MD( dt, damp );
-        printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
+        printf( "TrussDynamics_d_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
     }
     exit(0);
     return niter;

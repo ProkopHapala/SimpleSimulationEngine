@@ -24,7 +24,7 @@ inline size_t roundUp(size_t size, size_t alignment) {
     return ((size + alignment - 1) / alignment) * alignment;
 }
 
-class OCL_Orb_cpp : public OrbSim_f {
+class OCL_Orb_cpp : public TrussDynamics_f {
 public:
     // OpenCL objects
     cl::Context context;

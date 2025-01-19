@@ -75,7 +75,7 @@ class PickerUI{ public:
 
     //SpaceCraft*   craft=0;
     //Builder2*  mesh =0;
-    //OrbSim_f*  sim  =0;
+    //TrussDynamics_f*  sim  =0;
 
     Picker* picker=0;
 

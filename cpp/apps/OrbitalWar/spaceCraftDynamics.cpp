@@ -54,9 +54,6 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 
 double elementSize  = 5.;
 
-// Mesh::Builder2 mesh;
-// OrbSim         sim;
-// OrbSim_f       sim_f;
 SpaceCraftSimulator W;
 
 void solve_float(){

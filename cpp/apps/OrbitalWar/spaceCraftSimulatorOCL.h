@@ -41,7 +41,7 @@ void test_SolverConvergence( OCL_Orb& sim_cl, Quat4f* ps_bak , int nSolverIters=
 
 void initGPU( OCL_Orb& sim ){
     printf("#### ====  SpaceCraftSimulatorOCL::to_OCL_Orb() \n");
-    if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulatorOCL::to_OCL_Orb() sim.nPoint=%i => run  SpaceCraftSimulator::to_OrbSim_f() first \n... exit() \n", sim.nPoint ); exit(0); };
+    if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulatorOCL::to_OCL_Orb() sim.nPoint=%i => run  SpaceCraftSimulator::to_TrussDynamics_f() first \n... exit() \n", sim.nPoint ); exit(0); };
     if( !sim.bOpenCL_initialized ){
         sim.print_devices();
         sim.initOCL();
@@ -76,7 +76,7 @@ void initGPU( OCL_Orb& sim ){
 class SpaceCraftSimulatorOCL: public SpaceCraftSimulator { public:
 
     // Mesh::Builder2 mesh;
-    // OrbSim         sim;
+    // TrussDynamics_d sim;
     OCL_Orb        sim_cl;
     // std::vector<int> fixPoints;
     // bool   bDouble = false;
@@ -85,22 +85,22 @@ class SpaceCraftSimulatorOCL: public SpaceCraftSimulator { public:
 
     // ---- Functions
     // void         reloadShip ( const char* fname );
-    // virtual void to_OrbSim  ( double dt=0.1, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero );
-    // virtual void to_OrbSim_f( double dt=0.1, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero );
+    // virtual void to_TrussDynamics_d( double dt=0.1, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero );
+    // virtual void to_TrussDynamics_f( double dt=0.1, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero );
     void to_OCL_Orb( Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero, bool bCholesky=false, bool bGPU=true );
     virtual void initSimulators( double dt=0.1, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero ) override;
     // virtual void initSimDefault();
 
-    // virtual OrbSim*         getOrbSim  (){ return &sim;   };
-    virtual OrbSim_f*       getOrbSim_f(){ return &sim_cl; };
+    // virtual TrussDynamics_d*    getTrussSim  (){ return &sim;   };
+    virtual TrussDynamics_f*       getTrussSim_f(){ return &sim_cl; };
     // virtual Mesh::Builder2* getMesh(){ return &mesh; };
 
 };
     
 void SpaceCraftSimulatorOCL::initSimulators( double dt, Vec3d p0, Vec3d omega ){
     printf("SpaceCraftSimulatorOCL::initSimulators() \n");
-    to_OrbSim  ( sim,    mesh, dt,        p0,        omega, fixPoints.size(), fixPoints.data() );
-    to_OrbSim_f( sim_cl, mesh, dt, (Vec3f)p0, (Vec3f)omega, fixPoints.size(), fixPoints.data() );
+    to_TrussDynamics_d( sim,    mesh, dt,        p0,        omega, fixPoints.size(), fixPoints.data() );
+    to_TrussDynamics_f( sim_cl, mesh, dt, (Vec3f)p0, (Vec3f)omega, fixPoints.size(), fixPoints.data() );
     initGPU    ( sim_cl );
 }
 

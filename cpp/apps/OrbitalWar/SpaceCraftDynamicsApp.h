@@ -23,8 +23,8 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     SpaceCraftSimulator* simulator=0;
     Mesh::Builder2* _mesh=0;
-    TrussDynamics_d*         _sim =0;
-    OrbSim_f*       _sim_f=0;
+    TrussDynamics_d*       _sim =0;
+    TrussDynamics_f*       _sim_f=0;
 
     double Estrain = 0.0;
 
@@ -66,12 +66,12 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     virtual void bindSimulators( SpaceCraftSimulator* simulator_ ){
         simulator=simulator_;
         _mesh  = simulator->getMesh();
-        _sim   = simulator->getOrbSim();
-        _sim_f = simulator->getOrbSim_f();
+        _sim   = simulator->getTrussSim();
+        _sim_f = simulator->getTrussSim_f();
     }
 
     void drawSim  ( TrussDynamics_d&   sim );
-    void drawSim_f( OrbSim_f& sim );
+    void drawSim_f( TrussDynamics_f& sim );
     //virtual void initSimDefault();
 
 	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
@@ -115,7 +115,7 @@ void SpaceCraftDynamicsApp::drawSim( TrussDynamics_d& sim ){
     if(bViewFixedPoints && (sim.kFix!=0) ){ renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 ); }
 };
 
-void SpaceCraftDynamicsApp::drawSim_f( OrbSim_f& sim ){
+void SpaceCraftDynamicsApp::drawSim_f( TrussDynamics_f& sim ){
     Estrain = sim.evalBondTension();
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );

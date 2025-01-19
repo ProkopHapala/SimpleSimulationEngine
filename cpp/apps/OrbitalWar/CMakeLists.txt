@@ -63,6 +63,7 @@ add_executable( spaceCraftEditor
     $<TARGET_OBJECTS:DynamicOpt>
     $<TARGET_OBJECTS:MeshBuilder2>
     $<TARGET_OBJECTS:TrussDynamics_d>
+    $<TARGET_OBJECTS:TrussDynamics_f>
 )
 target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
@@ -74,6 +75,7 @@ add_executable( spaceCraftEditorNew
     $<TARGET_OBJECTS:DynamicOpt>
     $<TARGET_OBJECTS:MeshBuilder2>
     $<TARGET_OBJECTS:TrussDynamics_d>
+    $<TARGET_OBJECTS:TrussDynamics_f>
 )
 target_link_libraries( spaceCraftEditorNew  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
@@ -85,6 +87,7 @@ add_executable( spaceCraftDynamics
     $<TARGET_OBJECTS:DynamicOpt>
     $<TARGET_OBJECTS:MeshBuilder2>
     $<TARGET_OBJECTS:TrussDynamics_d>
+    $<TARGET_OBJECTS:TrussDynamics_f>
 )
 target_link_libraries( spaceCraftDynamics  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 

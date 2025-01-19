@@ -258,12 +258,85 @@ class TrussDynamics_d: public Picker { public:
     inline void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
     inline void cleanVel  ( Quat4d v0=Quat4dZero ){ for (int i=0; i<nPoint; i++){ vel[i]=v0; } };
 
-
-
     inline double getLinearBondStiffness( int ib ){
         // (l0,kPress,kTens,damp)
         //return  bparams[ib].y;  //k = kPress;
         return  bparams[ib].z;  //k = kTens;  
+    }
+
+    inline void applyForceRotatingFrame_i( int i, Vec3d p0, Vec3d ax, double omega ){
+        const Quat4d& p = points[i];
+        const Quat4d& v = vel   [i];
+        Vec3d d,f;
+        // Coriolis force     = 2*m*omega*v
+        f.set_cross(ax,v.f);        
+        f.mul( 2.0*omega );
+        // centrifugal force  = r*m*omega^2
+        d.set_sub(p.f,p0);
+        d.makeOrthoU(ax);
+        f.add_mul( d, omega*omega );     
+        // apply force
+        forces[i].f.add_mul(f, p.w );
+    }
+
+    inline void applyForceCentrifug_i( int i, Vec3d p0, Vec3d ax, double omega ){
+        const Quat4d& p = points[i];
+        Vec3d d;
+        d.set_sub(p.f,p0);
+        d.makeOrthoU(ax);   
+        forces[i].f.add_mul(d, p.w*omega*omega );
+    }
+
+    inline Vec3d getEdgeVertPos( int i ){
+        Vec3i b = edgeVertBonds[i].verts;
+        const Quat4d& pa = points[b.x];
+        const Quat4d& pb = points[b.y];
+        const Quat4d& pc = points[b.z];
+        double c = edgeVertBonds[i].c;
+        double mc = 1-c;
+        return pa.f*mc + pb.f*c;
+    }
+
+    //void evalEdgeVert( Vec3i b, double c, double K ){
+    inline void evalEdgeVert( int i ){
+        Vec3i  b = edgeVertBonds[i].verts; // vert indexes (edge.a,edge.b,ivert);
+        double c = edgeVertBonds[i].c;     //  interpolation parameter
+        double K = edgeVertBonds[i].K;     //  stiffness constant 
+        // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
+        // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
+        // ToDo: Damping ( collision damping )
+        
+        // fit vert to edge
+        const Quat4d& pa = points[b.x];
+        const Quat4d& pb = points[b.y];
+        const Quat4d& pc = points[b.z];
+        double mc = 1-c;
+        Vec3d d = pc.f - (pa.f*mc + pb.f*c);
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d, pc.f*1.0 );
+        
+        double invL = 1./d.norm();
+        double dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
+        double mab  = pa.w*mc + pb.w*c;
+        double imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
+        //imp/=dt; 
+
+        d.mul( K + imp*invL ); 
+        edgeVertBonds[i].f = d;
+        //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   
+        forces[b.x].f.add_mul(d,mc);  // edge vert 1
+        forces[b.y].f.add_mul(d, c);  // edge vert 2
+        forces[b.z].f.sub(d);         // vert
+
+        // Force
+        // const Quat4d& pa = points[b.x];
+        // const Quat4d& pc = points[b.z];
+        // Vec3d d = pc.f - pa.f;          
+        // // Damping
+        // //double dv   = d.dot( vel[b.x].f + vel[b.y].f - vel[b.z].f );
+        // d.mul( K );
+        // forces[b.x].f.add(d);
+        // //forces[b.y].f.add_mul(d, c);
+        // forces[b.z].f.sub(d);
     }
 
     // ============ virtual Functions
@@ -335,13 +408,13 @@ void evalTrussForce_neighs2(int iG);
 void evalTrussForces_neighs2();
 void evalTrussForces_neighs();
 void evalTrussForces_bonds();
-Vec3d getEdgeVertPos(int i );
-void evalEdgeVert(int i );
+//Vec3d getEdgeVertPos(int i );
+//void evalEdgeVert(int i );
 void evalEdgeVerts();
 void evalTrussCollisionImpulses_bonds(double rate=1.0 );
 double evalBondTension();
-void applyForceRotatingFrame_i(int i, Vec3d p0, Vec3d ax, double omega );
-void applyForceCentrifug_i(int i, Vec3d p0, Vec3d ax, double omega );
+//void applyForceRotatingFrame_i(int i, Vec3d p0, Vec3d ax, double omega );
+//void applyForceCentrifug_i(int i, Vec3d p0, Vec3d ax, double omega );
 void applyForceRotatingFrame(Vec3d p0, Vec3d ax, double omega );
 void applyForceCentrifug(Vec3d p0, Vec3d ax, double omega );
 void printNeighs(int i);
