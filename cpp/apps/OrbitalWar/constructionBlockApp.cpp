@@ -37,6 +37,8 @@
 // ======================  Global Variables & Declarations
 Mesh::Builder2 mesh2;
 ConstructionBlock block;
+BlockBuilder skelet;
+
 
 
 Vec3d pivot_point{ 5.0, 0.0, 3.0 };
@@ -74,11 +76,21 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 };
 
 ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
     //Lua1.init();
     fontTex       = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
+
+    skelet.blocks.clear();
+    int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
+    int ibk = skelet.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
+    int ifw = skelet.addBlock( Vec3d{0.0,  0.0, 20.0}, 0.5  );
+    int ilf = skelet.addBlock( Vec3d{0.0,-10.0, 0.0 }, 0.25 );
+    int irt = skelet.addBlock( Vec3d{0.0, 10.0, 0.0 }, 0.25 );
+    skelet.connectBlocks(ic,ibk);
+    skelet.connectBlocks(ic,ifw);
+    skelet.connectBlocks(ic,ilf);
+    skelet.connectBlocks(ic,irt);
 
     //block.faces[0].typ=1;
     block.Ls=Vec3d{1.1,1.0,0.9};
@@ -87,23 +99,14 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         //block.faces[i].typ=2;
         //block.faces[i].typ=3;
     }
+    
     Mesh::ConstructionBlockToMeshBuilder cbm;
+
     cbm.mesh = &mesh2;
     cbm.drawBlock( block );
-
     printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
 
     mesh2.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
-
-    // int ivs[4];
-    // int ich=2;
-    // int n    = mesh2.loadChunk( ich, ivs );
-    // Vec3d nr = mesh2.getChunkNormal( ich ); 
-    // //mesh2.extrudeVertLoop( n, ivs, nr, true, false, false );
-    // int ich2 = mesh2.extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
-    // //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,0} );
-    // //mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {0,0,0,1} );
-    // mesh2.bridge_quads( *(Quat4i*)mesh2.getChunkStrip( ich ), *(Quat4i*)mesh2.getChunkStrip( ich2 ), n, {0,1,2,3}, {1,1,1,1} );
 
     printf( "ConstructionBlockApp::ConstructionBlockApp() .bridge_quads() DONE \n" );
 
@@ -140,53 +143,46 @@ void ConstructionBlockApp::draw(){
 	glEnable(GL_LIGHTING);
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
 
-    glColor3f( 1.0,1.0,1.0 );
-    drawFaces( mesh2 );
-    glColor3f( 0.0,0.5,1.0 );
-    drawFaceNormals( mesh2 );
+    Draw3D::drawBlockBuilder( skelet );
 
-    glDisable(GL_LIGHTING);
-    glDisable(GL_CULL_FACE);
-    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-
-    // Draw All Edges
-    glColor3f(0.0,0.0,0.0);
-    glLineWidth(1.0);
-    drawEdges( mesh2 );
-
-    if(ipick>=0){
-        //printf( "ipick %i \n", ipick );
-        if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
-            glLineWidth(5.0);
+    if(1) // draw mesh2
+    {
+        glColor3f( 1.0,1.0,1.0 );
+        drawFaces( mesh2 );
+        glColor3f( 0.0,0.5,1.0 );
+        drawFaceNormals( mesh2 );
+        glDisable(GL_LIGHTING);
+        glDisable(GL_CULL_FACE);
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+        // Draw All Edges
+        glColor3f(0.0,0.0,0.0);
+        glLineWidth(1.0);
+        drawEdges( mesh2 );
+        if(ipick>=0){
+            //printf( "ipick %i \n", ipick );
+            if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
+                glLineWidth(5.0);
+                glColor3f(0.0,0.7,0.0);
+                drawPolygonBorder( mesh2, ipick );
+            };
+        }
+        // Draw selected edges
+        if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
             glColor3f(0.0,0.7,0.0);
-            drawPolygonBorder( mesh2, ipick );
-        };
-    }
-
-    // glLineWidth(10.0);
-    // glColor3f(1.0,0.0,1.0);
-    // int ivs[]{32,33,34,35};
-    // drawVertLoop( mesh2, 4, ivs, GL_LINE_LOOP );
-
-    // Draw selected edges
-    if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
+            glLineWidth(5.0);
+            drawSelectedEdges( mesh2 );
+            drawSelectedEdgeLabels( mesh2, 0.02 );
+        }
+        glColor3f(0.f,0.f,0.f);
+        drawPointLabels       ( mesh2, 0.02 );
+        //drawEdgeLabels        ( mesh2, 0.02 );
+        //drawSelectedEdgeLabels( mesh2, 0.02 );
+        glColor3f(1.f,0.f,0.f); drawFaceLabels        ( mesh2, 0.02 );
+        glColor3f(0.f,0.5f,0.f); drawTriLabels         ( mesh2, 0.02 );
+        glLineWidth(1.0);
         glColor3f(0.0,0.7,0.0);
-        glLineWidth(5.0);
-        drawSelectedEdges( mesh2 );
-        drawSelectedEdgeLabels( mesh2, 0.02 );
+        if(bDragging){ drawMuseSelectionBox(); }
     }
-
-    glColor3f(0.f,0.f,0.f);
-    drawPointLabels       ( mesh2, 0.02 );
-    //drawEdgeLabels        ( mesh2, 0.02 );
-    //drawSelectedEdgeLabels( mesh2, 0.02 );
-    glColor3f(1.f,0.f,0.f); drawFaceLabels        ( mesh2, 0.02 );
-    glColor3f(0.f,0.5f,0.f); drawTriLabels         ( mesh2, 0.02 );
-
-    glLineWidth(1.0);
-    glColor3f(0.0,0.7,0.0);
-    if(bDragging){ drawMuseSelectionBox(); }
-
     Draw3D::drawPointCross( pivot_point, 0.5 );
 
     //glLineWidth(5.0); Draw3D::drawAxis(10.0);

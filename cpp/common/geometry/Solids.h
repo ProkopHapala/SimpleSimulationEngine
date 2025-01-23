@@ -58,6 +58,47 @@ namespace Solids{
     static int     Cube_ngons [Cube_nfaces  ] = { 4,        4,          4,         4,         4,         4        };
     static int     Cube_faces [Cube_nfaces*4] = { 0,1,3,2,  0,4,5,1,    0,2,6,4,   7,5,4,6,   7,3,1,5,   7,6,2,3  };
 
+        // drawFace( block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
+        // drawFace( block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
+        // drawFace( block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
+        // drawFace( block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
+        // drawFace( block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
+        // drawFace( block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+
+    static Vec3d      Cube_normals  [Cube_nfaces] = { 
+        { 1., 0., 0.},
+        {-1., 0., 0.},
+        { 0., 1., 0.},
+        { 0.,-1., 0.},
+        { 0., 0., 1.},
+        { 0., 0.,-1.}
+        
+    };
+    static Vec3d      Cube_ups      [Cube_nfaces] = { 
+        //{ 0., 1., 0.},
+        //{ 0.,-1., 0.},
+        //{ 0., 0., 1.},
+        //{ 0., 0.,-1.},
+        //{ 1., 0., 0.},
+        //{-1., 0., 0.}
+
+        { 0., 1., 0.},
+        { 0., 1., 0.},
+        { 0., 0., 1.},
+        { 0., 0., 1.},
+        { 1., 0., 0.},
+        { 1., 0., 0.}
+
+        // { 0., 0.,-1.},
+        // { 0., 0., 1.},
+        // {-1., 0., 0.},
+        // { 1., 0., 0.},
+        // { 0.,-1., 0.},
+        // { 0., 1., 0.}
+    };
+
+
+
     const static CMesh Cube = (CMesh){Cube_nverts,Cube_nedges,Cube_ntris,Cube_nfaces, Cube_verts, Cube_edges, Cube_tris, Cube_ngons, Cube_faces};
 
 

@@ -13,6 +13,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 #include "raytrace.h"
+#include "Solids.h"
 
 
 
@@ -150,7 +151,15 @@ struct BlockFace{
     int nid;
     int ids[nid_max];
     Vec3d Lhs;
-    BlockFace(): typ(0), rot(0), nid(0), ids{-1,-1,-1, -1,-1,-1, -1,-1,-1}, Lhs{0.5,0.5,0.5} {};
+    BlockFace( int typ_=0, int rot_=0 ): typ(typ_), rot(rot_), nid(0), ids{-1,-1,-1, -1,-1,-1, -1,-1,-1}, Lhs{0.5,0.5,0.5} {};
+
+    void clean( int typ_=0, int rot_=0 ){
+        typ=typ_;
+        rot=rot_;
+        nid=0;
+        for(int i=0; i<nid_max; i++){ ids[i] = -1; }
+        Lhs = Vec3d{0.5,0.5,0.5};
+    }
 
     bool addId( int id, int i ){
         if( i>=nid_max ) return false;
@@ -194,12 +203,41 @@ class ConstructionBlock{ public:
     BlockFace faces[nfaces]; 
     // block orientation is 
 
+    ConstructionBlock() = default;
+    ConstructionBlock( Vec3d p, Vec3d L ){ pos=p; Ls=L; cleanFaces(); };
+    ConstructionBlock( Vec3d p, double L ){ pos=p; Ls={L,L,L}; cleanFaces(); };
+
+    void cleanFaces(){ for(int i=0; i<nfaces; i++){ faces[i].clean(); } }
+
     Vec2i findId( int id ){
         for(int i=0; i<nfaces; i++){
             int j = faces[i].findId(id);
             if( j>=0 ){ return Vec2i{i,j}; }
         }
         return Vec2i{-1,-1};
+    }
+
+    Vec2i findFace( Vec3d d ){
+        // we fine face with minimum cosinus
+        double cbest = -1.0;
+        Vec2i  ibest = Vec2i{-1,-1}; 
+        for(int i=0; i<nfaces; i++){
+            Vec3d nr = Solids::Cube_normals[i];
+            double c = nr.dot(d);
+            //double c = faces[i].bestFace(d); // ToDo: later we need to consider sub-faces inside each face
+            if( c>cbest ){
+                cbest = c;
+                ibest = Vec2i{i,0};
+            }
+        }
+        return ibest;
+    }
+
+    Vec2i addId( int id, Vec3d d){
+        Vec2i where = findFace(d);
+        if( where.i<0 ) return Vec2i{-1,-1};
+        if( !faces[where.i].addId(id,where.j) ) return Vec2i{-1,-1};
+        return where;
     }
 
     bool addId( int id, Vec2i where ){
@@ -231,6 +269,28 @@ class ConstructionBlock{ public:
 class BlockBuilder{ public:
     std::vector<ConstructionBlock> blocks;
     std::vector<Quat4i> edges;
+
+    void addBlock( Vec3d p, Vec3d L  ){ 
+        //blocks.push_back(ConstructionBlock(p,L)); 
+        blocks.emplace_back(p,L);
+    }
+    int addBlock( Vec3d p, double L ){ 
+        //blocks.push_back(ConstructionBlock(p,L)); 
+        blocks.emplace_back(p,L);
+        return blocks.size()-1;
+    }
+    // can we use emplace ?
+
+    int connectBlocks( int i, int j ){
+        Vec3d d = blocks[i].pos - blocks[j].pos; 
+        d.normalize();
+        int id = edges.size();
+        Vec2i f1 = blocks[i].addId( id, d       );
+        Vec2i f2 = blocks[j].addId( id, d*-1.0  );
+        edges.push_back( Quat4i{i,j,f1.x,f2.x}  );
+        return id;
+    }
+   
 };
 
 //#ifdef MeshBuilder2_h
@@ -295,12 +355,20 @@ namespace Mesh{
         mesh.box( block.pos, L, rot );
         mesh.selectVertRange( i0, mesh.verts.size() );
         //mesh.printSelectedVerts();
-        drawFace( block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
-        drawFace( block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
-        drawFace( block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
-        drawFace( block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
-        drawFace( block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
-        drawFace( block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+        
+        // drawFace( block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
+        // drawFace( block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );
+        // drawFace( block, 2, block.pos+rot.b* L.b, Mat3d{ rot.c    ,rot.a    ,rot.b    }, {L.z,L.x} );
+        // drawFace( block, 3, block.pos+rot.b*-L.b, Mat3d{ rot.c*-1.,rot.a*-1.,rot.b*-1.}, {L.z,L.x} );
+        // drawFace( block, 4, block.pos+rot.c* L.c, Mat3d{ rot.a    ,rot.b    ,rot.c    }, {L.x,L.y} );
+        // drawFace( block, 5, block.pos+rot.c*-L.c, Mat3d{ rot.a*-1.,rot.b*-1.,rot.c*-1.}, {L.x,L.y} );
+
+        Mat3d rot_; 
+        for(int i=0; i<6; i++){
+            rot_.fromDirUp( Solids::Cube_normals[i], Solids::Cube_ups[i]  );
+            drawFace( block, i, block.pos+rot_.c*L.a, rot_, {L.y,L.z} );
+        }
+
         mesh.selection.clear();
     }
 
@@ -447,6 +515,21 @@ void drawBlock(const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){
     //}
 
 }
+
+    void drawBlockBuilder( BlockBuilder& skelet ){
+        // for(int i=0; i<skelet.blocks.size(); i++){
+        //     drawBlock( skelet.blocks[i], Mat3dIdentity, true );
+        // }
+        glBegin(GL_LINES);
+        for(int i=0; i<skelet.edges.size(); i++){
+            Quat4i e = skelet.edges[i];
+            ConstructionBlock& b1 = skelet.blocks[e.x];
+            ConstructionBlock& b2 = skelet.blocks[e.y];
+            //mesh.bridge_quads( q1, q2, nseg, stickTypes, stickMaks );
+            Draw3D::vertex( b1.pos ); Draw3D::vertex( b2.pos );
+        }
+        glEnd();
+    }
 
 }; // Draw3D
 //#endif // Draw3D_h
