@@ -204,10 +204,10 @@ class ConstructionBlock{ public:
     // block orientation is 
 
     ConstructionBlock() = default;
-    ConstructionBlock( Vec3d p, Vec3d L ){ pos=p; Ls=L; cleanFaces(); };
-    ConstructionBlock( Vec3d p, double L ){ pos=p; Ls={L,L,L}; cleanFaces(); };
+    ConstructionBlock( Vec3d p, Vec3d L , int ftyp=0){ pos=p; Ls=L; cleanFaces(ftyp); };
+    ConstructionBlock( Vec3d p, double L, int ftyp=0 ){ pos=p; Ls={L,L,L}; cleanFaces(ftyp); };
 
-    void cleanFaces(){ for(int i=0; i<nfaces; i++){ faces[i].clean(); } }
+    void cleanFaces( int ftyp=0 ){ for(int i=0; i<nfaces; i++){ faces[i].clean(ftyp, 0); } }
 
     Vec2i findId( int id ){
         for(int i=0; i<nfaces; i++){
@@ -267,6 +267,7 @@ class ConstructionBlock{ public:
 
 
 class BlockBuilder{ public:
+    static const int edge_end_offset = 100000000;
     std::vector<ConstructionBlock> blocks;
     std::vector<Quat4i> edges;
 
@@ -274,19 +275,22 @@ class BlockBuilder{ public:
         //blocks.push_back(ConstructionBlock(p,L)); 
         blocks.emplace_back(p,L);
     }
-    int addBlock( Vec3d p, double L ){ 
+    int addBlock( Vec3d p, double L, int ftyp=1 ){ 
         //blocks.push_back(ConstructionBlock(p,L)); 
-        blocks.emplace_back(p,L);
+        blocks.emplace_back(p,L,ftyp);
         return blocks.size()-1;
     }
     // can we use emplace ?
 
+
+    // ToDo: There is serious problem how to identify (index) faces and sub-faces by unique id systematically
     int connectBlocks( int i, int j ){
+        
         Vec3d d = blocks[i].pos - blocks[j].pos; 
         d.normalize();
         int id = edges.size();
-        Vec2i f1 = blocks[i].addId( id, d       );
-        Vec2i f2 = blocks[j].addId( id, d*-1.0  );
+        Vec2i f1 = blocks[i].addId( id                 , d       );
+        Vec2i f2 = blocks[j].addId( id+edge_end_offset , d*-1.0  );
         edges.push_back( Quat4i{i,j,f1.x,f2.x}  );
         return id;
     }
@@ -299,23 +303,32 @@ class BlockBuilder{ public:
 namespace Mesh{
 
     class ConstructionBlockToMeshBuilder{ public:
+        
         Builder2* mesh=0;
         std::unordered_map<int,int> edge2chunk;  // todo: later we perhaps need to use slots
         Quat4i stickTypes{-1,-1,-1,-1};
         Quat4i stickMaks{1,1,1,1};
 
+        void printEdge2chunk(){
+            printf("printEdge2chunk() n=%i \n", edge2chunk.size() );
+            for(auto& e: edge2chunk){
+                printf(" %3i -> %3i \n", e.first, e.second);
+            }
+        }
+
 
     int replace_chunk( ConstructionBlock& block, Vec2i where, int ich=-1 ){
         if(ich<0){ ich = mesh->chunks.size()+ich; };
         int id = block.replaceId( ich, where );
-        edge2chunk[id] = ich;
+        //printf("replace_chunk() id %i ich %i where %i %i \n", id, ich, where.x, where.y );
+        if( id>=0 ) edge2chunk[id] = ich;
         return id;
     }
 
     void drawFace( ConstructionBlock& block, int iface, const Vec3d& p0, const Mat3d& rot, Vec2d Ls, bool bStoreFaceIds=false ){
         Builder2& mesh = *this->mesh;
         const BlockFace& f = block.faces[iface];
-        printf("drawFace: iface=%i p0(%g,%g,%g)\n", iface, p0.x, p0.y, p0.z );
+        //printf("drawFace: iface=%i p0(%g,%g,%g) f.typ %i f.rot %i \n", iface, p0.x, p0.y, p0.z, f.typ, f.rot );
         switch(f.typ){
             case 1:{ // single edge
                 if( f.rot ){ mesh.snapBoxFace     ( p0, Mat3d{rot.b,rot.a,rot.c}, Ls.y, Ls.x ); } // is the face rotated by 90 degrees?
@@ -348,6 +361,7 @@ namespace Mesh{
     }
 
     void drawBlock( ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity, bool bStoreFaceIds=false ){
+        //printf("drawBlockBuilder()\n");
         Builder2& mesh = *this->mesh;
         //for(int i=0; i<6; i++){
         const Vec3d& L = block.Ls;
@@ -366,30 +380,36 @@ namespace Mesh{
         Mat3d rot_; 
         for(int i=0; i<6; i++){
             rot_.fromDirUp( Solids::Cube_normals[i], Solids::Cube_ups[i]  );
-            drawFace( block, i, block.pos+rot_.c*L.a, rot_, {L.y,L.z} );
+            drawFace( block, i, block.pos+rot_.c*L.a, rot_, {L.y,L.z}, bStoreFaceIds );
         }
 
         mesh.selection.clear();
     }
 
-    void drawBlockBuilder( BlockBuilder& skelet, int nseg=4 ){
+    void drawBlockBuilder( BlockBuilder& skelet, int nseg=4, bool bAllign=true ){
+        //printf("drawBlockBuilder() nblock=%i nedge=%i \n", skelet.blocks.size(), skelet.edges.size() );
         Builder2& mesh = *this->mesh;
         edge2chunk.clear();
         for(int i=0; i<skelet.blocks.size(); i++){
+            //printf("\n drawBlockBuilder() block[ %i ]\n", i);
             drawBlock( skelet.blocks[i], Mat3dIdentity, true );
         }
+        //printEdge2chunk();
         for(int i=0; i<skelet.edges.size(); i++){
+            //printf("drawEdge[ %i ]\n", i);
             Quat4i e = skelet.edges[i];
             ConstructionBlock& b1 = skelet.blocks[e.x];
             ConstructionBlock& b2 = skelet.blocks[e.y];
-            int ich1   = edge2chunk[e.z];
-            int ich2   = edge2chunk[e.w];
+            int ich1   = edge2chunk[ i ];
+            int ich2   = edge2chunk[ i + BlockBuilder::edge_end_offset ];
             //Vec2i fe1 = b1.findId( if1 );
             //Vec2i fe2 = b2.findId( if2 );
             Quat4i q1 = *(Quat4i*)mesh.getChunkStrip( ich1 );
             Quat4i q2 = *(Quat4i*)mesh.getChunkStrip( ich2 );
-            mesh.bridge_quads( q1, q2, nseg, stickTypes, stickMaks );
+            //printf("drawBlockBuilder() edge[ %i ] e %i %i ich %i %i  q1 %i %i %i %i q2 %i %i %i %i\n", i, e.x, e.y, ich1, ich2, q1.x,q1.y,q1.z,q1.w,   q2.z,q2.w,q2.x,q2.y );
+            mesh.bridge_quads( q1, q2, nseg, stickTypes, stickMaks, bAllign );
         }
+        //printf("drawBlockBuilder() END\n");
     }
 
     }; // ConstructionBlockToMeshBuilder

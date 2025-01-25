@@ -151,7 +151,9 @@ class Builder2{ public:
 
     // ======= Functions
 
-    int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask );
+    Vec3d getCOG(int n, const int* ivs) const;
+    void alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv=0 );
+    int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling=false );
     int extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bFace, bool bTris, bool bSort );
     int loadChunk( int ich, int* iedges=0, int* iverts=0 );
     Vec3d getChunkNormal( int ich );

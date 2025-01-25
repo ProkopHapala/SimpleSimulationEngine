@@ -486,13 +486,13 @@ void Builder2::snapBoxFace( const Vec3d& p0, const Mat3d& rot, double La, double
     int i01=findVert( p0-rot.a*La+rot.b*Lb, R_snapVert );
     int i10=findVert( p0+rot.a*La-rot.b*Lb, R_snapVert );
     int i11=findVert( p0+rot.a*La+rot.b*Lb, R_snapVert );
-    printf("snapBoxFace: ivs: %i %i %i %i \n", i00,i01,i10,i11 );
+    //printf("snapBoxFace: ivs: %i %i %i %i \n", i00,i01,i10,i11 );
     int ies[4];
     ies[0]=findOrAddEdges( {i00,i01} );
     ies[1]=findOrAddEdges( {i01,i11} );
     ies[2]=findOrAddEdges( {i11,i10} );
     ies[3]=findOrAddEdges( {i10,i00} );
-    printf("snapBoxFace: ies: %i %i %i %i \n", ies[0],ies[1],ies[2],ies[3] );
+    //printf("snapBoxFace: ies: %i %i %i %i \n", ies[0],ies[1],ies[2],ies[3] );
     polygon(4, ies); // top
 }
 
@@ -784,10 +784,76 @@ void Builder2::printEdges(){
     }
 }
 
+Vec3d Builder2::getCOG(int n, const int* ivs) const {
+    //printf( "getCOG() n %i \n", n );
+    Vec3d cog = Vec3dZero;
+    for(int i=0; i<n; i++){
+        //printf( "getCOG() %i %f %f %f\n", i, verts[ivs[i]].pos.x, verts[ivs[i]].pos.y, verts[ivs[i]].pos.z );
+        cog.add( verts[ivs[i]].pos );
+    }
+    cog.mul(1./n);
+    return cog;
+}
+
+void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
+
+    // compute centers of gravity
+    Vec3d cog1 = getCOG( n, ivs1);
+    Vec3d cog2 = getCOG( n, ivs2);
+    // compute axis
+    Vec3d ax = cog2 - cog1;
+    ax.normalize();
+    Vec3d u = verts[ ivs1[ipiv] ].pos - cog1;
+    u.makeOrthoU(ax);
+    u.normalize();
+    Vec3d v; v.set_cross(ax, u);
+    v.normalize();
+
+    //printf( "alling_polygons() cog1 %f %f %f cog2 %f %f %f \n", cog1.x, cog1.y, cog1.z, cog2.x, cog2.y, cog2.z );
+    //printf( "alling_polygons() ax %f %f %f u %f %f %f v %f %f %f \n", ax.x, ax.y, ax.z, u.x, u.y, u.z, v.x, v.y, v.z );
+
+    //Mat3d fromDirUp( const VEC& dir, const VEC& up );
+    
+    // Project points to uv plane
+    Vec2d uv1[n], uv2[n];
+    for(int i=0; i<n; i++){
+        Vec3d d1 = verts[ivs1[i]].pos - cog1;
+        Vec3d d2 = verts[ivs2[i]].pos - cog2;
+        uv1[i] = Vec2d{d1.dot(u), d1.dot(v)};
+        uv2[i] = Vec2d{d2.dot(u), d2.dot(v)};
+        //printf( "%i uv1 %f %f uv2 %f %f \n", i, uv1[i].x, uv1[i].y, uv2[i].x, uv2[i].y );
+        // normalize to direction only
+        uv1[i].normalize();
+        uv2[i].normalize();
+    }
+    
+    // 6) match points by nearest uv projection
+    int map[n];
+    for(int i=0; i<n; i++){
+        double dmin = -1.0;
+        int    imin = -1;
+        Vec2d uvi = uv1[i];
+        for(int j=0; j<n; j++){
+            double d = uvi.dot(uv2[j]);
+            //printf( "d=%f\n", d );
+            if(d > dmin){
+                dmin = d;
+                imin = ivs2[j];
+            }
+        }
+        map[i] = imin;
+    }
+    for(int i=0; i<n; i++){
+        ivs2[i] = map[i];
+    }
+}
 
 
 
-int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask ){
+int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling ){
+    //printf( "Mesh::Builder2::bridge_quads() BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
+    if( bAlling ) alling_polygons(4, q1.array, q2.array, 0);
+    //printf( "Mesh::Builder2::bridge_quads() AFTER q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
 
     Vec3d A1 = verts[q1.x].pos; Vec3d A2 = verts[q2.x].pos;
     Vec3d B1 = verts[q1.y].pos; Vec3d B2 = verts[q2.y].pos;

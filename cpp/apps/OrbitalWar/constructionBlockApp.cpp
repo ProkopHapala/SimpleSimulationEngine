@@ -81,6 +81,9 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
+    Mesh::ConstructionBlockToMeshBuilder cbm;
+    cbm.mesh = &mesh2;
+
     skelet.blocks.clear();
     int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
     int ibk = skelet.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
@@ -92,6 +95,8 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     skelet.connectBlocks(ic,ilf);
     skelet.connectBlocks(ic,irt);
 
+    cbm.drawBlockBuilder( skelet, 4 );
+
     //block.faces[0].typ=1;
     block.Ls=Vec3d{1.1,1.0,0.9};
     for(int i=0;i<6;i++){
@@ -100,25 +105,18 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         //block.faces[i].typ=3;
     }
     
-    Mesh::ConstructionBlockToMeshBuilder cbm;
-
-    cbm.mesh = &mesh2;
+    /*
     cbm.drawBlock( block );
     printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
-
     mesh2.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
-
     printf( "ConstructionBlockApp::ConstructionBlockApp() .bridge_quads() DONE \n" );
-
     Vec3d hdir{ -pivot_point.z, 0.0, pivot_point.x }; hdir.normalize();
-
     mesh2.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
-
     printf( "ConstructionBlockApp::ConstructionBlockApp() .make_anchor_point() DONE \n" );
-
     mesh2.printSizes();
     //mesh2.printVerts();
     //mesh2.printEdges();
+    */
 
 
     //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
