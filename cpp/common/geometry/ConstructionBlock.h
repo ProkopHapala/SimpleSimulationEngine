@@ -289,8 +289,8 @@ class BlockBuilder{ public:
         Vec3d d = blocks[i].pos - blocks[j].pos; 
         d.normalize();
         int id = edges.size();
-        Vec2i f1 = blocks[i].addId( id                 , d       );
-        Vec2i f2 = blocks[j].addId( id+edge_end_offset , d*-1.0  );
+        Vec2i f1 = blocks[i].addId( id                 , d*-1.0 );
+        Vec2i f2 = blocks[j].addId( id+edge_end_offset , d      );
         edges.push_back( Quat4i{i,j,f1.x,f2.x}  );
         return id;
     }
