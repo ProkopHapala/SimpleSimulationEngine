@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +50,16 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 
 	bool bSmoothLines = 1;
 	bool bWireframe   = 1;
+
+    // View control properties
+    bool bViewBlockBuilder = true;
+    bool bViewMesh = true;
+    bool bViewEdges = true;
+    bool bViewFaceNormals = true;
+    bool bViewPointLabels = true;
+    bool bViewFaceLabels = true;
+    bool bViewTriLabels = true;
+    bool bViewPivotPoint = true;
 
 	//DropDownList lstLuaFiles;
     GUI gui;
@@ -129,6 +138,19 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
     //lstLuaFiles->setCommand([this](GUIAbstractPanel* panel){ onSelectLuaShipScript.GUIcallback(panel); });
 
+    // Setup GUI checkboxes for view control
+    CheckBoxList* viewControls = new CheckBoxList();
+    viewControls->caption = "View Controls";
+    viewControls->initCheckBoxList(5, 5, 150);
+    viewControls->addBox("Block Builder", &bViewBlockBuilder);
+    viewControls->addBox("Mesh", &bViewMesh);
+    viewControls->addBox("Edges", &bViewEdges);
+    viewControls->addBox("Face Normals", &bViewFaceNormals);
+    viewControls->addBox("Point Labels", &bViewPointLabels);
+    viewControls->addBox("Face Labels", &bViewFaceLabels);
+    viewControls->addBox("Tri Labels", &bViewTriLabels);
+    viewControls->addBox("Pivot Point", &bViewPivotPoint);
+    gui.addPanel(viewControls);
 }
 
 
@@ -141,29 +163,38 @@ void ConstructionBlockApp::draw(){
 	glEnable(GL_LIGHTING);
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
 
-    Draw3D::drawBlockBuilder( skelet );
+    if(bViewBlockBuilder) {
+        Draw3D::drawBlockBuilder( skelet );
+    }
 
-    if(1) // draw mesh2
-    {
+    if(bViewMesh) {
         glColor3f( 1.0,1.0,1.0 );
         drawFaces( mesh2 );
-        glColor3f( 0.0,0.5,1.0 );
-        drawFaceNormals( mesh2 );
+        
+        if(bViewFaceNormals) {
+            glColor3f( 0.0,0.5,1.0 );
+            drawFaceNormals( mesh2 );
+        }
+        
         glDisable(GL_LIGHTING);
         glDisable(GL_CULL_FACE);
         glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-        // Draw All Edges
-        glColor3f(0.0,0.0,0.0);
-        glLineWidth(1.0);
-        drawEdges( mesh2 );
+        
+        if(bViewEdges) {
+            // Draw All Edges
+            glColor3f(0.0,0.0,0.0);
+            glLineWidth(1.0);
+            drawEdges( mesh2 );
+        }
+
         if(ipick>=0){
-            //printf( "ipick %i \n", ipick );
             if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
                 glLineWidth(5.0);
                 glColor3f(0.0,0.7,0.0);
                 drawPolygonBorder( mesh2, ipick );
-            };
+            }
         }
+        
         // Draw selected edges
         if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
             glColor3f(0.0,0.7,0.0);
@@ -171,17 +202,30 @@ void ConstructionBlockApp::draw(){
             drawSelectedEdges( mesh2 );
             drawSelectedEdgeLabels( mesh2, 0.02 );
         }
-        glColor3f(0.f,0.f,0.f);
-        drawPointLabels       ( mesh2, 0.02 );
-        //drawEdgeLabels        ( mesh2, 0.02 );
-        //drawSelectedEdgeLabels( mesh2, 0.02 );
-        glColor3f(1.f,0.f,0.f); drawFaceLabels        ( mesh2, 0.02 );
-        glColor3f(0.f,0.5f,0.f); drawTriLabels         ( mesh2, 0.02 );
+
+        if(bViewPointLabels) {
+            glColor3f(0.f,0.f,0.f);
+            drawPointLabels( mesh2, 0.02 );
+        }
+
+        if(bViewFaceLabels) {
+            glColor3f(1.f,0.f,0.f);
+            drawFaceLabels( mesh2, 0.02 );
+        }
+
+        if(bViewTriLabels) {
+            glColor3f(0.f,0.5f,0.f);
+            drawTriLabels( mesh2, 0.02 );
+        }
+
         glLineWidth(1.0);
         glColor3f(0.0,0.7,0.0);
         if(bDragging){ drawMuseSelectionBox(); }
     }
-    Draw3D::drawPointCross( pivot_point, 0.5 );
+
+    if(bViewPivotPoint) {
+        Draw3D::drawPointCross( pivot_point, 0.5 );
+    }
 
     //glLineWidth(5.0); Draw3D::drawAxis(10.0);
 };
