@@ -259,6 +259,12 @@ class MultiPanel : public GUIAbstractPanel { public:
         return p;
     };
 
+    GUIPanel* addButton( const std::string& label, std::function<void(GUIAbstractPanel*)> command_ ){
+        GUIPanel*p=addPanel( label, {0.0,1.0, 0.0},  0,1,0,0,0 );
+        p->command= command_;
+        return p;
+    }
+
     virtual int clearChanged()     override{ int j=-1; for(int i=0; i<nsubs; i++){ if( subs[i]->clearChanged()>=0 ){ if(j<0)j=i; } } return  j; };
     virtual int readChanged()const override{           for(int i=0; i<nsubs; i++){ if( subs[i]-> readChanged()>=0 ){ return i;   } } return -1; };
 
@@ -269,6 +275,8 @@ class MultiPanel : public GUIAbstractPanel { public:
     //virtual void tryRender( );
     virtual void render( )override;
     virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui )override;
+
+    virtual bool showAsContextMenu( int x, int y){ visible=!visible; moveTo(x,y); return visible; };
 
     void toggleOpen();
 

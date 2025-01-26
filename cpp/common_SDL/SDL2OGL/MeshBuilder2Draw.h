@@ -62,6 +62,12 @@ void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
     }
 }
 
+void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
+    for(int iv: mesh.selset){
+        Draw3D::drawInt( mesh.verts[iv].pos, iv, fontTex, sz );
+    }
+}
+
 void drawPolygonBorder( const Mesh::Builder2& mesh, int ich ){
     Quat4i ch = mesh.chunks[ich];
     glBegin(GL_LINE_LOOP);
@@ -153,6 +159,14 @@ void drawSelectedEdges( const Mesh::Builder2& mesh ){
     for(int ie: mesh.selset){
         Vec2i e = mesh.edges[ie].lo;
         Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+    }
+    glEnd();
+}
+
+void drawSelectedVerts( const Mesh::Builder2& mesh ){
+    glBegin(GL_POINTS);
+    for(int iv: mesh.selection){
+        Draw3D::vertex( mesh.verts[iv].pos );
     }
     glEnd();
 }

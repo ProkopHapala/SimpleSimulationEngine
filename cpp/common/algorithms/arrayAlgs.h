@@ -301,7 +301,17 @@ void quickSort_reverse( TYPE * A, int * permut, int p, int q){
 }
 
 
-
+template<class T1, class T2>
+void sortArrayByAnother( int n, T1* arr1, T2* arr2) {
+    int permut[n];
+    //std::vector<int> permut(n);
+    indexArray<int>(n, permut);
+    quickSort<T2>(arr2, permut, 0, n);
+    //std::vector<T1> sortedArr1(n);
+    T1 sortedArr1[n];
+    permute<T1>(permut, arr1, sortedArr1, 0, n);
+    for (int i = 0; i < n; i++){  arr1[i] = sortedArr1[i]; }
+}
 
 
 

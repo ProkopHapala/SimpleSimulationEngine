@@ -10,20 +10,18 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <algorithm>
+
 
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
-#include "raytrace.h"
 
 #include "datatypes.h"
 #include "Slots.h"
 
-#include "testUtils.h"
-#include "MeshBuilder.h"
+//#include "MeshBuilder.h"
 
 using LoopDict = std::unordered_map<int,Slots<int,2>>;
 
@@ -74,13 +72,14 @@ class Builder2{ public:
     bool bExitError    = true;
     int ngon_max       = 16;
     double R_snapVert  = 0.1;   // tolerance for snapping vertices used in findVert()
+    bool bAdditiveSelect = false;
     int selection_mode = 3;  // 0-none, 1-vert, 2-edge, 3-face
     enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
     std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
     std::unordered_set<int> selset;    // edge index for vert
 
-    int draw_mode = TRIANGLES;
+    //int draw_mode = TRIANGLES;
     Vec3f  penColor;
     
 
@@ -142,6 +141,11 @@ class Builder2{ public:
 
     // ======= Functions
 
+
+    int selectVertsAlongLine( Vec3d p0, Vec3d p1, double r=0.1, bool bSort=true );
+
+    int selectVertsAlongPolyline( double r=0.1, bool bSort=true );
+
     int conected_vertex( const Vec3d& p, int stickType, int n, int* iverts );
     int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l );
     int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
@@ -173,6 +177,7 @@ class Builder2{ public:
     int polygon( int n, int* iedges );
     int polygonToTris( int i );
     int selectionToFace();
+    int clearSelection();
     int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R );
     int pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax );
     int toggleSelSet(  int i );
@@ -180,7 +185,8 @@ class Builder2{ public:
     int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
     int pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
     int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
-    void selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  );
+    int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
+    int selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  );
     void makeSelectrionUnique();
     int findClosestVert(const Vec3d& p0,int i0=0,int n=-1);
     int findVert(const Vec3d& p0, double Rmax, int n=-1, int* sel=0 );
@@ -213,6 +219,8 @@ class Builder2{ public:
     int  export_pos( float4* ps, int i0=0, int i1=-1 );
     int  export_edges( Vec2i* eds, int i0=0, int i1=-1 );
     int  export_tris( Quat4i* tri, int i0=0, int i1=-1 );
+    
+    void printSelection();
     void printSelectedVerts();
 
     void printSizes();

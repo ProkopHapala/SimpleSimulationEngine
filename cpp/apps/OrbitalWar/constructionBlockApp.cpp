@@ -34,7 +34,7 @@
 //#include "testUtils.h"
 
 // ======================  Global Variables & Declarations
-Mesh::Builder2 mesh2;
+Mesh::Builder2 mesh;
 ConstructionBlock block;
 BlockBuilder skelet;
 
@@ -53,16 +53,19 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 
     // View control properties
     bool bViewBlockBuilder = true;
-    bool bViewMesh = true;
+    bool bViewMesh  = true;
     bool bViewEdges = true;
-    bool bViewFaceNormals = true;
-    bool bViewPointLabels = true;
-    bool bViewFaceLabels = true;
-    bool bViewTriLabels = true;
-    bool bViewPivotPoint = true;
+    bool bViewFaceNormals = false;
+    bool bViewPointLabels = false;
+    bool bViewFaceLabels  = false;
+    bool bViewTriLabels   = false;
+    bool bViewPivotPoint  = true;
+    bool bViewSelection   = true;
 
 	//DropDownList lstLuaFiles;
     GUI gui;
+    CheckBoxList* viewControls = 0;
+    MultiPanel*   contextMenu  = 0;
 
     //EDIT_MODE edit_mode = EDIT_MODE::component;
     //int picked = -1;
@@ -80,6 +83,8 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
+    void initGUI();
+
 	ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_ , int argc, char *argv[]);
 
 };
@@ -91,7 +96,7 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     Draw::fontTex = fontTex;
 
     Mesh::ConstructionBlockToMeshBuilder cbm;
-    cbm.mesh = &mesh2;
+    cbm.mesh = &mesh;
 
     skelet.blocks.clear();
     int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
@@ -117,18 +122,18 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     /*
     cbm.drawBlock( block );
     printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
-    mesh2.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
+    mesh.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
     printf( "ConstructionBlockApp::ConstructionBlockApp() .bridge_quads() DONE \n" );
     Vec3d hdir{ -pivot_point.z, 0.0, pivot_point.x }; hdir.normalize();
-    mesh2.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
+    mesh.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
     printf( "ConstructionBlockApp::ConstructionBlockApp() .make_anchor_point() DONE \n" );
-    mesh2.printSizes();
-    //mesh2.printVerts();
-    //mesh2.printEdges();
+    mesh.printSizes();
+    //mesh.printVerts();
+    //mesh.printEdges();
     */
 
 
-    //printf( "mesh2.tris.size(): \n", mesh2.tris.size() );
+    //printf( "mesh.tris.size(): \n", mesh.tris.size() );
 
     //plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     //girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -138,8 +143,16 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
     //lstLuaFiles->setCommand([this](GUIAbstractPanel* panel){ onSelectLuaShipScript.GUIcallback(panel); });
 
+    mesh.bAdditiveSelect = true;
+    mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::vert;
+    //mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; break;
+    //mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::face; break;
+    initGUI();
+}
+
+void ConstructionBlockApp::initGUI(){
     // Setup GUI checkboxes for view control
-    CheckBoxList* viewControls = new CheckBoxList();
+    viewControls = new CheckBoxList();
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
@@ -151,6 +164,19 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     viewControls->addBox("Tri Labels", &bViewTriLabels);
     viewControls->addBox("Pivot Point", &bViewPivotPoint);
     gui.addPanel(viewControls);
+
+    //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 
+
+    // context menu for right mouse button
+    contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2*(5+1) );
+    //contextMenu->addPanel( "select along line",  {0.0,1.0, 0.0},  0,1,0,0,0 )->command = [&](GUIAbstractPanel* p){ W->ffl.print_nonbonded();   return 0; }; 
+    contextMenu->addButton( "select along line", [&](GUIAbstractPanel* p){ 
+        printf( "select along line BEFORE \n" ); mesh.printSelectedVerts();
+        mesh.selectVertsAlongPolyline( 0.1, true ); 
+        printf( "select along line AFTER \n" ); mesh.printSelectedVerts();
+        return 0; 
+    } );
+    gui.addPanel( contextMenu );
 }
 
 
@@ -169,11 +195,11 @@ void ConstructionBlockApp::draw(){
 
     if(bViewMesh) {
         glColor3f( 1.0,1.0,1.0 );
-        drawFaces( mesh2 );
+        drawFaces( mesh );
         
         if(bViewFaceNormals) {
             glColor3f( 0.0,0.5,1.0 );
-            drawFaceNormals( mesh2 );
+            drawFaceNormals( mesh );
         }
         
         glDisable(GL_LIGHTING);
@@ -184,43 +210,51 @@ void ConstructionBlockApp::draw(){
             // Draw All Edges
             glColor3f(0.0,0.0,0.0);
             glLineWidth(1.0);
-            drawEdges( mesh2 );
-        }
-
-        if(ipick>=0){
-            if( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
-                glLineWidth(5.0);
-                glColor3f(0.0,0.7,0.0);
-                drawPolygonBorder( mesh2, ipick );
-            }
-        }
-        
-        // Draw selected edges
-        if( mesh2.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
-            glColor3f(0.0,0.7,0.0);
-            glLineWidth(5.0);
-            drawSelectedEdges( mesh2 );
-            drawSelectedEdgeLabels( mesh2, 0.02 );
+            drawEdges( mesh );
         }
 
         if(bViewPointLabels) {
             glColor3f(0.f,0.f,0.f);
-            drawPointLabels( mesh2, 0.02 );
+            drawPointLabels( mesh, 0.02 );
         }
 
         if(bViewFaceLabels) {
             glColor3f(1.f,0.f,0.f);
-            drawFaceLabels( mesh2, 0.02 );
+            drawFaceLabels( mesh, 0.02 );
         }
 
         if(bViewTriLabels) {
             glColor3f(0.f,0.5f,0.f);
-            drawTriLabels( mesh2, 0.02 );
+            drawTriLabels( mesh, 0.02 );
         }
 
         glLineWidth(1.0);
         glColor3f(0.0,0.7,0.0);
         if(bDragging){ drawMuseSelectionBox(); }
+
+        glDisable(GL_DEPTH_TEST);
+
+        if(bViewSelection) {
+            if( mesh.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
+                if(ipick>=0){
+                    glLineWidth(5.0);
+                    glColor3f(0.0,0.7,0.0);
+                    drawPolygonBorder( mesh, ipick );
+                }
+            }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
+                glColor3f(0.0,0.7,0.0);
+                glLineWidth(5.0);
+                drawSelectedEdges( mesh );
+                drawSelectedEdgeLabels( mesh, 0.02 );
+                glLineWidth(1.0);
+            }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::vert ){
+                glColor3f(0.0,1.0,0.0);
+                glPointSize(8.0);
+                drawSelectedVerts( mesh );
+                //drawSelectedVertLabels( mesh, 0.02 );
+                glPointSize(1.0);
+            }
+        }
     }
 
     if(bViewPivotPoint) {
@@ -284,11 +318,11 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_LEFT:{
                     //printf("SDL_BUTTON_LEFT: mouse_ray0 %g %g %g mouse_begin %g %g \n", ray0.x, ray0.y, ray0.z, mouse_begin_x, mouse_begin_y); 
                     mouseStartSelectionBox(); 
-                    
                     //picker.pick();
                 } break;
 
                 case SDL_BUTTON_RIGHT:{} break;
+
             }
             break;
 
@@ -296,15 +330,18 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     if( ray0.dist2(ray0_start)<0.1 ){ // too small for selection box 
-                        ipick = mesh2.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
-                        //printf( "ipick %i \n", ipick );
+                        ipick = mesh.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
+                        printf( "ipick %i \n", ipick );
+                        //if(mesh.bAdditiveSelect){ mesh.selection.push_back(ipick); mesh.printSelection(); }
                     }else{
                         //ipick=-1;
-                        mesh2.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
+                        int nsel = mesh.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
+                        if(nsel==0) mesh.clearSelection();
                     }
                     bDragging=false;
                     break;
                 case SDL_BUTTON_RIGHT: { 
+                    //contextMenu->showAsContextMenu( mouseX, mouseY );
                     ipick=-1;
                 } break;
             }
@@ -316,19 +353,19 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 //case SDLK_l:{} break;
                 case SDLK_f:{
-                    mesh2.selectionToFace();
+                    mesh.selectionToFace();
                 } break;
 
                 case SDLK_e:{
-                    if( (ipick>=0) && ( mesh2.selection_mode == (int)Mesh::Builder2::SelectionMode::face ) ){
-                        mesh2.extrudeFace( ipick, 5.0 );    
+                    if( (ipick>=0) && ( mesh.selection_mode == (int)Mesh::Builder2::SelectionMode::face ) ){
+                        mesh.extrudeFace( ipick, 5.0 );    
                     }
                 } break;
 
                 // ---- Selection mode  I, O, P
-                case SDLK_i: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; break;
-                case SDLK_o: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::face; break;
-                case SDLK_p: mesh2.selection_mode = (int)Mesh::Builder2::SelectionMode::vert; break;
+                case SDLK_i: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; mesh.bAdditiveSelect = true;  break;
+                case SDLK_o: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::vert; mesh.bAdditiveSelect = true;  break;
+                case SDLK_p: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::face; mesh.bAdditiveSelect = false; break;
 
             }
             break;

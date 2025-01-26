@@ -1,5 +1,11 @@
 #include "MeshBuilder2.h"
 
+#include <algorithm>
+
+#include "arrayAlgs.h"
+#include "raytrace.h"
+#include "testUtils.h"
+
 namespace Mesh {
 
 void Builder2::clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
@@ -159,7 +165,15 @@ int Builder2::selectionToFace(){
     return 0;
 }
 
+int Builder2::clearSelection(){
+    int n = selection.size();
+    selection.clear();
+    selset.clear();
+    return n;
+}
+
 int Builder2::pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ){
+    printf( "pickVertex() ray0(%g,%g,%g) hRay(%g,%g,%g) R=%g \n", ray0.x, ray0.y, ray0.z, hRay.x, hRay.y, hRay.z, R );
     double tmin =  1e+300;
     int imin    = -1;
     for(int i=0; i<verts.size(); i++){
@@ -167,6 +181,7 @@ int Builder2::pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ){
         double ti = raySphere( ray0, hRay, R, verts[i].pos );
         if(ti<tmin){ imin=i; tmin=ti; }
     }
+    printf( "pickVertex() DONE ipick %i \n", imin );
     return imin;
 }
 
@@ -206,10 +221,21 @@ int Builder2::pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){ i
 
 int Builder2::pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
     //printf( "pickSelect() selection_mode %i  \n", selection_mode);
+    int ipick=-1;
     switch( (SelectionMode)selection_mode ){
-        case SelectionMode::vert: return pickVertex    ( ro, rh, Rmax ); break;
-        case SelectionMode::edge: return pickEdgeSelect( ro, rh, Rmax ); break;
-        case SelectionMode::face: return pickTriangle  ( ro, rh, true ); break;
+        case SelectionMode::vert: ipick= pickVertex    ( ro, rh, Rmax ); break;
+        case SelectionMode::edge: ipick= pickEdgeSelect( ro, rh, Rmax ); break;
+        case SelectionMode::face: ipick= pickTriangle  ( ro, rh, true ); break;
+    }
+    if( bAdditiveSelect ){ 
+        // is ipick in selset?
+        if( selset.find(ipick)!=selset.end() ){ 
+            selset.erase(ipick); 
+            selection.erase( std::remove( selection.begin(), selection.end(), ipick ), selection.end() );
+        }else{ 
+            selset.insert(ipick);
+            selection.push_back(ipick); 
+        }
     }
     return -1;
 }
@@ -238,12 +264,36 @@ int Builder2::selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot
     return nfound;
 }
 
-void Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
+int Builder2::selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){ 
+    //printf( "Mesh::Builder2::selectRectEdge() p0(%g,%g,%g) p1(%g,%g,%g) \n", p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
+    Vec3d Tp0,Tp1;
+    //Mat3d rot = (Mat3d)cam.rot;
+    rot.dot_to(p0,Tp0);
+    rot.dot_to(p1,Tp1);
+    _order(Tp0.x,Tp1.x);
+    _order(Tp0.y,Tp1.y);
+    Tp0.z=-1e+300;
+    Tp1.z=+1e+300;
+    int nfound=0;
+    for(int i=0; i<verts.size(); i++ ){
+        Vec3d p;
+        rot.dot_to( verts[i].pos,p);
+        if( p.isBetween(Tp0,Tp1) ){
+            selset.insert( i );
+            nfound++;
+        }
+    }
+    return nfound;
+}
+
+int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
     selset.clear();
     //printf( "pickSelect() selection_mode %i  \n", selection_mode);
     switch( (SelectionMode)selection_mode ){
-        case SelectionMode::edge: selectRectEdge( p0, p1, rot ); break;
+        case SelectionMode::edge: return selectRectEdge( p0, p1, rot ); break;
+        case SelectionMode::vert: return selectRectVert( p0, p1, rot ); break;
     }
+    return 0;
 }
 
 void Builder2::makeSelectrionUnique(){
@@ -279,6 +329,41 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
     };
     return imin;
 }
+
+
+    int Builder2::selectVertsAlongLine( Vec3d p0, Vec3d p1, double r, bool bSort ){
+        std::vector<int> sel; // we need to make local selection so we can add to global selection
+        sel.clear();
+        Vec3d ax = p1-p0;
+        double l = ax.normalize();
+        double R2 = r*r;
+        std::vector<double> xalong;
+        for(int i=0; i<verts.size(); i++){
+            Vec3d d = verts[i].pos-p0;
+            double x = ax.dot(d); // axial component
+            if( (x<0)|| (x>l) ) continue;
+            d.add_mul( ax, -x ); // orthogonal component
+            double r2 = d.norm2(); 
+            if( r2>R2 ) continue;
+            sel.push_back(i);
+            if(bSort) xalong.push_back(x);
+        }
+        if(bSort){  // we need to sort selection by xalong
+            sortArrayByAnother( sel.size(), sel.data(), xalong.data() );
+        }
+        selection.insert( selection.end(), sel.begin(), sel.end() );
+        return sel.size();
+    };
+
+    int Builder2::selectVertsAlongPolyline( double r, bool bSort ){
+        std::vector<int> sel = selection; // we need to backup selection so we can accumulate all found points into global selection
+        for(int i=1; i<sel.size(); i++){
+            Vec3d p0 = verts[sel[i-1]].pos;
+            Vec3d p1 = verts[sel[i  ]].pos;
+            selectVertsAlongLine( p0, p1, r, bSort );
+        }
+        return selection.size();
+    }
 
 
     int Builder2::conected_vertex( const Vec3d& p, int stickType, int n, int* iverts ){
@@ -760,6 +845,12 @@ int Builder2::export_edges( Vec2i* eds, int i0, int i1 ){   if(i1<0){ i1=edges.s
 int Builder2::export_tris( Quat4i* tri, int i0, int i1 ){  if(i1<0){ i1=edges.size()-i1; };
     for(int i=i0; i<=i1; i++){ tri[i]=tris[i]; }
     return i1-i0+1;
+}
+
+void Builder2::printSelection(){
+    printf( "Mesh::Builder2::printSelection() n=%i mode=%i :", selection.size(), selection_mode );
+    for(int ii=0; ii<selection.size(); ii++){  printf( "%i ", selection[ii] ); }
+    printf( "\n" );
 }
 
 void Builder2::printSelectedVerts(){
