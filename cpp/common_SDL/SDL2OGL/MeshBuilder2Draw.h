@@ -166,6 +166,7 @@ void drawSelectedEdges( const Mesh::Builder2& mesh ){
 void drawSelectedVerts( const Mesh::Builder2& mesh ){
     glBegin(GL_POINTS);
     for(int iv: mesh.selection){
+        printf( "drawSelectedVerts() iv=%i \n", iv );
         Draw3D::vertex( mesh.verts[iv].pos );
     }
     glEnd();

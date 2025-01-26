@@ -25,7 +25,8 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	//Vec3d  camPos;
 	Camera cam;
 
-    bool   bDragging = false;
+    bool   bDragging       = false;
+    int    iDraggingButton = 0;
     Vec3f  ray0_start;
     Vec3f  ray0;
     int perFrame =  100;
@@ -60,7 +61,7 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y + cam.pos; }
     inline Vec3f updateRay0(){ ray0 = mouseRay0(); return ray0; }
     //ray0 = (Vec3d)(  cam.rot.a*mouse_begin_x  +  cam.rot.b*mouse_begin_y  +  cam.pos );
-    inline void mouseStartSelectionBox(){ ray0_start = ray0;  bDragging = true; }
+    inline void mouseStartDragging( int button ){ ray0_start=ray0;  bDragging = true; iDraggingButton = button; }
 
 	//inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y; }
 	void drawCrosshair( float sz );

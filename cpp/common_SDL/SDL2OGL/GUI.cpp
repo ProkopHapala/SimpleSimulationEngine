@@ -370,6 +370,7 @@ void MultiPanel::toggleOpen(){
 }
 
 void MultiPanel::view( ){
+    if( visible==false ) return;
     //printf( "MultiPanel::view() opened %i \n", opened );
     glCallList( gllist );
     // --- NOTE: we do not need to call view() for subs, because they are already baked into gllist ( see MultiPanel::render() )
@@ -384,6 +385,7 @@ void MultiPanel::view( ){
 }
 
 void MultiPanel::render( ){
+    if( visible==false ) return;
     //printf( "MultiPanel::render() opened=%i \n", opened );
     nsubs = subs.size();
     GUIAbstractPanel::render();
@@ -396,6 +398,7 @@ void MultiPanel::render( ){
 }
 
 GUIAbstractPanel* MultiPanel::onMouse  ( int x, int y, const SDL_Event& event, GUI& gui ){
+    if( visible==false ) return 0;
     GUIAbstractPanel* active = NULL;
     if( check( x, y ) ){
         active = this;
@@ -404,7 +407,13 @@ GUIAbstractPanel* MultiPanel::onMouse  ( int x, int y, const SDL_Event& event, G
             for(int i=0; i<nsubs; i++){
                 active = subs[i]->onMouse ( x, y, event, gui );
                 if(subs[i]->redraw) redraw = true;
-                if(active) return active;
+                if(active){
+                    if(hideOnCommand){ 
+                        visible = false; redraw = true; 
+                        return this;
+                    }; 
+                    return active;
+                }
             }
         }
         if( ( event.type == SDL_MOUSEBUTTONDOWN ) ){
@@ -986,9 +995,11 @@ void GUI::draw(){
     glDisable(GL_DEPTH_TEST);
     for(GUIAbstractPanel* panel: panels){ if(focused!=panel)panel->draw(); }
     if(focused){
-        focused->draw();
-        if(bTextEvents){ glColor3f(1.0f,0.0f,0.0f); }else{Draw::setRGB(focused->textColor); }
-        Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
+        if(focused->visible){ 
+            focused->draw();
+            if(bTextEvents){ glColor3f(1.0f,0.0f,0.0f); }else{Draw::setRGB(focused->textColor); }
+            Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
+        }
     }
     //printf( "GUI::draw() END \n" );
 }

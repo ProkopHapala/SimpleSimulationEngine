@@ -227,7 +227,7 @@ int Builder2::pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
         case SelectionMode::edge: ipick= pickEdgeSelect( ro, rh, Rmax ); break;
         case SelectionMode::face: ipick= pickTriangle  ( ro, rh, true ); break;
     }
-    if( bAdditiveSelect ){ 
+    if( bAdditiveSelect && (ipick>=0) ){ 
         // is ipick in selset?
         if( selset.find(ipick)!=selset.end() ){ 
             selset.erase(ipick); 

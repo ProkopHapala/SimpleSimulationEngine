@@ -236,6 +236,7 @@ class MultiPanel : public GUIAbstractPanel { public:
     //GUIPanel ** subs;
     std::vector<GUIPanel*> subs;
     bool opened = true;
+    bool hideOnCommand = false;
     int dy;
 
     // ==== functions

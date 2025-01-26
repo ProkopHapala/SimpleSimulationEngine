@@ -168,7 +168,8 @@ void ConstructionBlockApp::initGUI(){
     //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 
 
     // context menu for right mouse button
-    contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2*(5+1) );
+    contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2, 1 );
+    contextMenu->hideOnCommand = true;
     //contextMenu->addPanel( "select along line",  {0.0,1.0, 0.0},  0,1,0,0,0 )->command = [&](GUIAbstractPanel* p){ W->ffl.print_nonbonded();   return 0; }; 
     contextMenu->addButton( "select along line", [&](GUIAbstractPanel* p){ 
         printf( "select along line BEFORE \n" ); mesh.printSelectedVerts();
@@ -230,7 +231,7 @@ void ConstructionBlockApp::draw(){
 
         glLineWidth(1.0);
         glColor3f(0.0,0.7,0.0);
-        if(bDragging){ drawMuseSelectionBox(); }
+        if(bDragging && iDraggingButton==SDL_BUTTON_LEFT ){ drawMuseSelectionBox(); }
 
         glDisable(GL_DEPTH_TEST);
 
@@ -317,12 +318,12 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:{
                     //printf("SDL_BUTTON_LEFT: mouse_ray0 %g %g %g mouse_begin %g %g \n", ray0.x, ray0.y, ray0.z, mouse_begin_x, mouse_begin_y); 
-                    mouseStartSelectionBox(); 
+                    mouseStartDragging( SDL_BUTTON_LEFT ); 
                     //picker.pick();
                 } break;
-
-                case SDL_BUTTON_RIGHT:{} break;
-
+                case SDL_BUTTON_RIGHT:{
+                    mouseStartDragging( SDL_BUTTON_RIGHT ); 
+                } break;
             }
             break;
 
@@ -341,8 +342,10 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
                     bDragging=false;
                     break;
                 case SDL_BUTTON_RIGHT: { 
-                    //contextMenu->showAsContextMenu( mouseX, mouseY );
-                    ipick=-1;
+                    if( ray0.dist2(ray0_start)<0.1 ){ // right click, not dragging
+                        contextMenu->showAsContextMenu( mouseX, mouseY );
+                        ipick=-1;
+                    } 
                 } break;
             }
             break;
