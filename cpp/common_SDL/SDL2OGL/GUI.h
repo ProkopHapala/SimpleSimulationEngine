@@ -245,6 +245,8 @@ class MultiPanel : public GUIAbstractPanel { public:
     MultiPanel(){};
     MultiPanel(const std::string& caption, int xmin, int ymin, int xmax, int dy, int nsubs=0, bool isSlider=true, bool isButton=true, bool isInt=false, bool viewVal=true, bool bCmdOnSlider=false ){ if(dy==0){dy=2*fontSizeDef;} initMulti( caption, xmin, ymin, xmax, dy, nsubs, isSlider,isButton,isInt,viewVal,bCmdOnSlider); }
 
+    //void preAllocSubs( int nsubs_ );
+
     GUIPanel* addPanel( const std::string& label, Vec3d vals, bool isSlider_=true, bool isButton_=true, bool isInt_=false, bool viewVal_=true, bool bCmdOnSlider_=false ){
         int ns = subs.size();
         int yi = ymin+dy*ns;

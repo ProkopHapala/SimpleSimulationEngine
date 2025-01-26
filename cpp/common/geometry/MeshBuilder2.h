@@ -173,6 +173,10 @@ class Builder2{ public:
     int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
 
+
+    int plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub );
+    int plateBetweenEdges( int nsub=1, double r=0.1, bool bSort=true );
+
     int polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris );
     int polygon( int n, int* iedges );
     int polygonToTris( int i );

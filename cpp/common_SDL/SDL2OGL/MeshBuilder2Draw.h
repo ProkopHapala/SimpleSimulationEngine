@@ -62,10 +62,9 @@ void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
     }
 }
 
-void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
-    for(int iv: mesh.selset){
-        Draw3D::drawInt( mesh.verts[iv].pos, iv, fontTex, sz );
-    }
+void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02, bool bOrder=false ){
+    if( bOrder ){ for(int i=0; i<mesh.selection.size(); i++){ Draw3D::drawInt( mesh.verts[mesh.selection[i] ].pos, i,  fontTex, sz ); } }
+    else        { for(int iv: mesh.selset                  ){ Draw3D::drawInt( mesh.verts[iv                ].pos, iv, fontTex, sz ); } }
 }
 
 void drawPolygonBorder( const Mesh::Builder2& mesh, int ich ){
@@ -166,7 +165,7 @@ void drawSelectedEdges( const Mesh::Builder2& mesh ){
 void drawSelectedVerts( const Mesh::Builder2& mesh ){
     glBegin(GL_POINTS);
     for(int iv: mesh.selection){
-        printf( "drawSelectedVerts() iv=%i \n", iv );
+        //printf( "drawSelectedVerts() iv=%i \n", iv );
         Draw3D::vertex( mesh.verts[iv].pos );
     }
     glEnd();

@@ -365,6 +365,40 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
         return selection.size();
     }
 
+    int Builder2::plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub ){
+        if( n<2 ) return 0;
+        for( int i=0; i<n; i++){
+            edge( ivs1[i], ivs2[i] ); // this is just quick for debugig
+            /// TODO: later we will do subdivision and faces / triangles creation
+        }
+        return 0;
+    }
+
+    int Builder2::plateBetweenEdges( int nsub, double r, bool bSort ){
+        printf( "plateBetweenEdges() nsub=%i  r=%f  bSort=%i  sel.size=%i\n", nsub, r, bSort, selection.size() );
+        std::vector<int> sel = selection;
+        std::vector<int> strip1;
+        std::vector<int> strip2;
+        if( sel.size()==3 ){ // corner ( triangle )
+            selection.clear(); Builder2::selectVertsAlongLine( verts[sel[1]].pos, verts[sel[0]].pos, r, bSort ); strip1 = selection;
+            selection.clear(); Builder2::selectVertsAlongLine( verts[sel[1]].pos, verts[sel[2]].pos, r, bSort ); strip2 = selection;
+            int n = _min( strip1.size(), strip2.size() );
+            plateBetweenVertStrips( n-1, strip1.data()+1, strip2.data()+1, nsub ); 
+            /// TODO: we ignore the first vert so we can use Quad plateBetweenVertStrips, later we need to make triangle version
+            selection.insert( selection.end(), strip1.begin()+1, strip1.end() );
+        } else if( sel.size()==4 ){ // quad
+            selection.clear(); Builder2::selectVertsAlongLine( verts[sel[0]].pos, verts[sel[1]].pos, r, bSort ); strip1 = selection;
+            selection.clear(); Builder2::selectVertsAlongLine( verts[sel[3]].pos, verts[sel[2]].pos, r, bSort ); strip2 = selection;
+            int n = _min( strip1.size(), strip2.size() );
+            plateBetweenVertStrips( n, strip1.data(), strip2.data(), nsub );
+            selection.insert( selection.end(), strip1.begin(), strip1.end() );
+        }else{
+            printf( "ERROR in plateBetweenEdges() selection.size()=%i \n", selection.size() );
+            printSelectedVerts();
+            //exit(0);
+        }
+        return 0;
+    }
 
     int Builder2::conected_vertex( const Vec3d& p, int stickType, int n, int* iverts ){
         int iv = vert( p );
