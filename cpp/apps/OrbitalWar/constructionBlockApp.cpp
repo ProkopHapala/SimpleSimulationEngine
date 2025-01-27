@@ -25,8 +25,9 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 
-#include "ConstructionBlock.h"
 #include "MeshBuilder2.h"
+#include "DrawUV.h"
+#include "ConstructionBlock.h"
 #include "MeshBuilder2Draw.h"
 #include "argparse.h"
 
@@ -156,13 +157,13 @@ void ConstructionBlockApp::initGUI(){
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
-    viewControls->addBox("Mesh", &bViewMesh);
-    viewControls->addBox("Edges", &bViewEdges);
-    viewControls->addBox("Face Normals", &bViewFaceNormals);
-    viewControls->addBox("Point Labels", &bViewPointLabels);
-    viewControls->addBox("Face Labels", &bViewFaceLabels);
-    viewControls->addBox("Tri Labels", &bViewTriLabels);
-    viewControls->addBox("Pivot Point", &bViewPivotPoint);
+    viewControls->addBox("Mesh",          &bViewMesh);
+    viewControls->addBox("Edges",         &bViewEdges);
+    viewControls->addBox("Face Normals",  &bViewFaceNormals);
+    viewControls->addBox("Point Labels",  &bViewPointLabels);
+    viewControls->addBox("Face Labels",   &bViewFaceLabels);
+    viewControls->addBox("Tri Labels",    &bViewTriLabels);
+    viewControls->addBox("Pivot Point",   &bViewPivotPoint);
     gui.addPanel(viewControls);
 
     //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 

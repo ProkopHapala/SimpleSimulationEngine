@@ -28,7 +28,7 @@
 //#include "SpaceCraft2Mesh.h"   // deprecated
 #include "MeshBuilder2.h"
 #include "SpaceCraft2Mesh2.h"
-#include "SoftBody.h"
+//#include "SoftBody.h"
 
 #include "Truss.h"
 #include "SpaceCraft2Truss.h" // deprecated

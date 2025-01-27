@@ -1,4 +1,4 @@
-﻿
+
 #ifndef  EditSpaceCraft_h
 #define  EditSpaceCraft_h
 
