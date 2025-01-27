@@ -20,7 +20,7 @@ namespace Mesh {
 //     return nor; 
 // }
 
-template<typename UVfunc> void UVFunc2smooth(Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, Builder2& builder) {
+template<typename UVfunc> void UVFunc2smooth(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
     std::vector<int> verts((n.a+1)*(n.b+1)); int iv = 0;
     for(int ia=0; ia<=n.a; ia++) { 
@@ -41,17 +41,19 @@ template<typename UVfunc> void UVFunc2smooth(Vec2i n, Vec2f UVmin, Vec2f UVmax, 
     builder.chunk({builder.tris.size()-2*n.a*n.b, 2*n.a*n.b, -1, (int)Builder2::ChunkType::face});
 }
 
-template<typename UVfunc> void UVFunc2wire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, Builder2& builder) {
+template<typename UVfunc> void UVFunc2wire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
-    std::vector<int> verts((n.a+1)*(n.b+1)); int iv = 0;
+    //std::vector<int> verts((n.a+1)*(n.b+1)); int iv = 0;
+    int iv = builder.verts.size();
     for(int ia=0; ia<=n.a; ia++) { 
         Vec2f uv = {UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia};
         for(int ib=0; ib<=n.b; ib++) { 
             Vec3d p; 
             convert(func(uv), p); 
-            verts[iv] = builder.vert(p); 
-            if(ia<n.a) builder.edge(verts[iv],verts[iv+n.b+1]); 
-            if(ib<n.b) builder.edge(verts[iv],verts[iv+1]); 
+            //verts[iv] = 
+            builder.vert(p); 
+            if(ia<n.a) builder.edge( iv, iv+n.b+1 ); 
+            if(ib<n.b) builder.edge( iv, iv+1     ); 
             iv++; 
             uv.b += duv.b; 
         }
@@ -59,7 +61,7 @@ template<typename UVfunc> void UVFunc2wire(Vec2i n, Vec2f UVmin, Vec2f UVmax, fl
     builder.chunk({builder.edges.size()-n.a*(n.b+1)-n.b*(n.a+1), n.a*(n.b+1)+n.b*(n.a+1), -1, (int)Builder2::ChunkType::edgestrip});
 }
 
-template<typename UVfunc> void drawExtrudedWireUVFunc(Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, Builder2& builder) {
+template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b}); float eps = 0.001;
     std::vector<int> verts((n.a+1)*(n.b+1)*2); int iv = 0;
     for(int ia=0; ia<=n.a; ia++) { 
@@ -68,7 +70,7 @@ template<typename UVfunc> void drawExtrudedWireUVFunc(Vec2i n, float thick, Vec2
             Vec3d p,nr; 
             convert(func(uv), p); 
             convert(getUVFuncNormal(uv,eps,func), nr);
-            verts[iv*2] = builder.vert(p); 
+            verts[iv*2  ] = builder.vert(p); 
             verts[iv*2+1] = builder.vert(p+nr*thick);
             if(ia>0 && ib>0) { 
                 int i=iv*2, i_prev=(iv-1)*2, i_up=(iv-(n.b+1))*2;
@@ -84,116 +86,116 @@ template<typename UVfunc> void drawExtrudedWireUVFunc(Vec2i n, float thick, Vec2
     builder.chunk({builder.tris.size()-4*n.a*n.b, 4*n.a*n.b, -1, (int)Builder2::ChunkType::face});
 }
 
-void Cone2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire, Builder2& builder) { 
+void Cone2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Sphere2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, bool wire, Builder2& builder) { 
+void Sphere2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return SphereUVfunc(uv,R);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Torus2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, bool wire, Builder2& builder) { 
+void Torus2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return TorusUVfunc(uv,r,R);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Teardrop2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire, Builder2& builder) { 
+void Teardrop2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return TeardropUVfunc(uv,R1,R2,L);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void NACASegment2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, bool wire, Builder2& builder) { 
+void NACASegment2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return NACA4digitUVfunc(uv,coefs1,coefs2,L);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void HarmonicTube2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, bool wire, Builder2& builder) { 
+void HarmonicTube2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Parabola2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, bool wire, Builder2& builder) { 
+void Parabola2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, bool wire) { 
     float K = L/(R*R); 
     UVmin.a*=R; UVmax.a*=R; 
     auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);}; 
-    if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-    else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+    if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+    else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Hyperbola2Mesh(Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, bool wire, Builder2& builder) {
+void Hyperbola2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, bool wire) {
     if(r>0){ 
         float K = R/L; 
         UVmin.a*=L; UVmax.a*=L; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaLUVfunc(uv,r,K);}; 
-        if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-        else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+        if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+        else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
     }else{ 
         r=-r; 
         float K = L/R; 
         UVmin.a*=R; UVmax.a*=R; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaRUVfunc(uv,r,K);}; 
-        if(wire) UVFunc2wire  (n,UVmin,UVmax,voff,uvfunc,builder); 
-        else     UVFunc2smooth(n,UVmin,UVmax,voff,uvfunc,builder); 
+        if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
+        else     UVFunc2smooth(builder, n,UVmin,UVmax,voff,uvfunc); 
     }
 }
 
-void Cone_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick, Builder2& builder) { 
+void Cone_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Sphere_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, float thick, Builder2& builder) { 
+void Sphere_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return SphereUVfunc(uv,R);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Torus_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, float thick, Builder2& builder) { 
+void Torus_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return TorusUVfunc(uv,r,R);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Teardrop_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick, Builder2& builder) { 
+void Teardrop_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return TeardropUVfunc(uv,R1,R2,L);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void NACASegment_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, float thick, Builder2& builder) { 
+void NACASegment_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return NACA4digitUVfunc(uv,coefs1,coefs2,L);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void HarmonicTube_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, float thick, Builder2& builder) { 
+void HarmonicTube_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, float thick) { 
     auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Parabola_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, float thick, Builder2& builder) { 
+void Parabola_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, float thick) { 
     float K = L/(R*R); UVmin.a*=R; UVmax.a*=R; 
     auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);}; 
-    drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
-void Hyperbola_ExtrudedWire(Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, float thick, Builder2& builder) {
+void Hyperbola_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, float thick) {
     if(r>0){ 
         float K = R/L; UVmin.a*=L; UVmax.a*=L; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaLUVfunc(uv,r,K);}; 
-        drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+        drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
     }else{ 
         r=-r; float K = L/R; UVmin.a*=R; UVmax.a*=R; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaRUVfunc(uv,r,K);}; 
-        drawExtrudedWireUVFunc(n,thick,UVmin,UVmax,voff,uvfunc,builder); 
+        drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
     }
 }
 
-void ConeFan(int n, float r, const Vec3f& base, const Vec3f& tip, Builder2& builder) {
+void ConeFan(Builder2& builder, int n, float r, const Vec3f& base, const Vec3f& tip) {
     Vec3f a,b,c,c_hat; c.set_sub(tip,base); c_hat.set_mul(c,1/c.norm()); c_hat.getSomeOrtho(a,b); a.normalize(); b.normalize();
     float alfa=2*M_PI/n; Vec2f rot; rot.set(1.0f,0.0f); Vec2f drot; drot.set(cos(alfa),sin(alfa));
     Vec3f q=c; q.add_mul(a,-r); float pnab=c_hat.dot(q)/q.norm(), pnc=sqrt(1-pnab*pnab);
@@ -208,7 +210,7 @@ void ConeFan(int n, float r, const Vec3f& base, const Vec3f& tip, Builder2& buil
     builder.chunk({builder.tris.size()-n, n, -1, (int)Builder2::ChunkType::face});
 }
 
-void CylinderStrip(int n, float r1, float r2, const Vec3f& base, const Vec3f& tip, Builder2& builder) {
+void CylinderStrip(Builder2& builder, int n, float r1, float r2, const Vec3f& base, const Vec3f& tip) {
     Vec3f a,b,c,c_hat; c.set_sub(tip,base); c_hat.set_mul(c,1/c.norm()); c_hat.getSomeOrtho(a,b); a.normalize(); b.normalize();
     float alfa=2*M_PI/n; Vec2f rot; rot.set(1.0f,0.0f); Vec2f drot; drot.set(cos(alfa),sin(alfa));
     Vec3f q=c; q.add_mul(a,-(r1-r2)); float pnab=c_hat.dot(q)/q.norm(), pnc=sqrt(1-pnab*pnab);
@@ -224,7 +226,7 @@ void CylinderStrip(int n, float r1, float r2, const Vec3f& base, const Vec3f& ti
     builder.chunk({builder.tris.size()-2*n, 2*n, -1, (int)Builder2::ChunkType::face});
 }
 
-void CylinderStrip_wire(int n, float r1, float r2, const Vec3f& base, const Vec3f& tip, Builder2& builder) {
+void CylinderStrip_wire(Builder2& builder, int n, float r1, float r2, const Vec3f& base, const Vec3f& tip) {
     Vec3f a,b,c,c_hat; c.set_sub(tip,base); c_hat.set_mul(c,1/c.norm()); c_hat.getSomeOrtho(a,b); a.normalize(); b.normalize();
     float alfa=2*M_PI/n; Vec2f rot; rot.set(1.0f,0.0f); Vec2f drot; drot.set(cos(alfa),sin(alfa));
     int i0=builder.verts.size();
@@ -240,7 +242,7 @@ void CylinderStrip_wire(int n, float r1, float r2, const Vec3f& base, const Vec3
     builder.chunk({builder.edges.size()-3*n, 3*n, -1, (int)Builder2::ChunkType::edgestrip});
 }
 
-void SphereTriangle_wire(int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c, Builder2& builder) {
+void SphereTriangle_wire(Builder2& builder, int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c) {
     float d=1.0f/n; Vec3f da(a-c),db(b-c); da.mul(d); db.mul(d);
     int i0=builder.verts.size();
     for(int ia=0; ia<=n; ia++) {
@@ -257,7 +259,7 @@ void SphereTriangle_wire(int n, float r, const Vec3f& pos, const Vec3f& a, const
     builder.chunk({builder.edges.size()-2*n*n, 2*n*n, -1, (int)Builder2::ChunkType::edgestrip});
 }
 
-void SphereTriangle(int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c, Builder2& builder) {
+void SphereTriangle(Builder2& builder, int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c) {
     float d=1.0f/n; Vec3f da(a-c),db(b-c); da.mul(d); db.mul(d);
     int i0=builder.verts.size();
     for(int ia=0; ia<=n; ia++) {
@@ -274,26 +276,26 @@ void SphereTriangle(int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3
     builder.chunk({builder.tris.size()-n*n, n*n, -1, (int)Builder2::ChunkType::face});
 }
 
-void Sphere_oct(int n, float r, const Vec3f& pos, bool wire, Builder2& builder) {
+void Sphere_oct(Builder2& builder, int n, float r, const Vec3f& pos, bool wire) {
     Vec3f a,b,c; 
     a.set(1.0f,0.0f,0.0f); b.set(0.0f,1.0f,0.0f); c.set(0.0f,0.0f,1.0f);
     Vec3f na=a; na.mul(-1.0f);
     Vec3f nb=b; nb.mul(-1.0f);
     Vec3f nc=c; nc.mul(-1.0f);
     if(wire) {
-        SphereTriangle_wire(n,r,pos, a, b, c,builder); SphereTriangle_wire(n,r,pos,na, b, c,builder);
-        SphereTriangle_wire(n,r,pos, a,nb, c,builder); SphereTriangle_wire(n,r,pos,na,nb, c,builder);
-        SphereTriangle_wire(n,r,pos, a, b,nc,builder); SphereTriangle_wire(n,r,pos,na, b,nc,builder);
-        SphereTriangle_wire(n,r,pos, a,nb,nc,builder); SphereTriangle_wire(n,r,pos,na,nb,nc,builder);
+        SphereTriangle_wire(builder,n,r,pos, a, b, c); SphereTriangle_wire(builder,n,r,pos,na, b, c);
+        SphereTriangle_wire(builder,n,r,pos, a,nb, c); SphereTriangle_wire(builder,n,r,pos,na,nb, c);
+        SphereTriangle_wire(builder,n,r,pos, a, b,nc); SphereTriangle_wire(builder,n,r,pos,na, b,nc);
+        SphereTriangle_wire(builder,n,r,pos, a,nb,nc); SphereTriangle_wire(builder,n,r,pos,na,nb,nc);
     } else {
-        SphereTriangle(n,r,pos, a, b, c,builder); SphereTriangle(n,r,pos,na, b, c,builder);
-        SphereTriangle(n,r,pos, a,nb, c,builder); SphereTriangle(n,r,pos,na,nb, c,builder);
-        SphereTriangle(n,r,pos, a, b,nc,builder); SphereTriangle(n,r,pos,na, b,nc,builder);
-        SphereTriangle(n,r,pos, a,nb,nc,builder); SphereTriangle(n,r,pos,na,nb,nc,builder);
+        SphereTriangle(builder,n,r,pos, a, b, c); SphereTriangle(builder,n,r,pos,na, b, c);
+        SphereTriangle(builder,n,r,pos, a,nb, c); SphereTriangle(builder,n,r,pos,na,nb, c);
+        SphereTriangle(builder,n,r,pos, a, b,nc); SphereTriangle(builder,n,r,pos,na, b,nc);
+        SphereTriangle(builder,n,r,pos, a,nb,nc); SphereTriangle(builder,n,r,pos,na,nb,nc);
     }
 }
 
-void Capsula(Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped, Builder2& builder) {
+void Capsula(Builder2& builder, Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped) {
     Vec3f ax=p1-p0; float L=ax.normalize();
     Vec3f up,lf; ax.getSomeOrtho(up,lf);
     float dPhi=2*M_PI/nPhi, R=(r1+r2)*0.5f, dR=(r2-r1)*0.5f;
