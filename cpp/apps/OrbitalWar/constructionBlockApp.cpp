@@ -56,6 +56,8 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
     bool bViewBlockBuilder = true;
     bool bViewMesh  = true;
     bool bViewEdges = true;
+    bool bViewTris    = true;
+    bool bViewFaces   = true;
     bool bViewFaceNormals = false;
     bool bViewPointLabels = false;
     bool bViewFaceLabels  = false;
@@ -96,8 +98,9 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
-    Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
-    //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,1.0}, 10.0, 10.0, 0.0, 0.1 );
+    //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
+    //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // does not work - crash in Mesh::drawFace
+    Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
     /*
     Mesh::ConstructionBlockToMeshBuilder cbm;
@@ -210,7 +213,13 @@ void ConstructionBlockApp::draw(){
 
     if(bViewMesh) {
         glColor3f( 1.0,1.0,1.0 );
-        drawFaces( mesh );
+        
+        if(bViewFaces) {
+            drawFaces( mesh );
+        }
+        if(bViewTris){
+            drawTriagles( mesh );
+        }
         
         if(bViewFaceNormals) {
             glColor3f( 0.0,0.5,1.0 );

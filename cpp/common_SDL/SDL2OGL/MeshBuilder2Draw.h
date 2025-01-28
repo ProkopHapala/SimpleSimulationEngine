@@ -28,6 +28,20 @@ void drawEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
     }
 }
 
+void drawTriagles( const Mesh::Builder2& mesh ){
+    glBegin(GL_TRIANGLES);
+    for(int i=0; i<mesh.tris.size(); i++){
+        //Vec3d p=Vec3dZero;
+        const Quat4i& t = mesh.tris[i];
+        Draw3D::vertex( mesh.verts[t.x].pos );
+        Draw3D::vertex( mesh.verts[t.y].pos );
+        Draw3D::vertex( mesh.verts[t.z].pos );
+        // p.mul( 1./3 );
+        // Draw3D::drawInt( p, i, fontTex, sz );
+    }
+    glEnd();
+}
+
 void drawFaceLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
     for(int i=0; i<mesh.chunks.size(); i++){
         Quat4i ch = mesh.chunks[i];
