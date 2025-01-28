@@ -25,8 +25,9 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 
-#include "ConstructionBlock.h"
 #include "MeshBuilder2.h"
+#include "DrawUV.h"
+#include "ConstructionBlock.h"
 #include "MeshBuilder2Draw.h"
 #include "argparse.h"
 
@@ -95,6 +96,10 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
+    Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
+    //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,1.0}, 10.0, 10.0, 0.0, 0.1 );
+
+    /*
     Mesh::ConstructionBlockToMeshBuilder cbm;
     cbm.mesh = &mesh;
 
@@ -118,6 +123,7 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         //block.faces[i].typ=2;
         //block.faces[i].typ=3;
     }
+    */
     
     /*
     cbm.drawBlock( block );
@@ -156,13 +162,13 @@ void ConstructionBlockApp::initGUI(){
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
-    viewControls->addBox("Mesh", &bViewMesh);
-    viewControls->addBox("Edges", &bViewEdges);
-    viewControls->addBox("Face Normals", &bViewFaceNormals);
-    viewControls->addBox("Point Labels", &bViewPointLabels);
-    viewControls->addBox("Face Labels", &bViewFaceLabels);
-    viewControls->addBox("Tri Labels", &bViewTriLabels);
-    viewControls->addBox("Pivot Point", &bViewPivotPoint);
+    viewControls->addBox("Mesh",          &bViewMesh);
+    viewControls->addBox("Edges",         &bViewEdges);
+    viewControls->addBox("Face Normals",  &bViewFaceNormals);
+    viewControls->addBox("Point Labels",  &bViewPointLabels);
+    viewControls->addBox("Face Labels",   &bViewFaceLabels);
+    viewControls->addBox("Tri Labels",    &bViewTriLabels);
+    viewControls->addBox("Pivot Point",   &bViewPivotPoint);
     gui.addPanel(viewControls);
 
     //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 
