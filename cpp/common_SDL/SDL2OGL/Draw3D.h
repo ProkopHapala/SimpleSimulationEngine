@@ -65,9 +65,9 @@ void drawMatInPos ( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc=Vec3fOne
 //void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
 //void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape );
 
-void drawShape    ( int shape, const Vec3f& pos, const Mat3f&  rot=Mat3fIdentity, bool transposed = false );
+void drawShape    ( int shape, const Vec3f& pos=Vec3fZero, const Mat3f&  rot=Mat3fIdentity, bool transposed = false );
 //void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot  );
-void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale=Vec3fOne );
+void drawShape    ( int shape, const Vec3f& pos=Vec3fZero, const Quat4f& qrot=Quat4fIdentity, const Vec3f& scale=Vec3fOne );
 
 int  drawCylinderStrip     ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
 int  drawCylinderStrip_wire( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );

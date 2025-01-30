@@ -81,6 +81,83 @@ Vec3d wheel_speed_setup{ 5.0, 5.0, 5.0 };
 
 Vec3d p_debug{ 100.0, 0.0,0.0 };
 
+void sampleTriangle(const Triangle3D& tri, int nSamples, std::vector<Vec3d>& points) {
+    points.clear();
+    double step = 1.0 / nSamples;
+    
+    for(int i = 0; i < nSamples; i++) {
+        for(int j = 0; j < nSamples - i; j++) {
+            double u = (i + 0.5) * step;
+            double v = (j + 0.5) * step;
+            
+            Vec3d point = tri.a * (1 - u - v) + 
+                         tri.b * u + 
+                         tri.c * v;
+            points.push_back(point);
+        }
+    }
+}
+
+void visualizeRayTracing() {
+    // Create two triangular surfaces
+    Triangle3D sourceTri = {
+        Vec3d{-10.0, 0.0, -10.0},
+        Vec3d{10.0, 0.0, -10.0}, 
+        Vec3d{0.0, 0.0, 10.0}
+    };
+    
+    Triangle3D screenTri = {
+        Vec3d{-10.0, 20.0, -10.0},
+        Vec3d{10.0, 20.0, -10.0},
+        {0.0, 20.0, 10.0}
+    };
+
+    // Create ray tracer and add obstacles
+    TriangleRayTracer tracer;
+    tracer.addTriangle(sourceTri, 1.0, true);
+    tracer.addTriangle(screenTri, 1.0, true);
+    
+    // Add some obstacle triangles
+    Triangle3D obstacle1 = {
+        Vec3d{-5.0, 5.0, -5.0},
+        Vec3d{5.0, 5.0, -5.0},
+        Vec3d{0.0, 5.0, 5.0}
+    };
+    tracer.addTriangle(obstacle1, 1.0, true);
+
+    // Sample points on both surfaces
+    int nSamples = 5;
+    std::vector<Vec3d> sourcePoints, screenPoints;
+    sampleTriangle(sourceTri, nSamples, sourcePoints);
+    sampleTriangle(screenTri, nSamples, screenPoints);
+
+    // Draw surfaces and obstacles
+    glColor3f(0.2, 0.8, 0.2);
+    Draw3D::drawTriangle(sourceTri, true);
+    Draw3D::drawTriangle(screenTri, true);
+    
+    glColor3f(0.8, 0.2, 0.2);
+    Draw3D::drawTriangle(obstacle1, true);
+
+    // Cast rays and visualize
+    Vec3d sourcePoint = sourcePoints[nSamples/2]; // Middle point
+    for(const Vec3d& target : screenPoints) {
+        Vec3d dir = (target - sourcePoint).normalized();
+        double tmax = (target - sourcePoint).norm();
+        
+        double occlusion = tracer.getOcclusion(sourcePoint, dir, tmax, 0, 1);
+        
+        if(occlusion > 0) {
+            glColor3f(1.0, 0.0, 0.0); // Red for occluded rays
+        } else {
+            glColor3f(0.0, 0.0, 1.0); // Blue for clear rays
+        }
+        
+        Draw3D::drawLine(sourcePoint, target);
+    }
+}
+
+
 
 class LinSolverTrussDynamics : public LinSolver{ public:
     TrussDynamics_d* sim=0;
@@ -367,6 +444,8 @@ class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
     PlateGUI*  plateGui  =0;
     PickerUI   picker;
 
+    int ogl_rayTracing = 0;
+
     DropDownList* lstLuaFiles=0;
     OnSelectLuaShipScript onSelectLuaShipScript;
 
@@ -424,6 +503,12 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     drawAsteroide( 16, 0, 0.0, true );
     //drawAsteroide( 32, 50, 0.1, true );
     glEndList();
+
+    ogl_rayTracing = Draw::list();
+    visualizeRayTracing();
+    glEndList();
+
+
 
     //std::vector<std::string> luaFiles;
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
@@ -509,6 +594,8 @@ void SpaceCraftEditorApp::draw(){
     */
 
     glDisable(GL_LIGHTING);
+
+    Draw3D::drawShape(ogl_rayTracing, Vec3fZero, Mat3fIdentity);
 
     //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3d){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
 

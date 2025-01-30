@@ -2,7 +2,10 @@
 
 # ====== Paths
 
-name=constructionBlockApp
+#name=test_Radiosity
+name=test_Raytracing
+
+
 dir=../../cpp/Build/sketches_SDL/3D
 ln -s ../../cpp/apps/OrbitalWar/data
 ln -s ../../cpp/common_resources
