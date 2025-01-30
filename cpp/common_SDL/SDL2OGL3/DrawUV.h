@@ -22,23 +22,34 @@ namespace Mesh {
 
 template<typename UVfunc> void UVFunc2smooth(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
-    std::vector<int> verts((n.a+1)*(n.b+1)); int iv = 0;
+    std::vector<int> verts((n.a+1)*(n.b+1)); 
+    int iv = 0;
     for(int ia=0; ia<=n.a; ia++) { 
         Vec2f uv = {UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia}; 
         for(int ib=0; ib<=n.b; ib++) { 
             Vec3d p,nor; 
             convert(func(uv), p); 
             convert(getUVFuncNormal(uv,0.01,func), nor); 
-            verts[iv++] = builder.vert(p, nor, Vec2d{uv.x,uv.y}); 
+            verts[iv] = builder.vert(p, nor, Vec2d{uv.x,uv.y}); 
+            //printf( " %i %i iv(%i): %i uv(%f,%f) p(%f,%f,%f)\n", ia,ib, iv, verts[iv], uv.a, uv.b,  p.x,p.y,p.z  );
+            printf( " %3i %3i verts[ %3i ]: %3i \n", ia,ib, iv, verts[iv] );
+            iv++;
             uv.b += duv.b; 
         }
     }
-    for(int ia=0; ia<n.a; ia++) for(int ib=0; ib<n.b; ib++) { 
-        int i=ia*(n.b+1)+ib; 
-        builder.tri(verts[i], verts[i+1], verts[i+n.b+1]); 
-        builder.tri(verts[i+1], verts[i+n.b+2], verts[i+n.b+1]); 
+    for(int ia=0; ia<n.a; ia++) {
+        for(int ib=0; ib<n.b; ib++) { 
+            int i=ia*(n.b+1)+ib; 
+            printf( " %3i %3i ivs{ %3i %3i %3i %3i  } \n", ia,ib, i, i+1, i+n.b+1, i+n.b+2 );
+            builder.tri(verts[i  ], verts[i+1    ], verts[i+n.b+1]); 
+            builder.tri(verts[i+1], verts[i+n.b+2], verts[i+n.b+1]); 
+            /// TODO:  Make Faces - we need some switch if this should ple plotted as a face
+            //builder.chunk({builder.tris.size()-2*n.a*n.b, 2*n.a*n.b, -1, (int)Builder2::ChunkType::face}); 
+        }
+        /// TODO: Make triangle strip
+        //builder.chunk({builder.tris.size()-2*n.a*n.b, 2*n.a*n.b, -1, (int)Builder2::ChunkType::face});
     }
-    builder.chunk({builder.tris.size()-2*n.a*n.b, 2*n.a*n.b, -1, (int)Builder2::ChunkType::face});
+    
 }
 
 template<typename UVfunc> void UVFunc2wire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
@@ -56,9 +67,13 @@ template<typename UVfunc> void UVFunc2wire(Builder2& builder, Vec2i n, Vec2f UVm
             if(ib<n.b) builder.edge( iv, iv+1     ); 
             iv++; 
             uv.b += duv.b; 
+            /// TODO:  Make Faces - we need some switch if this should ple plotted as a face
+            //builder.chunk({builder.edges.size()-n.a*(n.b+1)-n.b*(n.a+1), n.a*(n.b+1)+n.b*(n.a+1), -1, (int)Builder2::ChunkType::edgestrip});
         }
+        /// TODO: Make triangle strip
+        //builder.chunk({builder.edges.size()-n.a*(n.b+1)-n.b*(n.a+1), n.a*(n.b+1)+n.b*(n.a+1), -1, (int)Builder2::ChunkType::edgestrip});
     }
-    builder.chunk({builder.edges.size()-n.a*(n.b+1)-n.b*(n.a+1), n.a*(n.b+1)+n.b*(n.a+1), -1, (int)Builder2::ChunkType::edgestrip});
+    
 }
 
 template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
@@ -83,7 +98,7 @@ template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n
             uv.b += duv.b;
         }
     }
-    builder.chunk({builder.tris.size()-4*n.a*n.b, 4*n.a*n.b, -1, (int)Builder2::ChunkType::face});
+    //builder.chunk({builder.tris.size()-4*n.a*n.b, 4*n.a*n.b, -1, (int)Builder2::ChunkType::face});
 }
 
 void Cone2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 

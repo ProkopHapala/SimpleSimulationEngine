@@ -56,6 +56,8 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
     bool bViewBlockBuilder = true;
     bool bViewMesh  = true;
     bool bViewEdges = true;
+    bool bViewTris    = true;
+    bool bViewFaces   = true;
     bool bViewFaceNormals = false;
     bool bViewPointLabels = false;
     bool bViewFaceLabels  = false;
@@ -96,8 +98,9 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
-    Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
-    //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,1.0}, 10.0, 10.0, 0.0, 0.1 );
+    //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
+    //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // does not work - crash in Mesh::drawFace
+    Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
     /*
     Mesh::ConstructionBlockToMeshBuilder cbm;
@@ -174,13 +177,21 @@ void ConstructionBlockApp::initGUI(){
     //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 
 
     // context menu for right mouse button
-    contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2, 1 );
+    contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2, -1 );
     contextMenu->hideOnCommand = true;
     //contextMenu->addPanel( "select along line",  {0.0,1.0, 0.0},  0,1,0,0,0 )->command = [&](GUIAbstractPanel* p){ W->ffl.print_nonbonded();   return 0; }; 
-    contextMenu->addButton( "select along line", [&](GUIAbstractPanel* p){ 
+    contextMenu->addButton( "selectVertsAlongPolyline", [&](GUIAbstractPanel* p){ 
+        printf( "selectVertsAlongPolyline \n" );
         printf( "select along line BEFORE \n" ); mesh.printSelectedVerts();
         mesh.selectVertsAlongPolyline( 0.1, true ); 
         printf( "select along line AFTER \n" ); mesh.printSelectedVerts();
+        return 0; 
+    } );
+    contextMenu->addButton( "plateBetweenEdges", [&](GUIAbstractPanel* p){ 
+        printf( "plateBetweenEdges \n" );
+        printf( "plateBetweenEdges BEFORE \n" ); mesh.printSelectedVerts();
+        mesh.plateBetweenEdges();
+        printf( "plateBetweenEdges AFTER \n" ); mesh.printSelectedVerts();
         return 0; 
     } );
     gui.addPanel( contextMenu );
@@ -202,7 +213,13 @@ void ConstructionBlockApp::draw(){
 
     if(bViewMesh) {
         glColor3f( 1.0,1.0,1.0 );
-        drawFaces( mesh );
+        
+        if(bViewFaces) {
+            drawFaces( mesh );
+        }
+        if(bViewTris){
+            drawTriagles( mesh );
+        }
         
         if(bViewFaceNormals) {
             glColor3f( 0.0,0.5,1.0 );
@@ -258,7 +275,8 @@ void ConstructionBlockApp::draw(){
                 glColor3f(0.0,1.0,0.0);
                 glPointSize(8.0);
                 drawSelectedVerts( mesh );
-                //drawSelectedVertLabels( mesh, 0.02 );
+                glColor3f(0.0,0.5,0.0);
+                drawSelectedVertLabels( mesh, 0.02, true );
                 glPointSize(1.0);
             }
         }

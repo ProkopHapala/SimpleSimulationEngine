@@ -405,6 +405,7 @@ GUIAbstractPanel* MultiPanel::onMouse  ( int x, int y, const SDL_Event& event, G
         if(opened){
             nsubs = subs.size();
             for(int i=0; i<nsubs; i++){
+                printf( "MultiPanel::onMouse() subs[%i].caption = %s \n", i, subs[i]->caption.c_str() );
                 active = subs[i]->onMouse ( x, y, event, gui );
                 if(subs[i]->redraw) redraw = true;
                 if(active){
