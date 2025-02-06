@@ -3,7 +3,7 @@
 in      vec2      fUV;
 uniform sampler2D texture_1; 
 
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
 
 void main(){
     vec4 c = textureLod( texture_1, fUV, 0 );
