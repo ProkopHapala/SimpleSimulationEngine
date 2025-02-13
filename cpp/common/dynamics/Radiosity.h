@@ -12,6 +12,8 @@
 
 #include "Lingebra.h"
 
+/// TODO: Make this into module ?
+
 // See:
 // https://en.wikipedia.org/wiki/Radiosity_(computer_graphics)
 
