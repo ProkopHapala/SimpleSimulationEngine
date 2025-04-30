@@ -65,7 +65,7 @@ TO DO:
 
 
 char str[8000];
-int     fontTex;
+//int     fontTex;
 
 std::vector<Vec3d> iso_points;
 int isoOgl;

@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
+#include <cstring>
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
@@ -84,8 +86,8 @@ double ticks_per_second=0;
 
 const char str_glslf_sin[]= GLSL(330,
 in        vec3 fpos_world;
-out       vec4 gl_FragColor;
-void main(){ gl_FragColor = vec4( sin( fpos_world*30.0 ), 1.0 ); }
+out       vec4 fragColor;
+void main(){ fragColor = vec4( sin( fpos_world*30.0 ), 1.0 ); }
 );
 
 char* strconcat( char* str1, char * str2 ){
@@ -105,11 +107,23 @@ void replaceStr_inpl(char* str, char* mask, char* mod){
 }
 
 char* replaceStr(char* str, char* mask, char* mod){
-    char * str_  = new char[strlen(str)];
-    strcpy(str_,str);
-    char * found = strstr(str_,mask);
-    if(found) strncpy(found,mod,strlen(mask));
-    return str_;
+    
+    //printf("replaceStr(>>%s<<,>>%s<<,>>%s<<)\n", str, mask, mod);
+    //printf("replacestr:>>%s<<\n", str);
+    std::string s(str);
+    std::string m(mask);
+    std::string o(mod);
+    
+    size_t pos = s.find(m);
+    if(pos != std::string::npos){
+        s.replace(pos, m.length(), o);
+    } else {
+        printf("replaceStr: mask(%s) not found\n", mask);
+    }
+    
+    char* out = new char[s.size() + 1];
+    strcpy(out, s.c_str());
+    return out;
 }
 
 double calibrate_timer(int delay){
@@ -121,23 +135,34 @@ double calibrate_timer(int delay){
 
 int setup(){
 
+    
     shFraged=new Shader();
     //shFraged->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Sphere3D.glslf" );
     shFraged->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Sphere3D.glslf" );
     shFraged->getDefaultUniformLocation();
 
+    
     char* str_glslv_Instance3D     = filetobuf( "common_resources/shaders/Instance3D.glslv"  );
     char* str_glslf_Sphere3D       = filetobuf( "common_resources/shaders/Sphere3D.glslf"    );
+    
     char* str_glslf_Sphere3D_depth = replaceStr( str_glslf_Sphere3D, "#define CUSTOM_DEPTH_0", "#define CUSTOM_DEPTH_1");
-    printf("str_glslf_Sphere3D_depth:>>%s<<\n", str_glslf_Sphere3D_depth );
+    
+    //printf("str_glslf_Sphere3D_depth:>>%s<<\n", str_glslf_Sphere3D_depth );
 
+    
     shGeom=new Shader();
+    
 	shGeom-> init_str ( str_glslv_Instance3D, str_glslf_sin, NULL );
+    
     shGeom->getDefaultUniformLocation();
+    
 
     shFragedDepth=new Shader();
+    
     shFragedDepth->init_str( str_glslv_Instance3D, str_glslf_Sphere3D_depth, NULL );
+    
     shFragedDepth->getDefaultUniformLocation();
+    
 
     delete [] str_glslv_Instance3D; delete [] str_glslf_Sphere3D; delete [] str_glslf_Sphere3D_depth;
 
@@ -150,9 +175,11 @@ int setup(){
     float time = frameCount * 0.005;
     ParticlesCount = MaxParticles;
 
+    
+
     int nside = int( pow( ParticlesCount, 1.0/3.0) );
 
-	for( int i=0; i<ParticlesCount; i++ ){
+	for( int i=0; i<ParticlesCount-2; i++ ){
         Vec3f pos, dir, up, sc;
         // pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
         // sc.set( randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) );
@@ -169,6 +196,8 @@ int setup(){
         *((Vec3f*)(instance_sc +(3*i))) = sc;
 	}
 
+    
+
     //CMesh mesh = Solids::Octahedron;
     CMesh mesh = Solids::Icosahedron;
     nVerts = countVerts( mesh.nfaces, mesh.ngons );
@@ -177,6 +206,9 @@ int setup(){
 	hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, (GLfloat*)model_vpos, (GLfloat*)model_vnor );
 
 	instances.init( MaxParticles, nVerts, model_vpos, model_vnor, instance_pos, instance_dir, instance_Up, instance_sc );
+
+
+    
 
 	delete [] model_vpos;
 	delete [] model_vnor;
@@ -217,17 +249,24 @@ void draw( ){
         lastCPUtick = t2;
     };
 
+    
+
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
+    
 	physics();
 
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    
+
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
+
+    
 
     Mat4f camMat,mRot,mPersp;
     qCamera.toMatrix(mouseMat);
@@ -237,22 +276,27 @@ void draw( ){
     camMat.set_mmul_TN( mRot, mPersp );
     //Mat3f objRot; objRot.setOne();
 
+    
+
     //printf("======\n");
     //printf( "qCamera (%g,%g,%g,%g)\n", qCamera.x, qCamera.y, qCamera.z, qCamera.w );
     //printf( "camPos (%g,%g,%g)\n", camPos.x, camPos.y, camPos.z );
     //mouseMat.print();
     //camMat.print();
 
+    
     Shader       * sh;
     if      ( viewGeom    ){ sh = shGeom; }
     else if ( customDepth ){ sh = shFragedDepth; }else{ sh = shFraged; };
     sh->use();
     sh->set_camPos( (GLfloat*)&camPos );
     sh->set_camMat( (GLfloat*)&camMat );
+    
 
     uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
+    
     instances.draw( GL_TRIANGLES );
-
+    
 }
 
 void init();

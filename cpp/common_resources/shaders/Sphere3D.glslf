@@ -8,10 +8,9 @@
 // https://gamedev.stackexchange.com/questions/16588/computing-gl-fragdepth/16605#16605
 
 //in        vec2 gl_PointCoord;
-smooth in vec4 gl_FragCoord;
 in        vec4 obj;
 in        vec3 fpos_world;
-out       vec4 gl_FragColor;
+out       vec4 fragColor; // Define a custom output color variable
 
 //uniform mat3 camRot;
 uniform vec3 camPos;
@@ -81,7 +80,7 @@ void main(){
 		float cS    = -dot( normal, normalize(hRay+light_pos) ); 
 		//float cS    = -dot( normal, normalize(hRay) ); 
 		cS          = lorenz( (cS-1)*obj_specular.x )*obj_specular.y;
-		gl_FragColor= vec4( (cD + cS)*obj_clr, 1.0 );
+		fragColor   = vec4( (cD + cS)*obj_clr, 1.0 ); // Assign to the custom output variable
 #ifdef CUSTOM_DEPTH_1
         //gl_FragDepth = gl_FragCoord.z;
         //gl_FragDepth = log(lZ)*0.1;
@@ -89,4 +88,3 @@ void main(){
 #endif 
 	}
 }
-

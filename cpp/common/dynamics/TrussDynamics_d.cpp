@@ -27,6 +27,7 @@
 
 #include "TrussDynamics_d.h"
 
+#include "IO_utils.h"
 #include "testUtils.h"
 
 double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb, double tol ){
@@ -819,10 +820,9 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 //LsparseT.fromDense( nPoint, LDLT_L, 1.e-16, true );
                 //for(int i=0; i<n2; i++){ LDLT_L[i]=0; }
                 Lingebra::CholeskyDecomp_LDLT( PDmat, LDLT_L, LDLT_D, nPoint );
-                Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
+                //Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
+                Lsparse.fromDense( nPoint, LDLT_L, 1e-300 );
                 LsparseT.fromFwdSubT( nPoint, LDLT_L);
-                
-
                 //mat2file<double>( "PDmat.log",  nPoint,nPoint, PDmat  );
                 //mat2file<double>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
             }
@@ -843,10 +843,18 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
             LsparseT.fprint_inds("LsparseT_inds.log");
             //LsparseT.fprint_vals("LsparseT_vals.log");
             //exit(0);
+
+            double* L_reconstructed  = Lsparse .reconstruct_dense( );
+            double* LT_reconstructed = LsparseT.reconstruct_dense( );
+            writeMatrix("LDLT_L_dense.txt",         nPoint, nPoint,  LDLT_L, false);
+            writeMatrix("LDLT_LT_reconstructed.txt", nPoint, nPoint, LT_reconstructed, false);
+            writeMatrix("LDLT_L_reconstructed.txt", nPoint, nPoint,  L_reconstructed, false);
+            delete[] L_reconstructed;
+            delete[] LT_reconstructed;
         }
 
-    }
 
+    }
 
     void TrussDynamics_d::dampPoints( double Vdamping ){
         for (int i : damped_points){
@@ -920,6 +928,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                     updateIterativeMomentum( ps_pred, ps_cor );
                     break;
                 case LinSolveMethod::CholeskySparse:{
+                    //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::CholeskySparse \n");
                     // Solve using LDLT decomposition (assuming you have this method)
                     //solve_LDLT_sparse(b, ps_cor);
                     rhs_ProjectiveDynamics(ps_pred, linsolve_b );
@@ -928,6 +937,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                     Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMaxLDLT );
                 } break;
                 case LinSolveMethod::Cholesky:{
+                    //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::Cholesky \n");
                     //Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
                     //Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)ps_cor );
                     //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };

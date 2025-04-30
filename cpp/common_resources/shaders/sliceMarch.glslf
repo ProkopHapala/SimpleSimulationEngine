@@ -6,7 +6,7 @@ uniform sampler2D texture_1;
 //uniform sampler2D texture_noise;
 uniform  float txScale;
 
-out vec4 gl_FragColor;
+out vec4 fragColor;
 
 
 void main(){
@@ -60,10 +60,10 @@ void main(){
     color /= 4.0;
     */
     
-    //gl_FragColor = vec4( vec3(0.0), cover );
+    //fragColor = vec4( vec3(0.0), cover );
     //vec4 color = textureLod( texture_1, p.xy, 0 );
     
-    gl_FragColor = color;
+    fragColor = color;
 }
 
 

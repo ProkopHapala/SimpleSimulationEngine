@@ -61,7 +61,10 @@ export LD_PRELOAD
 
 #./$name.x -method 13 -dt 0.01 -double -fix 2 -shape 2,50 -perframe 10  -G 0.0,-9.81,0.0  -nsolve 10
 #./$name.x -method 2  -dt 0.01 -double -fix 2 -shape 2,50 -perframe 10  -G 0.0,-9.81,0.0  
-#./$name.x -method 2  -dt 0.05 -double -fix 2 -shape 2,10 -perframe 100 -G 0.0,-9.81,0.0
+
+
+./$name.x -method 2  -dt 0.05 -double -fix 2 -shape 2,2 -perframe 100 -G 0.0,-9.81,0.0
+#./$name.x -method 3  -dt 0.05 -double -fix 2 -shape 2,2 -perframe 100 -G 0.0,-9.81,0.0
 
 
 #./$name.x -method 2  -dt 0.01  -double -fix 0  -shape 4,2  -perframe 10
@@ -78,7 +81,7 @@ export LD_PRELOAD
 #./$name.x -s data/ship_ICF_marksman_1.lua
 #./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua
 
-./$name.x -method 12  -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -perframe 10  -nsolve 10 -bmix 3,0.8
+#./$name.x -method 12  -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -perframe 10  -nsolve 10 -bmix 3,0.8
 #./$name.x -method 2   -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -perframe 10
 
 

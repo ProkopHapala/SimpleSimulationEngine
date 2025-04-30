@@ -99,8 +99,10 @@ class SpaceCraftSimulatorOCL: public SpaceCraftSimulator { public:
     
 void SpaceCraftSimulatorOCL::initSimulators( double dt, Vec3d p0, Vec3d omega ){
     printf("SpaceCraftSimulatorOCL::initSimulators() \n");
-    to_TrussDynamics_d( sim,    mesh, dt,        p0,        omega, fixPoints.size(), fixPoints.data() );
-    to_TrussDynamics_f( sim_cl, mesh, dt, (Vec3f)p0, (Vec3f)omega, fixPoints.size(), fixPoints.data() );
+    //to_TrussDynamics_d( sim,    mesh, dt,        p0,        omega, fixPoints.size(), fixPoints.data() );
+    //to_TrussDynamics_f( sim_cl, mesh, dt, (Vec3f)p0, (Vec3f)omega, fixPoints.size(), fixPoints.data() );
+    to_TrussDynamics_d( sim,    mesh, fixPoints.size(), fixPoints.data() );
+    to_TrussDynamics_f( sim_cl, mesh, fixPoints.size(), fixPoints.data() );
     initGPU    ( sim_cl );
 }
 

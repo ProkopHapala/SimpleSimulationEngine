@@ -112,7 +112,7 @@ class SpaceCraftSimulator { public:
 
 void SpaceCraftSimulator::reloadShip( const char* fname ){
     printf("#### START reloadShip('%s')\n", fname );
-    theSpaceCraft->clear();                       DEBUG
+    theSpaceCraft->clear();                       
     //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
     if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
     printf( "Lua::dofile(%s) DONE \n", fname );

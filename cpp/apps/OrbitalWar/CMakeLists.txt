@@ -99,6 +99,9 @@ if(  WITH_OPENCL )
         $<TARGET_OBJECTS:Truss>
         $<TARGET_OBJECTS:SoftBody>
         $<TARGET_OBJECTS:DynamicOpt>
+        $<TARGET_OBJECTS:MeshBuilder2>
+        $<TARGET_OBJECTS:TrussDynamics_d>
+        $<TARGET_OBJECTS:TrussDynamics_f>
         #$<TARGET_OBJECTS:TrussDynamics_f>
     )
     target_link_libraries( spaceCraftDynamicsOCL  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} ${OpenCL_LIBRARY} )
