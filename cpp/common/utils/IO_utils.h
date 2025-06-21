@@ -1,4 +1,3 @@
-
 #ifndef  IO_utils_h
 #define  IO_utils_h
 
@@ -131,6 +130,25 @@ inline int readMatrix( const char* fname, int nrow, int ncol, double* buff, bool
             buff[i*di+j*dj] = val;
         }
     }
+    return nrow*ncol;
+}
+
+inline int writeMatrix( const char* fname, int nrow, int ncol, const double* buff, bool bTranspose=0 ){
+    FILE *file = fopen(fname, "w");
+    if ( file==0 ){
+        printf( "ERROR in writeMatrix(%s): cannot open file for writing \n", fname );
+        return -1;
+    }
+    int di=ncol,dj=1;
+    if(bTranspose){ di=1; dj=nrow; }
+    for(int i=0; i<nrow; i++){
+        for(int j=0; j<ncol; j++){
+            double val = buff[i*di+j*dj];
+            fprintf( file, "%g ", val );
+        }
+        fprintf( file, "\n" );
+    }
+    fclose(file);
     return nrow*ncol;
 }
 

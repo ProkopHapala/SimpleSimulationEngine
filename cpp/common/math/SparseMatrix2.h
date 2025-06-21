@@ -46,7 +46,7 @@ class SparseMatrix2 { public:
 
     __attribute__((hot)) 
     void fwd_subs_mi( int i, int ns, const T* b, T* x ){
-        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] \n", i);
         T sum[ns];
         for(int s=0;s<ns;s++){ sum[s]=0.0; }
         const int i0 = i0s [i];
@@ -63,7 +63,7 @@ class SparseMatrix2 { public:
     }
     __attribute__((hot)) 
     void fwd_subs_m_( int ns, const T* b, T* x ){
-        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] n\", i);
         T sum[ns];
         for (int i=0; i<n; i++){
             fwd_subs_mi( i, ns, b, x );
@@ -72,7 +72,7 @@ class SparseMatrix2 { public:
     
     __attribute__((hot)) 
     void fwd_subs_T_mi( int i, int ns, const T* b, T* x ){
-        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] \n", i);
         T sum[ns];
         for(int s=0;s<ns;s++){ sum[s]=0.0; }
         const int i0 = i0s [i];
@@ -100,7 +100,7 @@ class SparseMatrix2 { public:
 
     __attribute__((hot)) 
     void fwd_subs_m( int ns, const T* b, T* x ){
-        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        printf("SparseMatrix2::fwd_subs_m() \n");
         T sum[ns];
         #pragma omp simd
         for (int i=0; i<n; i++){
@@ -138,6 +138,22 @@ class SparseMatrix2 { public:
                 const int ii=i*ns+s; x[ii]=b[ii]-sum[s]; 
             }
         }
+    }
+
+    T* reconstruct_dense( T* dens=0 ){
+        if(dens==0) dens = new T[n*n];
+        for(int i=0; i<n; i++){
+            for(int j=0; j<n; j++){
+                dens[i*n + j] = 0.0;
+            }
+            int i0 = i0s[i];
+            int ni = nngs[i];
+            for(int k=0; k<ni; k++){
+                int j = inds[i0+k];
+                dens[i*n + j] = vals[i0+k];
+            }
+        }
+        return dens;
     }
 
     int fromDense( int n_, T* A, T tol, bool bRev=false ){

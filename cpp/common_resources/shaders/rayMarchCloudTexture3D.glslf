@@ -1,6 +1,5 @@
 #version 330 core
 
-
 ///  see this:
 //   https://www.shadertoy.com/view/Md2BWc
 // Approximation of the real function, computed with Maple
@@ -76,7 +75,7 @@ uniform sampler3D texture_noise;
 
 uniform  float txScale;
 
-out vec4 gl_FragColor;
+out vec4 fragColor;
 
 
 const float safeFator = 1.0;
@@ -271,14 +270,14 @@ void main(){
     light = max(0.0,dot( lightDir, normal ))*0.8 + 0.2;
     //light = textureLod( texture_noise, p*5.0, 0 ).r;
     //light     =  rayMarchShadow( p, vec3(0.0,1.0,0.0), 0.1, 0.05, 1.0, 2.5 );
-    gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
-    //gl_FragColor = vec4( vec3(light), 1.0 );
+    fragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
+    //fragColor = vec4( vec3(light), 1.0 );
 
-    //gl_FragColor = vec4(vec3(t*0.3), 1.0 );  // ray length
-    //gl_FragColor = vec4(vec3(it*0.025), 1.0 ); // iteration count
+    //fragColor = vec4(vec3(t*0.3), 1.0 );  // ray length
+    //fragColor = vec4(vec3(it*0.025), 1.0 ); // iteration count
 
     //vec4 rgba = textureLod( texture_1, p*txScale+vec3(0.5), 0 );
-    //gl_FragColor = vec4( vec3(rgba.x),1.0);
+    //fragColor = vec4( vec3(rgba.x),1.0);
 }
 
 

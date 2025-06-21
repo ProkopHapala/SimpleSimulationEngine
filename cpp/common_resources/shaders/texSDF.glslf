@@ -3,7 +3,8 @@
 in      vec2      fUV;
 uniform sampler2D texture_1; 
 
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
+out vec4 fragColor;
 
 //uniform vec4 baseColor;
 const vec3 baseColor = vec3(0.0,0.0,1.0);
@@ -21,7 +22,7 @@ void main(){
 	if( d<dAAmin ){
 	    discard;
 	}else{
-	    gl_FragColor = vec4( baseColor, smoothstep( dAAmin, dAAmax, d ) );
+	    fragColor = vec4( baseColor, smoothstep( dAAmin, dAAmax, d ) );
 	};
 }
 

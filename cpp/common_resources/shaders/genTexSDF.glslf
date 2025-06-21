@@ -3,7 +3,8 @@
 in      vec2      fUV;
 uniform sampler2D texture_1; 
 
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
+out vec4 fragColor;
 
 //uniform ivec2 n;
 //#define msub 8
@@ -32,7 +33,7 @@ void main(){
     float val = (rOn-rOff)*0.5 + 0.5;
     //float val = rOn/(msub*msub);
     //gl_FragColor = vec4( val, 0.0,0.0,1.0 );
-    gl_FragColor = vec4( val );
+    fragColor = vec4( val );
 }
 
 

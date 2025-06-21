@@ -16,6 +16,8 @@
 //#include "OCL_Orb.h"
 #include "spaceCraftSimulator.h"
 
+#include "testUtils.h"
+
 namespace SpaceCrafting {
 
 // =======================================================================
