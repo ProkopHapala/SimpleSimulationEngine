@@ -189,10 +189,13 @@ class RayScatterWorld{ public:
         Vec3d normal;
         int imin;
         double t = rayTriangles( ray0, hRay, triangles.size(), &triangles[0], &points[0], normal, imin );
-        double cdot = normal.dot( hRay );
-        if( cdot>0 ){ imat = tri2mat[imin].b; }
-        else        { imat = tri2mat[imin].a; }
-        //printf( "cdot %g t %g imat %i \n", cdot, t, imat );
+        if( imin >= 0 ){
+            double cdot = normal.dot( hRay );
+            if( cdot>0 ){ imat = tri2mat[imin].b; }
+            else        { imat = tri2mat[imin].a; }
+        }else{
+            imat = -1;
+        }
         return t;
     }
 

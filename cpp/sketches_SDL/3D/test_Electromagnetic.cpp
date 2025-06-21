@@ -175,8 +175,18 @@ class GridFF2d : public Ruler2DFast{ public:
         for(int iy=0; iy<n.y; iy++ ){
             for(int ix=0; ix<n.x; ix++ ){
                 int i = ip2i({ix,iy});
-                if(iy!=0){ force[i].y = (Vpot[i+n.x]-Vpot[i])*invStep.y; }else{ force[i].y=0; }
-                if(ix!=0){ force[i].x = (Vpot[i+1  ]-Vpot[i])*invStep.x; }else{ force[i].x=0; }
+                // Calculate force.y
+                if(iy < n.y - 1){ // Not the last row
+                    force[i].y = (Vpot[i+n.x]-Vpot[i])*invStep.y;
+                } else { // Last row, no "below" neighbor
+                    force[i].y = 0;
+                }
+                // Calculate force.x
+                if(ix < n.x - 1){ // Not the last column
+                    force[i].x = (Vpot[i+1]-Vpot[i])*invStep.x;
+                } else { // Last column, no "right" neighbor
+                    force[i].x = 0;
+                }
             }
         }
     }
@@ -487,6 +497,11 @@ TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_
     glEndList();
     */
 
+    //qCamera = Quat4fFront;
+    //qCamera = Quat4fLeft;
+    qCamera = Quat4fTop;
+
+
 }
 
 void TestAppElectromagnetic::draw(){
@@ -505,7 +520,7 @@ void TestAppElectromagnetic::draw(){
 
 
         glCallList(ogl);
-        return;
+        //return;
 
 
         bElFieldFromGrid = false;
@@ -626,19 +641,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

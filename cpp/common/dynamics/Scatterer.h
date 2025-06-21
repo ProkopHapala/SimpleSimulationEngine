@@ -1,6 +1,8 @@
-
 #ifndef Scatterer_h
 #define Scatterer_h
+
+/// @file
+/// @brief Defines the `Scattering` class, a matrix-based solver for flux transport using radiosity-like approach.
 
 #include "Vec3.h"
 #include "Mat3.h"
@@ -46,11 +48,15 @@ There are two fundamental processes and therefore two views of the problem:
 */
 
 
+/// @struct HalfRay
+/// @brief Represents a ray channel with angular spread and effective thickness.
 struct HalfRay{
-    double width; // angular spread of the channel, how large the complementary elements seem from this point of view
+    double width; /// @brief Angular spread of the channel, how large the complementary elements seem from this point of view
     // area/(4*pi*distance^2)
 };
 
+/// @struct FluxRay
+/// @brief Represents a flux ray with direction, flux value, and geometric coupling.
 struct FluxRay{
     //int i,j; // scattering elements between which the flux is
     HalfRay left;
@@ -58,26 +64,29 @@ struct FluxRay{
     Vec3d  dir;
     double flux;
     double Kgeom; //  through space gemetric coupling |  ToDo : how it should be normalized? How to choose angular width ?
-}
+};
 
-
+/// @struct ScatterElem
+/// @brief Represents a scattering element with position, rotation, thickness, and area.
 struct ScatterElem{
 
 // the Scatterer scatter flux between rays attached to the node
 // scheme 2 - assume there is external matrix "rays" which store flux along
 
-    Vec3d pos;     // position in space
-    Mat3d rot;     // rotation of main axes (elipsoide maping)
-    Vec3d thicks;  // thickness along main axes
-    Vec3d areas;   // crossection area along mains axes
-    double beta;   // decay exponent
+    Vec3d pos;     /// @brief Position in space
+    Mat3d rot;     /// @brief Rotation of main axes (elipsoide maping)
+    Vec3d thicks;  /// @brief Thickness along main axes
+    Vec3d areas;   /// @brief Crossection area along mains axes
+    double beta;   /// @brief Decay exponent
 
 
+    /// @brief Projects a direction onto the scatterer's main axes.
     //double project(const Vec3d& dir, const Vec3d& property){
     //    rot.dot
     //    return property.dot(V);
     //}
 
+    /// @brief Computes the scattering probability between two directions.
     double scatter( Vec3d h0, Vec3d h1, double  ){
         // this scattering function has to be normalized so that sum of flux scattered oto all channels is = 1
 
@@ -88,26 +97,20 @@ struct ScatterElem{
         double thick0 = cs0.dot(thicks);
         double thick1 = cs1.dot(thicks);
         double area0  = cs0.dot(areas );
-        double area1  = cs2.dot(areas );
+        double area1  = cs1.dot(areas );
 
         //double thick  = thick0 + thick1;
         double cosa     = h0.dot(h1);
         return exp( beta*cosa*(thick0 + thick1) ); // ToDo: scattering probabilities should depend on width of channels between which it scatters
     }
 
-}
+};
 
-
-
-
-
-
-
-
+/// @class ScatterElement
+/// @brief Represents a scattering element with position, frequency, and direction subdivisions.
 class ScatterElement{ public:
 
-    Vec3d pos;     //= Vec3dZero;
-
+    Vec3d pos;     /// @brief Position of scattering element
     int nfreq = 0; // number of frequeny(energy) spectrum subdivision
     int n     = 0; // number of subdivision per u,v axis
     int ndir  = 0;
@@ -115,21 +118,20 @@ class ScatterElement{ public:
     //double* cross =0; // store projection of element crossection in different directions  ( to evaluate hit probability )
     //double* thick =0; // store projection of element thickness in different directions    ( to evaluate intercation probability )
 
-    Vec2d dsamp;
-    int ia=0,ib=0,iface=0;
-
+    Vec2d dsamp;   /// @brief Direction sampling intervals
+    int ia=0,ib=0,iface=0; /// @brief Current direction indices
     Mat3d cross;
     Mat3d thick;
 
-    double* rays  =0; // store population of rays in particular direction
+    double* rays  =0; /// @brief Array storing ray populations in different directions
 
-    // ==== Methods
-
+    /// @brief Gets the direction of a ray given its indices.
     //Vec3d getDir(int idir){
     //    int iface = idir&7;
     //    int ip    = idir>>3;
     //};
 
+    /// @brief Gets the direction of a ray given its indices.
     inline void getDir(int ia, int ib, int iface, Vec3d& h ){
         //Vec3d h;
         h.a = dsamp.a*ia;
@@ -139,6 +141,7 @@ class ScatterElement{ public:
         h.normalize_taylor3();
     };
 
+    /// @brief Gets the next direction in the iteration.
     inline void getNextDir( Vec3d& h ){
         ia++;
         if(ia>=n){ia=0;ib++;}
@@ -148,12 +151,14 @@ class ScatterElement{ public:
         //idir++;
     };
 
+    /// @brief Computes the scattering function value.
     inline double scatterFunc(double cosa, double thick){
         // it is basically diffusion
         // exp(2*cos(x)-2)   ~=~   exp(-x^2)
         return exp( 2*(cosa-1)/thick );
     };
 
+    /// @brief Computes the scattering coefficients for elastic scattering.
     void scatterCoefs_elastic( Vec3d dir, double thick, double Apre, double* coefs ){
         double sum = 0;
         ia=0;ib=0;iface=0;
@@ -170,39 +175,39 @@ class ScatterElement{ public:
 
 };
 
-
-
-
-
-
-
+/// @class Scattering
+/// @brief A matrix-based solver for flux transport using radiosity-like approach.
 class Scattering : public TriangleRayTracer, public LinSolver { public:
-    double couplingTrashold  = 1e-8;
+    double couplingTrashold  = 1e-8; /// @brief Minimum coupling value to consider in matrix construction
 
     //int nObstacles=0;
     //Triangle3D* obstacles=0;
 
-    double* coupling =0; // geometric-compling matrix between elements in space (depending on distance)
-    double* rays     =0; // flux stored in each coupling (channel)
+    double* coupling =0; /// @brief Geometric coupling matrix between elements (distance dependent)
+    double* rays     =0; /// @brief Flux stored in each coupling channel
 
     // work arrays
-    double* vals=0;    // a
-    double* sources=0; //
+    double* vals=0;    /// @brief Current flux values (solution vector)
+    double* sources=0; /// @brief Source terms for each element (right-hand side)
 
+    /// @brief Allocates work arrays for the solver.
     inline void allocateWork(int n){
         _realloc(vals   ,n);
         _realloc(sources,n);
     }
 
+    /// @brief Prepares the solver for computation.
     inline void prepare(){
         int n = elements.size();
         allocateWork( n );
         setLinearProblem( n, vals, sources );
     }
 
+    /// @brief Constructs the coupling matrix M[i][j] = geomCoupling(el_i,el_j) accounting for occlusion.
     inline int makeCouplingMatrix(){
         int n = elements.size();
         _realloc(M,n*n);
+        int nvalid = 0;
         for(int i=0; i<n; i++) M[i*n+i] = 0.0;
         //for(int i=0; i<n; i++) M[i*n+i] = 1.0;
         for(int i=0; i<n; i++){
@@ -225,7 +230,9 @@ class Scattering : public TriangleRayTracer, public LinSolver { public:
                 //coupling *=  eli.area * elj.area;
                 coupling *= 2* eli.area/(4*M_PI);
 
-                double occlusion = getOcclusion( eli.pos, d, sqrt(r2), eli.isurf, elj.isurf );
+                Vec3d d = elj.pos - eli.pos;
+                double r = d.normalize();
+                double occlusion = getOcclusion( eli.pos, d, r, eli.isurf, elj.isurf );
 
                 coupling*=(1-occlusion);
 
@@ -237,8 +244,10 @@ class Scattering : public TriangleRayTracer, public LinSolver { public:
 
                 M[i*n+j] = coupling;
                 M[j*n+i] = coupling;
+                nvalid++;
             }
         }
+        return nvalid;
     }
 
     inline void processTriangles( int ntri, Triangle3D* tris, double sz ){
@@ -263,18 +272,7 @@ class Scattering : public TriangleRayTracer, public LinSolver { public:
         }
     }
 
-    inline void step_Direct(){
-        for(int i=0; i<n; i++){
-            double Axi = 0.0;
-            for(int j=0; j<n; j++){
-                Axi += M[i*n+j] * ( vals[j] + sources[j] );
-            }
-            vals[i] = Axi; // - sources[i];
-        }
-    }
-
-
-
+    /// @brief Direct propagation step: vals[i] = sum_j M[i][j]*(vals[j] + sources[j])
     inline void step_Direct(){
         for(int i=0; i<n; i++){
             double Axi = 0.0;

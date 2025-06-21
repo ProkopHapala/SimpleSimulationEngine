@@ -31,6 +31,9 @@ target_link_libraries( test_MusculeEditor ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL
 add_executable       ( test_Camera test_Camera.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Camera ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_MousePicking test_MousePicking.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_MousePicking ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 #add_executable       ( test_ShotHit test_ShotHit.cpp $<TARGET_OBJECTS:SDL2OGL> )
 #target_link_libraries( test_ShotHit ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
