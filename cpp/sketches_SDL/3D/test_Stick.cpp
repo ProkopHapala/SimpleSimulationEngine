@@ -1,4 +1,5 @@
 
+/// @file @brief This is a physics simulation that uses a Molecular Mechanics Force Field (`MMFF.h`), typically used for atomic-scale simulations, to model the dynamics of macroscopic objects. It demonstrates "stick" molecules colliding with a large sphere, showcasing an interesting application of molecular dynamics principles to a different scale.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -246,19 +247,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

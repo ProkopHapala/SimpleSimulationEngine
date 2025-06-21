@@ -1,4 +1,5 @@
 
+/// @file @brief  This program demonstrates a particle-based simulation of a compressible fluid, likely using a method similar to Smoothed Particle Hydrodynamics (SPH). It visualizes a high-velocity impact of the fluid particles against a static wedge-shaped boundary, showcasing effects like shockwaves, compression, and fluid dynamics without a mesh. The simulation is self-running, with camera controls for observation.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -167,19 +168,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

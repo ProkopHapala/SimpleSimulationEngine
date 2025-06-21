@@ -1,4 +1,5 @@
 
+/// @file @brief This is a classic physics simulation of rigid body dynamics using the `Body.h` library. The scene consists of one or more solid objects that are connected by string-like constraints and are subject to forces like gravity. Users can typically interact with the simulation by grabbing and throwing the objects with the mouse.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -343,19 +344,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

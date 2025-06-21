@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a technical debugging tool for developers. It visualizes the viewing frustum of a camera by rendering a cloud of points that lie within it. Its primary purpose is to debug projection matrices and culling logic, especially for custom renderers suchas those using OpenCL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -181,19 +182,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

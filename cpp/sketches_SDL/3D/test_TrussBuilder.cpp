@@ -1,4 +1,5 @@
 
+/// @file @brief An interactive construction and simulation tool. Using `TrussBuilder.h`, the user can build a 2D or 3D truss structure by adding nodes and beams with the numeric keypad (`KP_1` to `KP_7`). After building, pressing the `SPACE` bar starts a physics simulation (`SoftBody.h` or `TrussDynamics_d.h`), showing how the created structure behaves under stress. The `k` and `l` keys can be used to save and load designs.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

@@ -34,6 +34,9 @@ target_link_libraries( test_Camera ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRA
 add_executable       ( test_MousePicking test_MousePicking.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_MousePicking ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_SphereTree test_SphereTree.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SphereTree ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 #add_executable       ( test_ShotHit test_ShotHit.cpp $<TARGET_OBJECTS:SDL2OGL> )
 #target_link_libraries( test_ShotHit ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

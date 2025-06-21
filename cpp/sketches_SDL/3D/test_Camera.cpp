@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a foundational demo for any first-person application. It sets up a standard 1st-person camera with a crosshair, suitable for a shooting game or a flight simulator. The user can navigate the 3D space using standard WASD keys for movement and the mouse or arrow keys for changing the camera orientation (pitch/yaw). This test is a minimal example of the `AppSDL2OGL_3D` application framework.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -228,19 +229,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

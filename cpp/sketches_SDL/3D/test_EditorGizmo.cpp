@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a utility demo showcasing the `EditorGizmo.h` library, a standard tool for 3D content creation. It displays a manipulation gizmo (with arrows for translation and rings for rotation) that can be attached to selected objects or points in space. The user can typically select points by clicking the mouse and then drag the gizmo handles to move or rotate the selection, providing a direct and intuitive way to edit 3D scenes.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -122,19 +123,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

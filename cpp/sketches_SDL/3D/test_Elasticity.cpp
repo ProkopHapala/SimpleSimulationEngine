@@ -1,4 +1,5 @@
 
+/// @file @brief This demo runs a simulation of a deformable structure using a legacy linearized elasticity solver from `Truss.h` and `SoftBody.h`. It shows how a truss or other soft body deforms under external forces. While functional, the description notes that the more modern and capable `TrussDynamics_d.h` is preferred for new projects. Users can likely interact by applying forces with the mouse.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -274,19 +275,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

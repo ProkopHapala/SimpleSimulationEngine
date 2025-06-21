@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a focused demo on object selection in a 3D scene. It uses the `raytrace.h` library to cast a ray from the camera through the mouse cursor to determine which object is being pointed at. The test specifically highlights `raySphere()` for picking spherical objects. When an object is "picked," it is typically highlighted. This is a fundamental mechanic for any interactive 3D application.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -196,19 +197,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

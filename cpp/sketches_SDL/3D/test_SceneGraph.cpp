@@ -1,4 +1,5 @@
 
+/// @file @brief  This program demonstrates the use of a scene graph (`SceneGraph.h`) to organize objects in a 3D world. It showcases how to create parent-child relationships between objects (e.g., a moon orbiting a planet). When the parent object is transformed (moved or rotated), all of its children are transformed along with it, simplifying the management of complex, articulated scenes.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -100,19 +101,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

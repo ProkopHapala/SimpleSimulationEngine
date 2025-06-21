@@ -1,4 +1,5 @@
 
+/// @file @brief  This demo visualizes an Axis-Aligned Bounding Box (AABB) tree, a hierarchical spatial data structure used to accelerate collision detection and other spatial queries. It demonstrates the use of `AABBTree3D.h` and `kBoxes.h` to partition a scene with many objects. The visualization likely shows a collection of geometric objects and their enclosing bounding boxes at different levels of the tree, allowing the user to inspect the culling efficiency. The scene can typically be navigated using the mouse to rotate the camera and the scroll wheel to zoom.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -132,19 +133,3 @@ int main(int argc, char *argv[]){
     testApp->loop( 1000000 );
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a creative modeling tool for generating organic, muscle-like shapes. It uses Hermite splines (`spline_hermite.h`) to define cross-sections which are then "lofted" to form a smooth 3D surface. The shape can be interactively edited by manipulating the spline control points using the `EditorGizmo.h` interface, allowing for intuitive, real-time sculpting.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -323,19 +324,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

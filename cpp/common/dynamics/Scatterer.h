@@ -1,8 +1,7 @@
 #ifndef Scatterer_h
 #define Scatterer_h
 
-/// @file
-/// @brief Defines the `Scattering` class, a matrix-based solver for flux transport using radiosity-like approach.
+/// @file @brief Defines the `Scattering` class, a matrix-based solver for flux transport using radiosity-like approach.
 
 #include "Vec3.h"
 #include "Mat3.h"

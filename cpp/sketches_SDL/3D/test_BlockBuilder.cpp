@@ -1,4 +1,5 @@
 
+/// @file @brief  This program is a demonstration of an interactive construction system based on a 3D spatial hash grid. It serves as a prototype for a "panel-housing game" where users can place and remove blocks in a 3D world. The core logic relies on a 3D hashing system for efficient block management. User interaction is likely handled via mouse clicks to add or remove blocks and keyboard shortcuts to select different block types.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

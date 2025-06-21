@@ -1,4 +1,5 @@
 
+/// @file @brief A fundamental graphics demo that showcases the core concepts of ray tracing from `raytrace.h`. It casts rays from a viewpoint and calculates their intersection with a scene composed of triangles. A key feature is demonstrating occlusion, where rays are blocked by objects. The visualization typically colors rays to indicate whether they hit their target or were occluded, as seen in the `visualizeRayTracing` function in `spaceCraftEditor.cpp`.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -247,19 +248,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

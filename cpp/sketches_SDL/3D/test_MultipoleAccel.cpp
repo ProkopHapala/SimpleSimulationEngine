@@ -1,4 +1,5 @@
 
+/// @file @brief  This demo illustrates an advanced algorithm for accelerating N-body simulations. It uses the Fast Multipole Method (FMM) via `kBoxes.h` and `HierarchicalKpivot` to approximate the influence of distant particles, reducing the computational complexity from O(N^2) to O(N). The visualization would likely show a system of particles and the hierarchical grid used to group them for the multipole expansion.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -275,13 +276,3 @@ class MultipoleAccel{
 
 };
 */
-
-
-
-
-
-
-
-
-
-

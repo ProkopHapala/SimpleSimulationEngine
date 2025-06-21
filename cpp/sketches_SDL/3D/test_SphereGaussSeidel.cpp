@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a physics demo showcasing a method for resolving collisions and packing objects together. It uses an iterative Gauss-Seidel solver (`SphereGaussSeidel.h`) to enforce non-penetration constraints between a collection of spheres or boxes. The user can watch as the objects, which may start in an overlapping state, quickly settle into a valid, tightly-packed configuration.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

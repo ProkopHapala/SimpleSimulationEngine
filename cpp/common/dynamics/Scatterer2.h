@@ -1,8 +1,7 @@
 
 #ifndef Scatterer2_h
 #define Scatterer2_h
-/// @file
-/// @brief Defines the `Scattering2` class, a direct iterative solver for flux transport using a network of channels.
+/// @file @brief Defines the `Scattering2` class, a direct iterative solver for flux transport using a network of channels.
 
 #include "Vec3.h"
 #include "Mat3.h"

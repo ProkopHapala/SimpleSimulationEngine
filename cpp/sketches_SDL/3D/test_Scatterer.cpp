@@ -1,3 +1,4 @@
+/// @file @brief  This demo implements a particle or light scattering simulation using the direct iterative approach found in `Scatterer2.h`. Instead of solving a large matrix like in radiosity, this method models the transport of flux through a network of pre-defined channels connecting different surface elements. It's an alternative approach to global illumination that can be more efficient for certain scene types.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

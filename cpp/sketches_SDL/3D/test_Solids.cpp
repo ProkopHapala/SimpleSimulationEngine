@@ -1,4 +1,5 @@
 
+/// @file @brief  A simple demo program for displaying and testing the generation of primitive shapes. It uses `Solids.h` to create various polyhedra, including the Platonic solids (cube, icosahedron, etc.), and renders them using a basic mesh class (`CMesh.h`). It's a good starting point for verifying that the 3D rendering pipeline is working correctly.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -160,19 +161,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

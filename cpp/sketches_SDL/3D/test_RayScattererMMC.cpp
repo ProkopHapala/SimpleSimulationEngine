@@ -1,4 +1,5 @@
 
+/// @file @brief  This program demonstrates volumetric light scattering using a Monte Carlo method, implemented in `RayScatter.h`. It simulates the transport of light or particles through a medium by tracing the random paths of many individual rays as they scatter. This is useful for rendering effects like fog, smoke, or murky water.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -179,19 +180,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

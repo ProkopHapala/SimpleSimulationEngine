@@ -1,4 +1,5 @@
 
+/// @file @brief  This demo showcases physics simulation, specifically the collision between a 3D rigid body (from `Body.h`) and a deformable terrain. The terrain is represented by a spline-based height map using `Terrain2D.h`, allowing for smooth, continuous surfaces. The highlight is observing the dynamic interaction and realistic collision response between a solid object and a complex, non-planar surface.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -234,19 +235,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

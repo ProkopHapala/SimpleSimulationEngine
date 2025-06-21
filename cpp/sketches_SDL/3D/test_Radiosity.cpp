@@ -1,4 +1,5 @@
 
+/// @file @brief This demo implements the classic Radiosity global illumination algorithm using `Radiosity.h`. It calculates the diffuse inter-reflection of light within a scene, in this case, a labyrinth of corridors. The result is a soft, realistic lighting effect with color bleeding, where light bounces off surfaces and illuminates others. The calculation is iterative, and the user can likely watch the scene's lighting converge to the final solution.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -223,19 +224,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

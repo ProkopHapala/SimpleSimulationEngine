@@ -18,18 +18,19 @@
 #name=test_Patches               # rendering C1,C2-continuous triangle patches with heightmap using spline_triC1.h and TerrainSimplex.h 
 #name=test_Projection            # debugging OpenCL projection frustum by point-clouds
 #name=test_QuatRotSampling       # visualize orietation of surface diractions (u,v) on surface of icosahedron using Quat4f.h and RotationMesh.h, usefull for continuous maps on surface of sphere
-#name=test_Radiosity             # use Radiosity.h to calculate radiosity of light labirynth of rectangular corridors sampled by surface points on uniform grid
+name=test_Radiosity             # use Radiosity.h to calculate radiosity of light labirynth of rectangular corridors sampled by surface points on uniform grid
 #name=test_RayScattererMMC       # use RayScatter.h to calculate volumetric scattering of light or particle with Monte Carlo method
 #name=test_Raytracing            # use raytrace.h rayTriangles() to calculate intersection of ray with triangles and occlusion of other polygon
 #name=test_RigidBody             # rigid body dynamics hanging on strings using Body.h RigidBody class
 #name=test_Solids                # demo and testing of Solids.h (with Platonic solids) and CMesh.h (with simple mesh class) 
-name=test_Scatterer              # scattering of particles on thin surfaces using Scatterer2.h to calculate flux transport through a network of channels connecting scattering elements
-#name=test_SceneGraph
-#name=test_SphereGaussSeidel
-#name=test_SphereSampling
-#name=test_Stick
-#name=test_TrussBuilder
-#name=test_VortexLattice
+#name=test_Scatterer             # scattering of particles on thin surfaces using Scatterer2.h to calculate flux transport through a network of channels connecting scattering elements
+#name=test_SceneGraph            # showcase SceneGraph.h especially  Scene::Group
+#name=test_SphereGaussSeidel     # showcase SphereGaussSeidel.h to quickly pack boxes close to each other (respecting their bounding boxes)
+#name=test_SphereSampling        # demonstrate generation of heightmap on planet or asteroided using SphereSampling.h Noise.h and DrawSphereMap.h
+#name=test_SphereTree            # 3D Diffusion-limited aggregation (DLA) using CubicRuler.h and std::unordered_multimap<int_fast64_t,int>  grid;
+#name=test_Stick                 # dynamics of straight sticks hitting a sphere using MMFF.h
+#name=test_TrussBuilder          # Create Truss by keyboard input [KP_1-7] using TrussBuilder.h and export it to SoftBody.h by and run simulation [SPACE], [k,l] to save/load from file
+#name=test_VortexLattice         # PotentialFlow.h to calculate velocity field of vortex lattice for flow around wing (represented by lift-line), contains function for numerical integration of velocity field (to verify analytical formulas)
 
 
 

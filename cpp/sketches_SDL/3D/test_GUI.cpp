@@ -1,3 +1,4 @@
+/// @file @brief  This program is a comprehensive showcase of the engine's immediate-mode Graphical User Interface library, `GUI.h`. It displays a variety of UI widgets, including 2D and 3D text rendering, data tables, text input fields, 2D plots, dropdown lists, and scissor boxes for clipping UI elements. Users can interact with all the elements to see their functionality, making this a key demo for learning how to build UIs in the engine.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,4 +1,5 @@
 
+/// @file @brief  This is a physics simulation of charged particles in a magnetic field. It models a thin, hot plasma where ions are trapped within a "magnetic bottle". The simulation calculates the aggregate electric and magnetic fields using a Poisson solver (`Fourier.h`) and `PotentialFlow.h`, then integrates the motion of the ions. The description suggests pressing the 'm' key to run or control the simulation.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

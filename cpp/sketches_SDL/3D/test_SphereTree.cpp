@@ -1,4 +1,5 @@
 
+/// @file @brief This program simulates the growth of a fractal structure using the Diffusion-Limited Aggregation (DLA) algorithm. It starts with a seed particle, and new particles are added one by one, performing a random walk until they collide and stick to the growing cluster. The result is a natural, tree-like or coral-like structure. The simulation is accelerated using a `CubicRuler.h` spatial grid.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include "Solids.h"
 
 #include "DynamicOpt.h"
-#include "SoftBody.h"
 #include "CubicRuler.h"
 
 #include "Draw3D.h"
@@ -41,7 +41,6 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
 	std::unordered_multimap<int_fast64_t,int>  grid;
 
 	CubicRuler ruler;
-    SoftBody   truss;
 
     int sphereShape, cursorShape;
 
@@ -105,7 +104,7 @@ void TestAppSphereTree::ray_next(){
     ruler.index2pos( ruler.iRay, {0.0,0.0,0.0}, lpos );
     int rayShape = glGenLists(1);
     glNewList( rayShape , GL_COMPILE );
-        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawShape ( lpos, {1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0}, cursorShape );
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawShape ( cursorShape, lpos, {1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0} );
         glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine      ( p1, p2 );
         glColor3f(0.8f,0.0f,0.0f); Draw3D::drawPointCross( p2, 0.2 );
     glEndList();
@@ -463,7 +462,7 @@ void TestAppSphereTree::draw   (){
         double r = lpos.norm();
         float c  = (float)(r/rStart);
         glColor3f( c, 2*c*(1-c), 0 );
-        Draw3D::drawShape    ( lpos, lrot, sphereShape );
+        Draw3D::drawShape( sphereShape, lpos, lrot );
     }
     tview = getCPUticks() - tview;
 
@@ -472,7 +471,7 @@ void TestAppSphereTree::draw   (){
     if(isph>=0){
         lpos = sphere_pos[isph];
         glColor3f( 0.0, 1.0, 1.0 );
-        Draw3D::drawShape ( lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01}, sphereShape );
+        Draw3D::drawShape ( sphereShape, lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01} );
     }
 
     glColor3f( 1.0, 0.0, 1.0 );
@@ -480,7 +479,7 @@ void TestAppSphereTree::draw   (){
     auto range = grid.equal_range( ind );
     for ( auto it = range.first; it != range.second; ++it ){
         lpos = sphere_pos[it->second];
-        Draw3D::drawShape ( lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01}, sphereShape );
+        Draw3D::drawShape ( sphereShape, lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01} );
     }
 
 //    printf( " frame %05i : alg %3.3f(%3.3f+e6) view %3.3f(%3.3f+e6) | nsph %05i \n", frameCount, (tcomp/(double)perFrame), tcomp*1e-6, (tview/(double)nSpheres), tview*1e-6, nSpheres );
@@ -488,7 +487,7 @@ void TestAppSphereTree::draw   (){
     glColor3f( 1.0f, 1.0f, 1.0f );
 	//glDisable(GL_DEPTH_TEST);
 	ruler.index2pos( iCurPos, {0.0,0.0,0.0}, lpos );
-	Draw3D::drawShape( lpos, lrot, cursorShape );
+	Draw3D::drawShape( cursorShape, lpos, lrot );
 	//Draw3D::drawShape( lpos, lrot, sphereShape );
 
 };

@@ -1,3 +1,4 @@
+/// @file @brief  This demo focuses on fundamental mesh processing operations using the `Mesh.h` library. It loads or generates a 3D mesh and allows the user to perform and visualize various algorithms, such as finding all edges, collapsing a selected edge, or generating a convex polygon from a set of planes. It's a technical demonstration of the engine's core geometry manipulation capabilities.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

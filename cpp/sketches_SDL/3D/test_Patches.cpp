@@ -1,4 +1,5 @@
 
+/// @file @brief  A graphics-focused demo that showcases advanced terrain rendering. It uses `spline_triC1.h` to render a surface made of C1 or C2 continuous curved triangular patches. This avoids the faceted look of standard triangle meshes and creates a much smoother, more realistic landscape from a heightmap, using `TerrainSimplex.h` for the underlying grid structure.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -491,19 +492,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

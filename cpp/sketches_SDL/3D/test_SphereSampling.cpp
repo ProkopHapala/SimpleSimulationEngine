@@ -1,4 +1,5 @@
 
+/// @file @brief This demo procedurally generates a planet or asteroid using `SphereSampling.h` and `Noise.h`. It applies one or more layers of a noise function (like Simplex noise) to a sphere to create a heightmap, resulting in features like continents, mountains, and craters. The result is rendered using `DrawSphereMap.h`, and the user can rotate the generated celestial body.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -379,19 +380,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

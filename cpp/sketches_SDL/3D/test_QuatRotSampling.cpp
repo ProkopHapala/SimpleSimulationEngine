@@ -1,4 +1,5 @@
 
+/// @file @brief This is a math and geometry visualization that deals with mapping orientations on a sphere. It uses an icosahedron as a base and, with the help of Quaternions (`Quat4f.h`), visualizes a consistent set of local coordinate systems (u,v directions) on the surface. This is a key technique for applying seamless textures or vector fields (like wind patterns) to a sphere without singularities at the poles.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -213,19 +214,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
