@@ -1,3 +1,4 @@
+/// @file @brief This program simulates hydraulic erosion on a 2D terrain, using `TerrainHydraulics.h` to model water flow and sediment transport. It visualizes the dynamic evolution of the landscape as water carves channels and deposits material, demonstrating procedural terrain generation. The simulation can be toggled with the `SPACE` key.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -246,19 +247,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

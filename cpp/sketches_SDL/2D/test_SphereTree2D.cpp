@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates `SphereTree2D.h`, a 2D hierarchical bounding sphere tree. It populates the scene with many circles and visualizes the tree structure, allowing the user to explore how objects are grouped spatially and to identify the tree node containing the mouse cursor.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -167,10 +168,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-

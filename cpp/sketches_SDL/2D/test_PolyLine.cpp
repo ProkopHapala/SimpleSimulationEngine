@@ -1,3 +1,4 @@
+/// @file @brief This demo showcases the `PolyLine.h` class, which represents a sequence of connected line segments. It visualizes the polyline and its control points, allowing for interactive manipulation of these points (add, remove, drag with mouse) to demonstrate how the polyline can be dynamically reshaped.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -143,19 +144,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

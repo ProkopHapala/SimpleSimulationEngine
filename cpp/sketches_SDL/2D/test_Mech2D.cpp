@@ -1,3 +1,4 @@
+/// @file @brief This demo simulates a 2D mechanical system using `Mech2D.h`, which likely involves particles and forces like springs or gravity. It visualizes the dynamic behavior of the system, allowing the user to pause/resume the simulation with the `SPACE` key and interactively apply forces by dragging particles with the mouse.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -231,19 +232,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

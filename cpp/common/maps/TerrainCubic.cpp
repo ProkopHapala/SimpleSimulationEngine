@@ -12,6 +12,8 @@ double TerrainCubic::getVal( double x, double y ){
     double f_iy = getIx_f( y );
     int ix      = (int)f_ix;
     int iy      = (int)f_iy;
+    if( (ix<1) || (ix>nx-3) || 
+        (iy<0) || (iy>ny-4) ) return 0.0;
     double tx   = f_ix - ix;
     double ty   = f_iy - iy;
     double * h0 = heights + getIndexI( ix-1, iy );

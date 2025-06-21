@@ -1,8 +1,5 @@
 
-/**
- * @file test_BranchFract.cpp
- * @brief Example of generation of city-like mapt using binary tree fractal subdivision of a quad
- */
+/// @file @brief This program generates and visualizes a 2D fractal branching pattern, such as a fractal tree. It uses recursive drawing functions, allowing the user to interactively modify parameters like branch angle, length, and recursion depth using keyboard controls to explore different fractal forms.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -182,19 +179,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

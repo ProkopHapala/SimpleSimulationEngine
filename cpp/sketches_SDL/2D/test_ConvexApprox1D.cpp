@@ -1,3 +1,4 @@
+/// @file @brief This demo illustrates the concept of convex approximation for 1D functions. It visualizes a given function and its piecewise linear convex hull or approximation, allowing the user to observe how the approximation quality changes with various parameters.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,7 +67,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
 
     srand(545454);
     int npow = 8;
-    int n    = 1<<npow;
+    int n    = (1<<npow)+1;  // bisecNoise1D requires 2^n+1 points
     DataLine2D * line1 = new DataLine2D(n); plot1.lines.push_back( line1 ); line1->clr = 0xFFFF00FF; line1->linspan(-3,3);
     DataLine2D * line2 = new DataLine2D(n); plot1.lines.push_back( line2 ); line2->clr = 0xFFFF0000; line2->linspan(-3,3);
     DataLine2D * line3 = new DataLine2D(n); plot1.lines.push_back( line3 ); line3->clr = 0xFF008000; line3->linspan(-3,3);
@@ -125,19 +126,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,8 +1,6 @@
 
-/**
- * @file test_Clustering2D.cpp
- * @brief Example of 2D clustering in 2D 
- */
+/// @file @brief This program demonstrates a 2D clustering algorithm, likely K-means or a similar iterative method, using `Clustering2D.h`. It generates random points and iteratively refines their cluster assignments, allowing the user to observe the clustering process step-by-step by pressing the `SPACE` key.
+
 
 #include <stdlib.h>
 #include <stdio.h>

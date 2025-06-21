@@ -1,3 +1,4 @@
+/// @file @brief This program generates and visualizes 2D Voronoi diagrams using `Voronoi.h`. It displays the cells associated with a set of seed points (sites), allowing the user to add new sites interactively with mouse clicks and observe how the diagram dynamically updates.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -154,19 +155,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

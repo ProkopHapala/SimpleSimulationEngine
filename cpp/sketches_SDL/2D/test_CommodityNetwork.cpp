@@ -1,3 +1,4 @@
+/// @file @brief This demo simulates a 2D commodity network using `CommodityNetwork.h`. It visualizes the flow of resources or goods between interconnected nodes (e.g., cities, factories) and along edges (e.g., roads, pipelines), demonstrating economic or logistical network dynamics.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -338,19 +339,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

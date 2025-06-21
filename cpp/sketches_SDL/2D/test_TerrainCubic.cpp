@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates `TerrainCubic.h`, a method for representing and rendering 2D terrain using cubic interpolation or a cubic grid structure. It visualizes the terrain, potentially leveraging `TiledView.h` for efficient rendering of large landscapes by dividing them into manageable tiles.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -150,19 +151,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

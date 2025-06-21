@@ -1,3 +1,4 @@
+/// @file @brief This demo visualizes the functionality of `HashMap2D.h`, a 2D spatial hashing data structure. It populates a grid with numerous 2D circular bodies and displays the grid cells, highlighting bodies within the cell currently under the mouse cursor, demonstrating efficient spatial partitioning for object lookup.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -136,19 +137,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

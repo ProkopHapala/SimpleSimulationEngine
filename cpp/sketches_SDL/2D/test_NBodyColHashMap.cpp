@@ -1,3 +1,4 @@
+/// @file @brief This demo simulates 2D N-body collisions, leveraging `HashMap2D.h` for optimized broad-phase collision detection. It visualizes the dynamic interaction of numerous circular bodies, where the hash map efficiently identifies potential collision pairs, and the simulation resolves their physical responses. The simulation can be toggled with the `SPACE` key, and bodies can be dragged with the mouse.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -427,19 +428,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

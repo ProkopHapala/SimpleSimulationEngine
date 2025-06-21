@@ -1,3 +1,4 @@
+/// @file @brief This program simulates 2D supersonic fluid flow, likely using a numerical method to solve the governing equations. It visualizes the complex flow patterns, including shock waves and pressure distributions around objects, demonstrating principles of aerodynamics.
 
 #include <stdlib.h>
 #include <stdio.h>

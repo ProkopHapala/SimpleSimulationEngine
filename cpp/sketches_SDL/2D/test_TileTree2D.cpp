@@ -1,3 +1,4 @@
+/// @file @brief This demo showcases `TileTree2D.h`, a 2D spatial data structure optimized for managing and querying rectangular tiles. It displays a grid of tiles, highlighting the tile currently under the mouse cursor, illustrating its use for efficient spatial indexing of rectangular regions.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -235,23 +236,7 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
-	//testApp = new TestAppTileTree2D( junk , 800, 600 );
-	//testApp->loop( 1000000 );
+	testApp = new TestAppTileTree2D( junk , 800, 600 );
+	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

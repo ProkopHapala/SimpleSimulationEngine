@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates `SimplexGrid.h`, a 2D data structure based on a triangular grid. It visualizes the grid and allows for the display of scalar data (e.g., height, color) interpolated across its triangular cells, useful for terrain representation or scientific visualization.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -309,19 +310,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

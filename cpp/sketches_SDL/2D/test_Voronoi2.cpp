@@ -1,3 +1,4 @@
+/// @file @brief This demo provides an enhanced visualization of 2D Voronoi diagrams, building upon the `Voronoi.h` library. It likely offers more detailed rendering options, such as coloring individual cells, displaying centroids, or overlaying the dual Delaunay triangulation, to better illustrate the properties of Voronoi tessellations.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -164,19 +165,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

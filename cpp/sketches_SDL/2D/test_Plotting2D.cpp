@@ -1,3 +1,4 @@
+/// @file @brief This demo showcases the `Plot2D.h` library, a utility for rendering 2D graphs and data visualizations. It displays multiple data series with customizable styles, axes, and labels, demonstrating the library's capabilities for plotting scientific or analytical data.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -207,19 +208,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

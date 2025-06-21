@@ -102,12 +102,14 @@ void Plot2D::autoAxes(double dx, double dy){
     n0=(int)(bounds.x0/dx)-1;  axBounds.x0 = dx*n0;
     n1=(int)(bounds.x1/dx)+1;  axBounds.x1 = dx*n1; nXTicks=(n1-n0)+1;
     //printf("x(%g:%g) dx %g nx(%i:%i) nXTicks %i \n", bounds.x0, bounds.x1, dx,   n0, n1, nXTicks );
+    printf("Plot2D::autoAxes: X-axis: bounds=(%g,%g), dx=%g -> n0=%i, n1=%i, nXTicks=%i\n", bounds.x0, bounds.x1, dx, n0, n1, nXTicks);
     n0=(int)(bounds.y0/dy)-1;  axBounds.y0 = dy*n0;
     n1=(int)(bounds.y1/dy)+1;  axBounds.y1 = dy*n1; nYTicks=(n1-n0)+1;
     //printf("y(%g:%g) dy %g ny(%i:%i) nYTicks %i \n", bounds.y0, bounds.y1, dy,   n0, n1, nYTicks );
+    printf("Plot2D::autoAxes: Y-axis: bounds=(%g,%g), dy=%g -> n0=%i, n1=%i, nYTicks=%i\n", bounds.y0, bounds.y1, dy, n0, n1, nYTicks);
 
-    if( xTicks==NULL ) delete [] xTicks;
-    if( yTicks==NULL ) delete [] yTicks;
+    if( xTicks != NULL ) delete [] xTicks;
+    if( yTicks != NULL ) delete [] yTicks;
     //double x0    = (axBounds.x0 - axPos.x);  x0 = 2*x0 - dx*(int)(x0/dx);
     //double y0    = (axBounds.y0 - axPos.y);  y0 = 2*y0 - dy*(int)(y0/dy);
     //printf("DEBUG 2.1.1\n");
@@ -351,6 +353,3 @@ void QuePlot2D::drawTrj3DPoints( Vec3i which, double pointSize ){
         glEnd();
     }
 }
-
-
-

@@ -1,3 +1,4 @@
+/// @file @brief This demo showcases `TerrainRBF.h`, a technique for generating or interpolating 2D terrain using Radial Basis Functions. It visualizes the smoothly interpolated terrain surface, allowing the user to interactively define or adjust the RBF control points that shape the landscape.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -142,19 +143,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates pixel-based glyph rendering for displaying text. It loads a font texture and renders characters on screen, showcasing basic text rendering capabilities and potentially exploring effects like anti-aliasing or color variations.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -183,19 +184,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,3 +1,4 @@
+/// @file @brief This program is a performance test for `HashMap2D.h`, focusing on the efficiency of adding a large number of points to the 2D hash map. It visualizes the populated grid and measures the computational time required for the insertion process.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -248,25 +249,9 @@ int main(int argc, char *argv[]){
         printf( " \n" );
         //printf( " ================= \n" );
         testApp->prepareHashMap( powers[itest], nps[itest] );
-        testApp->loop( 100 );
-        delete testApp->map.fields;
-        delete testApp->points;
+        testApp->loop( 100 ); // Run the app for 100 frames
+        delete[] testApp->map.fields; // Corrected: Use delete[] for array allocated with new[]
+        delete[] testApp->points;     // Corrected: Use delete[] for array allocated with new[]
     }
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

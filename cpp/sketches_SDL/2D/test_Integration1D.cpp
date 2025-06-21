@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates various numerical integration methods for 1D functions. It visualizes the function and the approximation process (e.g., Riemann sums, trapezoidal rule), allowing the user to compare the accuracy and behavior of different integration techniques.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -152,19 +153,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

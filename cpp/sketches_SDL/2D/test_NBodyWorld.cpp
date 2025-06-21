@@ -1,3 +1,4 @@
+/// @file @brief This program simulates a 2D N-body system using `NBodyWorld2D.h`, where particles interact under forces like gravity. It visualizes the trajectories and dynamic behavior of the bodies, allowing the user to pause/resume the simulation with the `SPACE` key and interactively manipulate individual particles with the mouse.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -283,19 +284,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

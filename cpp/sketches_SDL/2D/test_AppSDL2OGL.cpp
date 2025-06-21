@@ -1,11 +1,5 @@
 
-/**
- * @file test_AppSDL2OGL.cpp
- * @brief this is simple example how to use AppSDL2OGL class for creating OpenGL application with SDL2
- * 
- * The TestApp class represents a test application that uses SDL2 and OpenGL for rendering.
- * It demonstrates how to draw a line using the Draw2D class.
-*/
+/// @file @brief This is a minimal boilerplate application demonstrating the basic setup of an `AppSDL2OGL` 2D window. It allows for simple camera navigation (pan, zoom) using WASD and arrow keys, and draws a crosshair, serving as a foundational starting point for other 2D demos.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -71,19 +65,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

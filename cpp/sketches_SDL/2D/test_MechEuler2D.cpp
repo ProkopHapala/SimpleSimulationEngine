@@ -1,3 +1,4 @@
+/// @file @brief This program demonstrates a 2D mechanical simulation using `Mech2D.h`, specifically highlighting the Euler integration method for time-stepping. It visualizes the system's dynamics, allowing comparison of the Euler method's stability and accuracy with other integration schemes.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -197,19 +198,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

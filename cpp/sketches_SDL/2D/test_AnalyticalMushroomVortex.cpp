@@ -1,8 +1,7 @@
 
+/// @file @brief This program demonstrates procedural 2D city generation. It creates a city layout, including road networks, building plots, and potentially simple building representations, allowing the user to explore different urban patterns generated algorithmically.
+
 /**
- * @file test_AnalyticalMushroomVortex.cpp
- * @brief Analytical Mushroom Vortex velocity field
- * 
  * Here we try to create velocity field of a mushroom vortex (e.g. like in a nuclear explosion) and visualize it with streamlines.
  * 
  * Analytical expression:
@@ -133,6 +132,7 @@ AnalyticVortexApp::AnalyticVortexApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     plot1.lines[1]->clr=0xFF0000FF;
 
 
+
     double L = M_PI*M_SQRT2;
     //Vec2d dp=(Vec2d){l/np,0.0};
     for(int i=0; i<np; i++){
@@ -141,8 +141,9 @@ AnalyticVortexApp::AnalyticVortexApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         particles[i] = (Vec2d){randf(pmin.x,pmax.x),randf(pmin.y,pmax.y)};
     }
 
-    //propagate( particles[np/2], plot1.lines[0]->n, 0.1, plot1.lines[0]->ys, plot1.lines[1]->ys );
-
+    propagate( particles[np/2], plot1.lines[0]->n, 0.1, plot1.lines[0]->ys, plot1.lines[1]->ys );
+    plot1.update(); // Update plot1.bounds based on the newly added DataLine2D objects
+    plot1.autoAxes(1.0, 1.0); // Recalculate axes based on the updated bounds
     plot1.render();
 
     //.zoom = 10;

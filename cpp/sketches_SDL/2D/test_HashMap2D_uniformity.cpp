@@ -1,3 +1,4 @@
+/// @file @brief This demo evaluates the uniformity of point distribution within a `HashMap2D` grid. It populates the hash map with points and visualizes the density or count of points per cell, providing insight into the effectiveness of the hashing function for even spatial distribution.
 
 
 /*

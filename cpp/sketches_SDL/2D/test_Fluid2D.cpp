@@ -1,3 +1,4 @@
+/// @file @brief This demo simulates 2D fluid dynamics using `Fluid2D.h`. It visualizes the behavior of a fluid on a grid, showing properties like velocity, density, or pressure, and allows for interactive manipulation (e.g., introducing disturbances with the mouse) to observe fluid flow phenomena. The simulation can be toggled with the `SPACE` key.
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,3 +1,5 @@
+/// @file @brief This program demonstrates 2D global optimization for molecular systems using `DynamicOpt.h` and `MoleculeWorld2D.h`. It visualizes the iterative search for minimum energy configurations of molecules, allowing the user to observe the system settling into stable arrangements. The optimization process can be toggled with the `SPACE` key, and the system can be perturbed with the mouse.
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -196,19 +198,3 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

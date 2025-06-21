@@ -1,3 +1,4 @@
+/// @file @brief This demo explores the conversion between triangular and rectangular data representations in 2D, using `Tris2Rect.h`. It visualizes how data from a triangular mesh can be mapped onto a regular rectangular grid, or vice-versa, which is useful for various data processing tasks.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -202,19 +203,3 @@ int main(int argc, char *argv[]){
 	testApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
