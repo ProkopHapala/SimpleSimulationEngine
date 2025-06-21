@@ -36,10 +36,77 @@
 
 // ======================  Global Variables & Declarations
 Mesh::Builder2 mesh;
-ConstructionBlock block;
-BlockBuilder skelet;
+Mesh::Builder2 low_res_mesh;
+ConstructionBlock block; // for single block testing
+BlockBuilder skelet;     // for the final ship skeleton
 
+const int GIRDER_TYPE = 1;
+const int ROPE_TYPE   = 2;
 
+using namespace Mesh;
+
+void createLowResShip(Mesh::Builder2& mesh, std::vector<double>& node_sizes) {
+    mesh.clear();
+    node_sizes.clear();
+
+    // Nodes from ship_ICF_marksman_2.lua
+    node_sizes.push_back(1.0);  mesh.vert({0.0,  0.0, 0.0 }); // 0
+    node_sizes.push_back(0.5);  mesh.vert({0.0,  0.0,-15.0}); // 1
+    node_sizes.push_back(0.5);  mesh.vert({0.0,  0.0, 20.0}); // 2
+    node_sizes.push_back(0.25); mesh.vert({0.0,-10.0, 0.0 }); // 3
+    node_sizes.push_back(0.25); mesh.vert({0.0, 10.0, 0.0 }); // 4
+    node_sizes.push_back(0.25); mesh.vert({-10.0,0.0, 0.0 }); // 5
+    node_sizes.push_back(0.25); mesh.vert({10.0, 0.0, 0.0 }); // 6
+
+    // Girders
+    mesh.edge(0, 1, GIRDER_TYPE, -1);
+    mesh.edge(0, 2, GIRDER_TYPE, -1);
+    mesh.edge(0, 3, GIRDER_TYPE, -1);
+    mesh.edge(0, 4, GIRDER_TYPE, -1);
+    mesh.edge(0, 5, GIRDER_TYPE, -1);
+    mesh.edge(0, 6, GIRDER_TYPE, -1);
+
+    // Ropes
+    mesh.edge(1, 3, ROPE_TYPE, -1); mesh.edge(1, 4, ROPE_TYPE, -1); mesh.edge(1, 5, ROPE_TYPE, -1); mesh.edge(1, 6, ROPE_TYPE, -1);
+    mesh.edge(2, 3, ROPE_TYPE, -1); mesh.edge(2, 4, ROPE_TYPE, -1); mesh.edge(2, 5, ROPE_TYPE, -1); mesh.edge(2, 6, ROPE_TYPE, -1);
+    mesh.edge(3, 5, ROPE_TYPE, -1); mesh.edge(5, 4, ROPE_TYPE, -1); mesh.edge(4, 6, ROPE_TYPE, -1); mesh.edge(6, 3, ROPE_TYPE, -1);
+}
+
+void convertLowToHigh(const Mesh::Builder2& low_res, const std::vector<double>& node_sizes, BlockBuilder& skelet, Mesh::Builder2& high_res) {
+    skelet.clear();
+    for (int i = 0; i < low_res.verts.size(); ++i) {
+        skelet.addBlock(low_res.verts[i].pos, node_sizes[i]);
+    }
+    for (const auto& edge : low_res.edges) {
+        if (edge.w == GIRDER_TYPE) { skelet.connectBlocks(edge.x, edge.y); }
+    }
+    Mesh::ConstructionBlockToMeshBuilder cbm;
+    cbm.mesh = &high_res;
+    cbm.drawBlockBuilder(skelet, 4);
+    for (const auto& edge : low_res.edges) {
+        if (edge.w == ROPE_TYPE) {
+            high_res.rope(low_res.verts[edge.x].pos, low_res.verts[edge.y].pos, -1); // -1 for auto-segmentation
+        }
+    }
+}
+
+void createTestShip_Hardcoded(BlockBuilder& skelet, Mesh::Builder2& mesh){
+    Mesh::ConstructionBlockToMeshBuilder cbm;
+    cbm.mesh = &mesh;
+
+    skelet.clear();
+    int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
+    int ibk = skelet.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
+    int ifw = skelet.addBlock( Vec3d{0.0,  0.0, 20.0}, 0.5  );
+    int ilf = skelet.addBlock( Vec3d{0.0,-10.0, 0.0 }, 0.25 );
+    int irt = skelet.addBlock( Vec3d{0.0, 10.0, 0.0 }, 0.25 );
+    skelet.connectBlocks(ic,ibk);
+    skelet.connectBlocks(ic,ifw);
+    skelet.connectBlocks(ic,ilf);
+    skelet.connectBlocks(ic,irt);
+
+    cbm.drawBlockBuilder( skelet, 4 );
+}
 
 Vec3d pivot_point{ 5.0, 0.0, 3.0 };
 
@@ -53,7 +120,8 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 	bool bWireframe   = 1;
 
     // View control properties
-    bool bViewBlockBuilder = true;
+    bool bViewLowRes  = false;
+    bool bViewBlockBuilder = false;
     bool bViewMesh  = true;
     bool bViewEdges = true;
     bool bViewTris    = true;
@@ -103,45 +171,30 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // does not work - crash in Mesh::drawFace
     //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
+    // --- The new procedural method
+    std::vector<double> node_sizes;
+    createLowResShip(low_res_mesh, node_sizes);
+    convertLowToHigh(low_res_mesh, node_sizes, skelet, mesh);
+    printf("low_res_mesh.printSizes(): "); low_res_mesh.printSizes();
+    printf("mesh.printSizes():         "); mesh.printSizes();
+    low_res_mesh.write_obj("low_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+    mesh        .write_obj("high_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
     
-    Mesh::ConstructionBlockToMeshBuilder cbm;
-    cbm.mesh = &mesh;
 
-    skelet.blocks.clear();
-    int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
-    int ibk = skelet.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
-    int ifw = skelet.addBlock( Vec3d{0.0,  0.0, 20.0}, 0.5  );
-    int ilf = skelet.addBlock( Vec3d{0.0,-10.0, 0.0 }, 0.25 );
-    int irt = skelet.addBlock( Vec3d{0.0, 10.0, 0.0 }, 0.25 );
-    skelet.connectBlocks(ic,ibk);
-    skelet.connectBlocks(ic,ifw);
-    skelet.connectBlocks(ic,ilf);
-    skelet.connectBlocks(ic,irt);
 
-    cbm.drawBlockBuilder( skelet, 4 );
+    // --- The old hardcoded method (preserved for testing)
+    //createTestShip_Hardcoded(skelet, mesh);
+    //printf("mesh.printSizes():         \n"); mesh.printSizes();
+    //mesh.write_obj("high_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
 
-    //block.faces[0].typ=1;
+    // --- Single block testing
     block.Ls=Vec3d{1.1,1.0,0.9};
     for(int i=0;i<6;i++){
         block.faces[i].typ=1;
-        //block.faces[i].typ=2;
-        //block.faces[i].typ=3;
     }
-    
-    
-    /*
-    cbm.drawBlock( block );
-    printf( "ConstructionBlockApp::ConstructionBlockApp() .drawBlock() DONE \n" );
-    mesh.extrudeFace( 2, 5.0, {-1,-1,-1,-1}, {1,1,1,1} );
-    printf( "ConstructionBlockApp::ConstructionBlockApp() .bridge_quads() DONE \n" );
-    Vec3d hdir{ -pivot_point.z, 0.0, pivot_point.x }; hdir.normalize();
-    mesh.make_anchor_point( pivot_point, 1, hdir, 1.5, 1.0 );
-    printf( "ConstructionBlockApp::ConstructionBlockApp() .make_anchor_point() DONE \n" );
-    mesh.printSizes();
-    //mesh.printVerts();
-    //mesh.printEdges();
-    */
 
+    mesh.printSizes();
+    
 
     //printf( "mesh.tris.size(): \n", mesh.tris.size() );
 
@@ -165,6 +218,7 @@ void ConstructionBlockApp::initGUI(){
     viewControls = new CheckBoxList();
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
+    viewControls->addBox("Low-Res Graph", &bViewLowRes);
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
     viewControls->addBox("Mesh",          &bViewMesh);
     viewControls->addBox("Edges",         &bViewEdges);
@@ -208,6 +262,16 @@ void ConstructionBlockApp::draw(){
 	glEnable(GL_LIGHTING);
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
 
+    if(bViewLowRes) {
+        glDisable(GL_LIGHTING);
+        glColor3f(0.8, 0.2, 0.2);
+        glLineWidth(3.0);
+        drawEdges(low_res_mesh);
+        glPointSize(10.0);
+        drawVerts(low_res_mesh);
+        glEnable(GL_LIGHTING);
+    }
+
     if(bViewBlockBuilder) {
         Draw3D::drawBlockBuilder( skelet );
     }
@@ -215,13 +279,19 @@ void ConstructionBlockApp::draw(){
     if(bViewMesh) {
         glColor3f( 1.0,1.0,1.0 );
         
+        // Enable polygon offset to push the solid faces back slightly in the depth buffer.
+        // This prevents "z-fighting" where the wireframe edges would be hidden by the faces.
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset( 1.0, 1.0 );
+
         if(bViewFaces) {
             drawFaces( mesh );
         }
         if(bViewTris){
             drawTriagles( mesh );
         }
-        
+        glDisable(GL_POLYGON_OFFSET_FILL);
+
         if(bViewFaceNormals) {
             glColor3f( 0.0,0.5,1.0 );
             drawFaceNormals( mesh );

@@ -33,13 +33,11 @@ A key feature of `MeshBuilder2` is its ability to store complex, variable-length
 
 *   **`strips`** (`std::vector<int>`): This is a flat, contiguous buffer that stores the raw data for all complex primitives. It is simply a long list of integer indices. These indices can refer to vertices, edges, or other primitives depending on the context defined by the chunk.
 
-*   **`chunks`** (`std::vector<Quat4i>`): This is the metadata or descriptor vector. Each `Quat4i` entry in this vector defines a single "chunk" and describes a specific segment within the `strips` vector.
-
-The `Quat4i` for a chunk is interpreted as `{ i0, i_end, n, type }`:
--   `x` (`i0`): The starting index of the chunk's data within the `strips` vector.
--   `y` (`i_end`): The end index of the first part of the chunk's data (e.g., the vertex list for a face).
--   `z` (`n`): The number of elements in the primitive (e.g., the number of vertices in a polygon).
--   `w` (`type`): The type of the chunk, defined by the `ChunkType` enum (`face`, `edgestrip`, `trianglestrip`).
+*   **`chunks`** (`std::vector<Quat4i>`): This is the metadata or descriptor vector. Each `Quat4i` entry in this vector defines a single "chunk" and describes a specific segment within the `strips` vector. The `Quat4i` for a chunk is interpreted as `{ i0, i_end, n, type }`:
+    -   `x` (`i0`): The starting index of the chunk's data within the `strips` vector.
+    -   `y` (`i_end`): The end index of the first part of the chunk's data (e.g., the vertex list for a face).
+    -   `z` (`n`): The number of elements in the primitive (e.g., the number of vertices in a polygon).
+    -   `w` (`type`): The type of the chunk, defined by the `ChunkType` enum (`face`, `edgestrip`, `trianglestrip`).
 
 **Example: A Face Chunk (`ChunkType::face`)**
 

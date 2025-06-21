@@ -29,6 +29,18 @@ using LoopDict = std::unordered_map<int,Slots<int,2>>;
 
 namespace Mesh{
 
+    struct ObjMask {
+        enum : uint8_t {
+            Verts    = 1 << 0,
+            Normals  = 1 << 1,
+            UVs      = 1 << 2,
+            Tris     = 1 << 3,
+            Polygons = 1 << 4,
+            Edges    = 1 << 5,
+        };
+    };
+
+
 template<typename T>
 struct VertT{ // double8
     union{
@@ -76,6 +88,7 @@ class Builder2{ public:
     int selection_mode = 3;  // 0-none, 1-vert, 2-edge, 3-face
     enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
+
     std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
     std::unordered_set<int> selset;    // edge index for vert
 
@@ -235,8 +248,8 @@ class Builder2{ public:
     void addPointCross( const Vec3d& p, double d );
     void addArrow( const Vec3d& p1, const Vec3d& p2, double d );
 
-    void write_obj( const char* fname );
-    void read_obj( const char* fname );
+    void write_obj( const char* fname, uint8_t mask = 0xFF );
+    void read_obj( const char* fname, uint8_t mask = 0xFF );
     
     void printSelection();
     void printSelectedVerts();
@@ -254,7 +267,7 @@ class Builder2{ public:
     int girder1( int ip0, int ip1, Vec3d up, int n, double width, Quat4i stickTypes );
     int wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes );
     int ngon( Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType );
-    int rope( Vec3d p0, Vec3d p1, int n,  int stickType );
+    int rope( Vec3d p0, Vec3d p1, int n,  int stickType = -1 );
     int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes );
 
 }; // class Mesh::Builder2

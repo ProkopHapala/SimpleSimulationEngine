@@ -902,7 +902,7 @@ int Builder2::export_tris( Quat4i* tri, int i0, int i1 ){  if(i1<0){ i1=edges.si
     return i1-i0+1;
 }
 
-void Builder2::write_obj( const char* fname ){
+void Builder2::write_obj( const char* fname, uint8_t mask ){
     printf( "Mesh::Builder2::write_obj(%s)\n", fname );
     FILE * pFile;
     pFile = fopen(fname,"w");
@@ -910,29 +910,98 @@ void Builder2::write_obj( const char* fname ){
         printf("Error opening file %s\n", fname);
         return;
     }
+
+    bool bVerts    = mask & ObjMask::Verts;
+    bool bNormals  = mask & ObjMask::Normals;
+    bool bUVs      = mask & ObjMask::UVs;
+    bool bTris     = mask & ObjMask::Tris;
+    bool bPolygons = mask & ObjMask::Polygons;
+    bool bEdges    = mask & ObjMask::Edges;
+
     fprintf(pFile, "# SimpleSimulationEngine MeshBuilder2 OBJ export\n");
-    fprintf(pFile, "# Vertices: %zu\n", verts.size());
-    fprintf(pFile, "# Triangles: %zu\n", tris.size());
-    // Write vertices
-    for(const auto& v : verts){
-        fprintf(pFile, "v %f %f %f\n", v.pos.x, v.pos.y, v.pos.z);
+
+    if(bVerts){
+        fprintf(pFile, "# Vertices: %zu\n", verts.size());
+        for(const auto& v : verts){
+            fprintf(pFile, "v %f %f %f\n", v.pos.x, v.pos.y, v.pos.z);
+        }
     }
-    // Write vertex normals
-    for(const auto& v : verts){
-        fprintf(pFile, "vn %f %f %f\n", v.nor.x, v.nor.y, v.nor.z);
+
+    if(bNormals){
+        fprintf(pFile, "# Vertex Normals: %zu\n", verts.size());
+        for(const auto& v : verts){
+            fprintf(pFile, "vn %f %f %f\n", v.nor.x, v.nor.y, v.nor.z);
+        }
     }
-    // Write faces (1-based indices)
-    for(const auto& t : tris){
-        fprintf(pFile, "f %i//%i %i//%i %i//%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
+
+    if(bUVs){
+        fprintf(pFile, "# Texture Coords: %zu\n", verts.size());
+        for(const auto& v : verts){
+            fprintf(pFile, "vt %f %f\n", v.uv.x, v.uv.y);
+        }
     }
+
+    if(bTris){
+        fprintf(pFile, "# Triangles: %zu\n", tris.size());
+        for(const auto& t : tris){
+            if(bUVs && bNormals){
+                fprintf(pFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", t.x+1, t.x+1, t.x+1, t.y+1, t.y+1, t.y+1, t.z+1, t.z+1, t.z+1);
+            } else if (bNormals){
+                fprintf(pFile, "f %i//%i %i//%i %i//%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
+            } else if (bUVs){
+                fprintf(pFile, "f %i/%i %i/%i %i/%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
+            } else {
+                fprintf(pFile, "f %i %i %i\n", t.x+1, t.y+1, t.z+1);
+            }
+        }
+    }
+
+    if(bPolygons){
+        fprintf(pFile, "# Polygons (from chunks)\n");
+        for(const auto& ch : chunks){
+            if(ch.w == (int)ChunkType::face){
+                fprintf(pFile, "f");
+                int* ivs = strips.data() + ch.x;
+                for(int i=0; i<ch.z; i++){
+                    int iv = ivs[i] + 1;
+                    if(bUVs && bNormals){
+                        fprintf(pFile, " %i/%i/%i", iv, iv, iv);
+                    } else if (bNormals){
+                        fprintf(pFile, " %i//%i", iv, iv);
+                    } else if (bUVs){
+                        fprintf(pFile, " %i/%i", iv, iv);
+                    } else {
+                        fprintf(pFile, " %i", iv);
+                    }
+                }
+                fprintf(pFile, "\n");
+            }
+        }
+    }
+
+    if(bEdges){
+        fprintf(pFile, "# Edges: %zu\n", edges.size());
+        for(const auto& e : edges){
+            fprintf(pFile, "l %i %i\n", e.x+1, e.y+1);
+        }
+    }
+
     fclose(pFile);
     printf( "Mesh::Builder2::write_obj(%s) DONE\n", fname );
 }
 
-void Builder2::read_obj(const char* fname) {
+void Builder2::read_obj(const char* fname, uint8_t mask) {
     printf("Mesh::Builder2::read_obj(%s)\n", fname);
     FILE* pFile = fopen(fname, "r");
     if (pFile == NULL) { printf("ERROR in Builder2::read_obj(%s) Cannot open file\n", fname); exit(0); }
+
+    bool bVerts    = mask & ObjMask::Verts;
+    bool bNormals  = mask & ObjMask::Normals;
+    bool bUVs      = mask & ObjMask::UVs;
+    bool bTris     = mask & ObjMask::Tris;
+    bool bPolygons = mask & ObjMask::Polygons;
+    bool bEdges    = mask & ObjMask::Edges;
+
     int vert_offset = verts.size();
     std::vector<Vec3d> file_normals;
     std::vector<Vec2d> file_uvs;
@@ -943,19 +1012,24 @@ void Builder2::read_obj(const char* fname) {
 
         if ( type[0]=='v'){
             if ( type[1]=='n' ) {
+                if(!bNormals) continue;
                 Vec3d n;
                 sscanf(line_buffer, "vn %lf %lf %lf", &n.x, &n.y, &n.z);
                 file_normals.push_back(n);
             } else if ( type[1]=='t' ) {
+                if(!bUVs) continue;
                 Vec2d uv;
                 sscanf(line_buffer, "vt %lf %lf", &uv.x, &uv.y);
                 file_uvs.push_back(uv);
             }else{
+                if(!bVerts) continue;
                 Vec3d p;
                 sscanf(line_buffer, "v %lf %lf %lf", &p.x, &p.y, &p.z);
                 vert(p);
             }
         } else if ( type[0]=='f' ) {
+            bool bFaces = bTris || bPolygons;
+            if(!bFaces) continue;
             std::vector<int> face_v_indices;
             std::vector<int> face_vn_indices;
             std::vector<int> face_vt_indices;
@@ -976,22 +1050,44 @@ void Builder2::read_obj(const char* fname) {
                 while (*p && !isspace(*p)) p++;
             }
             if (face_v_indices.size() >= 3) {
+                bool is_tri = (face_v_indices.size() == 3);
+                if (is_tri && !bTris) continue;
+                if (!is_tri && !bPolygons) continue;
+
                 int n = face_v_indices.size();
                 int iedges[n];
                 int ivs[n];
                 for (int i = 0; i < n; ++i) {
                     ivs[i] = face_v_indices[i] - 1 + vert_offset;
                 }
-                if (face_vn_indices.size() == n && !file_normals.empty()) {
+                if (bNormals && face_vn_indices.size() == n && !file_normals.empty()) {
                     for (int i = 0; i < n; ++i) { if (ivs[i] < verts.size() && (face_vn_indices[i]-1) < file_normals.size()) verts[ivs[i]].nor = file_normals[face_vn_indices[i]-1]; }
                 }
-                if (face_vt_indices.size() == n && !file_uvs.empty()) {
+                if (bUVs && face_vt_indices.size() == n && !file_uvs.empty()) {
                     for (int i = 0; i < n; ++i) { if (ivs[i] < verts.size() && (face_vt_indices[i]-1) < file_uvs.size()) verts[ivs[i]].uv = file_uvs[face_vt_indices[i]-1]; }
                 }
                 for (int i = 0; i < n; ++i) {
                     iedges[i] = findOrAddEdges({ivs[i], ivs[(i + 1) % n]});
                 }
                 polygon(n, iedges);
+            }
+        } else if ( type[0]=='l' ) {
+            if(!bEdges) continue;
+            std::vector<int> line_v_indices;
+            const char* p = line_buffer + 1;
+            int v_idx;
+            while(*p){
+                while(*p && isspace(*p)) p++;
+                if(*p == '\0' || *p == '\r' || *p == '\n') break;
+                if(sscanf(p, "%d", &v_idx) == 1){
+                    line_v_indices.push_back(v_idx - 1 + vert_offset);
+                }
+                while(*p && !isspace(*p)) p++;
+            }
+            if(line_v_indices.size() >= 2){
+                for(size_t i=0; i < line_v_indices.size() - 1; ++i){
+                    edge(line_v_indices[i], line_v_indices[i+1]);
+                }
             }
         }
     }

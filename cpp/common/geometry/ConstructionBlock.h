@@ -246,9 +246,11 @@ class ConstructionBlock{ public:
         return true;
     }
 
-    int replaceId( int id, Vec2i where ){
+    // Replaces the logical edge ID in a slot with a new ID (typically a geometric chunk ID)
+    // and returns the old logical ID that was stored there.
+    int assignChunkToSlot( int new_id, Vec2i where ){
         int oid = faces[where.i].ids[where.j];
-        if( oid<0 ) faces[where.i].nid++;
+        faces[where.i].ids[where.j] = new_id;
         return oid;
     }
 
@@ -271,6 +273,11 @@ class BlockBuilder{ public:
     std::vector<ConstructionBlock> blocks;
     std::vector<Quat4i> edges;
 
+    void clear(){
+        blocks.clear();
+        edges.clear();
+    }
+
     void addBlock( Vec3d p, Vec3d L  ){ 
         //blocks.push_back(ConstructionBlock(p,L)); 
         blocks.emplace_back(p,L);
@@ -285,12 +292,12 @@ class BlockBuilder{ public:
 
     // ToDo: There is serious problem how to identify (index) faces and sub-faces by unique id systematically
     int connectBlocks( int i, int j ){
-        
         Vec3d d = blocks[i].pos - blocks[j].pos; 
         d.normalize();
         int id = edges.size();
         Vec2i f1 = blocks[i].addId( id                 , d*-1.0 );
         Vec2i f2 = blocks[j].addId( id+edge_end_offset , d      );
+        printf("connectBlocks() edges.push_back(Quat4i{%i,%i,%i,%i});  id: %i \n", i, j, id, f1.x, id );
         edges.push_back( Quat4i{i,j,f1.x,f2.x}  );
         return id;
     }
@@ -319,7 +326,7 @@ namespace Mesh{
 
     int replace_chunk( ConstructionBlock& block, Vec2i where, int ich=-1 ){
         if(ich<0){ ich = mesh->chunks.size()+ich; };
-        int id = block.replaceId( ich, where );
+        int id = block.assignChunkToSlot( ich, where );
         //printf("replace_chunk() id %i ich %i where %i %i \n", id, ich, where.x, where.y );
         if( id>=0 ) edge2chunk[id] = ich;
         return id;
@@ -555,5 +562,3 @@ void drawBlock(const ConstructionBlock& block, const Mat3d& rot=Mat3dIdentity ){
 //#endif // Draw3D_h
 
 #endif
-
-

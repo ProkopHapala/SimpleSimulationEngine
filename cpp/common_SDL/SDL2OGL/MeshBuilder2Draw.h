@@ -118,6 +118,15 @@ void drawFace( const Mesh::Builder2& mesh, Quat4i ch, bool bFlat=true, bool bNor
     // }
 }
 
+
+static void drawVerts(const Mesh::Builder2& mesh) {
+    glBegin(GL_POINTS);
+    for (const auto& v : mesh.verts) {
+        glVertex3dv(v.pos.array);
+    }
+    glEnd();
+}
+
 void drawFaces( const Mesh::Builder2& mesh, bool bFlat=true, bool bNormals=false ){
     const int face_typ = (int)Mesh::Builder2::ChunkType::face;
     for( Quat4i ch: mesh.chunks ){
