@@ -98,11 +98,12 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
+    // ----- Testing Parabola_ExtrudedWire to build magnetic nozzle for nuclear spacecraft
     //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
     //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // does not work - crash in Mesh::drawFace
-    Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
+    //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
-    /*
+    
     Mesh::ConstructionBlockToMeshBuilder cbm;
     cbm.mesh = &mesh;
 
@@ -126,7 +127,7 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         //block.faces[i].typ=2;
         //block.faces[i].typ=3;
     }
-    */
+    
     
     /*
     cbm.drawBlock( block );

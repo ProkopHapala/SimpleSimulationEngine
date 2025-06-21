@@ -158,6 +158,13 @@ class Builder2{ public:
     Vec3d getCOG(int n, const int* ivs) const;
     void alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv=0 );
     int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling=false );
+
+    // ======= Mesh Editing & Transformations (from legacy MeshBuilder)
+    void move_verts( const std::vector<int>& indices, const Vec3d& shift );
+    void scale_verts( const std::vector<int>& indices, const Vec3d& p, const Vec3d& s );
+    void rotate_verts( const std::vector<int>& indices, const Vec3d& p, const Mat3d& rot );
+    int duplicateBlock( int iblock );
+
     int extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bFace, bool bTris, bool bSort );
     int loadChunk( int ich, int* iedges=0, int* iverts=0 );
     Vec3d getChunkNormal( int ich );
@@ -223,6 +230,13 @@ class Builder2{ public:
     int  export_pos( float4* ps, int i0=0, int i1=-1 );
     int  export_edges( Vec2i* eds, int i0=0, int i1=-1 );
     int  export_tris( Quat4i* tri, int i0=0, int i1=-1 );
+
+    // ======= Debug Drawing (from legacy MeshBuilder)
+    void addPointCross( const Vec3d& p, double d );
+    void addArrow( const Vec3d& p1, const Vec3d& p2, double d );
+
+    void write_obj( const char* fname );
+    void read_obj( const char* fname );
     
     void printSelection();
     void printSelectedVerts();
@@ -250,5 +264,3 @@ class Builder2{ public:
 }; // namespace Mesh
 
 #endif
-
-

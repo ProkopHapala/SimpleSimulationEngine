@@ -510,6 +510,27 @@ int Builder2::fstrip( int ip0, int ip1, int n, int ft, Vec2i et ){
     return i0;
 }
 
+void Builder2::addPointCross( const Vec3d& p, double d ){
+    stick( p + Vec3d{d,0,0}, p + Vec3d{-d, 0, 0} );
+    stick( p + Vec3d{0,d,0}, p + Vec3d{ 0,-d, 0} );
+    stick( p + Vec3d{0,0,d}, p + Vec3d{ 0, 0,-d} );
+}
+
+void Builder2::addArrow( const Vec3d& p1, const Vec3d& p2, double d ){
+    stick( p1, p2 );
+    Vec3d dir = p2 - p1;
+    dir.normalize();
+    Vec3d up, right;
+    dir.getSomeOrtho(up, right);
+    double head_len = d * 2.0;
+    double head_wid = d;
+    Vec3d head_base = p2 - dir * head_len;
+    stick( p2, head_base + up * head_wid );
+    stick( p2, head_base - up * head_wid );
+    stick( p2, head_base + right * head_wid );
+    stick( p2, head_base - right * head_wid );
+}
+
 /* Too Complicated logic inside
 int vstrip(Vec3d p0, Vec3d p1, int n, Quat4i t=Quat4i{-1,-1,-1,-1}){
     Vec3d d=p1-p0; 
@@ -881,6 +902,103 @@ int Builder2::export_tris( Quat4i* tri, int i0, int i1 ){  if(i1<0){ i1=edges.si
     return i1-i0+1;
 }
 
+void Builder2::write_obj( const char* fname ){
+    printf( "Mesh::Builder2::write_obj(%s)\n", fname );
+    FILE * pFile;
+    pFile = fopen(fname,"w");
+    if (pFile == NULL) {
+        printf("Error opening file %s\n", fname);
+        return;
+    }
+    fprintf(pFile, "# SimpleSimulationEngine MeshBuilder2 OBJ export\n");
+    fprintf(pFile, "# Vertices: %zu\n", verts.size());
+    fprintf(pFile, "# Triangles: %zu\n", tris.size());
+    // Write vertices
+    for(const auto& v : verts){
+        fprintf(pFile, "v %f %f %f\n", v.pos.x, v.pos.y, v.pos.z);
+    }
+    // Write vertex normals
+    for(const auto& v : verts){
+        fprintf(pFile, "vn %f %f %f\n", v.nor.x, v.nor.y, v.nor.z);
+    }
+    // Write faces (1-based indices)
+    for(const auto& t : tris){
+        fprintf(pFile, "f %i//%i %i//%i %i//%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
+    }
+    fclose(pFile);
+    printf( "Mesh::Builder2::write_obj(%s) DONE\n", fname );
+}
+
+void Builder2::read_obj(const char* fname) {
+    printf("Mesh::Builder2::read_obj(%s)\n", fname);
+    FILE* pFile = fopen(fname, "r");
+    if (pFile == NULL) { printf("ERROR in Builder2::read_obj(%s) Cannot open file\n", fname); exit(0); }
+    int vert_offset = verts.size();
+    std::vector<Vec3d> file_normals;
+    std::vector<Vec2d> file_uvs;
+    char line_buffer[2048];
+    while (fgets(line_buffer, sizeof(line_buffer), pFile)) {
+        char type[3] = {0};
+        sscanf(line_buffer, "%2s", type);
+
+        if ( type[0]=='v'){
+            if ( type[1]=='n' ) {
+                Vec3d n;
+                sscanf(line_buffer, "vn %lf %lf %lf", &n.x, &n.y, &n.z);
+                file_normals.push_back(n);
+            } else if ( type[1]=='t' ) {
+                Vec2d uv;
+                sscanf(line_buffer, "vt %lf %lf", &uv.x, &uv.y);
+                file_uvs.push_back(uv);
+            }else{
+                Vec3d p;
+                sscanf(line_buffer, "v %lf %lf %lf", &p.x, &p.y, &p.z);
+                vert(p);
+            }
+        } else if ( type[0]=='f' ) {
+            std::vector<int> face_v_indices;
+            std::vector<int> face_vn_indices;
+            std::vector<int> face_vt_indices;
+            const char* p = line_buffer + 1;
+            while (*p) {
+                while (*p && isspace(*p)) p++;
+                if (*p == '\0' || *p == '\r' || *p == '\n') break;
+                int v_idx = 0, vt_idx = 0, vn_idx = 0;
+                if (sscanf(p, "%d/%d/%d", &v_idx, &vt_idx, &vn_idx) == 3) {
+                    face_v_indices.push_back(v_idx); face_vt_indices.push_back(vt_idx); face_vn_indices.push_back(vn_idx);
+                } else if (sscanf(p, "%d//%d", &v_idx, &vn_idx) == 2) {
+                    face_v_indices.push_back(v_idx); face_vn_indices.push_back(vn_idx);
+                } else if (sscanf(p, "%d/%d", &v_idx, &vt_idx) == 2) {
+                    face_v_indices.push_back(v_idx); face_vt_indices.push_back(vt_idx);
+                } else if (sscanf(p, "%d", &v_idx) == 1) {
+                    face_v_indices.push_back(v_idx);
+                }
+                while (*p && !isspace(*p)) p++;
+            }
+            if (face_v_indices.size() >= 3) {
+                int n = face_v_indices.size();
+                int iedges[n];
+                int ivs[n];
+                for (int i = 0; i < n; ++i) {
+                    ivs[i] = face_v_indices[i] - 1 + vert_offset;
+                }
+                if (face_vn_indices.size() == n && !file_normals.empty()) {
+                    for (int i = 0; i < n; ++i) { if (ivs[i] < verts.size() && (face_vn_indices[i]-1) < file_normals.size()) verts[ivs[i]].nor = file_normals[face_vn_indices[i]-1]; }
+                }
+                if (face_vt_indices.size() == n && !file_uvs.empty()) {
+                    for (int i = 0; i < n; ++i) { if (ivs[i] < verts.size() && (face_vt_indices[i]-1) < file_uvs.size()) verts[ivs[i]].uv = file_uvs[face_vt_indices[i]-1]; }
+                }
+                for (int i = 0; i < n; ++i) {
+                    iedges[i] = findOrAddEdges({ivs[i], ivs[(i + 1) % n]});
+                }
+                polygon(n, iedges);
+            }
+        }
+    }
+    fclose(pFile);
+    printf("Mesh::Builder2::read_obj(%s) DONE\n", fname);
+}
+
 void Builder2::printSelection(){
     printf( "Mesh::Builder2::printSelection() n=%i mode=%i :", selection.size(), selection_mode );
     for(int ii=0; ii<selection.size(); ii++){  printf( "%i ", selection[ii] ); }
@@ -919,6 +1037,66 @@ Vec3d Builder2::getCOG(int n, const int* ivs) const {
     cog.mul(1./n);
     return cog;
 }
+
+
+void Builder2::move_verts( const std::vector<int>& indices, const Vec3d& shift ){
+    for( int iv : indices ){
+        if (iv >= 0 && iv < verts.size()) {
+            verts[iv].pos.add(shift);
+        }
+    }
+}
+
+void Builder2::scale_verts( const std::vector<int>& indices, const Vec3d& p, const Vec3d& s ){
+    Vec3d inv_s;
+    if(s.x!=0) inv_s.x=1/s.x;
+    if(s.y!=0) inv_s.y=1/s.y;
+    if(s.z!=0) inv_s.z=1/s.z;
+    for( int iv : indices ){
+        if (iv >= 0 && iv < verts.size()) {
+            Vert& v = verts[iv];
+            v.pos.sub(p);
+            v.pos.mul(s);
+            v.pos.add(p);
+            v.nor.mul(inv_s);
+            v.nor.normalize();
+        }
+    }
+}
+
+void Builder2::rotate_verts( const std::vector<int>& indices, const Vec3d& p, const Mat3d& rot ){
+    for( int iv : indices ){
+        if (iv >= 0 && iv < verts.size()) {
+            Vert& v = verts[iv];
+            v.pos.sub(p);
+            rot.dot_to(v.pos, v.pos);
+            v.pos.add(p);
+            rot.dot_to(v.nor, v.nor);
+        }
+    }
+}
+
+int Builder2::duplicateBlock( int iblock ){
+    if( iblock < 0 || iblock >= blocks.size() ){ return -1; }
+    Quat4i i0 = blocks[iblock];
+    Quat4i i1;
+    if( (iblock+1) < blocks.size() ){ i1 = blocks[iblock+1]; } else { i1 = latsBlock(); }
+    int nVerts = i1.x - i0.x;
+    int nEdges = i1.y - i0.y;
+    int nTris  = i1.z - i0.z;
+    int vert_offset = verts.size();
+    for(int i=0; i<nVerts; i++){ verts.push_back( verts[i0.x + i] ); }
+    for(int i=0; i<nEdges; i++){ Quat4i old_e = edges[i0.y + i]; edge( old_e.x + vert_offset, old_e.y + vert_offset, old_e.w, old_e.z ); }
+    for(int i=0; i<nTris;  i++){ Quat4i old_t = tris [i0.z + i]; tri ( old_t.x + vert_offset, old_t.y + vert_offset, old_t.z + vert_offset, old_t.w ); }
+    return block();
+}
+
+
+
+
+
+
+
 
 void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
 

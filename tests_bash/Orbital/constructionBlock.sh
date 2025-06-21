@@ -3,7 +3,7 @@
 # ====== Paths
 
 name=constructionBlockApp
-dir=../../cpp/Build/sketches_SDL/3D
+dir=../../cpp/Build/apps/OrbitalWar
 ln -s ../../cpp/apps/OrbitalWar/data
 ln -s ../../cpp/common_resources
 
@@ -21,6 +21,7 @@ pwd
 rm $name
 make -j$ncpu $name   # 2>$wd/compile_err.log
 cd $wd
+rm $name.x
 ln -s $dir/$name ./$name.x
 
 # ====== ASan (Memory Sanitizer)
