@@ -289,7 +289,6 @@ class BlockBuilder{ public:
     }
     // can we use emplace ?
 
-
     // ToDo: There is serious problem how to identify (index) faces and sub-faces by unique id systematically
     int connectBlocks( int i, int j ){
         Vec3d d = blocks[i].pos - blocks[j].pos; 
@@ -300,6 +299,11 @@ class BlockBuilder{ public:
         printf("connectBlocks() edges.push_back(Quat4i{%i,%i,%i,%i});  id: %i \n", i, j, id, f1.x, id );
         edges.push_back( Quat4i{i,j,f1.x,f2.x}  );
         return id;
+    }
+
+    void addBlockNetwork(int nnode, const Vec3d* pos, const double* sizes, int nedge, const Vec2i* edges, const int* edge_types=0 ) {
+        for (int i = 0; i < nnode; ++i) { addBlock     (pos[i],     sizes[i]);   }
+        for (int i = 0; i < nedge; ++i) { connectBlocks(edges[i].x, edges[i].y); }
     }
    
 };
@@ -314,7 +318,9 @@ namespace Mesh{
         Builder2* mesh=0;
         std::unordered_map<int,int> edge2chunk;  // todo: later we perhaps need to use slots
         Quat4i stickTypes{-1,-1,-1,-1};
-        Quat4i stickMaks{1,1,1,1};
+        Quat4i stickMaks {1,1,1,1};
+
+        ConstructionBlockToMeshBuilder( Builder2* mesh_ ): mesh(mesh_){};
 
         void printEdge2chunk(){
             printf("printEdge2chunk() n=%i \n", edge2chunk.size() );

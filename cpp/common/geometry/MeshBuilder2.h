@@ -156,14 +156,15 @@ class Builder2{ public:
     // ======= Functions
 
 
+
     int selectVertsAlongLine( Vec3d p0, Vec3d p1, double r=0.1, bool bSort=true );
-
     int selectVertsAlongPolyline( double r=0.1, bool bSort=true );
-
-    int conected_vertex( const Vec3d& p, int stickType, int n, int* iverts );
-    int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l );
-    int select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
-    int make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l );
+    int select_in_box     ( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
+    
+    Vec2i conect_vertex  ( int iv, int stickType, int n, int* iverts );
+    int conected_vertex  ( const Vec3d& p, int stickType, int n, int* iverts );
+    int make_anchor_point( const Vec3d& p, int stickType, double Rcolapse=0.1, double r=1.0, const Vec3d* fw=0, double l=1.0 );
+    int make_anchor_points( int nv, Vec3d* vs, int* ivrts, int anchorType, double Rcolapse, double r=1.0, const Vec3d* fw=0, double l=1.0 );
 
     int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
 
@@ -194,29 +195,40 @@ class Builder2{ public:
     int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
 
-
     int plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub );
     int plateBetweenEdges( int nsub=1, double r=0.1, bool bSort=true );
 
     int polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
     int polygon( int n, int* iedges );
     int polygonToTris( int i );
-    Vec2i addFaces( int nface, const int* nVerts, const int* iverts, bool bPolygonToTris );
+    Vec2i addVerts( int n, const Vec3d* ps );
+    Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2 );
+    Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris );
     int addCMesh(const CMesh& cmesh, bool bFaces);
     int selectionToFace();
+
+    // ---- Selection
     int clearSelection();
+    int toggleSelSet( int i );
+    void makeSelectrionUnique();
+    // find vertices by distance from point 
+    int findClosestVert(const Vec3d& p0,int i0=0,int n=-1);
+    int findVert(const Vec3d& p0, double Rmax, int n=-1, int* sel=0 );
+    int closestInSelection(const Vec3d& p0, double Rmax, int n, int* sel );
+    int select_in_sphere  ( const Vec3d& p0, double r );
+    int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l );
+    // pick by ray intersection
     int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R );
     int pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax );
-    int toggleSelSet(  int i );
     int pickTriangle( const Vec3d& ro, const Vec3d& rh, bool bReturnFace=false );
     int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
     int pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
+    // select by rectangle (box)
     int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
     int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
     int selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  );
-    void makeSelectrionUnique();
-    int findClosestVert(const Vec3d& p0,int i0=0,int n=-1);
-    int findVert(const Vec3d& p0, double Rmax, int n=-1, int* sel=0 );
+    
+
     int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 );
     int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 );
     int fstrip( int ip0, int ip1, int n, int ft=-1, Vec2i et={-1,-1} );
@@ -228,7 +240,8 @@ class Builder2{ public:
     void snapPrismFace( const Vec3d& p0, const Mat3d& rot, double La, double Lb, double h, double Lbh, bool bFace=true );
 
     void quad( Quat4i q, int face_type=-2, int edge_type=-3 );
-    int  rope( int ip0,  int ip1,  int typ=-1, int n=1 );
+    int  rope( int ip0,  int ip1,  int typ=-1, int nseg=1 );
+    void ropes( int n, int nseg, const Vec2i* ends, int typ );
     int  ring( Vec3d p,  Vec3d a,  Vec3d b, Vec2d cs, int n=4 );
     int  ring( Vec3d p,  Vec3d ax, Vec3d up, double R, int n=4 );
     void tube( Vec3d p0, Vec3d p1, Vec3d up, Vec2d R, Vec2i n={4,1} );
@@ -243,9 +256,9 @@ class Builder2{ public:
     // ToDo: This is too complicated, put we should remove it or move it elsewhere
     int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
     int export_pos ( Vec3d* ps, int i0=0, int i1=-1 );
-    int  export_pos( float4* ps, int i0=0, int i1=-1 );
-    int  export_edges( Vec2i* eds, int i0=0, int i1=-1 );
-    int  export_tris( Quat4i* tri, int i0=0, int i1=-1 );
+    int export_pos( float4* ps, int i0=0, int i1=-1 );
+    int export_edges( Vec2i* eds, int i0=0, int i1=-1 );
+    int export_tris( Quat4i* tri, int i0=0, int i1=-1 );
 
     // ======= Debug Drawing (from legacy MeshBuilder)
     void addPointCross( const Vec3d& p, double d );
@@ -261,8 +274,6 @@ class Builder2{ public:
     void printVerts();
     void printEdges();
 
-
-
     int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false );
     int triangle_strip( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, int stickType, bool bCaps=false );
     int plateOnGriders( Vec2i ns, Vec2i prange1, Vec2i prange2, Vec2i byN, Vec2i offs, Vec2d span1, Vec2d span2, Quat4i stickTypes );
@@ -270,7 +281,10 @@ class Builder2{ public:
     int girder1( int ip0, int ip1, Vec3d up, int n, double width, Quat4i stickTypes );
     int wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes );
     int ngon( Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType );
-    int rope( Vec3d p0, Vec3d p1, int n,  int stickType = -1 );
+    //int rope( Vec3d p0, Vec3d p1, int n,  int stickType = -1 );
+
+    int rope ( Vec3d p0,  Vec3d p1, int nseg, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
+    int ropes( int nv, Vec3d* vs, int ne, int nseg, const Vec2i* ends, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes );
 
 }; // class Mesh::Builder2

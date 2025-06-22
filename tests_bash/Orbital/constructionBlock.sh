@@ -31,9 +31,10 @@ export LD_PRELOAD
 
 # ====== RUN
 
-#./$name.x -skelet
+#./$name.x -skelet 1
+./$name.x -skelet 0
 #./$name.x -parabola
 #./$name.x -blocks
-./$name.x -extrude_octahedron
+#./$name.x -extrude_octahedron
 
 

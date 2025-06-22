@@ -152,23 +152,41 @@ int Builder2::polygonToTris( int i ){
     return n;
 }
 
-Vec2i Builder2::addFaces( int nface, const int* nVerts, const int* iverts, bool bPolygonToTris ){
+Vec2i Builder2::addVerts( int n, const Vec3d* ps ){
+    int i0 = verts.size();
+    for(int i=0; i<n; i++){ vert(ps[i]); }
+    return Vec2i{i0, (int)verts.size()-1};
+}
+
+Vec2i Builder2::addEdges( int n, const Vec2i* iedges, const int* types, const int* types2 ){
+    //int ich0 = chunks.size();
+    int ie0 = edges.size();
+    for (int i = 0; i < n; ++i) {
+        int t1=(types  )? types [i]:-1;
+        int t2=(types2 )? types2[i]:-1;
+        edge(iedges[i].x,iedges[i].y,t1,t2);
+        //edges.push_back(Quat4i{iedges[i].x,iedges[i].y,t1,t2});
+    }
+    return Vec2i{ie0, (int)edges.size()-1};
+};
+
+Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPolygonToTris ){
     //std::vector<int> plane_chunks;
     //const int* iverts = Solids::Octahedron_planeVs;
     //printf("Adding octahedron planes as polygons...\n");
     int ich0 = chunks.size();
-    for (int i = 0; i < nface; ++i) {
-        int n = nVerts[i];
-        int iedges[n];
-        for (int j = 0; j < n; ++j) {
-            Vec2i vpair = {iverts[j], iverts[(j + 1) % n]};
+    for (int i = 0; i < nf; ++i) {
+        int nvi = nVerts[i];
+        int iedges[nvi];
+        for (int j = 0; j < nvi; ++j) {
+            Vec2i vpair = {verts[j], verts[(j + 1) % nvi]};
             iedges[j]   = findEdgeByVerts(vpair);
             if (iedges[j] == -1) {printf("ERROR: -extrude_octahedron could not find edge between %d and %d. This should not happen for a well-defined CMesh.\n", vpair.a, vpair.b);exit(0); }
         }
-        int chunk_id = polygonChunk(n, iedges, iverts, true); // true to triangulate
+        int chunk_id = polygonChunk(nvi, iedges, verts, true); // true to triangulate
         //plane_chunks.push_back(chunk_id);
-        //printf("  Added plane %i with %i vertices as chunk %i\n", i, n, chunk_id);
-        iverts += n;
+        //printf("  Added plane %i with %i vertices as chunk %i\n", i, nvi, chunk_id);
+        verts += nvi;
     }
     return Vec2i{ich0, (int)chunks.size()-1};
 };
@@ -355,6 +373,46 @@ int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
     return 0;
 }
 
+int Builder2::select_in_sphere( const Vec3d& p0, double r ){
+    int n=0;
+    for(int i=0;i<verts.size();i++){
+        Vec3d  d =  verts[i].pos-p0;
+        if( d.norm2() > r*r ) continue; // check bounds along the axis
+        selection.push_back(i);
+        n++;
+    }
+    return n;
+}
+
+int Builder2::select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l ){
+    int n=0;
+    for(int i=0;i<verts.size();i++){
+        Vec3d  d =  verts[i].pos-p0;
+        double cH = fw.dot(d);
+        if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
+        double cR = d.norm2() - cH*cH; //
+        if( cR>r*r ) continue;         // check bounds in the plane
+        selection.push_back(i);
+        n++;
+    }
+    return n;
+}
+
+int Builder2::select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax ){
+    Vec3d lf = cross(fw,up);
+    lf.normalize();
+    int n=0;
+    for(int i=0;i<verts.size();i++){
+        Vec3d  d  =  verts[i].pos-p0;
+        Vec3d  Td{ lf.dot(d), up.dot(d), fw.dot(d) }; 
+        if( Td.isBetween( Lmin, Lmax ) ){ 
+            selection.push_back(i);
+            n++;
+        }
+    }
+    return n;
+}
+
 void Builder2::makeSelectrionUnique(){
     std::sort( selection.begin(), selection.end() );
     auto it = std::unique( selection.begin(), selection.end() );
@@ -371,24 +429,21 @@ int Builder2::findClosestVert(const Vec3d& p0,int i0,int n){
 
 int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
     //printf( "Mesh::Builder2::findVert() p(%g,%g,%g) Rmax: %g  \n", p0.x,p0.y,p0.z, Rmax );
-    if(n==-1){
-        n  =selection.size();
-        sel=selection.data();
-    }
+    if(n==-1){ n  =selection.size(); sel=selection.data(); }
     double r2min=Rmax;
     int imin=-1;
     for(int ii=0;ii<n;ii++){ 
         int i = sel[ii];
-        double r2=(verts[i].pos-p0).norm2(); if(r2<r2min){r2min=r2; imin=i;} 
+        double r2=(verts[i].pos-p0).norm2(); 
+        if(r2<r2min){r2min=r2; imin=i;} 
     }
-    if( bExitError && (imin<0)){ 
-        printf( "ERROR in findVert() imin=%i cannot find vert near p(%g,%g,%g) within Rmax: %g => Exit() \n", imin, p0.x,p0.y,p0.z, Rmax );
-        printSelectedVerts(); 
-        exit(0); 
-    };
+    // if( bExitError && (imin<0)){ 
+    //     printf( "ERROR in findVert() imin=%i cannot find vert near p(%g,%g,%g) within Rmax: %g => Exit() \n", imin, p0.x,p0.y,p0.z, Rmax );
+    //     printSelectedVerts(); 
+    //     exit(0); 
+    // };
     return imin;
 }
-
 
     int Builder2::selectVertsAlongLine( Vec3d p0, Vec3d p1, double r, bool bSort ){
         std::vector<int> sel; // we need to make local selection so we can add to global selection
@@ -459,50 +514,34 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
         return 0;
     }
 
+    Vec2i Builder2::conect_vertex( int iv, int stickType, int n, int* iverts ){
+        int ie = edges.size();
+        for(int i=0;i<n;i++){ edge(iv,iverts[i],stickType); }
+        return Vec2i{ie,ie+n-1};
+    }
+
     int Builder2::conected_vertex( const Vec3d& p, int stickType, int n, int* iverts ){
         int iv = vert( p );
-        for(int i=0;i<n;i++){ edge(iv,iverts[i],stickType); }
+        conect_vertex( iv, stickType, n, iverts );
         return iv;
     };
 
-    int Builder2::select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l ){
-        int n=0;
-        for(int i=0;i<verts.size();i++){
-            Vec3d  d =  verts[i].pos-p0;
-            double cH = fw.dot(d);
-            if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
-            double cR = d.norm2() - cH*cH; //
-            if( cR>r*r ) continue;         // check bounds in the plane
-            selection.push_back(i);
-            n++;
-        }
-        return n;
-    }
-
-    int Builder2::select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax ){
-        Vec3d lf = cross(fw,up);
-        lf.normalize();
-        int n=0;
-        for(int i=0;i<verts.size();i++){
-            Vec3d  d  =  verts[i].pos-p0;
-            Vec3d  Td{ lf.dot(d), up.dot(d), fw.dot(d) }; 
-            if( Td.isBetween( Lmin, Lmax ) ){ 
-                selection.push_back(i);
-                n++;
-            }
-        }
-        return n;
-    }
-
-    int Builder2::make_anchor_point( const Vec3d& p, int stickType, const Vec3d& fw, double r, double l ){
+    int Builder2::make_anchor_point( const Vec3d& p, int stickType, double Rcolapse, double r, const Vec3d* fw, double l ){
         selection.clear();
-        select_in_cylinder( p, fw, r, l );
-        return conected_vertex( p, stickType, selection.size(), selection.data() );
+        if( fw ){ select_in_cylinder( p, *fw, r, l ); }
+        else    { select_in_sphere(p, r);             }
+        int iv=-1;
+        if(Rcolapse>0){ iv = findVert(p, Rcolapse); }  // use existing vert if found
+        if(iv<0      ){ iv = vert( p );             }  // create new vert if not found
+        conect_vertex( iv, stickType, selection.size(), selection.data() );
+        return iv;
     }
 
-
-
-
+    int Builder2::make_anchor_points( int nv, Vec3d* vs, int* ivrts, int anchorType, double Rcolapse, double r, const Vec3d* fw, double l ){
+        int nv0 = verts.size();
+        for(int i=0; i<nv; i++){ ivrts[i]=make_anchor_point( vs[i], anchorType, Rcolapse, r, fw, l ); }
+        return verts.size()-nv0;
+    }
 
 
 
@@ -768,23 +807,23 @@ void Builder2::quad( Quat4i q, int face_type, int edge_type ){
     if( edge_type>-2 ){ edge( q.x, q.y, edge_type ); edge( q.y, q.w, edge_type ); edge( q.w, q.z, edge_type ); edge( q.z, q.x, edge_type ); }
 }
 
-int Builder2::rope( int ip0, int ip1, int typ, int n ){   
+int Builder2::rope( int ip0, int ip1, int typ, int nseg ){   
     //printf( "MeshBuilder2::rope(%i,%i,n=%i,t=%i)\n", ip0,ip1, n,typ );
     int i0 = verts.size();
     Vec3d p0,d;
-    if( n!=1 ){
+    if( nseg!=1 ){
         p0 = verts[ip0].pos;
         d  = verts[ip1].pos-p0;
-        if( n<0 ){ 
-            double l = d.norm(); n=(int)(l/max_size)+1;   
+        if( nseg<0 ){ 
+            double l = d.norm(); nseg=(int)(l/max_size)+1;   
             //printf( "rope() l=%g n=%i ]n", l, n ); 
         }         
         //printf( "rope() n=%i d(%g,%g,%g)  p0(%g,%g,%g) \n", n,  d.x,d.y,d.z,  p0.x,p0.y,p0.z );   
-        d.mul(1./(double)n);  // we need this only it n>1
+        d.mul(1./(double)nseg);  // we need this only it n>1
         //printf( "rope() n=%i d(%g,%g,%g)  p0(%g,%g,%g) \n", n,  d.x,d.y,d.z,  p0.x,p0.y,p0.z );   
     }
     int oi=ip0;
-    for(int ii=1; ii<n; ii++){
+    for(int ii=1; ii<nseg; ii++){
         Vec3d p = p0+d*ii;
         int i=vert(p);
         edge(oi,i, typ);
@@ -796,6 +835,10 @@ int Builder2::rope( int ip0, int ip1, int typ, int n ){
     // ToDo: implementation by LINE_STRIP ?
     return i0;
 };
+
+void Builder2::ropes( int n, int nseg, const Vec2i* ends, int typ ){
+    for(int ii=0; ii<n; ii++){ Vec2i ed = ends[ii]; rope( ed.x, ed.y, typ, nseg ); }
+}
 
 int Builder2::ring( Vec3d p, Vec3d a, Vec3d b, Vec2d cs, int n ){
     Vec2d rot = Vec2d{1.0,0.0};
@@ -969,52 +1012,34 @@ void Builder2::write_obj( const char* fname, uint8_t mask ){
         printf("Error opening file %s\n", fname);
         return;
     }
-
     bool bVerts    = mask & ObjMask::Verts;
     bool bNormals  = mask & ObjMask::Normals;
     bool bUVs      = mask & ObjMask::UVs;
     bool bTris     = mask & ObjMask::Tris;
     bool bPolygons = mask & ObjMask::Polygons;
     bool bEdges    = mask & ObjMask::Edges;
-
     fprintf(pFile, "# SimpleSimulationEngine MeshBuilder2 OBJ export\n");
-
     if(bVerts){
         fprintf(pFile, "# Vertices: %zu\n", verts.size());
-        for(const auto& v : verts){
-            fprintf(pFile, "v %f %f %f\n", v.pos.x, v.pos.y, v.pos.z);
-        }
+        for(const auto& v : verts){ fprintf(pFile, "v %f %f %f\n", v.pos.x, v.pos.y, v.pos.z); }
     }
-
     if(bNormals){
         fprintf(pFile, "# Vertex Normals: %zu\n", verts.size());
-        for(const auto& v : verts){
-            fprintf(pFile, "vn %f %f %f\n", v.nor.x, v.nor.y, v.nor.z);
-        }
+        for(const auto& v : verts){ fprintf(pFile, "vn %f %f %f\n", v.nor.x, v.nor.y, v.nor.z); }
     }
-
     if(bUVs){
         fprintf(pFile, "# Texture Coords: %zu\n", verts.size());
-        for(const auto& v : verts){
-            fprintf(pFile, "vt %f %f\n", v.uv.x, v.uv.y);
-        }
+        for(const auto& v : verts){ fprintf(pFile, "vt %f %f\n", v.uv.x, v.uv.y); }
     }
-
     if(bTris){
         fprintf(pFile, "# Triangles: %zu\n", tris.size());
         for(const auto& t : tris){
-            if(bUVs && bNormals){
-                fprintf(pFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", t.x+1, t.x+1, t.x+1, t.y+1, t.y+1, t.y+1, t.z+1, t.z+1, t.z+1);
-            } else if (bNormals){
-                fprintf(pFile, "f %i//%i %i//%i %i//%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
-            } else if (bUVs){
-                fprintf(pFile, "f %i/%i %i/%i %i/%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);
-            } else {
-                fprintf(pFile, "f %i %i %i\n", t.x+1, t.y+1, t.z+1);
-            }
+            if(bUVs && bNormals){ fprintf(pFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", t.x+1, t.x+1, t.x+1, t.y+1, t.y+1, t.y+1, t.z+1, t.z+1, t.z+1); } 
+            else if (bNormals)  { fprintf(pFile, "f %i//%i %i//%i %i//%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);                            } 
+            else if (bUVs)      { fprintf(pFile, "f %i/%i %i/%i %i/%i\n", t.x+1, t.x+1, t.y+1, t.y+1, t.z+1, t.z+1);                               } 
+            else                { fprintf(pFile, "f %i %i %i\n", t.x+1, t.y+1, t.z+1);                                                             }
         }
     }
-
     if(bPolygons){
         fprintf(pFile, "# Polygons (from chunks)\n");
         for(const auto& ch : chunks){
@@ -1023,28 +1048,19 @@ void Builder2::write_obj( const char* fname, uint8_t mask ){
                 int* ivs = strips.data() + ch.x;
                 for(int i=0; i<ch.z; i++){
                     int iv = ivs[i] + 1;
-                    if(bUVs && bNormals){
-                        fprintf(pFile, " %i/%i/%i", iv, iv, iv);
-                    } else if (bNormals){
-                        fprintf(pFile, " %i//%i", iv, iv);
-                    } else if (bUVs){
-                        fprintf(pFile, " %i/%i", iv, iv);
-                    } else {
-                        fprintf(pFile, " %i", iv);
-                    }
+                    if(bUVs && bNormals){ fprintf(pFile, " %i/%i/%i", iv, iv, iv); } 
+                    else if (bNormals  ){ fprintf(pFile, " %i//%i", iv, iv); } 
+                    else if (bUVs      ){ fprintf(pFile, " %i/%i", iv, iv); } 
+                    else                { fprintf(pFile, " %i", iv); }
                 }
                 fprintf(pFile, "\n");
             }
         }
     }
-
     if(bEdges){
         fprintf(pFile, "# Edges: %zu\n", edges.size());
-        for(const auto& e : edges){
-            fprintf(pFile, "l %i %i\n", e.x+1, e.y+1);
-        }
+        for(const auto& e : edges){ fprintf(pFile, "l %i %i\n", e.x+1, e.y+1); }
     }
-
     fclose(pFile);
     printf( "Mesh::Builder2::write_obj(%s) DONE\n", fname );
 }
@@ -1749,12 +1765,23 @@ int Builder2::ngon( Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType ){
 }
 
 
-int Builder2::rope( Vec3d p0, Vec3d p1, int n,  int stickType ){
-    int i0 = vert( p0 );
-    int i1 = vert( p1 );
-    rope( i0, i1, stickType, n );
+int Builder2::rope( Vec3d p0, Vec3d p1, int n, int ropeType, int anchorType, double Rcolapse, double r ){
+    int i0 = make_anchor_point( p0, anchorType, Rcolapse, r );
+    int i1 = make_anchor_point( p1, anchorType, Rcolapse, r );
+    printf( "Builder2::rope() i0=%i i1=%i n=%i ropeType=%i anchorType=%i Rcolapse=%g r=%g \n", i0,i1,n,ropeType,anchorType,Rcolapse,r );
+    rope( i0, i1, ropeType, n );
     return i0;
 }
+
+int Builder2::ropes( int nv, Vec3d* vs, int ne, int nseg, const Vec2i* ends, int ropeType, int anchorType, double Rcolapse, double r ){
+    int ivrts[nv];
+    make_anchor_points( nv, vs, ivrts, anchorType, Rcolapse, r );
+    for( int i=0; i<ne; i++ ){
+        Vec2i e = ends[i];
+        rope( ivrts[e.x], ivrts[e.y], ropeType, nseg );
+    }
+    return nv;
+};
 
 
 /**
