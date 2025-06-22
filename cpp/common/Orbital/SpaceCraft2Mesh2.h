@@ -482,7 +482,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     printf( "BuildCraft_truss() DONE! : npoint %i nstick %i nblocks %i \n", mesh.verts.size(), mesh.edges.size(), mesh.blocks.size()  );
 }
 
-void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, double r, Mat3d rot=Mat3dIdentity, Vec3d p0=Vec3dZero ){
+void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, double r, Mat3d rot=Mat3dIdentity, Vec3d p0=Vec3dZero, double Rcolapse=0.1, double Ranchor=10.0 ){
     printf("makeTrussShape(%i,%i,%f,%f)\n",ishape,nseg,R,r);
     //StickMaterial *o = new StickMaterial();
     //shop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
@@ -497,7 +497,7 @@ void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, doubl
         case 1: mesh.wheel         ( p0, p1                            , ax, nseg, Vec2d{r,r}, stickTypes         ); break;
         case 2: mesh.girder1       ( p0, (p1-p0).normalized()*r*4*nseg , ax, nseg, r,          stickTypes,   true ); break;
         case 3: mesh.triangle_strip( p0, (p1-p0).normalized()*r*nseg   , up, nseg, r,          stickTypes.x, true ); break;
-        case 4: mesh.rope          ( p0, (p1-p0).normalized()*r*nseg   ,     nseg,             stickTypes.x       ); break;
+        case 4: mesh.rope          ( p0, (p1-p0).normalized()*r*nseg   ,     nseg,             stickTypes.x, stickTypes.y, Rcolapse, Ranchor ); break;
     }
     mesh.printSizes();
     //if(bDouble){ to_TrussDynamics ( sim2,   mesh,        p0,         ax      ); }

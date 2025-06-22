@@ -139,8 +139,8 @@ int Builder2::polygon( int n, int* iedges ){
 
 int Builder2::polygonToTris( int i ){
     Quat4i ch = chunks[i];
-    int n = ch.z;
-    int i0 = ch.x;
+    int n    = ch.z;
+    int i0   = ch.x;
     int* ivs = &strips[i0];
     //int* ies = &strips[i0+n];
     //int i1 = strips.size();
@@ -152,38 +152,87 @@ int Builder2::polygonToTris( int i ){
     return n;
 }
 
+Vec3d Builder2::polygonNormal( int ich ){
+    Quat4i ch = chunks[ich];
+    int n   = ch.z;
+    int i0  = ch.x;
+    int* ivs = &strips[i0];
+    //printf("polygonNormal(ich=%d): Chunk type=%d, num_verts=%d, strip_start_idx=%d\n", ich, ch.w, n, i0);
+    Vec3d nrm = Vec3dZero;
+    Vec3d a = verts[ivs[0]].pos;
+    Vec3d b = verts[ivs[1]].pos;
+    for(int j=1; j<n-1; j++){
+        Vec3d c = verts[ivs[j+1]].pos;
+        Vec3d nr; nr.set_cross( c-b, c-a);
+        //nr.normalize();
+        //printf("polygonNormal: Verts for tri %d: (%d, %d, %d) -> Pos: A(%g,%g,%g) B(%g,%g,%g) C(%g,%g,%g)\n", j, ivs[0], ivs[j], ivs[j+1], a.x,a.y,a.z, b.x,b.y,b.z, c.x,c.y,c.z);
+        //printf("polygonNormal: Cross product for tri %d: (%g,%g,%g)\n", j, nr.x,nr.y,nr.z);
+        nrm.add(nr);
+        b = c;
+    }
+    nrm.normalize();
+    //printf("polygonNormal(ich=%d): Final normalized normal: (%g,%g,%g)\n", ich, nrm.x,nrm.y,nrm.z);
+    return nrm;
+}
+
+int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin, bool bTwoSide ){
+    int ibest=-1;
+    double cmax = -1.0;
+    for(int i=0; i<nch; i++){
+        int current_chunk_id = chs[i];
+        //printf("  [DEBUG] findMostFacingNormal: Processing chunk ID %d (of %d total)\n", current_chunk_id, nch);
+        Vec3d nr = polygonNormal(current_chunk_id); // This will now print its own debug info
+        double c = hray.dot(nr);
+        //printf("  [DEBUG] findMostFacingNormal: hray=(%g,%g,%g), normal=(%g,%g,%g), dot_product (c)=%g\n", hray.x,hray.y,hray.z, nr.x,nr.y,nr.z, c);
+        //printf("  [DEBUG] findMostFacingNormal: cosMin=%g, bTwoSide=%d, current_cmax=%g\n", cosMin, bTwoSide, cmax);
+        if(bTwoSide) c=fabs(c);
+        //printf("  [DEBUG] findMostFacingNormal: After bTwoSide adjustment, c=%g\n", c);
+        if( c>cosMin && c>cmax){ ibest=chs[i]; cmax=c; }
+    }
+    return ibest;
+}
+
+int Builder2::findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin, bool bTwoSide ){
+    int nch = chrange.y - chrange.x + 1;
+    int chs[nch];
+    for(int i=0; i<nch; i++){ chs[i] = chrange.x+i; }
+    return findMostFacingNormal(hray, nch, chs, cosMin, bTwoSide );
+}
+
 Vec2i Builder2::addVerts( int n, const Vec3d* ps ){
     int i0 = verts.size();
     for(int i=0; i<n; i++){ vert(ps[i]); }
     return Vec2i{i0, (int)verts.size()-1};
 }
 
-Vec2i Builder2::addEdges( int n, const Vec2i* iedges, const int* types, const int* types2 ){
+Vec2i Builder2::addEdges( int n, const Vec2i* iedges, const int* types, const int* types2, int iv0 ){
     //int ich0 = chunks.size();
     int ie0 = edges.size();
     for (int i = 0; i < n; ++i) {
         int t1=(types  )? types [i]:-1;
         int t2=(types2 )? types2[i]:-1;
-        edge(iedges[i].x,iedges[i].y,t1,t2);
+        edge(iedges[i].x+iv0,iedges[i].y+iv0,t1,t2);
         //edges.push_back(Quat4i{iedges[i].x,iedges[i].y,t1,t2});
     }
     return Vec2i{ie0, (int)edges.size()-1};
 };
 
-Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPolygonToTris ){
+Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPolygonToTris, int iv0 ){
     //std::vector<int> plane_chunks;
     //const int* iverts = Solids::Octahedron_planeVs;
     //printf("Adding octahedron planes as polygons...\n");
     int ich0 = chunks.size();
     for (int i = 0; i < nf; ++i) {
         int nvi = nVerts[i];
+        int verts_[nvi]; for(int i=0; i<nvi; i++){ verts_[i] = verts[i]+iv0; }
         int iedges[nvi];
         for (int j = 0; j < nvi; ++j) {
-            Vec2i vpair = {verts[j], verts[(j + 1) % nvi]};
+            Vec2i vpair = {verts_[j], verts_[(j + 1) % nvi]};
+            //printf( "Builder2::addFaces() vpair(%3i,%3i) iv0 %3i\n", vpair.a, vpair.b, iv0 );
             iedges[j]   = findEdgeByVerts(vpair);
             if (iedges[j] == -1) {printf("ERROR: -extrude_octahedron could not find edge between %d and %d. This should not happen for a well-defined CMesh.\n", vpair.a, vpair.b);exit(0); }
         }
-        int chunk_id = polygonChunk(nvi, iedges, verts, true); // true to triangulate
+        int chunk_id = polygonChunk(nvi, iedges, verts_, true); // true to triangulate
         //plane_chunks.push_back(chunk_id);
         //printf("  Added plane %i with %i vertices as chunk %i\n", i, nvi, chunk_id);
         verts += nvi;
@@ -191,16 +240,22 @@ Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPol
     return Vec2i{ich0, (int)chunks.size()-1};
 };
 
-int Builder2::addCMesh(const CMesh& cmesh, bool bFaces) {
+Vec3i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Mat3d* rot ) {
     //b.clear();
     // Add vertices
-    int vert_offset = verts.size();
+    int iv0 = verts.size();
+    int ie0 = edges.size();
+    int it0 = tris.size();
+    //int ic0 = chunks.size();
     for (int i = 0; i < cmesh.nvert; ++i) {
-        vert(cmesh.verts[i]);
+        Vec3d p = cmesh.verts[i];
+        p = p*sc + p0;
+        if(rot){ p = rot->dot(p); }
+        vert(p);
     }
     // Add edges
     for (int i = 0; i < cmesh.nedge; ++i) {
-        edge(cmesh.edges[i].a + vert_offset, cmesh.edges[i].b + vert_offset);
+        edge(cmesh.edges[i].a + iv0, cmesh.edges[i].b + iv0);
     }
     buildVerts2Edge(); // Important for findEdgeByVerts to be fast
     // Add faces (as polygons)
@@ -211,7 +266,7 @@ int Builder2::addCMesh(const CMesh& cmesh, bool bFaces) {
             int iverts[n];
             int iedges[n];
             for(int j=0; j<n; ++j) {
-                iverts[j] = face_verts_ptr[j] + vert_offset;
+                iverts[j] = face_verts_ptr[j] + iv0;
             }
             for (int j = 0; j < n; ++j) {
                 Vec2i vpair = {iverts[j], iverts[(j + 1) % n]};
@@ -226,7 +281,7 @@ int Builder2::addCMesh(const CMesh& cmesh, bool bFaces) {
             face_verts_ptr += n;
         }
     }
-    return 0;
+    return Vec3i{iv0,ie0,it0};
 }
 
 int Builder2::selectionToFace(){

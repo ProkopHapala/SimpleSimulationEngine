@@ -148,6 +148,7 @@ class Builder2{ public:
     }
 
     inline int* getChunkStrip( int ich ){
+        if(ich>=chunks.size()){ printf("ERROR in Builder2::getChunkStrip() ich=%i our of range [0,chunks.size()=%i] \n", ich, chunks.size() ); exit(0); }
         Quat4i ch = chunks[ich];
         return strips.data() + ch.x;
     };
@@ -201,10 +202,13 @@ class Builder2{ public:
     int polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
     int polygon( int n, int* iedges );
     int polygonToTris( int i );
+    Vec3d polygonNormal( int ich );
+    int   findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin=0.0, bool bTwoSide=false );
+    int   findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin=0.0, bool bTwoSide=false );
     Vec2i addVerts( int n, const Vec3d* ps );
-    Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2 );
-    Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris );
-    int addCMesh(const CMesh& cmesh, bool bFaces);
+    Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2, int iv0=0 );
+    Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris, int iv0=0 );
+    Vec3i addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0=Vec3dZero, Vec3d sc=Vec3dOne, Mat3d* rot=0 );
     int selectionToFace();
 
     // ---- Selection
