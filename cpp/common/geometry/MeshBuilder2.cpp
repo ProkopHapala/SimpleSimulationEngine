@@ -122,7 +122,7 @@ void Builder2::buildVerts2Edge(){
     }
 }
 
-int Builder2::polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris ){
+int Builder2::polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris ){
     int i0 = strips.size();
     int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
     for(int i=0; i<n; i++){ strips.push_back( ivs[i]    ); } // store verts
@@ -150,6 +150,65 @@ int Builder2::polygonToTris( int i ){
         tris.push_back( Quat4i{ivs[0], ivs[j], ivs[j+1], i} );
     }
     return n;
+}
+
+Vec2i Builder2::addFaces( int nface, const int* nVerts, const int* iverts, bool bPolygonToTris ){
+    //std::vector<int> plane_chunks;
+    //const int* iverts = Solids::Octahedron_planeVs;
+    //printf("Adding octahedron planes as polygons...\n");
+    int ich0 = chunks.size();
+    for (int i = 0; i < nface; ++i) {
+        int n = nVerts[i];
+        int iedges[n];
+        for (int j = 0; j < n; ++j) {
+            Vec2i vpair = {iverts[j], iverts[(j + 1) % n]};
+            iedges[j]   = findEdgeByVerts(vpair);
+            if (iedges[j] == -1) {printf("ERROR: -extrude_octahedron could not find edge between %d and %d. This should not happen for a well-defined CMesh.\n", vpair.a, vpair.b);exit(0); }
+        }
+        int chunk_id = polygonChunk(n, iedges, iverts, true); // true to triangulate
+        //plane_chunks.push_back(chunk_id);
+        //printf("  Added plane %i with %i vertices as chunk %i\n", i, n, chunk_id);
+        iverts += n;
+    }
+    return Vec2i{ich0, (int)chunks.size()-1};
+};
+
+int Builder2::addCMesh(const CMesh& cmesh, bool bFaces) {
+    //b.clear();
+    // Add vertices
+    int vert_offset = verts.size();
+    for (int i = 0; i < cmesh.nvert; ++i) {
+        vert(cmesh.verts[i]);
+    }
+    // Add edges
+    for (int i = 0; i < cmesh.nedge; ++i) {
+        edge(cmesh.edges[i].a + vert_offset, cmesh.edges[i].b + vert_offset);
+    }
+    buildVerts2Edge(); // Important for findEdgeByVerts to be fast
+    // Add faces (as polygons)
+    if (bFaces) {
+        const int* face_verts_ptr = cmesh.faces;
+        for (int i = 0; i < cmesh.nfaces; ++i) {
+            int n = cmesh.ngons[i];
+            int iverts[n];
+            int iedges[n];
+            for(int j=0; j<n; ++j) {
+                iverts[j] = face_verts_ptr[j] + vert_offset;
+            }
+            for (int j = 0; j < n; ++j) {
+                Vec2i vpair = {iverts[j], iverts[(j + 1) % n]};
+                iedges[j] = findEdgeByVerts(vpair);
+                if (iedges[j] == -1) {
+                    // This should not happen if CMesh is well-defined.
+                    printf("WARNING: CMesh2Builder could not find edge between %d and %d. Adding it.\n", vpair.a, vpair.b);
+                    iedges[j] = edge(vpair.a, vpair.b);
+                }
+            }
+            polygonChunk(n, iedges, iverts, true); // true for triangulating
+            face_verts_ptr += n;
+        }
+    }
+    return 0;
 }
 
 int Builder2::selectionToFace(){

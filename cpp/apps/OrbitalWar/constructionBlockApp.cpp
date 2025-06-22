@@ -103,11 +103,6 @@ void testConstructionBlocks(BlockBuilder& bb, Mesh::Builder2& mesh){
     cbm.drawBlockBuilder( bb, 4 );
 }
 
-
-
-
-
-
 // ====================== Class Definitions
 
 class ConstructionBlockApp : public AppSDL2OGL_3D { public:
@@ -443,6 +438,14 @@ int main(int argc, char *argv[]){
         testConstructionBlocks(bb, truss);
         printf("Manual Construction Blocks Test: "); truss.printSizes();
     }};
+    funcs["-extrude_octahedron"] = {0, [&](const char**){
+        printf("--- Running test: extrude_octahedron\n");
+        truss.addCMesh(Solids::Octahedron, false); // bFaces=false, we only want the wireframe initially
+        Vec2i chs = truss.addFaces( Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs, true );
+        printf("Extruding chunk %i by 2.0 units...\n", chs.a);
+        truss.extrudeFace(chs.a, 2.0);
+    }};
+
 
     //if( argc<=1 ){  funcs["-parabola"].func(0); }
     //if( argc<=1 ){  funcs["-blocks"].func(0); }

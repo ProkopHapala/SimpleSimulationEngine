@@ -36,9 +36,9 @@ namespace Solids{
     static int       Octahedron_faces   [Octahedron_nfaces*3] = { 0,4,2, 0,2,5, 0,3,4, 0,5,3,   1,2,4, 1,5,2, 1,4,3, 1,3,5 };
     
     const static int Octahedron_nplanes  = 3;
-    static Vec3i     Octahedron_planes [Octahedron_nplanes  ] = {4,4,4};
+    static int     Octahedron_planes [Octahedron_nplanes  ] = {4,4,4};
     //                                                             xy          yz          zx 
-    static Vec3i     Octahedron_planeVs[Octahedron_nplanes*4] = { 0,2,1,3,  2,4,3,5,  4,0,5,1 };
+    static int     Octahedron_planeVs[Octahedron_nplanes*4] = { 0,2,1,3,  2,4,3,5,  4,0,5,1 };
     const static CMesh Octahedron = (CMesh){Octahedron_nverts,Octahedron_nedges,Octahedron_ntris,Octahedron_nfaces, Octahedron_verts, Octahedron_edges, Octahedron_tris, Octahedron_ngons, Octahedron_faces};
 
 

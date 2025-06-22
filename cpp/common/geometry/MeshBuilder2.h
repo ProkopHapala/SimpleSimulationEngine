@@ -20,6 +20,7 @@
 
 #include "datatypes.h"
 #include "Slots.h"
+#include "CMesh.h"
 
 //#include "MeshBuilder.h"
 
@@ -197,9 +198,11 @@ class Builder2{ public:
     int plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub );
     int plateBetweenEdges( int nsub=1, double r=0.1, bool bSort=true );
 
-    int polygonChunk( int n, int* iedges, int* ivs, bool bPolygonToTris );
+    int polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
     int polygon( int n, int* iedges );
     int polygonToTris( int i );
+    Vec2i addFaces( int nface, const int* nVerts, const int* iverts, bool bPolygonToTris );
+    int addCMesh(const CMesh& cmesh, bool bFaces);
     int selectionToFace();
     int clearSelection();
     int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R );

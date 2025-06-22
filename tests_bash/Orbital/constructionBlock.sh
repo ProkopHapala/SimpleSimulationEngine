@@ -33,7 +33,7 @@ export LD_PRELOAD
 
 #./$name.x -skelet
 #./$name.x -parabola
-./$name.x -blocks
-
+#./$name.x -blocks
+./$name.x -extrude_octahedron
 
 
