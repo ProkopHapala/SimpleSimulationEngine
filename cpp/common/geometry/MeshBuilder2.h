@@ -208,7 +208,7 @@ class Builder2{ public:
     Vec2i addVerts( int n, const Vec3d* ps );
     Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2, int iv0=0 );
     Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris, int iv0=0 );
-    Vec3i addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0=Vec3dZero, Vec3d sc=Vec3dOne, Mat3d* rot=0 );
+    Quat4i addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0=Vec3dZero, Vec3d sc=Vec3dOne, Mat3d* rot=0 );
     int selectionToFace();
 
     // ---- Selection
@@ -290,6 +290,11 @@ class Builder2{ public:
     int rope ( Vec3d p0,  Vec3d p1, int nseg, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int ropes( int nv, Vec3d* vs, int ne, int nseg, const Vec2i* ends, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes );
+
+
+
+    void facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, const int nplane=0, const int* planes=0, const int* planeVs=0 );
+    void bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
 
 }; // class Mesh::Builder2
 

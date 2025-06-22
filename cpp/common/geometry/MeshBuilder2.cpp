@@ -240,13 +240,13 @@ Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPol
     return Vec2i{ich0, (int)chunks.size()-1};
 };
 
-Vec3i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Mat3d* rot ) {
+Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Mat3d* rot ) {
     //b.clear();
     // Add vertices
     int iv0 = verts.size();
     int ie0 = edges.size();
     int it0 = tris.size();
-    //int ic0 = chunks.size();
+    int ich0 = chunks.size();
     for (int i = 0; i < cmesh.nvert; ++i) {
         Vec3d p = cmesh.verts[i];
         p = p*sc + p0;
@@ -277,11 +277,11 @@ Vec3i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Ma
                     iedges[j] = edge(vpair.a, vpair.b);
                 }
             }
-            polygonChunk(n, iedges, iverts, true); // true for triangulating
+            polygonChunk(n, iedges, iverts, false); // true for triangulating
             face_verts_ptr += n;
         }
     }
-    return Vec3i{iv0,ie0,it0};
+    return Quat4i{iv0,ie0,it0,ich0};
 }
 
 int Builder2::selectionToFace(){
@@ -1902,5 +1902,37 @@ int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double
     return i0;
 }
 
+void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, int nplane, const int* planes, const int* planeVs ){
+    //Vec2i chs[nnod];
+    bool bSpecialNodes = (planes!=nullptr);
+    //bSpecialNodes=false;
+    for(int i=0; i<nnod; i++){
+        Quat4i i0s = addCMesh( cmesh, !bSpecialNodes, points[i] ); // bFaces=false, we only want the wireframe initially
+        //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
+        if(bSpecialNodes){ out_chs[i] = addFaces( nplane, planes, planeVs, true, i0s.x ); }
+        else             { out_chs[i] = Vec2i{ i0s.w, (int)chunks.size()-1};                }
+        printf( "facingNodes() %i chs(%i,%i)\n", i, out_chs[i].a, out_chs[i].b );
+        //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
+    }
+}
+
+void Builder2::bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes, Quat4i maks ){
+    for(int i=0; i<nrod; i++){
+        Vec2i e = edges[i];
+        //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
+        Vec3d hray = points[e.x] - points[e.y];
+        hray.normalize();
+        int ich1 = findMostFacingNormal(hray, chs[e.x], 0.0, true );
+        int ich2 = findMostFacingNormal(hray, chs[e.y], 0.0, true );
+        if((ich1<0)||(ich2<0)){ 
+            printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
+        }
+        //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+        int* iq1 = getChunkStrip( ich1 );
+        int* iq2 = getChunkStrip( ich2 );
+        //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+        bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
+    }
+}
 
 } // namespace Mesh

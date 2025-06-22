@@ -66,6 +66,33 @@ void trussFromSkelet(const Mesh::Builder2& skelet, double* node_sizes, BlockBuil
     }
 }
 
+// void facingNodes( Mesh::Builder2& truss, int nnod, Vec3d* node_positions, int nrod, Vec2i* edges, int nseg, int nplane, int* planes, int* planeVs, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks=Quat4i{1,1,1,1} ){
+//     Vec2i chs[nnod];
+//     for(int i=0; i<nnod; i++){
+//         Quat4i i0s= truss.addCMesh( Solids::Octahedron, false, node_positions[i] ); // bFaces=false, we only want the wireframe initially
+//         //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
+//         chs[i]   = truss.addFaces( nplane, planes, planeVs, true, i0s.x );
+//         //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
+//     }
+//     for(int i=0; i<nrod; i++){
+//         Vec2i e = edges[i];
+//         //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
+//         Vec3d hray = node_positions[e.x] - node_positions[e.y];
+//         hray.normalize();
+//         int ich1 = truss.findMostFacingNormal(hray, chs[e.x], 0.0, true );
+//         int ich2 = truss.findMostFacingNormal(hray, chs[e.y], 0.0, true );
+//         if((ich1<0)||(ich2<0)){ 
+//             printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
+//         }
+//         //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+//         int* iq1 = truss.getChunkStrip( ich1 );
+//         int* iq2 = truss.getChunkStrip( ich2 );
+//         //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+//         truss.bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
+//     }
+// }
+
+
 // ====================== Class Definitions
 
 class ConstructionBlockApp : public AppSDL2OGL_3D { public:
@@ -434,46 +461,27 @@ int main(int argc, char *argv[]){
     funcs["-oct_nodes"] = {0, [&](const char**){
         printf("funcs[-oct_nodes]: Manual Construction Blocks Test:\n");
         //testConstructionBlocks(bb, truss);
-        const int N_NODES = 5;
-        Vec3d node_positions[N_NODES] = {
+        const int nnodes = 5;
+        Vec3d node_positions[nnodes] = {
             {0.0,   0.0,   0.0}, 
             {0.0,   0.0, -15.0}, 
             {0.0,   0.0,  20.0}, 
             {0.0, -10.0,   0.0}, 
             {0.0,  10.0,   0.0}
         };
-        double node_sizes[N_NODES] = {1.0, 0.5, 0.5, 0.25, 0.25};
-        const int N_GIRDER_EDGES = 4;
-        Vec2i girder_edges[N_GIRDER_EDGES] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
-        //printf("--- Running test: oct_nodes\n");
-        Vec2i chs[N_NODES];
-        for(int i=0; i<N_NODES; i++){
-            Vec3i i0s= truss.addCMesh( Solids::Octahedron, false, node_positions[i] ); // bFaces=false, we only want the wireframe initially
-            //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
-            chs[i]   = truss.addFaces( Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs, true, i0s.a );
-            //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
+        double node_sizes[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
+        const int nedges = 4;
+        Vec2i edges[nedges] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
+        Vec2i chs[nnodes];
+        bool bUseSpecialPlanes=true;
+        //bool bUseSpecialPlanes=false;
+        if(bUseSpecialPlanes){
+            truss.facingNodes( Solids::Octahedron, nnodes, node_positions, chs, Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs );
+        }else{
+            CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
+            truss.facingNodes( oct, nnodes, node_positions, chs );
         }
-        Quat4i stickTypes=Quat4i{-1,-1,-1,-1};
-        Quat4i maks={1,1,1,1};
-        int nseg=4;
-        for(int i=0; i<N_GIRDER_EDGES; i++){
-            Vec2i e = girder_edges[i];
-            //Vec2i ich1 = chs[e.x]; 
-            //Vec2i ich2 = chs[e.y];
-            //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
-            Vec3d hray = node_positions[e.x] - node_positions[e.y];
-            hray.normalize();
-            int ich1 = truss.findMostFacingNormal(hray, chs[e.x], 0.0, true );
-            int ich2 = truss.findMostFacingNormal(hray, chs[e.y], 0.0, true );
-            if((ich1<0)||(ich2<0)){ 
-                printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
-            }
-            //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-            int* iq1 = truss.getChunkStrip( ich1 );
-            int* iq2 = truss.getChunkStrip( ich2 );
-            //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-            truss.bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
-        }
+        truss.bridgeFacingPolygons( nedges, edges, node_positions, 4, chs );
         printf("  truss.printSizes():  "); truss.printSizes();
         truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
         //printf("Extruding chunk %i by 2.0 units...\n", chs.a);
