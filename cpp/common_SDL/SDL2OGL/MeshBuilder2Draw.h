@@ -203,6 +203,68 @@ void drawEdges( const Mesh::Builder2& mesh ){
     glEnd();
 }
 
+void drawMesh(Mesh::Builder2& mesh, bool bViewFaces, bool bViewTris, bool bViewFaceNormals, bool bViewEdges ){
+    glColor3f( 1.0,1.0,1.0 );
+    // Enable polygon offset to push the solid faces back slightly in the depth buffer.
+    // This prevents "z-fighting" where the wireframe edges would be hidden by the faces.
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset( 1.0, 1.0 );
+    if(bViewFaces ){ drawFaces( mesh );    }
+    if(bViewTris  ){ drawTriagles( mesh ); }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    if(bViewFaceNormals) {
+        glColor3f( 0.0,0.5,1.0 );
+        drawFaceNormals( mesh );
+    }
+    glDisable(GL_LIGHTING);
+    glDisable(GL_CULL_FACE);
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    if(bViewEdges) {
+        // Draw All Edges
+        glColor3f(0.0,0.0,0.0);
+        glLineWidth(1.0);
+        drawEdges( mesh );
+    }
+}
+
+void drawMeshLabels(Mesh::Builder2& mesh, bool bViewFaces, bool bViewPointLabels, bool bViewFaceLabels, bool bViewTriLabels){
+    if(bViewPointLabels) {
+        glColor3f(0.f,0.f,0.f);
+        drawPointLabels( mesh, 0.02 );
+    }
+    if(bViewFaceLabels) {
+        glColor3f(1.f,0.f,0.f);
+        drawFaceLabels( mesh, 0.02 );
+    }
+    if(bViewTriLabels) {
+        glColor3f(0.f,0.5f,0.f);
+        drawTriLabels( mesh, 0.02 );
+    }
+}
+
+void drawMeshSelection(Mesh::Builder2& mesh, int ipick){
+    if( mesh.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
+    if(ipick>=0){
+            glLineWidth(5.0);
+            glColor3f(0.0,0.7,0.0);
+            drawPolygonBorder( mesh, ipick );
+        }
+    }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
+        glColor3f(0.0,0.7,0.0);
+        glLineWidth(5.0);
+        drawSelectedEdges( mesh );
+        drawSelectedEdgeLabels( mesh, 0.02 );
+        glLineWidth(1.0);
+    }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::vert ){
+        glColor3f(0.0,1.0,0.0);
+        glPointSize(8.0);
+        drawSelectedVerts( mesh );
+        glColor3f(0.0,0.5,0.0);
+        drawSelectedVertLabels( mesh, 0.02, true );
+        glPointSize(1.0);
+    }
+}
+
 }; // namespace Mesh
 
 #endif

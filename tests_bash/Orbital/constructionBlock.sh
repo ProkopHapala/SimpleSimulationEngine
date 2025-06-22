@@ -31,7 +31,9 @@ export LD_PRELOAD
 
 # ====== RUN
 
-./$name.x
+#./$name.x -skelet
+#./$name.x -parabola
+./$name.x -blocks
 
 
 

@@ -28,12 +28,17 @@ namespace Solids{
     const static int Octahedron_nedges = 12;
     const static int Octahedron_nfaces = 8;
     const static int Octahedron_ntris  = 8;
+    //                                                             0:-x          1:+x           2:-y         3:+y        4:-z         5:+z
     static Vec3d     Octahedron_verts   [Octahedron_nverts  ] = { {-1.,0.,0.}, {+1.,0.,0.}, {0.,-1.,0.}, {0.,+1.,0.}, {0.,0.,-1.}, {0.,0.,+1.} };
     static Vec2i     Octahedron_edges   [Octahedron_nedges  ] = { 0,2, 0,3, 0,4, 0,5,   1,2, 1,3, 1,4, 1,5,   2,4, 2,5, 3,4, 3,5  };
     static Vec3i     Octahedron_tris    [Octahedron_ntris   ] = { 0,4,2, 0,2,5, 0,3,4, 0,5,3,   1,2,4, 1,5,2, 1,4,3, 1,3,5 };
     static int       Octahedron_ngons   [Octahedron_nfaces  ] = { 3,     3,     3,     3,       3,     3,     3,     3     };
     static int       Octahedron_faces   [Octahedron_nfaces*3] = { 0,4,2, 0,2,5, 0,3,4, 0,5,3,   1,2,4, 1,5,2, 1,4,3, 1,3,5 };
-
+    
+    const static int Octahedron_nplanes  = 3;
+    static Vec3i     Octahedron_planes [Octahedron_nplanes  ] = {4,4,4};
+    //                                                             xy          yz          zx 
+    static Vec3i     Octahedron_planeVs[Octahedron_nplanes*4] = { 0,2,1,3,  2,4,3,5,  4,0,5,1 };
     const static CMesh Octahedron = (CMesh){Octahedron_nverts,Octahedron_nedges,Octahedron_ntris,Octahedron_nfaces, Octahedron_verts, Octahedron_edges, Octahedron_tris, Octahedron_ngons, Octahedron_faces};
 
 

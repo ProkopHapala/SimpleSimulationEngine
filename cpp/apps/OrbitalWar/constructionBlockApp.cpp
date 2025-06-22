@@ -35,20 +35,22 @@
 //#include "testUtils.h"
 
 // ======================  Global Variables & Declarations
-Mesh::Builder2 mesh;
-Mesh::Builder2 low_res_mesh;
-ConstructionBlock block; // for single block testing
-BlockBuilder skelet;     // for the final ship skeleton
+
+Mesh::Builder2 truss;      // final truss to be rendered
+Mesh::Builder2 skelet;    // low resolution mesh to start from
+ConstructionBlock block;
+BlockBuilder bb;    
 
 const int GIRDER_TYPE = 1;
 const int ROPE_TYPE   = 2;
 
+Vec3d pivot_point{ 5.0, 0.0, 3.0 };
+
 using namespace Mesh;
 
-void createLowResShip(Mesh::Builder2& mesh, std::vector<double>& node_sizes) {
+void createSkelet(Mesh::Builder2& mesh, std::vector<double>& node_sizes) {
     mesh.clear();
     node_sizes.clear();
-
     // Nodes from ship_ICF_marksman_2.lua
     node_sizes.push_back(1.0);  mesh.vert({0.0,  0.0, 0.0 }); // 0
     node_sizes.push_back(0.5);  mesh.vert({0.0,  0.0,-15.0}); // 1
@@ -57,7 +59,6 @@ void createLowResShip(Mesh::Builder2& mesh, std::vector<double>& node_sizes) {
     node_sizes.push_back(0.25); mesh.vert({0.0, 10.0, 0.0 }); // 4
     node_sizes.push_back(0.25); mesh.vert({-10.0,0.0, 0.0 }); // 5
     node_sizes.push_back(0.25); mesh.vert({10.0, 0.0, 0.0 }); // 6
-
     // Girders
     mesh.edge(0, 1, GIRDER_TYPE, -1);
     mesh.edge(0, 2, GIRDER_TYPE, -1);
@@ -65,50 +66,47 @@ void createLowResShip(Mesh::Builder2& mesh, std::vector<double>& node_sizes) {
     mesh.edge(0, 4, GIRDER_TYPE, -1);
     mesh.edge(0, 5, GIRDER_TYPE, -1);
     mesh.edge(0, 6, GIRDER_TYPE, -1);
-
     // Ropes
     mesh.edge(1, 3, ROPE_TYPE, -1); mesh.edge(1, 4, ROPE_TYPE, -1); mesh.edge(1, 5, ROPE_TYPE, -1); mesh.edge(1, 6, ROPE_TYPE, -1);
     mesh.edge(2, 3, ROPE_TYPE, -1); mesh.edge(2, 4, ROPE_TYPE, -1); mesh.edge(2, 5, ROPE_TYPE, -1); mesh.edge(2, 6, ROPE_TYPE, -1);
     mesh.edge(3, 5, ROPE_TYPE, -1); mesh.edge(5, 4, ROPE_TYPE, -1); mesh.edge(4, 6, ROPE_TYPE, -1); mesh.edge(6, 3, ROPE_TYPE, -1);
 }
 
-void convertLowToHigh(const Mesh::Builder2& low_res, const std::vector<double>& node_sizes, BlockBuilder& skelet, Mesh::Builder2& high_res) {
-    skelet.clear();
-    for (int i = 0; i < low_res.verts.size(); ++i) {
-        skelet.addBlock(low_res.verts[i].pos, node_sizes[i]);
-    }
-    for (const auto& edge : low_res.edges) {
-        if (edge.w == GIRDER_TYPE) { skelet.connectBlocks(edge.x, edge.y); }
-    }
+void trussFromSkelet(const Mesh::Builder2& skelet, const std::vector<double>& node_sizes, BlockBuilder& bb, Mesh::Builder2& truss) {
+    // skelet (Mesh::Builder2) -> BlockBuilder
+    bb.clear();
+    for (int i = 0; i < skelet.verts.size(); ++i) { bb.addBlock(skelet.verts[i].pos, node_sizes[i]);}
+    for (const auto& edge : skelet.edges)         { if (edge.w == GIRDER_TYPE) { bb.connectBlocks(edge.x, edge.y); }}
     Mesh::ConstructionBlockToMeshBuilder cbm;
-    cbm.mesh = &high_res;
-    cbm.drawBlockBuilder(skelet, 4);
-    for (const auto& edge : low_res.edges) {
-        if (edge.w == ROPE_TYPE) {
-            high_res.rope(low_res.verts[edge.x].pos, low_res.verts[edge.y].pos, -1); // -1 for auto-segmentation
-        }
+    // BlockBuilder -> truss (Mesh::Builder2)
+    cbm.mesh = &truss;
+    cbm.drawBlockBuilder(bb, 4);
+    // ropes
+    for (const auto& edge : skelet.edges) {
+        if (edge.w == ROPE_TYPE) { truss.rope(skelet.verts[edge.x].pos, skelet.verts[edge.y].pos, -1); } // -1 for auto-segmentation
     }
 }
 
-void createTestShip_Hardcoded(BlockBuilder& skelet, Mesh::Builder2& mesh){
+void testConstructionBlocks(BlockBuilder& bb, Mesh::Builder2& mesh){
     Mesh::ConstructionBlockToMeshBuilder cbm;
     cbm.mesh = &mesh;
-
-    skelet.clear();
-    int ic  = skelet.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
-    int ibk = skelet.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
-    int ifw = skelet.addBlock( Vec3d{0.0,  0.0, 20.0}, 0.5  );
-    int ilf = skelet.addBlock( Vec3d{0.0,-10.0, 0.0 }, 0.25 );
-    int irt = skelet.addBlock( Vec3d{0.0, 10.0, 0.0 }, 0.25 );
-    skelet.connectBlocks(ic,ibk);
-    skelet.connectBlocks(ic,ifw);
-    skelet.connectBlocks(ic,ilf);
-    skelet.connectBlocks(ic,irt);
-
-    cbm.drawBlockBuilder( skelet, 4 );
+    bb.clear();
+    int ic  = bb.addBlock( Vec3d{0.0,  0.0, 0.0 }, 1.0  );
+    int ibk = bb.addBlock( Vec3d{0.0,  0.0,-15.0}, 0.5  );
+    int ifw = bb.addBlock( Vec3d{0.0,  0.0, 20.0}, 0.5  );
+    int ilf = bb.addBlock( Vec3d{0.0,-10.0, 0.0 }, 0.25 );
+    int irt = bb.addBlock( Vec3d{0.0, 10.0, 0.0 }, 0.25 );
+    bb.connectBlocks(ic,ibk);
+    bb.connectBlocks(ic,ifw);
+    bb.connectBlocks(ic,ilf);
+    bb.connectBlocks(ic,irt);
+    cbm.drawBlockBuilder( bb, 4 );
 }
 
-Vec3d pivot_point{ 5.0, 0.0, 3.0 };
+
+
+
+
 
 // ====================== Class Definitions
 
@@ -120,18 +118,18 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 	bool bWireframe   = 1;
 
     // View control properties
-    bool bViewLowRes  = false;
+    bool bViewSkelet       = false;
     bool bViewBlockBuilder = false;
-    bool bViewMesh  = true;
-    bool bViewEdges = true;
-    bool bViewTris    = true;
-    bool bViewFaces   = true;
-    bool bViewFaceNormals = false;
-    bool bViewPointLabels = false;
-    bool bViewFaceLabels  = false;
-    bool bViewTriLabels   = false;
-    bool bViewPivotPoint  = true;
-    bool bViewSelection   = true;
+    bool bViewMesh         = true;
+    bool bViewEdges        = true;
+    bool bViewTris         = true;
+    bool bViewFaces        = true;
+    bool bViewFaceNormals  = false;
+    bool bViewPointLabels  = false;
+    bool bViewFaceLabels   = false;
+    bool bViewTriLabels    = false;
+    bool bViewPivotPoint   = true;
+    bool bViewSelection    = true;
 
 	//DropDownList lstLuaFiles;
     GUI gui;
@@ -166,26 +164,24 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     Draw::fontTex = fontTex;
 
-    // ----- Testing Parabola_ExtrudedWire to build magnetic nozzle for nuclear spacecraft
+    // --- Create truss by extruding Parabola  (e.g. to build magnetic nozzle for nuclear spacecraft)
     //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true );
     //Parabola2Mesh(mesh,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // does not work - crash in Mesh::drawFace
     //Parabola_ExtrudedWire( mesh, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
-    // --- The new procedural method
-    std::vector<double> node_sizes;
-    createLowResShip(low_res_mesh, node_sizes);
-    convertLowToHigh(low_res_mesh, node_sizes, skelet, mesh);
-    printf("low_res_mesh.printSizes(): "); low_res_mesh.printSizes();
-    printf("mesh.printSizes():         "); mesh.printSizes();
-    low_res_mesh.write_obj("low_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
-    mesh        .write_obj("high_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
+    // --- Create truss from low resolution skeleton
+    // std::vector<double> node_sizes;
+    // createSkelet(skelet, node_sizes);
+    // trussFromSkelet(skelet, node_sizes, bb, truss);
+    // printf("skelet.printSizes(): "); skelet.printSizes();
+    // printf("truss.printSizes():  "); truss.printSizes();
+    // skelet.write_obj("skelet.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+    // truss .write_obj("truss.obj",  (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
     
-
-
-    // --- The old hardcoded method (preserved for testing)
-    //createTestShip_Hardcoded(skelet, mesh);
-    //printf("mesh.printSizes():         \n"); mesh.printSizes();
-    //mesh.write_obj("high_res_mesh.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
+    // --- Create truss using construction block manually
+    // testConstructionBlocks( bb, truss);
+    // printf("truss.printSizes():         \n"); truss.printSizes();
+    // truss.write_obj("high_res_truss.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
 
     // --- Single block testing
     block.Ls=Vec3d{1.1,1.0,0.9};
@@ -193,10 +189,10 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
         block.faces[i].typ=1;
     }
 
-    mesh.printSizes();
+    truss.printSizes();
     
 
-    //printf( "mesh.tris.size(): \n", mesh.tris.size() );
+    //printf( "truss.tris.size(): \n", truss.tris.size() );
 
     //plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     //girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -206,8 +202,8 @@ ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, in
     //lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
     //lstLuaFiles->setCommand([this](GUIAbstractPanel* panel){ onSelectLuaShipScript.GUIcallback(panel); });
 
-    mesh.bAdditiveSelect = true;
-    mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::vert;
+    truss.bAdditiveSelect = true;
+    truss.selection_mode = (int)Mesh::Builder2::SelectionMode::vert;
     //mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; break;
     //mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::face; break;
     initGUI();
@@ -218,7 +214,7 @@ void ConstructionBlockApp::initGUI(){
     viewControls = new CheckBoxList();
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
-    viewControls->addBox("Low-Res Graph", &bViewLowRes);
+    viewControls->addBox("Low-Res Graph", &bViewSkelet);
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
     viewControls->addBox("Mesh",          &bViewMesh);
     viewControls->addBox("Edges",         &bViewEdges);
@@ -237,21 +233,20 @@ void ConstructionBlockApp::initGUI(){
     //contextMenu->addPanel( "select along line",  {0.0,1.0, 0.0},  0,1,0,0,0 )->command = [&](GUIAbstractPanel* p){ W->ffl.print_nonbonded();   return 0; }; 
     contextMenu->addButton( "selectVertsAlongPolyline", [&](GUIAbstractPanel* p){ 
         printf( "selectVertsAlongPolyline \n" );
-        printf( "select along line BEFORE \n" ); mesh.printSelectedVerts();
-        mesh.selectVertsAlongPolyline( 0.1, true ); 
-        printf( "select along line AFTER \n" ); mesh.printSelectedVerts();
+        printf( "select along line BEFORE \n" ); truss.printSelectedVerts();
+        truss.selectVertsAlongPolyline( 0.1, true ); 
+        printf( "select along line AFTER \n" ); truss.printSelectedVerts();
         return 0; 
     } );
     contextMenu->addButton( "plateBetweenEdges", [&](GUIAbstractPanel* p){ 
         printf( "plateBetweenEdges \n" );
-        printf( "plateBetweenEdges BEFORE \n" ); mesh.printSelectedVerts();
-        mesh.plateBetweenEdges();
-        printf( "plateBetweenEdges AFTER \n" ); mesh.printSelectedVerts();
+        printf( "plateBetweenEdges BEFORE \n" ); truss.printSelectedVerts();
+        truss.plateBetweenEdges();
+        printf( "plateBetweenEdges AFTER \n" ); truss.printSelectedVerts();
         return 0; 
     } );
     gui.addPanel( contextMenu );
 }
-
 
 void ConstructionBlockApp::draw(){
     //printf( " ==== frame %i \n", frameCount );
@@ -262,101 +257,33 @@ void ConstructionBlockApp::draw(){
 	glEnable(GL_LIGHTING);
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
 
-    if(bViewLowRes) {
+    if(bViewSkelet) {
         glDisable(GL_LIGHTING);
         glColor3f(0.8, 0.2, 0.2);
         glLineWidth(3.0);
-        drawEdges(low_res_mesh);
+        drawEdges(skelet);
         glPointSize(10.0);
-        drawVerts(low_res_mesh);
+        drawVerts(skelet);
         glEnable(GL_LIGHTING);
     }
 
     if(bViewBlockBuilder) {
-        Draw3D::drawBlockBuilder( skelet );
+        Draw3D::drawBlockBuilder( bb );
     }
 
     if(bViewMesh) {
-        glColor3f( 1.0,1.0,1.0 );
-        
-        // Enable polygon offset to push the solid faces back slightly in the depth buffer.
-        // This prevents "z-fighting" where the wireframe edges would be hidden by the faces.
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset( 1.0, 1.0 );
-
-        if(bViewFaces) {
-            drawFaces( mesh );
-        }
-        if(bViewTris){
-            drawTriagles( mesh );
-        }
-        glDisable(GL_POLYGON_OFFSET_FILL);
-
-        if(bViewFaceNormals) {
-            glColor3f( 0.0,0.5,1.0 );
-            drawFaceNormals( mesh );
-        }
-        
-        glDisable(GL_LIGHTING);
-        glDisable(GL_CULL_FACE);
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-        
-        if(bViewEdges) {
-            // Draw All Edges
-            glColor3f(0.0,0.0,0.0);
-            glLineWidth(1.0);
-            drawEdges( mesh );
-        }
-
-        if(bViewPointLabels) {
-            glColor3f(0.f,0.f,0.f);
-            drawPointLabels( mesh, 0.02 );
-        }
-
-        if(bViewFaceLabels) {
-            glColor3f(1.f,0.f,0.f);
-            drawFaceLabels( mesh, 0.02 );
-        }
-
-        if(bViewTriLabels) {
-            glColor3f(0.f,0.5f,0.f);
-            drawTriLabels( mesh, 0.02 );
-        }
-
+        glEnable(GL_LIGHTING);
+        drawMesh      ( truss, bViewFaces, bViewTris, bViewFaceNormals, bViewEdges);
+        drawMeshLabels( truss, bViewFaces, bViewPointLabels, bViewFaceLabels, bViewTriLabels);
         glLineWidth(1.0);
         glColor3f(0.0,0.7,0.0);
         if(bDragging && iDraggingButton==SDL_BUTTON_LEFT ){ drawMuseSelectionBox(); }
-
         glDisable(GL_DEPTH_TEST);
-
         if(bViewSelection) {
-            if( mesh.selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
-                if(ipick>=0){
-                    glLineWidth(5.0);
-                    glColor3f(0.0,0.7,0.0);
-                    drawPolygonBorder( mesh, ipick );
-                }
-            }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
-                glColor3f(0.0,0.7,0.0);
-                glLineWidth(5.0);
-                drawSelectedEdges( mesh );
-                drawSelectedEdgeLabels( mesh, 0.02 );
-                glLineWidth(1.0);
-            }else if( mesh.selection_mode==(int)Mesh::Builder2::SelectionMode::vert ){
-                glColor3f(0.0,1.0,0.0);
-                glPointSize(8.0);
-                drawSelectedVerts( mesh );
-                glColor3f(0.0,0.5,0.0);
-                drawSelectedVertLabels( mesh, 0.02, true );
-                glPointSize(1.0);
-            }
+            drawMeshSelection(truss, ipick);
         }
     }
-
-    if(bViewPivotPoint) {
-        Draw3D::drawPointCross( pivot_point, 0.5 );
-    }
-
+    if(bViewPivotPoint) { Draw3D::drawPointCross( pivot_point, 0.5 ); }
     //glLineWidth(5.0); Draw3D::drawAxis(10.0);
 };
 
@@ -426,13 +353,13 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     if( ray0.dist2(ray0_start)<0.1 ){ // too small for selection box 
-                        ipick = mesh.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
+                        ipick = truss.pickSelect( (Vec3d)ray0, (Vec3d)cam.rot.c, 0.1 );
                         printf( "ipick %i \n", ipick );
                         //if(mesh.bAdditiveSelect){ mesh.selection.push_back(ipick); mesh.printSelection(); }
                     }else{
                         //ipick=-1;
-                        int nsel = mesh.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
-                        if(nsel==0) mesh.clearSelection();
+                        int nsel = truss.selectRect( (Vec3d)ray0_start, (Vec3d)ray0, (Mat3d)cam.rot );
+                        if(nsel==0) truss.clearSelection();
                     }
                     bDragging=false;
                     break;
@@ -451,19 +378,19 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 //case SDLK_l:{} break;
                 case SDLK_f:{
-                    mesh.selectionToFace();
+                    truss.selectionToFace();
                 } break;
 
                 case SDLK_e:{
-                    if( (ipick>=0) && ( mesh.selection_mode == (int)Mesh::Builder2::SelectionMode::face ) ){
-                        mesh.extrudeFace( ipick, 5.0 );    
+                    if( (ipick>=0) && ( truss.selection_mode == (int)Mesh::Builder2::SelectionMode::face ) ){
+                        truss.extrudeFace( ipick, 5.0 );    
                     }
                 } break;
 
                 // ---- Selection mode  I, O, P
-                case SDLK_i: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; mesh.bAdditiveSelect = true;  break;
-                case SDLK_o: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::vert; mesh.bAdditiveSelect = true;  break;
-                case SDLK_p: mesh.selection_mode = (int)Mesh::Builder2::SelectionMode::face; mesh.bAdditiveSelect = false; break;
+                case SDLK_i: truss.selection_mode = (int)Mesh::Builder2::SelectionMode::edge; truss.bAdditiveSelect = true;  break;
+                case SDLK_o: truss.selection_mode = (int)Mesh::Builder2::SelectionMode::vert; truss.bAdditiveSelect = true;  break;
+                case SDLK_p: truss.selection_mode = (int)Mesh::Builder2::SelectionMode::face; truss.bAdditiveSelect = false; break;
 
             }
             break;
@@ -489,6 +416,38 @@ int main(int argc, char *argv[]){
     //funcs["-bmix"    ]={1,[&](const char** ss){ int istart; float bmix;  sscanf( ss[0], "%i,%f", &istart, &bmix ); W.sim.mixer.b_end=bmix; W.sim.mixer.istart=istart; printf( "COMMAND LINE: -bmix( istart:%i bmix: %f ) \n", W.sim.mixer.istart, W.sim.mixer.b_end );    } };
     //funcs["-fix"     ]={1,[&](const char** ss){ int n =  readlist( ss[0], W.fixPoints); printf("COMMAND LINE: -fix[%i]{%s}\n", n, ss[0] );  } };
     //funcs["-nsolve"  ]={1,[&](const char** ss){ int nsolv; sscanf( ss[0], "%i", &nsolv ); printf( "COMMAND LINE: -nsolve(%i) \n", nsolv ); W.sim_f.nSolverIters=nsolv; W.sim.nSolverIters=nsolv;  } };    
+    funcs["-parabola"] = {0, [&](const char**){ 
+        printf("funcs[-parabola]: Parabola Extrude Test: "); 
+        truss.clear();
+        // --- Create truss by extruding Parabola (e.g. to build magnetic nozzle for nuclear spacecraft)
+        // Parabola2Mesh(truss,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true ); // Wireframe
+        // Parabola2Mesh(truss,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // Solid (crashes due to normal calculation in MeshBuilder.h)
+        Parabola_ExtrudedWire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
+        printf("Parabola Extrude Test: "); truss.printSizes();
+    }};
+    funcs["-skelet"]   = {0, [&](const char**){ 
+        printf("funcs[-skelet]: Truss from Skelet Test:\n");
+        skelet.clear();
+        std::vector<double> node_sizes;
+        createSkelet(skelet, node_sizes);
+        trussFromSkelet(skelet, node_sizes, bb, truss);
+        printf("Truss from Skelet Test:\n");
+        printf("  skelet.printSizes(): "); skelet.printSizes();
+        printf("  truss.printSizes():  "); truss.printSizes();
+        skelet.write_obj("skelet.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.write_obj("truss.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges | ObjMask::Tris));
+    
+    }};
+    funcs["-blocks"]   = {0, [&](const char**){ 
+        printf("funcs[-blocks]: Manual Construction Blocks Test:\n");
+        testConstructionBlocks(bb, truss);
+        printf("Manual Construction Blocks Test: "); truss.printSizes();
+    }};
+
+    //if( argc<=1 ){  funcs["-parabola"].func(0); }
+    //if( argc<=1 ){  funcs["-blocks"].func(0); }
+    if( argc<=1 ){  funcs["-skelet"].func(0); }
+
 
     process_args( argc, argv, funcs );
 

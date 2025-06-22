@@ -101,6 +101,7 @@ template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n
     //builder.chunk({builder.tris.size()-4*n.a*n.b, 4*n.a*n.b, -1, (int)Builder2::ChunkType::face});
 }
 
+
 void Cone2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);}; 
     if(wire) UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
