@@ -363,6 +363,7 @@ int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const 
     return o->id;
 }
 
+
 /*
 int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d along, Vec2i sides ){
     Slider* o = new Slider();

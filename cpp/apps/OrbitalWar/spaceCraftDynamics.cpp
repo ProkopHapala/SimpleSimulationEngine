@@ -66,6 +66,57 @@ void solve_float(){
     }
 }
 
+int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* nodes, int ngirdes, Vec2i* girdes, int nropes, Vec2i* ropes ){
+    printf("make_Skeleton() creating %d nodes, %d girders, %d ropes\n", nnode, ngirdes, nropes);
+    
+    // Initialize workshop if needed (you might want to move this outside)
+    init_workshop();
+    
+    // Create nodes
+    for(int i=0; i<nnode; i++){
+        theSpaceCraft->add_Node(nodes[i]);
+        printf("  Added node %d at position (%g,%g,%g)\n", i, nodes[i].x, nodes[i].y, nodes[i].z);
+    }
+    
+    // Create girders
+    Vec3d up = {0.0, 0.0, 1.0}; // Default up direction
+    int nseg = 5;               // Number of segments along girder
+    int mseg = 3;               // Number of segments around girder
+    Vec2d wh = {1.0, 1.0};      // Width and height
+    Quat4i stickTypes = {1, 2, 3, 4}; // Default stick material types
+    
+    for(int i=0; i<ngirdes; i++){
+        int node1 = girdes[i].a;
+        int node2 = girdes[i].b;
+        
+        // Calculate vector between nodes to determine up direction
+        Vec3d dir = nodes[node2] - nodes[node1];
+        dir.normalize();
+        
+        // Get a proper up vector (not parallel to dir)
+        if(fabs(dir.z) < 0.9){
+            up = {0.0, 0.0, 1.0};
+        } else {
+            up = {1.0, 0.0, 0.0};
+        }
+        
+        theSpaceCraft->add_Girder(node1, node2, up, nseg, mseg, wh, stickTypes);
+        printf("  Added girder between nodes %d and %d\n", node1, node2);
+    }
+    
+    // Create ropes
+    double thick = 0.1; // Default thickness
+    for(int i=0; i<nropes; i++){
+        int node1 = ropes[i].a;
+        int node2 = ropes[i].b;
+        theSpaceCraft->add_Rope(node1, node2, thick);
+        printf("  Added rope between nodes %d and %d\n", node1, node2);
+    }
+    
+    return 1; // Success
+}
+
+
 // ===================== MAIN
 
 int main(int argc, char *argv[]){
@@ -97,6 +148,43 @@ int main(int argc, char *argv[]){
         init_workshop ();
         makeTrussShape( W.mesh, ishape, nseg, 100.0, 10.0 );
         W.initSimulators();
+    }};
+
+    funcs["-oct_nodes"] = {0, [&](const char**){
+        printf("funcs[-oct_nodes]: Manual Construction Blocks Test:\n");
+        //testConstructionBlocks(bb, truss);
+        const int nnodes = 5;
+        Vec3d nodes[nnodes] = {
+            {0.0,    0.0,    0.0}, // 0
+            {0.0,    0.0, -150.0}, // 1
+            {0.0,    0.0,  200.0}, // 2
+            {0.0, -100.0,    0.0}, // 3
+            {0.0,  100.0,    0.0}  // 4
+        };
+        double node_sizes[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
+        const int nGirders = 4;
+        Vec2i girdes[nGirders] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
+        const int nRopes = 4;
+        Vec2i ropes[nRopes] = { {1,3}, {1,4}, {2,3}, {2,4} };
+
+        // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
+        make_Skeleton( theSpaceCraft, nnodes, nodes, nGirders, girdes, nRopes, ropes );
+
+        // ----- Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
+        W.mesh.clear();
+        BuildCraft_truss( W.mesh, *theSpaceCraft, 30.0 );
+        W.mesh.printSizes();
+        W.initSimulators();
+
+        // ---------- Backup from constructionBlockApp.cpp, this should perhaps go to BuildCraft_truss in SpaceCraft2Mesh2.h
+        //bool bUseSpecialPlanes=false;
+        // CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
+        // truss.facingNodes( oct, nnodes, node_positions, chs );
+        // truss.bridgeFacingPolygons( nedges, edges, node_positions, 4, chs );
+        // printf("  truss.printSizes():  "); truss.printSizes();
+        // truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
+        //printf("Extruding chunk %i by 2.0 units...\n", chs.a);
+        //truss.extrudeFace(chs.a, 2.0);
     }};
 
     funcs["-s"]={1,[&](const char** ss){ 

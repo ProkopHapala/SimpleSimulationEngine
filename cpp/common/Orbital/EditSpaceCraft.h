@@ -103,10 +103,10 @@ int l_BoundNode(lua_State * L){
     //printf( "!!!! l_BoundNode()\n" );
     Node* o = new Node();
     //Vec3d pos;
-    int gid  = Lua::getInt(L, 1);       // index of girder
-    int kind = Lua::getInt(L, 2);       // type of component
+    int gid   = Lua::getInt(L, 1);       // index of girder
+    int kind  = Lua::getInt(L, 2);       // type of component
     o->calong = Lua::getDouble(L, 3);   // position along girder
-    Vec3d p0 = Lua::getVec3(L, 4);
+    Vec3d p0  = Lua::getVec3(L, 4);
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     //o->along.x = o->boundTo->pointAlong( o->calong, -1, &o->pos, p0 );
     o->updateBound( p0 );
@@ -125,7 +125,7 @@ int l_Slider(lua_State * L){
     int gid   = Lua::getInt   (L,1);
     int kind  = Lua::getInt   (L,2);
     o->calong = Lua::getDouble(L, 3);   // position along girder
-    Vec3d p0 = Lua::getVec3(L, 4);
+    Vec3d p0  = Lua::getVec3(L, 4);
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     o->updateBound( p0 );
     //o->updatePath();  // path vertices are not created yet
@@ -241,12 +241,12 @@ int l_Girder  (lua_State * L){
     printf("l_Girder(): Calling make_Girder() C++ method.\n");
     int    node1_id = Lua::getInt(L,1);
     int    node2_id = Lua::getInt(L,2);
-    Vec3d  up = Lua::getVec3(L,3);
+    Vec3d  up       = Lua::getVec3(L,3);
     int    nseg     = Lua::getInt(L,4);
     int    mseg     = Lua::getInt(L,5);
-    Vec2d  wh = Lua::getVec2(L,6);
+    Vec2d  wh       = Lua::getVec2(L,6);
     const char* mat_name = Lua::getString(L,7);
-    Quat4i st = Lua::getVec4i(L,8);
+    Quat4i st       = Lua::getVec4i(L,8);
     int id = theSpaceCraft->make_Girder(node1_id, node2_id, up, nseg, mseg, wh, mat_name, st);
     if(id<0) return 0;
     lua_pushnumber(L, id);

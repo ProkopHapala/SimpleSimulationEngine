@@ -253,6 +253,7 @@ class ShipComponent : public Object { public:
 	//RigidBody pose;
     Vec2i pointRange{-1,-1}; // index of start and end in Truss
     Vec2i stickRange{-1,-1}; // --,,--
+    Vec2i chunkRange{-1,-1}; // --,,--
 
     virtual ~ShipComponent(){};
     virtual void print(bool bShort=false)const{ if(bShort){printf("ShipComponent(id=%i)",id);}else{
@@ -374,7 +375,8 @@ class Weld : public ShipComponent { public:
 };
 
 
-class Node : public Object{ public:
+//class Node : public Object{ public:
+class Node : public ShipComponent{ public:
     int ivert=-1; // to which vertex int the mesh/truss it corresponds
     Vec3d pos;
     //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?

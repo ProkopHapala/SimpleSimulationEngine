@@ -1,4 +1,4 @@
-﻿
+
 #ifndef  SpaceCraft2Mesh2_h
 #define  SpaceCraft2Mesh2_h
 
@@ -19,6 +19,7 @@
 #include "TrussDynamics_f.h"
 #include "TrussDynamics_d.h"
 
+#include "Solids.h"
 using namespace SpaceCrafting;
 
 namespace Mesh{
@@ -480,6 +481,167 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     // }
     
     printf( "BuildCraft_truss() DONE! : npoint %i nstick %i nblocks %i \n", mesh.verts.size(), mesh.edges.size(), mesh.blocks.size()  );
+}
+
+// New block-based construction function
+void BuildCraft_blocks( Builder2& mesh, SpaceCraft& craft, double max_size=-1, double node_scale=1.0 ){
+    printf( "BuildCraft_blocks() - Block-based construction\n" );
+    if(max_size>0){ mesh.max_size=max_size; };
+        
+    // ------ PASS 1: Generate Node Blocks (Octahedra) -------
+    printf("BuildCraft_blocks(): Creating %zu octahedron blocks for nodes...\n", craft.nodes.size());
+    
+    // Add octahedron geometry definition
+    CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
+    //truss.facingNodes( oct, nnodes, node_positions, chs );
+    
+    mesh.block();
+    int ip0 = mesh.verts.size();
+    
+    for(Node* o: craft.nodes){
+        // Record state before generating the block
+        mesh.block();
+        int pre_verts_size = mesh.verts.size();
+        int pre_edges_size = mesh.edges.size();
+        int pre_chunks_size = mesh.chunks.size();
+        
+        // Generate octahedron at the node position, scaled by node_scale
+        Mat3d rot = Mat3dIdentity;
+        // Check if the node is bound
+        if(o->boundTo == 0){
+            // Create an octahedron for the node
+            Quat4i i0s = mesh.addCMesh(oct, true, o->pos, Vec3d{node_scale,node_scale,node_scale} );
+            // // Create face chunks for connection points
+            // int chunk_id = mesh.chunks.size();
+            // mesh.addFaces(pre_verts_size, oct.nplanes);
+            //Quat4i i0s = addCMesh( cmesh, !bSpecialNodes, points[i] ); // bFaces=false, we only want the wireframe initially
+            //if(bSpecialNodes){ out_chs[i] = addFaces( nplane, planes, planeVs, true, i0s.x ); }
+            o->stickRange = {pre_edges_size,  (int)mesh.edges.size()};
+            o->pointRange = {pre_verts_size,  (int)mesh.verts.size()};
+            o->chunkRange = {pre_chunks_size, (int)mesh.chunks.size()};
+            // Store node information
+            // o->ivert = pre_verts_size; // First vertex of the octahedron
+            // NodeBlock nb = {o->pos, o->ivert, i0s.w };
+            // nodeBlocks.push_back(nb);
+        }
+        // Store ranges in the Node object
+        o->pointRange = {pre_verts_size, (int)mesh.verts.size()};
+        o->stickRange = {pre_edges_size, (int)mesh.edges.size()};
+    }
+    
+    // ------ PASS 2: Generate Girder Bridges between Blocks -------
+    // printf("BuildCraft_blocks(): Creating bridges between %zu girders...\n", craft.girders.size());
+    // int i = 0;
+    // for(Girder* o: craft.girders){
+    //     o->update_nodes();
+    //     mesh.block();
+    //     Node* node1 = o->nodes.x;
+    //     Node* node2 = o->nodes.y;
+    //     // Find the chunks to connect
+    //     int iChunk1 = -1;
+    //     int iChunk2 = -1;
+    //     int chunkStart = 0;
+    //     // Find the face on node1 that points most directly toward node2
+    //     Vec3d dir12 = node2->pos - node1->pos;
+    //     dir12.normalize();
+    //     double maxDot1 = -1.0;
+    //     if(node1->pointRange.x != node1->pointRange.y) { // If node has octahedron geometry
+    //         for(int ic = nodeBlocks[node1->id].chunk_id; ic < nodeBlocks[node1->id].chunk_id + oct.nplanes; ic++) {
+    //             Vec3d normal = mesh.calcChunkNormal(ic);
+    //             double dot = normal.dot(dir12);
+    //             if(dot > maxDot1) {
+    //                 maxDot1 = dot;
+    //                 iChunk1 = ic;
+    //             }
+    //         }
+    //     }
+    //     // Find the face on node2 that points most directly toward node1
+    //     Vec3d dir21 = node1->pos - node2->pos;
+    //     dir21.normalize();
+    //     double maxDot2 = -1.0;
+        
+    //     if(node2->pointRange.x != node2->pointRange.y) { // If node has octahedron geometry
+    //         for(int ic = nodeBlocks[node2->id].chunk_id; ic < nodeBlocks[node2->id].chunk_id + oct.nplanes; ic++) {
+    //             Vec3d normal = mesh.calcChunkNormal(ic);
+    //             double dot = normal.dot(dir21);
+    //             if(dot > maxDot2) {
+    //                 maxDot2 = dot;
+    //                 iChunk2 = ic;
+    //             }
+    //         }
+    //     }
+        
+    //     // If we found valid chunks to connect, bridge them
+    //     int pre_verts_size = mesh.verts.size();
+    //     int pre_edges_size = mesh.edges.size();
+        
+    //     if(iChunk1 >= 0 && iChunk2 >= 0) {
+    //         // Bridge the two chunks with a truss-like structure
+    //         mesh.bridgeFacingPolygons(iChunk1, iChunk2, 4, o->st);
+    //     } else {
+    //         // Fallback to traditional girder if octahedron faces not found
+    //         mesh.girder1(node1->pos, node2->pos, o->up, o->nseg, o->wh.a, o->st);
+    //         mesh.girder1_caps(node1->ivert, node2->ivert, o->st.x);
+    //     }
+        
+    //     Quat4i& b = mesh.blocks.back();
+    //     o->pointRange = {b.x, (int)mesh.verts.size()};
+    //     o->stickRange = {b.y, (int)mesh.edges.size()};
+    //     i++;
+    // }
+    
+    // // ------ Handle Ropes -------
+    // printf("BuildCraft_blocks(): Creating %zu ropes...\n", craft.ropes.size());
+    // for(Rope* o: craft.ropes){
+    //     o->update_nodes();
+    //     mesh.block(); 
+    //     Quat4i& b = mesh.blocks.back();
+        
+    //     // Traditional rope creation between nodes
+    //     mesh.rope(o->nodes.x->ivert, o->nodes.y->ivert, o->face_mat, o->nseg);
+        
+    //     o->pointRange = {b.x, (int)mesh.verts.size()};
+    //     o->stickRange = {b.y, (int)mesh.edges.size()};
+    // }
+    
+    // // ------ Handle Rings -------
+    // printf("BuildCraft_blocks(): Creating %zu rings...\n", craft.rings.size());
+    // i = 0;
+    // for(Ring* o: craft.rings){
+    //     o->update_nodes();
+    //     mesh.block();
+    //     mesh.wheel(o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st);
+        
+    //     Quat4i& b = mesh.blocks.back();
+    //     o->pointRange = {b.x, (int)mesh.verts.size()};
+    //     o->stickRange = {b.y, (int)mesh.edges.size()};
+    //     i++;
+    // }
+    
+    // // ------ Handle Other Components (Radiators, Welds) -------
+    // // Same as original implementation
+    // for(Radiator* o : craft.radiators ){
+    //     mesh.block();
+    //     o->print();
+    //     const Girder& g1 = *craft.girders[o->g1];
+    //     const Girder& g2 = *craft.girders[o->g2];
+    //     mesh.plateOnGriders({10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o->g1span, o->g2span, {0,1,2,3});
+        
+    //     Quat4i& b = mesh.blocks.back();
+    //     o->pointRange = {b.x, (int)mesh.verts.size()};
+    //     o->stickRange = {b.y, (int)mesh.edges.size()};
+    // }
+    
+    // for(Weld* o : craft.welds){
+    //     mesh.block();
+    //     mesh.bondsBetweenVertRanges(o->comps.x->pointRange, o->comps.y->pointRange, o->Rmax, o->face_mat);
+        
+    //     Quat4i& b = mesh.blocks.back();
+    //     o->pointRange = {b.x, (int)mesh.verts.size()};
+    //     o->stickRange = {b.y, (int)mesh.edges.size()};
+    // }
+    
+    printf("BuildCraft_blocks() DONE! : npoint %i nstick %i nblocks %i\n", mesh.verts.size(), mesh.edges.size(), mesh.blocks.size());
 }
 
 void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, double r, Mat3d rot=Mat3dIdentity, Vec3d p0=Vec3dZero, double Rcolapse=0.1, double Ranchor=10.0 ){
