@@ -103,10 +103,32 @@ class Builder2{ public:
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
     inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ 
         //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
+        { // check vertex min distance
+            double Rmin=1e-3;
+            for(int i=0;i<verts.size();i++){
+                Vec3d p = verts[i].pos;
+                double r2 = (p-pos).norm2();
+                if( r2<Rmin*Rmin ){
+                    printf( "Mesh::Builder2::vert() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", verts.size(), i,verts.size(), sqrt(r2),Rmin, p.x,p.y,p.z, pos.x,pos.y,pos.z );
+                    exit(0);
+                }
+            }
+        }
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
         printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
+        { // check vertex min distance
+            if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
+            double Rmin=1e-3;
+            Vec3d p0 = verts[a].pos;
+            Vec3d p1 = verts[b].pos;
+            double r2 = (p0-p1).norm2();
+            if( r2<Rmin*Rmin ){
+                printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", edges.size(), a,b, sqrt(r2),Rmin, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
+                exit(0);
+            }
+        }
         edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
     }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }

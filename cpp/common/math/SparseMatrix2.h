@@ -100,7 +100,7 @@ class SparseMatrix2 { public:
 
     __attribute__((hot)) 
     void fwd_subs_m( int ns, const T* b, T* x ){
-        printf("SparseMatrix2::fwd_subs_m() \n");
+        //printf("SparseMatrix2::fwd_subs_m() \n");
         T sum[ns];
         #pragma omp simd
         for (int i=0; i<n; i++){

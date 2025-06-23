@@ -50,6 +50,11 @@ template<typename T> inline void mat2file(const char* fname,int n, int m, T* vec
 template<typename T> void println(const T& t){t.print(); puts(""); };
 template<typename T> void println(const char* s,const T& t){ printf("%s",s);t.print(); puts(""); };
 
+//inline bool isnan(const Mat3d& m){ isnan }
+inline bool isnan(const Quat4d& q){ return isnan(q.x)||isnan(q.y)||isnan(q.z)||isnan(q.w)   || isinf(q.x)||isinf(q.y)||isinf(q.z)||isinf(q.w); }
+inline bool isnan(const Vec3d&  v){ return isnan(v.x)||isnan(v.y)||isnan(v.z)               || isinf(v.x)||isinf(v.y)||isinf(v.z); }
+inline bool isnan(const Vec2d&  v){ return isnan(v.x)||isnan(v.y)                           || isinf(v.x)||isinf(v.y); }
+
 // CPU ticks timer
 // http://stackoverflow.com/questions/6432669/variance-in-rdtsc-overhead
 

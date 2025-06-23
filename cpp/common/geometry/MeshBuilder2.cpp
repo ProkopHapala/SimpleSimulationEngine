@@ -1409,25 +1409,23 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
 
 
 
-int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling ){
-    //printf( "Mesh::Builder2::bridge_quads() BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
+int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Quat4i mask, bool bAlling ){
+    printf( "====Mesh::Builder2::bridge_quads() nseg %i BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", nseg, q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
     if( bAlling ) alling_polygons(4, q1.array, q2.array, 0);
     //printf( "Mesh::Builder2::bridge_quads() AFTER q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
-
     Vec3d A1 = verts[q1.x].pos; Vec3d A2 = verts[q2.x].pos;
     Vec3d B1 = verts[q1.y].pos; Vec3d B2 = verts[q2.y].pos;
     Vec3d C1 = verts[q1.z].pos; Vec3d C2 = verts[q2.z].pos;
     Vec3d D1 = verts[q1.w].pos; Vec3d D2 = verts[q2.w].pos;
-
     int dnp = 4;
     int i00start = verts.size();
     int i00      = i00start;
-    double dc = 1.0/((double)n);
-    int oA=q1.x,oB=q1.y,oC=q1.z,oD=q1.w;
-    for (int i=0; i<=n; i++){
-
+    double dc = 1.0/((double)nseg);
+    int oA=q1.x,oB=q1.y,oC=q1.z,oD=q1.w; // Start with q1 vertices
+    for (int i=0; i<nseg; i++){ // Loop nseg times to create nseg segments
+        printf( "Mesh::Builder2::bridge_quads() iseg %i\n", i );
         int iA,iB,iC,iD;
-        if( i<(n-1) ){
+        if( i < (nseg-1) ){ // Create intermediate rings
             // vertices
             double c  = (i+1)*dc;
             double mc = 1-c;
@@ -1436,29 +1434,33 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat
             iC = vert( C1*mc + C2*c );
             iD = vert( D1*mc + D2*c );
             // ring edges
+            printf( "Mesh::Builder2::bridge_quads()   ring-edges is(%i,%i,%i,%i)\n", iA,iB,iC,iD );
             edge( iA,iB, stickTypes.y );
             edge( iB,iC, stickTypes.y );
             edge( iC,iD, stickTypes.y );
             edge( iD,iA, stickTypes.y );
-        }else{ // i==n-1
+        }else{ // This is the last segment (i == nseg - 1), connect to q2
             iA=q2.x;
             iB=q2.y;
             iC=q2.z;
             iD=q2.w;
         }
         // longitudinal edges
+        printf( "Mesh::Builder2::bridge_quads()   longitudinal-edges os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", oA,oB,oC,oD, iA,iB,iC,iD );
         edge( oA,iA,stickTypes.x );
         edge( oB,iB,stickTypes.x );
         edge( oC,iC,stickTypes.x );
         edge( oD,iD,stickTypes.x );
         // spiral edges
         if(mask.x){
+            printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.x=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.x, oA,oB,oC,oD, iA,iB,iC,iD );
             edge( oA,iB, stickTypes.z );
             edge( oB,iC, stickTypes.z );
             edge( oC,iD, stickTypes.z );
             edge( oD,iA, stickTypes.z );
         }
         if(mask.y){
+            printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.y=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.y, oA,oB,oC,oD, iA,iB,iC,iD );
             edge( oB,iA, stickTypes.z );
             edge( oC,iB, stickTypes.z );
             edge( oD,iC, stickTypes.z );
@@ -1466,10 +1468,12 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat
         }
         // internal edges
         if(mask.z){
+            printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.z=%i os(%i,%i) is(%i,%i)\n", mask.z, oA,oB, iC,iD );
             edge( oA,iC, stickTypes.z );
             edge( oB,iD, stickTypes.z );
         }
         if(mask.w){
+            printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.w=%i os(%i,%i) is(%i,%i)\n", mask.w, oC,oD, iA,iB );
             edge( oC,iA, stickTypes.z );
             edge( oD,iB, stickTypes.z );
         }
@@ -1478,9 +1482,7 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat
         oC=iC;
         oD=iD;
         // i00+=dnp;
-
     }
-
     //return ibloc;
     return i00;
 }

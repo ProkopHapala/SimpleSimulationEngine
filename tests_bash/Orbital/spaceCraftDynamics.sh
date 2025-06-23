@@ -85,7 +85,7 @@ export LD_PRELOAD
 #./$name.x               -method 12  -dt 0.01 -omega 0.0,0.0,0.05 -s data/ship_ICF_marksman_2.lua  -perframe 10  -nsolve 10 -bmix 3,0.8  | tee OUT_orig
 
 
-./$name.x    -oct_nodes
+./$name.x   -omega 0.0,0.0,50.5 -dt 0.01   -oct_nodes
 
 
 

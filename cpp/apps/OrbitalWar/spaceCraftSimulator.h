@@ -44,7 +44,7 @@ void init_workshop(){
 }
 
 void to_TrussDynamics_d( TrussDynamics_d& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
-    printf("#### ==== SpaceCraftSimulator::to_TrussDynamics_d() sim.linSolveMethod=%i \n", sim.linSolveMethod );
+    printf("#### ==== SpaceCraftSimulator::to_TrussDynamics_d() sim.linSolveMethod=%i, sim.pos0=(%g,%g,%g), sim.omega=(%g,%g,%g,%g) \n", sim.linSolveMethod, sim.pos0.x, sim.pos0.y, sim.pos0.z, sim.omega.x, sim.omega.y, sim.omega.z, sim.omega.w );
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_TrussDynamics_d() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
@@ -86,7 +86,7 @@ class SpaceCraftSimulator { public:
 
     Mesh::Builder2 mesh;
     TrussDynamics_d sim;
-    TrussDynamics_f       sim_f;
+    TrussDynamics_f sim_f;
 
     std::vector<int> fixPoints;
 
@@ -124,7 +124,7 @@ void SpaceCraftSimulator::reloadShip( const char* fname ){
 };
 
 void SpaceCraftSimulator::initSimulators( double dt, Vec3d p0, Vec3d omega ){
-    to_TrussDynamics_d  ( sim,   mesh, fixPoints.size(), fixPoints.data() );
+    to_TrussDynamics_d( sim,   mesh, fixPoints.size(), fixPoints.data() );
     to_TrussDynamics_f( sim_f, mesh, fixPoints.size(), fixPoints.data() );
     //sim.cleanVel( Quat4d{0.0,1.0,0.0,0.0} );
     //sim.addAngularVelocity( p0, Vec3fZ*0.01 );

@@ -24,13 +24,22 @@ inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n, bool bTransp=false ){
     for(int j=0; j<n; j++){
         T sum = A[j*n+j];
         for(int k=0; k<j; k++){ sum -= L[j*n+k] * L[j*n+k] * D[k]; }
+        if(isnan(sum)||isinf(sum)){ 
+            printf("ERROR in CholeskyDecomp_LDLT() D[%i] sum=%g A[j,j]=%g \n", j, sum, A[j*n+j]); 
+            for(int k=0; k<j; k++){ printf("L[j=%i,k=%i]=%g D[k]=%g \n", j,k, L[j*n+k], D[k]); }
+            exit(0); 
+        }
         D[j] = sum;
         for(int i=j+1; i<n; i++){
             sum=A[i*n+j];
             for(int k=0; k<j; k++){ sum -= L[i*n+k] * L[j*n+k] * D[k]; }
-            sum /= D[j];
-            if(bTransp){ L[j*n+i]=sum; }
-            else       { L[i*n+j]=sum; };
+            double Lij = sum/D[j];
+            if(isnan(Lij)||isinf(Lij)){ 
+                printf("ERROR in CholeskyDecomp_LDLT() L[%i,%i] Lij=%g D[j]=%g sum=%g A[i,j]=%g \n", i,j, Lij, D[j], sum, A[i,j]); 
+                exit(0); 
+            }
+            if(bTransp){ L[j*n+i]=Lij; }
+            else       { L[i*n+j]=Lij; };
         }
     }
 }

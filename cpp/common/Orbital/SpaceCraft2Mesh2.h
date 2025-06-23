@@ -18,6 +18,7 @@
 #include "SpaceCraft.h"
 #include "TrussDynamics_f.h"
 #include "TrussDynamics_d.h"
+#include "testUtils.h"
 
 #include "Solids.h"
 using namespace SpaceCrafting;
@@ -101,6 +102,7 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
         sim.points[e.y].w += mass*0.5;
         Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
 
+        if(isnan(param)){ printf("ERROR in exportSim() mesh.edges[%i].type=%i param(l0=%g, kPush=%g, kPull=%g, damping=%g) \n", i, e.w, param.x, param.y, param.z, param.w ); exit(0); }
 
         // if mat.name begin with "rope"  
         if( strncmp( mat.name, "rope", 4 )==0 ){

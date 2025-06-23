@@ -129,6 +129,22 @@ class SparseMatrix { public:
         return bErr;
     }
 
+    bool checkNaN( bool bExit=false){
+        for (int i=0; i<n; i++){ // iteratie over rows
+            const int ni = nng[i];     // number of non-zero values in the row
+            const int i0 = i*m;        // start index of the row in the folded arrays
+            const int* indi = inds + i0;
+            const T*   Ai   = vals + i0;
+            T sum = 0;
+            for (int k=0; k<ni; k++) {
+                const int j  = indi[k];
+                T Aij = Ai[k];
+                if(isnan(Aij)||isinf(Aij)){ printf("ERROR in SparseMatrix::checkNaN() A[%i,%i]=%g\n", i,j,Aij); if(bExit)exit(0); return true; };
+            }
+        }
+        return false;
+    }
+
 };
 
 

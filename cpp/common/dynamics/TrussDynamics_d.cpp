@@ -30,6 +30,17 @@
 #include "IO_utils.h"
 #include "testUtils.h"
 
+
+bool checkMatrixNaN(int n, int m, const double* A, const char* name, bool bExit=false){
+    for(int i=0; i<n; i++){
+        for(int j=0; j<m; j++){
+            double Aij = A[i*m+j];
+            if(isnan(Aij)||isinf(Aij)){ printf("ERROR in checkMatrixNaN() %s[%i,%i]=%g\n", name, i,j,Aij); if(bExit)exit(0); return true; };
+        }
+    }
+    return false;
+}
+
 double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb, double tol ){
     double err=0;
     for(int i=0; i<n; i++){ 
@@ -333,7 +344,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     __attribute__((hot)) 
     void TrussDynamics_d::make_PDmat_sparse( SparseMatrix<double>& A, double dt, bool bRealloc ) {
-        printf( "TrussDynamics_d_d::make_PDmat_sparse() dt=%g nNeighMax=%i \n", dt, nNeighMax );
+        printf( "TrussDynamics_d::make_PDmat_sparse() dt=%g nNeighMax=%i \n", dt, nNeighMax );
         double idt2 = 1.0 / (dt * dt);
         // --- count neighbors
         if( bRealloc ){ A.realloc( nPoint, nNeighMax+1 ); }
@@ -349,6 +360,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 int2   b = bonds[ib];
                 int j    = b.y;
                 double k = getLinearBondStiffness( ib );  
+                if(isnan(k)||isinf(k)){ printf("ERROR in TrussDynamics_d::make_PDmat_sparse() [i=%i,ing=%i] ib=%i k=%g\n", i, ing, ib, k); exit(0); }
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
                 Aii += k;
                 if       ( b.y > i ){
@@ -753,7 +765,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     void TrussDynamics_d::prepare_LinearSystem( bool bRealloc, bool bCG, bool bCholesky, int nNeighMaxLDLT_, bool bDens ){ 
         double dt = this->dt;
-        printf( "TrussDynamics_d_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
+        printf( "TrussDynamics_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
 
@@ -768,9 +780,12 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         mat2file<int>   ( "PDsparse_inds.log",  nPoint, nNeighMax+1, (int*)   PDsparse.inds, "%5i " );
         mat2file<double>( "PDsparse_vals.log",  nPoint, nNeighMax+1, (double*)PDsparse.vals );
 
+        if(PDsparse.checkNaN(true)){ printf("ERROR in TrussDynamics_d::prepare_LinearSystem() PDsparse contains NaN => exit \n"); exit(0); }
+
         if(bDens){
             timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
-            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in TrussDynamics_d_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
+            if( PDsparse.checkDens( PDmat, 1e-16, true            ) ){ printf("ERROR in TrussDynamics_d::prepare_LinearSystem() PDsparse does not match (dense)PDmat => exit \n"); exit(0); }
+            if( checkMatrixNaN(nPoint, nPoint,PDmat, "PDmat", true) ){ printf("ERROR in TrussDynamics_d::prepare_LinearSystem() (dense)PDmat contains NaN => exit \n"); exit(0); }
         }
 
         // { // Check M.dot(vec) sparse
@@ -820,11 +835,18 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 //LsparseT.fromDense( nPoint, LDLT_L, 1.e-16, true );
                 //for(int i=0; i<n2; i++){ LDLT_L[i]=0; }
                 Lingebra::CholeskyDecomp_LDLT( PDmat, LDLT_L, LDLT_D, nPoint );
+
+                if( checkMatrixNaN(nPoint, nPoint, LDLT_L, "LDLT_L") || checkMatrixNaN(nPoint, 1, LDLT_D, "LDLT_D") ){ exit(0); }
+
+
                 //Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
-                Lsparse.fromDense( nPoint, LDLT_L, 1e-300 );
+                Lsparse.fromDense   ( nPoint, LDLT_L, 1e-300 );
                 LsparseT.fromFwdSubT( nPoint, LDLT_L);
                 //mat2file<double>( "PDmat.log",  nPoint,nPoint, PDmat  );
                 //mat2file<double>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
+
+                
+
             }
            
 
@@ -868,7 +890,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     __attribute__((hot)) 
     void TrussDynamics_d::run_LinSolve(int niter) {
-        //printf( "TrussDynamics_d::run_LinSolve()  linSolveMethod=%i nSolverIters=%i ps_cor=%p points=%p \n", linSolveMethod, nSolverIters, ps_cor, points  );
+        printf( "TrussDynamics_d::run_LinSolve()  linSolveMethod=%i nSolverIters=%i ps_cor=%p points=%p \n", linSolveMethod, nSolverIters, ps_cor, points  );
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
@@ -980,6 +1002,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
             // Update velocity and points
             
             //   Corrector step
+            double l2sum = 0.0;
             for (int i=0;i<nPoint;i++) {
                 //Vec3d dv = ps_cor[i] - ps_pred[i];
                 //dv.mul(1.0 / dt);
@@ -988,17 +1011,24 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 // To-Do : We need more rigorous approach how to update velocity
 
                 // position-based velocity update
-                double vr2 = vel[i].norm2();
+                //double vr2 = vel[i].norm2();
                 Vec3d v    = ps_cor[i] - points[i].f;
+                double l2 = v.norm2();
+                l2sum += l2;
                 v.mul(inv_dt);
                 //v.mul( sqrt(  vel[i].norm2()/( v.norm2() + 1e-8 ) ) ); // This is unphysicsl
                 if(kFix){ if( kFix[i] > 1e-8){ v=Vec3dZero; } }
                 vel[i].f = v;
                 // update positions
                 points[i].f = ps_cor[i];
+
+                //printf( "STEP: %6i time: %16.8f p.y: %1
+
+                if( isnan(l2)){ printf("ERROR in TrussDynamics_d::run_LinSolve() iter=%i #points=%i  l2=%g ps_cor(%g,%g,%g) points(%g,%g,%g)\n", iter, i, l2, ps_cor[i].x, ps_cor[i].y, ps_cor[i].z, points[i].f.x, points[i].f.y, points[i].f.z); exit(0); }
+                points[i].f = ps_cor[i];
             }            
             time += dt;
-            //printf( "STEP: %6i time: %16.8f p.y: %16.8f v.y: %16.8f f.y: %16.8f mass: %16.8f\n", iter, time, points[0].y, vel[0].y,  forces[0].y, points[0].w );
+            printf( "STEP: %6i time: %16.8f l2sum: %20.8e\n", iter, time, l2sum );
         } // for iter ( time stepping )
         //exit(0);
     }
