@@ -10,6 +10,8 @@
 #include "quaternion.h"
 #include "geom3D.h"
 
+#include "CMesh.h"
+
 //#include "TriangleRayTracer.h"
 //#include "Radiosity.h"
 //#include "Truss.h"
@@ -24,6 +26,10 @@ class SpaceCraft : public CatalogItem { public:
     SpaceCraftWorkshop* workshop = 0;
 
     std::vector<int>       LODs;  // levels of detail for OpenGL rendering
+
+    int defaultNodeMesh    = 0;
+    std::vector<CMesh>     nodeMeshes;
+
     //Truss truss;
     std::vector<Node*>      nodes;
 

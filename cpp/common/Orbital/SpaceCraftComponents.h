@@ -246,6 +246,9 @@ class ShipComponent : public Object { public:
     //int    compKind = (int)ComponetKind::ShipComponent;
     int    shape;
     int    face_mat=-1;
+    Vec3d  pos;
+    double size;
+    // Mat3d  rot; // currently we don't need this but maybe later?
     //int    edge_mat=-1;
     //int    p0; // anchor node
     // char name[NAME_LEN];
@@ -378,7 +381,6 @@ class Weld : public ShipComponent { public:
 //class Node : public Object{ public:
 class Node : public ShipComponent{ public:
     int ivert=-1; // to which vertex int the mesh/truss it corresponds
-    Vec3d pos;
     //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
     //int id;
     StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space

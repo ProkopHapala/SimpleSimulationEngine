@@ -294,6 +294,8 @@ class Builder2{ public:
 
 
     void facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, const int nplane=0, const int* planes=0, const int* planeVs=0 );
+
+    void bridgeFacingPolygons( Vec3d p0, Vec3d p1, const Vec2i ch1, const Vec2i ch2, int nseg=4, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
     void bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
 
 }; // class Mesh::Builder2

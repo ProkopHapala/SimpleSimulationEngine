@@ -1916,22 +1916,41 @@ void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, V
     }
 }
 
+
+void Builder2::bridgeFacingPolygons( Vec3d p0, Vec3d p1, const Vec2i ch1, const Vec2i ch2, int nseg, Quat4i stickTypes, Quat4i maks ){
+    //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
+    Vec3d hray = p1-p0;
+    hray.normalize();
+    int ich1 = findMostFacingNormal(hray, ch1, 0.0, true );
+    int ich2 = findMostFacingNormal(hray, ch2, 0.0, true );
+    if((ich1<0)||(ich2<0)){ 
+        printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
+    }
+    //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+    int* iq1 = getChunkStrip( ich1 );
+    int* iq2 = getChunkStrip( ich2 );
+    //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+    bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
+}
+
 void Builder2::bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes, Quat4i maks ){
     for(int i=0; i<nrod; i++){
         Vec2i e = edges[i];
-        //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
-        Vec3d hray = points[e.x] - points[e.y];
-        hray.normalize();
-        int ich1 = findMostFacingNormal(hray, chs[e.x], 0.0, true );
-        int ich2 = findMostFacingNormal(hray, chs[e.y], 0.0, true );
-        if((ich1<0)||(ich2<0)){ 
-            printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
-        }
-        //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-        int* iq1 = getChunkStrip( ich1 );
-        int* iq2 = getChunkStrip( ich2 );
-        //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-        bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
+        bridgeFacingPolygons( points[e.x], points[e.y], chs[e.x], chs[e.y], nseg, stickTypes, maks );
+        // Vec2i e = edges[i];
+        // //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
+        // Vec3d hray = points[e.x] - points[e.y];
+        // hray.normalize();
+        // int ich1 = findMostFacingNormal(hray, chs[e.x], 0.0, true );
+        // int ich2 = findMostFacingNormal(hray, chs[e.y], 0.0, true );
+        // if((ich1<0)||(ich2<0)){ 
+        //     printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
+        // }
+        // //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+        // int* iq1 = getChunkStrip( ich1 );
+        // int* iq2 = getChunkStrip( ich2 );
+        // //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
+        // bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
     }
 }
 
