@@ -66,16 +66,16 @@ void solve_float(){
     }
 }
 
-int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* nodes, int ngirdes, Vec2i* girdes, int nropes, Vec2i* ropes ){
+int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double* node_size, int ngirdes, Vec2i* girdes, int nropes, Vec2i* ropes ){
     printf("make_Skeleton() creating %d nodes, %d girders, %d ropes\n", nnode, ngirdes, nropes);
     
     // Initialize workshop if needed (you might want to move this outside)
     init_workshop();
     
-    // Create nodes
+    int nodeEdgeType = 0;
     for(int i=0; i<nnode; i++){
-        theSpaceCraft->add_Node(nodes[i]);
-        printf("  Added node %d at position (%g,%g,%g)\n", i, nodes[i].x, nodes[i].y, nodes[i].z);
+        theSpaceCraft->add_Node(node_pos[i], node_size[i], nodeEdgeType );
+        printf("  Added node %d at position (%g,%g,%g)\n", i, node_pos[i].x, node_pos[i].y, node_pos[i].z);
     }
     
     // Create girders
@@ -83,25 +83,19 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* nodes, int ngird
     int nseg = 5;               // Number of segments along girder
     int mseg = 3;               // Number of segments around girder
     Vec2d wh = {1.0, 1.0};      // Width and height
-    Quat4i stickTypes = {1, 2, 3, 4}; // Default stick material types
+    //Quat4i stickTypes = {1, 2, 3, 4}; // Default stick material types
+    Quat4i stickTypes = {0,0,0,0}; // Default stick material types
     
     for(int i=0; i<ngirdes; i++){
-        int node1 = girdes[i].a;
-        int node2 = girdes[i].b;
-        
+        Vec2i e = girdes[i];
         // Calculate vector between nodes to determine up direction
-        Vec3d dir = nodes[node2] - nodes[node1];
+        Vec3d dir = node_pos[e.y] - node_pos[e.x];
         dir.normalize();
-        
         // Get a proper up vector (not parallel to dir)
-        if(fabs(dir.z) < 0.9){
-            up = {0.0, 0.0, 1.0};
-        } else {
-            up = {1.0, 0.0, 0.0};
-        }
-        
-        theSpaceCraft->add_Girder(node1, node2, up, nseg, mseg, wh, stickTypes);
-        printf("  Added girder between nodes %d and %d\n", node1, node2);
+        if(fabs(dir.z) < 0.9){ up = {0.0, 0.0, 1.0}; } 
+        else                 { up = {1.0, 0.0, 0.0}; }
+        theSpaceCraft->add_Girder(e.x, e.y, up, nseg, mseg, wh, stickTypes);
+        printf("  Added girder between nodes %d and %d\n", e.x, e.y);
     }
     
     // Create ropes
@@ -120,6 +114,12 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* nodes, int ngird
 // ===================== MAIN
 
 int main(int argc, char *argv[]){
+
+    // disable stdout buffering
+    setbuf(stdout, NULL);
+    //Or use the more flexible setvbuf:
+    //setvbuf(stdout, NULL, _IONBF, 0); 
+
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
     printf( "argc %i \n", argc );
     SDL_DisplayMode dm = initSDLOGL( 8 );
@@ -161,18 +161,22 @@ int main(int argc, char *argv[]){
             {0.0, -100.0,    0.0}, // 3
             {0.0,  100.0,    0.0}  // 4
         };
-        double node_sizes[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
+        double node_sizes[nnodes] = {10.0, 5., 5.0, 5.0, 5.0 };
         const int nGirders = 4;
         Vec2i girdes[nGirders] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
         const int nRopes = 4;
         Vec2i ropes[nRopes] = { {1,3}, {1,4}, {2,3}, {2,4} };
 
         // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
-        make_Skeleton( theSpaceCraft, nnodes, nodes, nGirders, girdes, nRopes, ropes );
+        make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, nRopes, ropes );
 
         // ----- Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
+
+        CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
+        theSpaceCraft->nodeMeshes.push_back(oct);
+        
         W.mesh.clear();
-        BuildCraft_truss( W.mesh, *theSpaceCraft, 30.0 );
+        BuildCraft_blocks( W.mesh, *theSpaceCraft, 30.0 );
         W.mesh.printSizes();
         W.initSimulators();
 

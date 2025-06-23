@@ -136,10 +136,12 @@ class SpaceCraft : public CatalogItem { public:
         return t;
 	}
 
-int add_Node( const Vec3d& pos ){ 
+int add_Node( const Vec3d& pos, double size=1, int edge_type=-1 ){ 
     Node* o = new Node();
     o->pos = pos;
     o->id  = nodes.size();
+    o->size = size;
+    o->edge_type = edge_type;
     nodes.push_back( o );
     //if(bPrint)printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
     if(bPrint) o->print();

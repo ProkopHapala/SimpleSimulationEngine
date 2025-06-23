@@ -383,6 +383,7 @@ class Node : public ShipComponent{ public:
     int ivert=-1; // to which vertex int the mesh/truss it corresponds
     //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
     //int id;
+    int edge_type=-1;
     StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space
     double calong;           // position along the bound component
     Vec2i  along{-1,-1};     // index of

@@ -105,7 +105,10 @@ class Builder2{ public:
         //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
-    inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
+    inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
+        printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
+        edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
+    }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
     inline int stick( Vec3d a, Vec3d b, int t=-1 ){ 
@@ -208,7 +211,7 @@ class Builder2{ public:
     Vec2i addVerts( int n, const Vec3d* ps );
     Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2, int iv0=0 );
     Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris, int iv0=0 );
-    Quat4i addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0=Vec3dZero, Vec3d sc=Vec3dOne, Mat3d* rot=0 );
+    Quat4i addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0=Vec3dZero, Vec3d sc=Vec3dOne, Mat3d* rot=0, int edge_type=-1 );
     int selectionToFace();
 
     // ---- Selection
@@ -277,6 +280,7 @@ class Builder2{ public:
     void printSizes();
     void printVerts();
     void printEdges();
+    void printChunkRange( int ich, int ich2=-1 );
 
     int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false );
     int triangle_strip( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, int stickType, bool bCaps=false );
