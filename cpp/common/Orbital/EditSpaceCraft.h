@@ -19,11 +19,14 @@ namespace SpaceCrafting{
 char str[4096];
 //int fontTex = 0;
 lua_State  * theLua=0;
+
 SpaceCraft * theSpaceCraft=0;
 
 SpaceCraftWorkshop workshop;
 
 Radiosity radiositySolver;
+
+static bool bUseOriginalLuaWrappers = false; 
 
 
 constexpr int NBIT_kind = 8;
@@ -87,7 +90,7 @@ int l_StickMaterial(lua_State * L){
 int l_Node    (lua_State * L){
     Node* o = new Node();
     //Vec3d pos;
-    Lua::getVec3(L, 1, o->pos );
+    o->pos = Lua::getVec3(L, 1);
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
     if(verbosity>1) o->print();
@@ -103,7 +106,7 @@ int l_BoundNode(lua_State * L){
     int gid  = Lua::getInt(L, 1);       // index of girder
     int kind = Lua::getInt(L, 2);       // type of component
     o->calong = Lua::getDouble(L, 3);   // position along girder
-    Vec3d p0; Lua::getVec3(L, 4, p0 );
+    Vec3d p0 = Lua::getVec3(L, 4);
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     //o->along.x = o->boundTo->pointAlong( o->calong, -1, &o->pos, p0 );
     o->updateBound( p0 );
@@ -122,7 +125,7 @@ int l_Slider(lua_State * L){
     int gid   = Lua::getInt   (L,1);
     int kind  = Lua::getInt   (L,2);
     o->calong = Lua::getDouble(L, 3);   // position along girder
-    Vec3d p0; Lua::getVec3(L, 4, p0 );
+    Vec3d p0 = Lua::getVec3(L, 4);
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     o->updateBound( p0 );
     //o->updatePath();  // path vertices are not created yet
@@ -163,35 +166,16 @@ int l_Slider(lua_State * L){
 */
 
 int l_Rope    (lua_State * L){
-    //ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
-    Rope* o = new Rope();
-    o->nodes.x    = theSpaceCraft->nodes[Lua::getInt(L,1)];
-    o->nodes.y    = theSpaceCraft->nodes[Lua::getInt(L,2)];
-    o->thick = Lua::getDouble(L,3) * 1e-3; // [mm]->[m]
-    o->nseg  = Lua::getInt(L,4);
+    printf("l_Rope(): Calling make_Rope() C++ method.\n");
+    int    node1_id  = Lua::getInt(L,1);
+    int    node2_id  = Lua::getInt(L,2);
+    double thick_mm  = Lua::getDouble(L,3);
+    int    nseg      = Lua::getInt(L,4);
     double preStrain = Lua::getDouble(L,5);
-    const char * matn = Lua::getString(L,6);
-    //o->face_mat = workshop.panelMaterials.getId( matn );
-    //o->face_mat = workshop.stickMaterials.getId( matn );
-    o->id   = theSpaceCraft->ropes.size();
-    { // define new StickMaterial
-        StickMaterial *mat = new StickMaterial();
-        //char mat_name[NAME_LEN];
-        sprintf( mat->name, "rope%i", o->id ); //printf( "l_Rope() mat->name(%s)\n", mat->name );
-        mat->diameter      =  o->thick;
-        mat->wallThickness =  o->thick*0.5;
-        mat->preStrain     =  preStrain;
-        //mat->area          =  o->thick*o->thick*0.25*M_PI;
-        mat->materialId    = workshop.materials.getId( matn );
-        mat->update( workshop.materials.vec[mat->materialId] );
-        if( workshop.stickMaterials.add(mat) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", mat->name );
-        mat->id = workshop.stickMaterials.getId( mat->name );
-        if(verbosity>1) mat->print();
-        o->face_mat = mat->id;
-    }
-    if(verbosity>1) o->print();
-    theSpaceCraft->ropes.push_back( o );
-    lua_pushnumber(L, o->id);
+    const char *mat_name = Lua::getString(L,6);
+    int id = theSpaceCraft->make_Rope(node1_id, node2_id, thick_mm, nseg, preStrain, mat_name);
+    if(id<0) return 0;
+    lua_pushnumber(L, id);
     return 1;
 };
 
@@ -254,115 +238,55 @@ int l_Rope2 (lua_State * L){
 };
 
 int l_Girder  (lua_State * L){
-    //Lua::dumpStack(L);
-    Girder* o = new Girder();
-    int id1  = Lua::getInt   (L,1);
-    int id2  = Lua::getInt   (L,2);
-    //printf( "l_Girder() id1,id2 %i,%i\n", id1, id2 );
-    if((id1>=theSpaceCraft->nodes.size()) || (id1<0) ){ printf( "ERROR in l_Girder() node1(%i) out of bounds (0,%i)", id1, theSpaceCraft->nodes.size() ); return 0; }
-    if((id2>=theSpaceCraft->nodes.size()) || (id2<0) ){ printf( "ERROR in l_Girder() node2(%i) out of bounds (0,%i)", id2, theSpaceCraft->nodes.size() ); return 0; }
-    o->nodes.x = theSpaceCraft->nodes[id1];
-    o->nodes.y = theSpaceCraft->nodes[id2];
-    //o->nodes.x = theSpaceCraft->nodes[Lua::getInt (L,1)];
-    //o->nodes.y = theSpaceCraft->nodes[Lua::getInt (L,2)];
-              Lua::getVec3(L,3, o->up );
-    o->nseg = Lua::getInt (L,4);
-    o->mseg = Lua::getInt (L,5);
-              Lua::getVec2(L,6, o->wh ); 
-    const char * matn = Lua::getString(L,7);
-              Lua::getVec4i(L,8, o->st );
-    o->face_mat = workshop.panelMaterials.getId( matn );
-    o->id     = theSpaceCraft->girders.size();
-    if(verbosity>1) o->print();
-    theSpaceCraft->girders.push_back( o );
-    lua_pushnumber(L, o->id);
+    printf("l_Girder(): Calling make_Girder() C++ method.\n");
+    int    node1_id = Lua::getInt(L,1);
+    int    node2_id = Lua::getInt(L,2);
+    Vec3d  up = Lua::getVec3(L,3);
+    int    nseg     = Lua::getInt(L,4);
+    int    mseg     = Lua::getInt(L,5);
+    Vec2d  wh = Lua::getVec2(L,6);
+    const char* mat_name = Lua::getString(L,7);
+    Quat4i st = Lua::getVec4i(L,8);
+    int id = theSpaceCraft->make_Girder(node1_id, node2_id, up, nseg, mseg, wh, mat_name, st);
+    if(id<0) return 0;
+    lua_pushnumber(L, id);
     return 1;
 };
-
 
 // ToDo: Make l_Ring function which takes as input 3-4 girders to which the wheel should be attached, that way we can avoid specification of axis, and others
 
 int l_Ring    (lua_State * L){
-    //Lua::dumpStack(L);
-    Ring* o = new Ring();
-    // Lua::getVec3(L,3, o->up );
-    Lua::getVec3(L,1, o->pose.pos   ); 
-    Lua::getVec3(L,2, o->pose.rot.c );
-    Lua::getVec3(L,3, o->pose.rot.b );
-    o->pose.rot.fromDirUp(o->pose.rot.c,o->pose.rot.b);
-    o->nseg = Lua::getInt (L,4);
-    o->R    = Lua::getDouble(L,5);
-             Lua::getVec2(L,6, o->wh );
-    const char * matn = Lua::getString(L,7);
-             Lua::getVec4i(L,8, o->st );
-    o->face_mat = workshop.panelMaterials.getId( matn );
-    o->id     = theSpaceCraft->rings.size();
-    if(verbosity>1) o->print();
-    theSpaceCraft->rings.push_back( o );
-    lua_pushnumber(L, o->id);
+    printf("l_Ring(): Calling make_Ring() C++ method.\n");
+    Vec3d  pos      = Lua::getVec3(L,1);
+    Vec3d  dir      = Lua::getVec3(L,2);
+    Vec3d  up       = Lua::getVec3(L,3);
+    int    nseg     = Lua::getInt(L,4);
+    double R        = Lua::getDouble(L,5);
+    Vec2d  wh       = Lua::getVec2(L,6);
+    const char* mat_name = Lua::getString(L,7);
+    Quat4i st       = Lua::getVec4i(L,8);
+    int id = theSpaceCraft->make_Ring(pos, dir, up, R, nseg, wh, mat_name, st);
+    if(id<0) return 0;
+    lua_pushnumber(L, id);
     return 1;
 };
 
 // this ring is attached to girders by 3-4 nodes, 3 points define a circle
 // Ring( [g1,g2,g3,g4], [c1,c1,c1,c1], p0, nseg, wh={4.0,4.0}, "Steel", g1_st )
 int l_Ring2    (lua_State * L){
-    //Lua::dumpStack(L);
-    Ring* o = new Ring();
     int   gs[4];
     float cs[4] ;
     Lua::getLuaArr( L, 4, gs, 1 );
     Lua::getLuaArr( L, 4, cs, 2 );
-    //for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
-    Vec3d p0; Lua::getVec3(L,3, p0 );
-    o->nseg = Lua::getInt (L,4);             //printf( "l_Ring2() nseg %i\n",  o->nseg          );
-              Lua::getVec2(L,5, o->wh );     //printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
-    o->pose.pos.add_mul( o->pose.rot.c, -o->wh.y );
-    const char * matn = Lua::getString(L,6); //printf( "l_Ring2() matn %s\n", matn );
-              Lua::getVec4i(L,7, o->st );    //printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
-    int icontrol = Lua::getInt (L,8);        //printf( "l_Ring2() icontrol %i\n", icontrol );
-
-    printf( "l_Ring2() p0(%g,%g,%g) gs %i,%i,%i,%i cs %g,%g,%g,%g \n", p0.x, p0.y, p0.z, gs[0], gs[1], gs[2], gs[3], cs[0], cs[1], cs[2], cs[3] );
-
-    // Make nodes bound to nodes to attach ring to girders
-    Slider* nd[4];
-    for(int i=0; i<4; i++){    // max 4 anchor points
-        if(gs[i]<0) continue;
-        nd[i] = new Slider();
-        nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
-        if(cs[i]>0){
-            nd[i]->calong = cs[i];
-            nd[i]->updateBound( p0 );   // find the nearest side of the girder to which the node is attached
-            //printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
-        }else{
-            nd[i]->calong = -1.0;  // to be calculated later
-        }
-        nd[i]->id = theSpaceCraft->nodes.size(); 
-        theSpaceCraft->nodes  .push_back( nd[i] ); 
-        theSpaceCraft->sliders.push_back( nd[i] );
-        nd[i]->icontrol = icontrol;
-        ((Slider**)&(o->nodes))[i] = nd[i];
-    }
-    // Warrning 1: what if nodes->pos are not yet defined (which is the case for BoundNodes)
-    o->R = circle_3point( nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b );   // find the pos, rot, and radius of the ring from 3 points nd[1,2,3].pos
-    o->pose.rot.c.set_cross( o->pose.rot.b, o->pose.rot.a );
-    //printf("o->pose.pos");   print( o->pose.pos );
-    //printf("o->pose.rot.c"); print( o->pose.rot.c );
-    //printf("o->pose.rot.b"); print( o->pose.rot.b );
-    // now when we know the ring pose we can calculate the position of the remaining nodes from intersection of the girders with the ring
-    for(int i=0; i<4; i++){ 
-        if(gs[i]<0) continue;
-        if(cs[i]<0){
-            nd[i]->calong = intersect_RingGirder( o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true );
-            nd[i]->updateBound( p0 );
-            //nd[i]->updateBound( nd[i]->pos );   // find the nearest side of the girder to which the node is attached
-            //printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
-        }
-    }
-    o->face_mat = workshop.panelMaterials.getId( matn );
-    o->id     = theSpaceCraft->rings.size();
-    //if(verbosity>1) o->print();
-    theSpaceCraft->rings.push_back( o );
-    lua_pushnumber(L, o->id);
+    Vec3d p0        = Lua::getVec3(L,3);
+    int    nseg     = Lua::getInt(L,4);
+    Vec2d  wh       = Lua::getVec2(L,5);
+    const char* mat_name = Lua::getString(L,6);
+    Quat4i st       = Lua::getVec4i(L,7);
+    int icontrol    = Lua::getInt(L,8);
+    int id = theSpaceCraft->make_Ring2(gs, cs, p0, nseg, wh, mat_name, st, icontrol);
+    if(id<0) return 0;
+    lua_pushnumber(L, id);
     return 1;
 };
 
@@ -381,8 +305,6 @@ int l_Weld    (lua_State * L){
     lua_pushnumber(L, o->id);
     return 1;
 };
-
-
 
 // Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 int l_Radiator (lua_State * L){
@@ -420,11 +342,11 @@ int l_Shield (lua_State * L){
 // Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 int l_Tank (lua_State * L){
     Tank* o = new Tank();
-    Lua::getVec3(L, 1, o->pose.pos   );
-    Lua::getVec3(L, 2, o->pose.rot.c );
+    o->pose.pos   = Lua::getVec3(L, 1);
+    o->pose.rot.c = Lua::getVec3(L, 2);
     o->pose.rot.c.normalize();
     o->pose.rot.c.getSomeOrtho( o->pose.rot.b, o->pose.rot.a );
-    Lua::getVec3(L, 3, o->span );
+    o->span = Lua::getVec3(L, 3);
     const char * matn = Lua::getString(L,4);
     o->id   = theSpaceCraft->tanks.size();
     if(verbosity>1) o->print();
@@ -436,11 +358,11 @@ int l_Tank (lua_State * L){
 // Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 int l_Thruster (lua_State * L){
     Thruster* o = new Thruster();
-    Lua::getVec3(L, 1, o->pose.pos   );
-    Lua::getVec3(L, 2, o->pose.rot.c );
+    o->pose.pos   = Lua::getVec3(L, 1);
+    o->pose.rot.c = Lua::getVec3(L, 2);
     o->pose.rot.c.normalize();
     o->pose.rot.c.getSomeOrtho( o->pose.rot.b, o->pose.rot.a );
-    Lua::getVec3(L, 3, o->span );
+    o->span       = Lua::getVec3(L, 3);
     const char * skind = Lua::getString(L,4);
     o->id   = theSpaceCraft->thrusters.size();
     if(verbosity>1) o->print();
@@ -451,9 +373,9 @@ int l_Thruster (lua_State * L){
 
 int l_Gun     (lua_State * L){
     Gun* o = new Gun();
-    o->suppId     = Lua::getInt   (L,1);
-    o->suppSpan.x  = Lua::getDouble(L,2);
-    o->suppSpan.y  = Lua::getDouble(L,3);
+    o->suppId          = Lua::getInt   (L,1);
+    o->suppSpan.x      = Lua::getDouble(L,2);
+    o->suppSpan.y      = Lua::getDouble(L,3);
     const char * skind = Lua::getString(L,4);
     o->id   = theSpaceCraft->guns.size();
     if(verbosity>1) o->print();
@@ -462,15 +384,14 @@ int l_Gun     (lua_State * L){
     return 1;
 };
 
-
 int l_Rock     (lua_State * L){
     Rock* o = new Rock();
     Vec3d dir,up;
-    Lua::getVec3(L, 1, o->pose.pos   );
-    Lua::getVec3(L, 2, dir );
-    Lua::getVec3(L, 3, up  );
+    o->pose.pos = Lua::getVec3(L, 1);
+    dir     = Lua::getVec3(L, 2);
+    up      = Lua::getVec3(L, 3);
     o->pose.rot.fromDirUp(dir, up);
-    Lua::getVec3(L, 4, o->span );
+    o->span = Lua::getVec3(L, 4);
     o->id   = theSpaceCraft->rocks.size();
     if(verbosity>1) o->print();
     theSpaceCraft->rocks.push_back( o );
@@ -481,11 +402,11 @@ int l_Rock     (lua_State * L){
 int l_Balloon     (lua_State * L){
     Balloon* o = new Balloon();
     Vec3d dir,up;
-    Lua::getVec3(L, 1, o->pose.pos   );
-    Lua::getVec3(L, 2, dir );
-    Lua::getVec3(L, 3, up  );
+    o->pose.pos = Lua::getVec3(L, 1);
+    dir     = Lua::getVec3(L, 2);
+    up      = Lua::getVec3(L, 3);
     o->pose.rot.fromDirUp(dir, up);
-    Lua::getVec3(L, 4, o->span );
+    o->span = Lua::getVec3(L, 4);
     o->id   = theSpaceCraft->balloons.size();
     if(verbosity>1) o->print();
     theSpaceCraft->balloons.push_back( o );
@@ -503,6 +424,7 @@ void initSpaceCraftingLua(){
     luaL_openlibs(L);
     lua_register(L, "Material", l_Material );
     lua_register(L, "StickMaterial", l_StickMaterial );
+    theSpaceCraft->workshop = &workshop; // Initialize the workshop pointer in SpaceCraft
     //lua_register(L, "PanelMaterial", l_PanelMaterial );
     lua_register(L, "Node",     l_Node     );
     lua_register(L, "BoundNode",l_BoundNode);

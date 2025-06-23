@@ -89,6 +89,7 @@ int main(int argc, char *argv[]){
     funcs["-omega"   ]={1,[&](const char** ss){ Quat4d o;  sscanf( ss[0], "%lf,%lf,%lf", &o.x, &o.y, &o.z ); o.w=o.f.normalize(); W.sim.omega=o; W.sim_f.omega=(Quat4f)o; printf( "COMMAND LINE: -omega( sim.omega: %f %f %f %f ) \n", W.sim.omega.x, W.sim.omega.y, W.sim.omega.z, W.sim.omega.w );    } };
     funcs["-drag"    ]={1,[&](const char** ss){ sscanf( ss[0], "%lf", &W.sim.Cdrag );  printf( "COMMAND LINE: -drag( sim.Cdrag: %f ) \n", W.sim.Cdrag );    } };
    
+    funcs["-debug_orig"]={0,[&](const char** ss){ bUseOriginalLuaWrappers=true; printf( "COMMAND LINE: -debug_orig \n" ); } };
 
     funcs["-shape"   ]={1,[&](const char** ss){ 
         int ishape, nseg; int nret=sscanf( ss[0],"%i,%i", &ishape, &nseg ); if(nret<2){ printf( "ERROR reading argument -shape nret(%i)<2 %s \n", nret, ss[0] ); exit(0);}
@@ -97,6 +98,7 @@ int main(int argc, char *argv[]){
         makeTrussShape( W.mesh, ishape, nseg, 100.0, 10.0 );
         W.initSimulators();
     }};
+
     funcs["-s"]={1,[&](const char** ss){ 
         W.reloadShip( ss[0] );
         W.initSimulators( );

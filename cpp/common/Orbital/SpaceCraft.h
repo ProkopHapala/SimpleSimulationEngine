@@ -271,6 +271,98 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
     return o->id;
 };
 
+// ==== functions to support scripting (e.g. from Lua)
+
+int make_Rope(int node1_id, int node2_id, double thick_mm, int nseg, double preStrain, const char* mat_name) {
+    if ((node1_id >= nodes.size()) || (node1_id < 0)) { printf("ERROR in make_Rope() node1(%i) out of bounds (0,%i)\n", node1_id, (int)nodes.size()); return -1; }
+    if ((node2_id >= nodes.size()) || (node2_id < 0)) { printf("ERROR in make_Rope() node2(%i) out of bounds (0,%i)\n", node2_id, (int)nodes.size()); return -1; }
+    Rope* o = new Rope();
+    o->nodes.x = nodes[node1_id];
+    o->nodes.y = nodes[node2_id];
+    o->thick = thick_mm * 1e-3; // [mm]->[m]
+    o->nseg = nseg;
+    o->id = ropes.size();
+    { // define new StickMaterial
+        StickMaterial *mat = new StickMaterial();
+        sprintf(mat->name, "rope%i", o->id);
+        mat->diameter = o->thick;
+        mat->wallThickness = o->thick * 0.5;
+        mat->preStrain = preStrain;
+        mat->materialId = workshop->materials.getId(mat_name);
+        mat->update(workshop->materials.vec[mat->materialId]);
+        workshop->stickMaterials.add(mat);
+        mat->id = workshop->stickMaterials.getId(mat->name);
+        o->face_mat = mat->id;
+    }
+    if (bPrint) o->print();
+    ropes.push_back(o);
+    return o->id;
+}
+
+int make_Girder(int node1_id, int node2_id, const Vec3d& up, int nseg, int mseg, const Vec2d& wh, const char* mat_name, const Quat4i& st) {
+    if ((node1_id >= nodes.size()) || (node1_id < 0)) { printf("ERROR in make_Girder() node1(%i) out of bounds (0,%i)\n", node1_id, (int)nodes.size()); return -1; }
+    if ((node2_id >= nodes.size()) || (node2_id < 0)) { printf("ERROR in make_Girder() node2(%i) out of bounds (0,%i)\n", node2_id, (int)nodes.size()); return -1; }
+    Girder* o = new Girder();
+    o->nodes.x = nodes[node1_id];
+    o->nodes.y = nodes[node2_id];
+    o->up = up;
+    o->nseg = nseg;
+    o->mseg = mseg;
+    o->wh = wh;
+    o->st = st;
+    o->face_mat = workshop->panelMaterials.getId(mat_name);
+    o->id = girders.size();
+    if (bPrint) o->print();
+    girders.push_back(o);
+    return o->id;
+}
+
+int make_Ring(const Vec3d& pos, const Vec3d& dir, const Vec3d& up, double R, int nseg, const Vec2d& wh, const char* mat_name, const Quat4i& st) {
+    Ring* o = new Ring();
+    o->pose.pos = pos;
+    o->pose.rot.fromDirUp(dir, up);
+    o->R = R;
+    o->nseg = nseg;
+    o->wh = wh;
+    o->st = st;
+    o->face_mat = workshop->panelMaterials.getId(mat_name);
+    o->id = rings.size();
+    if (bPrint) o->print();
+    rings.push_back(o);
+    return o->id;
+}
+
+int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const Vec2d& wh, const char* mat_name, const Quat4i& st, int icontrol) {
+    Ring* o = new Ring();
+    o->nseg = nseg;
+    o->wh = wh;
+    o->st = st;
+    o->face_mat = workshop->panelMaterials.getId(mat_name);
+
+    Slider* nd[4] = {nullptr, nullptr, nullptr, nullptr};
+    for (int i = 0; i < 4; i++) {
+        if (gs[i] < 0) continue;
+        nd[i] = new Slider();
+        nd[i]->boundTo = getStructuralComponent(gs[i], (int)ComponetKind::Girder);
+        if (cs[i] > 0) { nd[i]->calong = cs[i]; nd[i]->updateBound(p0); } else { nd[i]->calong = -1.0; }
+        nd[i]->id = nodes.size();
+        nodes.push_back(nd[i]); sliders.push_back(nd[i]);
+        nd[i]->icontrol = icontrol;
+        ((Slider**)&(o->nodes))[i] = nd[i];
+    }
+
+    if (!nd[0] || !nd[1] || !nd[2] || cs[0] < 0 || cs[1] < 0 || cs[2] < 0) { printf("ERROR in make_Ring2: The first 3 anchor points must have defined positions (cs > 0) to define the circle.\n"); delete o; return -1; }
+    o->R = circle_3point(nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b);
+    o->pose.rot.c.set_cross(o->pose.rot.b, o->pose.rot.a);
+
+    for (int i = 0; i < 4; i++) { if (nd[i] && cs[i] < 0) { nd[i]->calong = intersect_RingGirder(o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true); nd[i]->updateBound(p0); } }
+
+    o->id = rings.size();
+    if (bPrint) o->print();
+    rings.push_back(o);
+    return o->id;
+}
+
 /*
 int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d along, Vec2i sides ){
     Slider* o = new Slider();

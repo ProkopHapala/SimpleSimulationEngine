@@ -128,6 +128,9 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec4( lua_State* L, Quat4d& vec){  getVec4(L, -1, vec); }
+    Quat4d getVec4( lua_State* L, int idx){ Quat4d vec; getVec4(L, idx, vec); return vec; } // New overload
+    Quat4d getVec4( lua_State* L){ return getVec4(L, -1); } // New overload
+
 
     void getVec3( lua_State* L, int idx, Vec3d& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -138,6 +141,8 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec3( lua_State* L, Vec3d& vec){  getVec3(L, -1, vec); }
+    Vec3d getVec3( lua_State* L, int idx){ Vec3d vec; getVec3(L, idx, vec); return vec; } // New overload
+    Vec3d getVec3( lua_State* L){ return getVec3(L, -1); } // New overload
 
     void getVec2( lua_State* L, int idx, Vec2d& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -147,6 +152,8 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec2( lua_State* L, Vec2d& vec){  getVec2(L, -1, vec); }
+    Vec2d getVec2( lua_State* L, int idx){ Vec2d vec; getVec2(L, idx, vec); return vec; } // New overload
+    Vec2d getVec2( lua_State* L){ return getVec2(L, -1); } // New overload
 
     void getMat3( lua_State* L, int idx, Mat3d& mat){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -156,6 +163,8 @@ namespace Lua{
         lua_pushinteger(L, 3); lua_gettable(L, idx); getVec3(L,-1, mat.c ); lua_pop(L, 1);
     }
     void getMat3(lua_State* L, Mat3d& mat){ getMat3(L, -1, mat); };
+    Mat3d getMat3(lua_State* L, int idx){ Mat3d mat; getMat3(L, idx, mat); return mat; } // New overload
+    Mat3d getMat3(lua_State* L){ return getMat3(L, -1); } // New overload
 
     void getDoubleVector( lua_State* L, std::vector<double>& vec ) {
         luaL_checktype(L, -1, LUA_TTABLE);
@@ -163,7 +172,6 @@ namespace Lua{
         while(lua_next(L, -2)) { vec.push_back( lua_tonumber(L, -1) ); }
         clean(L);
     }
-
 
     void getVec4i( lua_State* L, int idx, Quat4i& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -182,6 +190,8 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec4i( lua_State* L, Quat4i& vec){  getVec4i(L, -1, vec); }
+    Quat4i getVec4i( lua_State* L, int idx){ Quat4i vec; getVec4i(L, idx, vec); return vec; } // New overload
+    Quat4i getVec4i( lua_State* L){ return getVec4i(L, -1); } // New overload
 
     void getVec3i( lua_State* L, int idx, Vec3i& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -192,6 +202,8 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec3i( lua_State* L, Vec3i& vec){  getVec3i(L, -1, vec); }
+    Vec3i getVec3i( lua_State* L, int idx){ Vec3i vec; getVec3i(L, idx, vec); return vec; } // New overload
+    Vec3i getVec3i( lua_State* L){ return getVec3i(L, -1); } // New overload
 
     void getVec2i( lua_State* L, int idx, Vec2i& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
@@ -201,8 +213,8 @@ namespace Lua{
         //lua_pop(L, 3);
     }
     void getVec2i( lua_State* L, Vec2i& vec){  getVec2i(L, -1, vec); }
-
-
+    Vec2i getVec2i( lua_State* L, int idx){ Vec2i vec; getVec2i(L, idx, vec); return vec; } // New overload
+    Vec2i getVec2i( lua_State* L){ return getVec2i(L, -1); } // New overload
 
 
     bool getVar(lua_State* L, const char * nameStr) {
@@ -299,7 +311,6 @@ void getMat3(lua_State *L, int idx, Mat3d& mat){
     //lua_rawgeti(L, idx, 3); lua_gettable(L, idx); printf("DEBUG 2.1\n"); lua_getVec3(L, -1, mat.c ); printf("DEBUG 3\n"); lua_pop(L, 1);
 }
 */
-
 
 }
 
