@@ -360,7 +360,29 @@ int makePointCunks( Buckets& ebuck, int2* edges, Buckets& pbuck ){
     return pbuck.nobj;
 }
 
-
+int checkSpaceCraftMesh(const Builder2& mesh, const SpaceCraft& craft, bool bPrint=true, bool bExit=true ){
+    std::vector<bool> connected(mesh.verts.size(), false);
+    for (const auto& edge : mesh.edges) {
+        if (edge.x < mesh.verts.size()) connected[edge.x] = true;
+        if (edge.y < mesh.verts.size()) connected[edge.y] = true;
+    }
+    int unconnected_count = 0;
+    for (size_t i = 0; i < mesh.verts.size(); ++i) {
+        if (!connected[i]) {
+            if (bPrint){ 
+                printf("WARNING: checkSpaceCraftMesh() vertex %3i at (%10.3f, %10.3f, %10.3f) is not connected to any edge.\n",  i, mesh.verts[i].pos.x, mesh.verts[i].pos.y, mesh.verts[i].pos.z); 
+                printf("        - vertex %i belong to SpaceCraft component: \n", i);
+            }
+            int j = craft.find_mesh_element(i, 'v', bPrint );
+            if(j>=0){ unconnected_count++; }
+        }
+    }
+    // if (unconnected_count > 0) {  
+    //     if(bPrint) printf("ERROR: Mesh::Builder2::checkAllPointsConnected() found %i unconnected vertices.\n", unconnected_count);
+    //     if(bExit)  exit(0);
+    // }
+    return unconnected_count;    
+}
 
 
 // Helper function to process Node objects
@@ -385,7 +407,7 @@ void nodeBlock_to_mesh(Node* o, Builder2& mesh, SpaceCraft* craft) {
         Vec3d size = Vec3d{1,1,1}*o->size;
         //printf("nodeBlock_to_mesh() nodeMesh.nvert=%i nodeMesh.nedge=%i nodeMesh.nfaces=%i\n", nodeMesh.nvert, nodeMesh.nedge, nodeMesh.nfaces);
         Quat4i i0s = mesh.addCMesh(nodeMesh, true, o->pos, size, 0, o->edge_type );
-        mesh.printChunkRange( i0s.w, mesh.chunks.size() );
+        //mesh.printChunkRange( i0s.w, mesh.chunks.size() );
     }else{ // attach node using Mesh::Builder2::make_anchor
         mesh.make_anchor_point(o->pos, g_AnchorStickType, g_Rcollapse, g_Ranchor );
     }
@@ -443,17 +465,16 @@ void ring_to_mesh(Ring* o, Builder2& mesh) {
 void slider_to_mesh(Slider* o, Builder2& mesh) {
     // The slider's position 'o->pos' should have been pre-calculated
     // to be the intersection point on its target girder or other component.
-
     // Record state before creating the anchor point geometry
     int pre_verts_size = mesh.verts.size();
     int pre_edges_size = mesh.edges.size();
-
+    Vec2i host_point_range = o->boundTo->pointRange;
     // Generate the anchor point mesh. This adds a new vertex and connects it to the nearby structure.
-    o->ivert = mesh.make_anchor_point(o->pos, g_AnchorStickType, g_Rcollapse, g_Ranchor);
-
+    o->ivert = mesh.make_anchor_point(o->pos, g_AnchorStickType, g_Rcollapse, g_Ranchor, 0, 0, host_point_range.x, host_point_range.y);
     // The slider now "owns" the geometry of its anchor point.
     o->pointRange = {pre_verts_size, (int)mesh.verts.size()};
     o->stickRange = {pre_edges_size, (int)mesh.edges.size()};
+    printf("slider_to_mesh() o->id %i o->ivert=%i o->pointRange(%i,%i) o->stickRange(%i,%i)\n", o->id, o->ivert, o->pointRange.x, o->pointRange.y, o->stickRange.x, o->stickRange.y);
 }
 
 // Helper function to process Radiator objects
@@ -532,7 +553,14 @@ void BuildCraft_blocks( Builder2& mesh, SpaceCraft& craft, double max_size=-1, d
     mesh.block();
     int ip0 = mesh.verts.size();
     printf("BuildCraft_blocks().nodes n=%i\n", craft.nodes.size());
-    for(Node* o: craft.nodes){ nodeBlock_to_mesh(o, mesh, &craft); }
+    for(Node* o: craft.nodes){ 
+        if (o->component_kind() == (int)ComponetKind::Slider){ 
+            //printf("BuildCraft_blocks().nodes: Slider processed in BuildCraft_blocks().nodes loop \n");
+            //exit(0);
+            continue;
+        }
+        nodeBlock_to_mesh(o, mesh, &craft); 
+    }
     printf("BuildCraft_blocks().girders n=%i\n", craft.girders.size() );   
     for(Girder* o: craft.girders){ girderBlocks_to_mesh(o, mesh, &craft); }
     // ------ PASS 3: Generate Rings -------
@@ -551,6 +579,10 @@ void BuildCraft_blocks( Builder2& mesh, SpaceCraft& craft, double max_size=-1, d
     //for(Radiator* o : craft.radiators ){ radiator_to_mesh(o, mesh, &craft); };
     //for( Weld* o : craft.welds ){ weld_to_mesh(o, mesh);};
     
+    // --- Final integrity check
+    //mesh.checkAllPointsConnected(craft, true, true);
+    checkSpaceCraftMesh(mesh, craft);
+
     printf("BuildCraft_blocks() DONE! : npoint %i nstick %i nblocks %i\n", mesh.verts.size(), mesh.edges.size(), mesh.blocks.size());
 }
 

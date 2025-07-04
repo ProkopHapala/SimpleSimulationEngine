@@ -73,7 +73,7 @@ void solve_float(){
 }
 
 int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double* node_size, int ngirdes, Vec2i* girdes, int nropes, Vec2i* ropes ){
-    printf("make_Skeleton() creating %d nodes, %d girders, %d ropes\n", nnode, ngirdes, nropes);
+    printf("### make_Skeleton() creating %d nodes, %d girders, %d ropes\n", nnode, ngirdes, nropes);
     
     // Initialize workshop if needed (you might want to move this outside)
     init_workshop();
@@ -81,7 +81,7 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double
     int nodeEdgeType = 0;
     for(int i=0; i<nnode; i++){
         theSpaceCraft->add_Node(node_pos[i], node_size[i], nodeEdgeType );
-        printf("  Added node %d at position (%g,%g,%g)\n", i, node_pos[i].x, node_pos[i].y, node_pos[i].z);
+        //printf("Added node %d at position (%g,%g,%g)\n", i, node_pos[i].x, node_pos[i].y, node_pos[i].z);
     }
     
     // Create girders
@@ -101,7 +101,7 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double
         if(fabs(dir.z) < 0.9){ up = {0.0, 0.0, 1.0}; } 
         else                 { up = {1.0, 0.0, 0.0}; }
         theSpaceCraft->add_Girder(e.x, e.y, up, nseg, mseg, wh, stickTypes);
-        printf("  Added girder between nodes %d and %d\n", e.x, e.y);
+        //printf("  Added girder between nodes %d and %d\n", e.x, e.y);
     }
     
     // // Create ropes

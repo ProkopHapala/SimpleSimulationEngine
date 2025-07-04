@@ -257,7 +257,7 @@ Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPol
 Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Mat3d* rot, int edge_type ) {
     //b.clear();
     // Add vertices
-    printf("Builder2::addCMesh() cmesh.nvert=%i cmesh.nedge=%i cmesh.nfaces=%i p0(%g,%g,%g) sc(%g,%g,%g)\n", cmesh.nvert, cmesh.nedge, cmesh.nfaces, p0.x,p0.y,p0.z, sc.x,sc.y,sc.z);
+    //printf("Builder2::addCMesh() cmesh.nvert=%i cmesh.nedge=%i cmesh.nfaces=%i p0(%g,%g,%g) sc(%g,%g,%g)\n", cmesh.nvert, cmesh.nedge, cmesh.nfaces, p0.x,p0.y,p0.z, sc.x,sc.y,sc.z);
     int iv0  = verts.size();
     int ie0  = edges.size();
     int it0  = tris.size();
@@ -267,7 +267,7 @@ Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, M
         Vec3d p = p_*sc + p0;
         if(rot){ p = rot->dot(p); }
         int iv=vert(p);
-        printf("Builder2::addCMesh() i=%3i iv=%3i p(%g,%g,%g) p_(%g,%g,%g)\n", i,iv,p.x,p.y,p.z, p_.x,p_.y,p_.z );
+        //printf("Builder2::addCMesh() i=%3i iv=%3i p(%g,%g,%g) p_(%g,%g,%g)\n", i,iv,p.x,p.y,p.z, p_.x,p_.y,p_.z );
     }
     // Add edges
     for (int i = 0; i < cmesh.nedge; ++i) {
@@ -281,13 +281,10 @@ Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, M
             int n = cmesh.ngons[i];
             int iverts[n];
             int iedges[n];
-            printf("Builder2::addCMesh() iface=%i n=%i\n", i,n );
+            //printf("Builder2::addCMesh() iface=%i n=%i\n", i,n );
             for(int j=0; j<n; ++j) {
                 iverts[j] = ifaces[j] + iv0;
-                {
-                    Vec3d p = verts[iverts[j]].pos;
-                    printf("Builder2::addCMesh() i iverts[%i]=%i p(%g,%g,%g)\n", j, iverts[j], p.x,p.y,p.z);
-                }
+                //{ Vec3d p = verts[iverts[j]].pos;printf("Builder2::addCMesh() i iverts[%i]=%i p(%g,%g,%g)\n", j, iverts[j], p.x,p.y,p.z);}
             }
             for (int j = 0; j < n; ++j) {
                 Vec2i vpair = {iverts[j], iverts[(j + 1) % n]};
@@ -296,6 +293,7 @@ Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, M
                     // This should not happen if CMesh is well-defined.
                     printf("WARNING: CMesh2Builder could not find edge between %d and %d. Adding it.\n", vpair.a, vpair.b);
                     iedges[j] = edge(vpair.a, vpair.b);
+                    exit(0);
                 }
             }
             polygonChunk(n, iedges, iverts, false); // true for triangulating
@@ -449,9 +447,10 @@ int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
     return 0;
 }
 
-int Builder2::select_in_sphere( const Vec3d& p0, double r ){
+int Builder2::select_in_sphere( const Vec3d& p0, double r, int i0, int imax ){
     int n=0;
-    for(int i=0;i<verts.size();i++){
+    if(imax==-1){ n=verts.size(); }
+    for(int i=i0;i<imax;i++){
         Vec3d  d =  verts[i].pos-p0;
         if( d.norm2() > r*r ) continue; // check bounds along the axis
         selection.push_back(i);
@@ -460,9 +459,10 @@ int Builder2::select_in_sphere( const Vec3d& p0, double r ){
     return n;
 }
 
-int Builder2::select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l ){
+int Builder2::select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l, int i0, int imax ){
     int n=0;
-    for(int i=0;i<verts.size();i++){
+    if(imax==-1){ imax=verts.size(); }
+    for(int i=i0;i<imax;i++){
         Vec3d  d =  verts[i].pos-p0;
         double cH = fw.dot(d);
         if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
@@ -602,19 +602,20 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
         return iv;
     };
 
-    int Builder2::make_anchor_point( const Vec3d& p, int stickType, double Rcolapse, double r, const Vec3d* fw, double l ){
-        selection.clear();
-        if( fw ){ select_in_cylinder( p, *fw, r, l ); }
-        else    { select_in_sphere(p, r);             }
-        int iv=-1;
-        if(Rcolapse>0){ iv = findVert(p, Rcolapse); }  // use existing vert if found
-        if(iv<0      ){ iv = vert( p );             }  // create new vert if not found
-
-    // Root cause fix: Remove the anchor point itself from the selection list
-    // if it was included by select_in_sphere/cylinder (which it will be if it's an existing vertex)
-    auto it = std::remove(selection.begin(), selection.end(), iv);
-    selection.erase(it, selection.end());
-    conect_vertex( iv, stickType, selection.size(), selection.data() );
+    int Builder2::make_anchor_point( const Vec3d& p, int stickType, double Rcolapse, double r, const Vec3d* fw, double l, int i0, int n ){
+        int iv = -1;
+        if (Rcolapse>0) { iv = findVert(p, Rcolapse); } // use existing vert if found
+        if (iv<0)       { 
+            selection.clear();
+            if( fw ){ select_in_cylinder( p, *fw, r, l, i0, n ); }
+            else    { select_in_sphere(p, r, i0, n);             }
+            iv = vert(p); 
+            // Root cause fix: Remove the anchor point itself from the selection list
+            // if it was included by select_in_sphere/cylinder (which it will be if it's an existing vertex)
+            //auto it = std::remove(selection.begin(), selection.end(), iv);
+            //selection.erase(it, selection.end());
+            conect_vertex(iv, stickType, selection.size(), selection.data());
+        }             // create new vert if not found
         return iv;
     }
 
@@ -1412,10 +1413,8 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
     }
 }
 
-
-
 int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Quat4i mask, bool bAlling ){
-    printf( "====Mesh::Builder2::bridge_quads() nseg %i BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", nseg, q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
+    //printf( "Mesh::Builder2::bridge_quads() nseg %i BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", nseg, q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
     if( bAlling ) alling_polygons(4, q1.array, q2.array, 0);
     //printf( "Mesh::Builder2::bridge_quads() AFTER q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
     Vec3d A1 = verts[q1.x].pos; Vec3d A2 = verts[q2.x].pos;
@@ -1428,7 +1427,7 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Q
     double dc = 1.0/((double)nseg);
     int oA=q1.x,oB=q1.y,oC=q1.z,oD=q1.w; // Start with q1 vertices
     for (int i=0; i<nseg; i++){ // Loop nseg times to create nseg segments
-        printf( "Mesh::Builder2::bridge_quads() iseg %i\n", i );
+        //printf( "Mesh::Builder2::bridge_quads() iseg %i\n", i );
         int iA,iB,iC,iD;
         if( i < (nseg-1) ){ // Create intermediate rings
             // vertices
@@ -1439,7 +1438,7 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Q
             iC = vert( C1*mc + C2*c );
             iD = vert( D1*mc + D2*c );
             // ring edges
-            printf( "Mesh::Builder2::bridge_quads()   ring-edges is(%i,%i,%i,%i)\n", iA,iB,iC,iD );
+            //printf( "Mesh::Builder2::bridge_quads()   ring-edges is(%i,%i,%i,%i)\n", iA,iB,iC,iD );
             edge( iA,iB, stickTypes.y );
             edge( iB,iC, stickTypes.y );
             edge( iC,iD, stickTypes.y );
@@ -1451,21 +1450,21 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Q
             iD=q2.w;
         }
         // longitudinal edges
-        printf( "Mesh::Builder2::bridge_quads()   longitudinal-edges os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", oA,oB,oC,oD, iA,iB,iC,iD );
+        //printf( "Mesh::Builder2::bridge_quads()   longitudinal-edges os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", oA,oB,oC,oD, iA,iB,iC,iD );
         edge( oA,iA,stickTypes.x );
         edge( oB,iB,stickTypes.x );
         edge( oC,iC,stickTypes.x );
         edge( oD,iD,stickTypes.x );
         // spiral edges
         if(mask.x){
-            printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.x=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.x, oA,oB,oC,oD, iA,iB,iC,iD );
+            //printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.x=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.x, oA,oB,oC,oD, iA,iB,iC,iD );
             edge( oA,iB, stickTypes.z );
             edge( oB,iC, stickTypes.z );
             edge( oC,iD, stickTypes.z );
             edge( oD,iA, stickTypes.z );
         }
         if(mask.y){
-            printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.y=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.y, oA,oB,oC,oD, iA,iB,iC,iD );
+            //printf( "Mesh::Builder2::bridge_quads()   spiral-edges mask.y=%i os(%i,%i,%i,%i) is(%i,%i,%i,%i)\n", mask.y, oA,oB,oC,oD, iA,iB,iC,iD );
             edge( oB,iA, stickTypes.z );
             edge( oC,iB, stickTypes.z );
             edge( oD,iC, stickTypes.z );
@@ -1473,12 +1472,12 @@ int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Q
         }
         // internal edges
         if(mask.z){
-            printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.z=%i os(%i,%i) is(%i,%i)\n", mask.z, oA,oB, iC,iD );
+            //printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.z=%i os(%i,%i) is(%i,%i)\n", mask.z, oA,oB, iC,iD );
             edge( oA,iC, stickTypes.z );
             edge( oB,iD, stickTypes.z );
         }
         if(mask.w){
-            printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.w=%i os(%i,%i) is(%i,%i)\n", mask.w, oC,oD, iA,iB );
+            //printf( "Mesh::Builder2::bridge_quads()   internal-edges mask.w=%i os(%i,%i) is(%i,%i)\n", mask.w, oC,oD, iA,iB );
             edge( oC,iA, stickTypes.z );
             edge( oD,iB, stickTypes.z );
         }
@@ -1955,7 +1954,7 @@ void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, V
 
 
 void Builder2::bridgeFacingPolygons( Vec3d p1, Vec3d p2, const Vec2i chr1, const Vec2i chr2, int nseg, Quat4i stickTypes, Quat4i maks ){
-    printf(" --- findMostFacingNormal() chr1(%i,%i) chr2(%i,%i)   p1(%g,%g,%g) p2(%g,%g,%g)\n", chr1.x,chr1.y, chr2.x,chr2.y, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z);
+    //printf("findMostFacingNormal() chr1(%i,%i) chr2(%i,%i)   p1(%g,%g,%g) p2(%g,%g,%g)\n", chr1.x,chr1.y, chr2.x,chr2.y, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z);
     Vec3d hray = p2-p1;
     hray.normalize();
     int ich1 = findMostFacingNormal(hray, chr1, 0.0, true );
@@ -2012,15 +2011,13 @@ int Builder2::checkAllPointsConnected(bool bExit,bool bPrint) const{
     int unconnected_count = 0;
     for (size_t i = 0; i < verts.size(); ++i) {
         if (!connected[i]) {
-            if (bPrint) {
-                printf("WARNING: Mesh::Builder2::checkAllPointsConnected() - Vertex %zu at (%f, %f, %f) is not connected to any edge.\n",  i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z);
-            }
+            if (bPrint) {printf("WARNING: Mesh::Builder2::checkAllPointsConnected() vertex %3i at (%10.3f, %10.3f, %10.3f) is not connected to any edge.\n",  i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z); }
             unconnected_count++;
         }
     }
     if (unconnected_count > 0) {  
-        if(bPrint) printf("ERROR: Mesh::Builder2::checkAllPointsConnected() found %d unconnected vertices.\n", unconnected_count);
-        if(bExit) exit(0);
+        if(bPrint) printf("ERROR: Mesh::Builder2::checkAllPointsConnected() found %i unconnected vertices.\n", unconnected_count);
+        if(bExit)  exit(0);
     }
     return unconnected_count;
 }

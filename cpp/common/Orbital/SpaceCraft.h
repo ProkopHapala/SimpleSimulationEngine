@@ -59,6 +59,7 @@ class SpaceCraft : public CatalogItem { public:
     std::vector<Weld*>   welds;
 
     std::vector<ShipComponent*>  build_order; // we need to know order of building because structural components can be attached to nodes bound  to previous components. => the mesh of the previous component must be already built so we can pick proper vertex to attach to
+    std::vector<ShipComponent*>  components; 
 
 	// aux
 	int pickedTyp = -1;
@@ -94,10 +95,35 @@ class SpaceCraft : public CatalogItem { public:
         for( Thruster* o : thrusters) delete o; thrusters.clear();
         for( Balloon*  o : balloons ) delete o; balloons.clear();
         for( Rock*     o : rocks    ) delete o; rocks.clear();
+
+        for( ShipComponent* o : components ) delete o; components.clear();
         //nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
         //rocks.clear(); balloons.clear();
         //truss.clear();
 	};
+
+    int find_mesh_element( int i, char elem_kind='v', bool bPrint=false )const{
+        for(int j=0; j<components.size(); j++){
+            ShipComponent* o = components[j];
+            //if( !_o->is_structural() ) continue;
+            //StructuralComponent* o = (StructuralComponent*)_o;
+            Vec2i range;
+            
+            switch( elem_kind ){
+                case 'v': range=o->pointRange; break; // point
+                case 'e': range=o->stickRange; break; // stick
+                case 'c': range=o->chunkRange; break; // chunk
+            }
+            printf( "    find_mesh_element().component %i range(%i,%i) ", j, range.x, range.y ); o->print();
+            if(i>=range.x && i<range.y){
+                if(bPrint) printf( "SpaceCraft::find_mesh_element(%i,'%c') -> %i %s\n", i, elem_kind, j  );
+                o->print();
+                return j;
+            }
+        }
+        if(bPrint) printf( "WARNING: SpaceCraft::find_mesh_element(%i,'%c') element not found\n", i, elem_kind );
+        return -1;
+    }
 
 
     Vec3d pointOnGirder( int g, double c )const{
@@ -143,6 +169,7 @@ int add_Node( const Vec3d& pos, double size=1, int edge_type=-1 ){
     o->size = size;
     o->edge_type = edge_type;
     nodes.push_back( o );
+    components.push_back( o );
     //if(bPrint)printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
     if(bPrint) o->print();
     return o->id;
@@ -159,6 +186,7 @@ int add_Rope( int p0, int p1, double thick, int matId=-1, const char* matn=0 ){
     //if(bPrint)printf( "Rope (%i,%i) %g %s ->  %i\n", o->p0, o->p1, o->thick, matn, o->id );
     if(bPrint) o->print();
     ropes.push_back( o );
+    components.push_back( o );
     return o->id;
 };
 
@@ -176,6 +204,7 @@ int add_Girder  ( int p0, int p1, const Vec3d& up, int nseg, int mseg, const Vec
     //if(bPrint)printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) st(%i,%i,%i,%i) ->  %i\n", o->p0, o->p1, o->up.x, o->up.y, o->up.z, o->nseg, o->mseg, o->wh.x, o->wh.y, o->st.x,o->st.y,o->st.z,o->st.w,   o->id );
     if(bPrint) o->print();
     girders.push_back( o );
+    components.push_back( o );
     return o->id;
 };
 
@@ -199,6 +228,7 @@ int add_Ring( Vec3d pos, Vec3d ax, Vec3d up, double R, int nseg, const Vec2d& wh
     */
     if(bPrint) o->print();
     rings.push_back( o );
+    components.push_back( o );
     return o->id;
 };
 
@@ -215,6 +245,7 @@ int add_Radiator ( int g1, const Vec2d& g1span, int g2, const Vec2d& g2span, int
     //if(bPrint)printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f %i -> %i\n", o->g1, o->g1span.x, o->g1span.y,   o->g2, o->g2span.x, o->g2span.y,  o->temperature, o->face_mat, o->id );
     if(bPrint) o->print();
     radiators.push_back( o );
+    components.push_back( o );
     return o->id;
 };
 
@@ -229,6 +260,8 @@ int add_Shield ( int g1, const Vec2d& g1span, int g2, const Vec2d& g2span, doubl
     //printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o->g1, o->g1span.x, o->g1span.y,   o->g2, o->g2span.x, o->g2span.y, o->face_mat, o->id );
     if(bPrint) o->print();
     shields.push_back( o );
+    components.push_back( o );
+    return o->id;
     //lua_pushnumber(L, o->id);
     return o->id;
 };
@@ -246,6 +279,7 @@ int add_Tank ( Vec3d pos, Vec3d dir, Vec3d span, int face_mat=-1, int fill=-1, d
     if(bPrint)o->print();
     //printf( "Tank pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o->pose.pos.x,o->pose.pos.x,o->pose.pos.x,  o->pose.rot.c.x, o->pose.rot.c.y, o->pose.rot.c.z,   o->span.b, o->span.c, o->id );
     tanks.push_back( o );
+    components.push_back( o );
     //lua_pushnumber(L, o->id);
     return o->id;
 };
@@ -262,6 +296,7 @@ int add_Thruster ( Vec3d pos, Vec3d dir, Vec3d span, int type=-1 ){
     //printf( "Thruster pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o->pose.pos.x,o->pose.pos.x,o->pose.pos.x,  o->pose.rot.c.x, o->pose.rot.c.y, o->pose.rot.c.z,   o->span.b, o->span.c, o->id );
     if(bPrint) o->print();
     thrusters.push_back( o );
+    components.push_back( o );
     //lua_pushnumber(L, o->id);
     return o->id;
 };
@@ -275,6 +310,7 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
     //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o->suppId, o->suppSpan.x, o->suppSpan.y,   skind, o->id );
     if(bPrint) o->print();
     guns.push_back( o );
+    components.push_back( o );
     //lua_pushnumber(L, o->id);
     return o->id;
 };
@@ -304,6 +340,7 @@ int make_Rope(int node1_id, int node2_id, double thick_mm, int nseg, double preS
     }
     if (bPrint) o->print();
     ropes.push_back(o);
+    components.push_back(o);
     return o->id;
 }
 
@@ -322,6 +359,7 @@ int make_Girder(int node1_id, int node2_id, const Vec3d& up, int nseg, int mseg,
     o->id = girders.size();
     if (bPrint) o->print();
     girders.push_back(o);
+    components.push_back(o);
     return o->id;
 }
 
@@ -337,6 +375,7 @@ int make_Ring(const Vec3d& pos, const Vec3d& dir, const Vec3d& up, double R, int
     o->id = rings.size();
     if (bPrint) o->print();
     rings.push_back(o);
+    components.push_back(o);
     return o->id;
 }
 
@@ -368,6 +407,7 @@ int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const 
     o->id = rings.size();
     if (bPrint) o->print();
     rings.push_back(o);
+    components.push_back(o);
     return o->id;
 }
 

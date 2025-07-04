@@ -259,10 +259,13 @@ class ShipComponent : public Object { public:
     Vec2i chunkRange{-1,-1}; // --,,--
 
     virtual ~ShipComponent(){};
-    virtual void print(bool bShort=false)const{ if(bShort){printf("ShipComponent(id=%i)",id);}else{
-        printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat );} 
+    virtual void print(bool bShort=false)const{ 
+        if(bShort){ printf("ShipComponent(id=%i)",id);}
+        else      { printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat );} 
     }
-    virtual int component_kind(){ return (int)ComponetKind::ShipComponent; }; 
+    virtual int  component_kind() const { return (int)ComponetKind::ShipComponent; }; 
+    virtual bool is_structural()  const { return false; };
+    inline bool  is_kind(int kind_){ return component_kind()==kind_; }
 };
 
 
@@ -292,9 +295,11 @@ class StructuralComponent : public ShipComponent { public:
     // ==== methods
 
     //double length;
-    virtual void print(bool bShort=false)const override;
     void ray( const Vec3d& ro, const Vec3d& rd ){}
-    virtual int component_kind(){ return (int)ComponetKind::StructuralComponent; };
+
+    virtual void print(bool bShort=false)const override;
+    virtual int  component_kind() const override { return (int)ComponetKind::StructuralComponent; };
+    virtual bool is_structural()  const override { return true; };
 
     virtual double rotMat( Mat3d& rot)const = 0;
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const = 0;

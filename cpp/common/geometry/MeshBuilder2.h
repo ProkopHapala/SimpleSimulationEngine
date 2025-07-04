@@ -106,7 +106,7 @@ class Builder2{ public:
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
     inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ 
-        printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
+        //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
         // _assert( // check vertex min distance
         //     double Rmin=1e-3;
         //     for(int i=0;i<verts.size();i++){
@@ -124,7 +124,7 @@ class Builder2{ public:
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
-        printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
+        //printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
         // { // check vertex min distance
         //     if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
         //     double Rmin=1e-3;
@@ -198,7 +198,7 @@ class Builder2{ public:
     
     Vec2i conect_vertex  ( int iv, int stickType, int n, int* iverts );
     int conected_vertex  ( const Vec3d& p, int stickType, int n, int* iverts );
-    int make_anchor_point( const Vec3d& p, int stickType, double Rcolapse=0.1, double r=1.0, const Vec3d* fw=0, double l=1.0 );
+    int make_anchor_point( const Vec3d& p, int stickType, double Rcolapse=0.1, double r=1.0, const Vec3d* fw=0, double l=1.0, int i0=0, int n=0 );
     int make_anchor_points( int nv, Vec3d* vs, int* ivrts, int anchorType, double Rcolapse, double r=1.0, const Vec3d* fw=0, double l=1.0 );
 
     int extrudeFace( int ich, double L, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
@@ -254,8 +254,8 @@ class Builder2{ public:
     int findClosestVert(const Vec3d& p0,int i0=0,int n=-1);
     int findVert(const Vec3d& p0, double Rmax, int n=-1, int* sel=0 );
     int closestInSelection(const Vec3d& p0, double Rmax, int n, int* sel );
-    int select_in_sphere  ( const Vec3d& p0, double r );
-    int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l );
+    int select_in_sphere  ( const Vec3d& p0, double r, int i0=0, int imax=-1 );
+    int select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, double l, int i0=0, int imax=-1 );
     // pick by ray intersection
     int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R );
     int pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax );
