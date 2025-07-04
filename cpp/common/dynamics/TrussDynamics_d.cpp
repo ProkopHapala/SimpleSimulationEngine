@@ -297,6 +297,23 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
 
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
+    bool TrussDynamics_d::checkMasses(double mass_tolerance, bool bExit){
+        int nUnconnected = 0;
+        //printf("TrussDynamics_d::checkMasses() checking %i points with mass_tolerance=%g\n", nPoint, mass_tolerance);
+        for(int i=0; i<nPoint; i++){
+            if(points[i].w < mass_tolerance){
+                printf("WARNING: TrussDynamics_d::checkMasses() point %i has mass %g (< %g), likely unconnected.\n", i, points[i].w, mass_tolerance);
+                nUnconnected++;
+            }
+        }
+        if(nUnconnected > 0){
+            printf("ERROR in TrussDynamics_d::checkMasses: Found %i points with mass < %g. This would lead to a singular PD matrix. \n", nUnconnected, mass_tolerance);
+            if(bExit) exit(0);
+            return false;
+        }
+        return true;
+    }
+
     __attribute__((hot)) 
     void TrussDynamics_d::make_PD_Matrix( double* A, double dt ) {
         printf( "TrussDynamics_d_d::make_PD_Matrix() dt=%g\n", dt );

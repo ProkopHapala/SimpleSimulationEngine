@@ -1999,4 +1999,30 @@ void Builder2::bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* 
     }
 }
 
+int Builder2::checkAllPointsConnected(bool bExit,bool bPrint) const{
+    if (verts.empty()) {
+        if(bPrint) printf("Mesh::Builder2::checkAllPointsConnected(): No vertices to check.\n");
+        return 0;
+    }
+    std::vector<bool> connected(verts.size(), false);
+    for (const auto& edge : edges) {
+        if (edge.x < verts.size()) connected[edge.x] = true;
+        if (edge.y < verts.size()) connected[edge.y] = true;
+    }
+    int unconnected_count = 0;
+    for (size_t i = 0; i < verts.size(); ++i) {
+        if (!connected[i]) {
+            if (bPrint) {
+                printf("WARNING: Mesh::Builder2::checkAllPointsConnected() - Vertex %zu at (%f, %f, %f) is not connected to any edge.\n",  i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z);
+            }
+            unconnected_count++;
+        }
+    }
+    if (unconnected_count > 0) {  
+        if(bPrint) printf("ERROR: Mesh::Builder2::checkAllPointsConnected() found %d unconnected vertices.\n", unconnected_count);
+        if(bExit) exit(0);
+    }
+    return unconnected_count;
+}
+
 } // namespace Mesh

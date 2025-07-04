@@ -39,6 +39,7 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
     printf( "exportSim() START nvert=%i nedge=%i \n", np, nb );
+    mesh.checkAllPointsConnected(true, true);
     int* nneighs = new int[ np ];
     //printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
@@ -137,6 +138,9 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
             sim.strain[i] = 0;
         }
     }
+
+    sim.checkMasses();
+
     sim.cleanForce();
     sim.cleanVel();
     //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }

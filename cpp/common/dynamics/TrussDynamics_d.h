@@ -433,7 +433,8 @@ int run(int niter, double dt, double damp  );
 void setOpt(double dt_, double damp_ );
 void FIRE_update(double& vf, double& vv, double& ff, double& cv, double& cf );
 int run_omp(int niter_max, bool bDynamic, double dt_, double damp_ );
-//void print_points();
+
+bool checkMasses(double mass_tolerance=1e-9, bool bExit=true);
 
 };   // TrussDynamics_d
 

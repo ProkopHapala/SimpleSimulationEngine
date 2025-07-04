@@ -46,6 +46,7 @@ void init_workshop(){
 void to_TrussDynamics_d( TrussDynamics_d& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
     printf("#### ==== SpaceCraftSimulator::to_TrussDynamics_d() sim.linSolveMethod=%i, sim.pos0=(%g,%g,%g), sim.omega=(%g,%g,%g,%g) \n", sim.linSolveMethod, sim.pos0.x, sim.pos0.y, sim.pos0.z, sim.omega.x, sim.omega.y, sim.omega.z, sim.omega.w );
     exportSim( sim, mesh, workshop );
+    // The connectivity check is now performed inside exportSim()
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_TrussDynamics_d() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );

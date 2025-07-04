@@ -313,6 +313,7 @@ class Builder2{ public:
     void printVerts();
     void printEdges();
     void printChunkRange( int ich, int ich2=-1 );
+    int checkAllPointsConnected(bool bExit=true, bool bPrint=true) const;
 
     int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false );
     int triangle_strip( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, int stickType, bool bCaps=false );

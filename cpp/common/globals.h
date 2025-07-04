@@ -24,7 +24,7 @@ static bool exit_on_error = true;
     pre_cond; \
     if( !(cond) ){ \
         printf("Assertion failed: %s, line: %d  function: %s file: %s \n", #cond, __LINE__, __FUNCTION__, __FILE__ ); \
-        printf("  => execute action: %s", #action ); \
+        printf("  => execute action:\n %s\n", #action ); \
         {action;} \
         if(exit_on_error){ exit(0);} \
     }}
@@ -33,7 +33,7 @@ static bool exit_on_error = true;
 //     pre_cond; \
 //     if( !(cond) ){ \
 //         printf("Assertion failed: %s, line: %d  function: %s file: %s \n", #cond, __LINE__, __FUNCTION__, __FILE__ ); \
-//         printf("  => execute action: %s\n", #__VA_ARGS__ ); \
+//         printf("  => execute action\n %s\n", #__VA_ARGS__ ); \
 //         {__VA_ARGS__;} \
 //         if(exit_on_error){ exit(1);} \
 //     }}
