@@ -22,6 +22,8 @@
 #include "Slots.h"
 #include "CMesh.h"
 
+#include "globals.h"
+
 //#include "MeshBuilder.h"
 
 using LoopDict = std::unordered_map<int,Slots<int,2>>;
@@ -29,6 +31,8 @@ using LoopDict = std::unordered_map<int,Slots<int,2>>;
 //#include "datatypes.h"
 
 namespace Mesh{
+
+static double RvertCollapse = 1e-3;
 
     struct ObjMask {
         enum : uint8_t {
@@ -102,33 +106,38 @@ class Builder2{ public:
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
     inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ 
-        //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
-        { // check vertex min distance
-            double Rmin=1e-3;
-            for(int i=0;i<verts.size();i++){
-                Vec3d p = verts[i].pos;
-                double r2 = (p-pos).norm2();
-                if( r2<Rmin*Rmin ){
-                    printf( "Mesh::Builder2::vert() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", verts.size(), i,verts.size(), sqrt(r2),Rmin, p.x,p.y,p.z, pos.x,pos.y,pos.z );
-                    exit(0);
-                }
-            }
-        }
+        printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
+        // _assert( // check vertex min distance
+        //     double Rmin=1e-3;
+        //     for(int i=0;i<verts.size();i++){
+        //         Vec3d p = verts[i].pos;
+        //         double r2 = (p-pos).norm2();
+        //         if( r2<Rmin*Rmin ){
+        //             printf( "Mesh::Builder2::vert() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", verts.size(), i,verts.size(), sqrt(r2),Rmin, p.x,p.y,p.z, pos.x,pos.y,pos.z );
+        //             exit(0);
+        //         }
+        //     }
+        // }
+        // Assert that no vertex is found nearby. If one is found (iv>=0), the assertion fails and the action is executed.
+        // The action is now safe because it only runs when 'iv' is a valid index.
+        _assert( int iv=findVert(pos,RvertCollapse), iv<0, { Vec3d p=verts[iv].pos; printf( "Mesh::Builder2::vert() ERROR [%i] vertex already exists: new_vert_ind=%i is too close to old_vert_ind=%i, rij(%g)<RvertCollapse(%g) p_new(%g,%g,%g) p_old(%g,%g,%g) \n", (int)verts.size(), (int)verts.size(), iv, sqrt((p-pos).norm2()), RvertCollapse, pos.x,pos.y,pos.z, p.x,p.y,p.z ); } );
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
         printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
-        { // check vertex min distance
-            if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
-            double Rmin=1e-3;
-            Vec3d p0 = verts[a].pos;
-            Vec3d p1 = verts[b].pos;
-            double r2 = (p0-p1).norm2();
-            if( r2<Rmin*Rmin ){
-                printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", edges.size(), a,b, sqrt(r2),Rmin, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
-                exit(0);
-            }
-        }
+        // { // check vertex min distance
+        //     if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
+        //     double Rmin=1e-3;
+        //     Vec3d p0 = verts[a].pos;
+        //     Vec3d p1 = verts[b].pos;
+        //     double r2 = (p0-p1).norm2();
+        //     if( r2<(Rmin*Rmin) ){
+        //         printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) rij(%g)<%g p0(%g,%g,%g) p1(%g,%g,%g) \n", edges.size(), a,b, sqrt(r2),Rmin, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
+        //         exit(0);
+        //     }
+        // }
+        _assert(                         {}          , a!=b , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same\n", edges.size(), a,b ) );
+        _assert( int ie=findEdgeByVerts_brute({a,b}) , ie<0 , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) already exists ie=%i \n", (int)edges.size(), a,b, ie )  );
         edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
     }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
@@ -215,6 +224,7 @@ class Builder2{ public:
 
     bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts );
     bool sortEdgeLoop( int n, int* iedges, int* iverts=0 );
+    
     int findEdgeByVerts_brute( Vec2i verts );
     int findEdgeByVerts_map( const Vec2i verts );
     int findEdgeByVerts( const Vec2i verts );

@@ -27,7 +27,7 @@ namespace Mesh{
 
 static double g_Rcollapse =   0.1;
 static double g_Ranchor   =  10.0;
-static int    g_AnchorStickType =  1;
+static int    g_AnchorStickType =  0;
 
 void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop, int nneighmax_min=0 ){
     // {
@@ -275,17 +275,17 @@ void applySliders2sim( SpaceCraft& craft, TrussDynamics_d& sim, double* control_
 }
 
 void sliders2edgeverts( SpaceCraft& craft, TrussDynamics_d& sim ){
-    //printf( "reloadShip().updateSlidersPaths \n" );
-    // update ring slider paths
-    for( Ring* o : craft.rings ){
-        o->updateSlidersPaths( true, true, sim.points );
-    }
-    //printf( "reloadShip().SlidersToEdgeVerts \n" );
+    // NOTE: Slider paths must be initialized before calling this function.
+    // This is typically done by calling `o->updateSlidersPaths(...)` for each Ring.
     // ----- Sliders to EdgeVerts
     sim.nEdgeVertBonds = craft.sliders.size();
+    if(sim.nEdgeVertBonds == 0) return;
     sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
     for( int i=0; i<craft.sliders.size(); i++ ){
         Slider* o = craft.sliders[i];
+        printf("sliders2edgeverts[%i]: SliderID=%i, ivert=%i, path.n=%i\n", i, o->id, o->ivert, o->path.n);
+        if (o->path.n <= 0) { printf("  ERROR: Slider path not initialized! Skipping.\n"); exit(0); }
+        if (o->ivert < 0 || o->ivert >= sim.nPoint) { printf("  ERROR: Slider ivert=%i is out of bounds [0..%i]! Skipping.\n", o->ivert, sim.nPoint-1); exit(0); }
         EdgeVertBond& ev = sim.edgeVertBonds[i];
         ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
         ev.verts.z = o->ivert;
@@ -435,6 +435,23 @@ void ring_to_mesh(Ring* o, Builder2& mesh) {
     o->stickRange = {b.y, (int)mesh.edges.size()};
 }
 
+// Helper function to process Slider objects
+void slider_to_mesh(Slider* o, Builder2& mesh) {
+    // The slider's position 'o->pos' should have been pre-calculated
+    // to be the intersection point on its target girder or other component.
+
+    // Record state before creating the anchor point geometry
+    int pre_verts_size = mesh.verts.size();
+    int pre_edges_size = mesh.edges.size();
+
+    // Generate the anchor point mesh. This adds a new vertex and connects it to the nearby structure.
+    o->ivert = mesh.make_anchor_point(o->pos, g_AnchorStickType, g_Rcollapse, g_Ranchor);
+
+    // The slider now "owns" the geometry of its anchor point.
+    o->pointRange = {pre_verts_size, (int)mesh.verts.size()};
+    o->stickRange = {pre_edges_size, (int)mesh.edges.size()};
+}
+
 // Helper function to process Radiator objects
 void radiator_to_mesh(Radiator* o, Builder2& mesh, SpaceCraft* craft) {
     mesh.block();
@@ -513,15 +530,18 @@ void BuildCraft_blocks( Builder2& mesh, SpaceCraft& craft, double max_size=-1, d
     printf("BuildCraft_blocks().nodes n=%i\n", craft.nodes.size());
     for(Node* o: craft.nodes){ nodeBlock_to_mesh(o, mesh, &craft); }
     printf("BuildCraft_blocks().girders n=%i\n", craft.girders.size() );   
-    for(Girder* o: craft.girders){ girderBlocks_to_mesh(o, mesh, &craft); }   
-    
+    for(Girder* o: craft.girders){ girderBlocks_to_mesh(o, mesh, &craft); }
+    // ------ PASS 3: Generate Rings -------
+    printf("BuildCraft_blocks().rings n=%i\n", craft.rings.size() );
+    for(Ring* o: craft.rings){ ring_to_mesh(o, mesh); }
+    // ------ PASS 4: Generate Slider Anchors -------
+    printf("BuildCraft_blocks().sliders n=%i\n", craft.sliders.size() );
+    for(Slider* o: craft.sliders){ slider_to_mesh(o, mesh); }
+    // ------ PASS 5: Generate Ropes -------
+    printf("BuildCraft_blocks().ropes n=%i\n", craft.ropes.size() );
+    for(Rope* o: craft.ropes){ rope_to_mesh(o, mesh);}
 
-    // --- ToDo Future
-    
-    // printf("BuildCraft_blocks().ropes n=%i\n", craft.ropes.size() );
-    //for(Rope* o: craft.ropes){ rope_to_mesh(o, mesh);}
-    //printf("BuildCraft_blocks().rings n=%i\n", craft.rings.size() );
-    //for(Ring* o: craft.rings){ ring_to_mesh(o, mesh);}
+    // --- ToDo Future ---
     //printf("BuildCraft_blocks().radiators n=%i\n", craft.radiators.size() );
     
     //for(Radiator* o : craft.radiators ){ radiator_to_mesh(o, mesh, &craft); };

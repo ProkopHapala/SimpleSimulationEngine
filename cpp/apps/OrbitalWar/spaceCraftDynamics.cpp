@@ -48,6 +48,7 @@
 #include "TrussDynamics_f.h"
 #include "SpaceCraftDynamicsApp.h"
 
+using namespace Mesh;
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
@@ -55,6 +56,11 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 double elementSize  = 5.;
 
 SpaceCraftSimulator W;
+
+Vec3d wheel_speed      {0.0,0.0,0.0};
+Vec3d wheel_speed_setup{ 5.0, 5.0, 5.0 };
+
+void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, W.sim, (double*)&wheel_speed ); }
 
 void solve_float(){
     //printf( "solve_float() \n" );
@@ -98,17 +104,31 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double
         printf("  Added girder between nodes %d and %d\n", e.x, e.y);
     }
     
-    // Create ropes
-    double thick = 0.1; // Default thickness
-    for(int i=0; i<nropes; i++){
-        int node1 = ropes[i].a;
-        int node2 = ropes[i].b;
-        theSpaceCraft->add_Rope(node1, node2, thick);
-        printf("  Added rope between nodes %d and %d\n", node1, node2);
-    }
+    // // Create ropes
+    // double thick = 0.1; // Default thickness
+    // for(int i=0; i<nropes; i++){
+    //     int node1 = ropes[i].a;
+    //     int node2 = ropes[i].b;
+    //     theSpaceCraft->add_Rope(node1, node2, thick);
+    //     printf("  Added rope between nodes %d and %d\n", node1, node2);
+    // }
     
     return 1; // Success
 }
+
+void keyStateHandling_local( const Uint8 *keys ){
+    // This is a bit of a hack, assuming wheel_speed is a global in the main app file
+    // A better solution would be a proper control system.
+    wheel_speed = Vec3dZero;
+    if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
+    if( keys[ SDL_SCANCODE_KP_0 ] ){ wheel_speed.x=0; wheel_speed.y=0; wheel_speed.z=0; }
+}
+
 
 
 // ===================== MAIN
@@ -156,8 +176,8 @@ int main(int argc, char *argv[]){
         const int nnodes = 5;
         Vec3d nodes[nnodes] = {
             {0.0,    0.0,    0.0}, // 0
-            {0.0,    0.0, -150.0}, // 1
             {0.0,    0.0,  200.0}, // 2
+            {0.0,    0.0, -150.0}, // 1
             {0.0, -100.0,    0.0}, // 3
             {0.0,  100.0,    0.0}  // 4
         };
@@ -170,6 +190,14 @@ int main(int argc, char *argv[]){
         // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
         make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, nRopes, ropes );
 
+        // Attach a wheel to the girders
+        const int   wheel_girders[4] = {2,3,1,0};
+        // We must provide at least 3 points to define the circle. The 4th can be calculated by intersection.
+        // We set the first three to the midpoint (0.5) of their respective girders.
+        const float wheel_pos[4]     = {0.5f, 0.5f, 0.3f, -1.0f};
+        Vec3d p0_ring_center_guess = {0.0, 0.0, -50.0}; // A point "near" the desired ring center to help resolve which side of the girder to attach to
+        theSpaceCraft->make_Ring2(wheel_girders, wheel_pos, p0_ring_center_guess, 32, {2.0, 2.0}, "GS1_long", {0,0,0,0}, 0);
+
         // ----- Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
 
         CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
@@ -179,6 +207,16 @@ int main(int argc, char *argv[]){
         BuildCraft_blocks( W.mesh, *theSpaceCraft, 30.0 );
         W.mesh.printSizes();
         W.initSimulators();
+
+        // --- Initialize slider paths now that the mesh and simulation points exist.
+        printf("--- Initializing Slider Paths ---\n");
+        for( Ring* o : theSpaceCraft->rings ){
+            // bSelf=true: The path is on the ring itself. bShared=true: All sliders on this ring share the same path.
+            o->updateSlidersPaths( true, true, W.sim.points );
+        }
+        sliders2edgeverts( *theSpaceCraft, W.sim );
+
+        W.sim.user_update = SpaceCraftControl;
 
         // ---------- Backup from constructionBlockApp.cpp, this should perhaps go to BuildCraft_truss in SpaceCraft2Mesh2.h
         //bool bUseSpecialPlanes=false;
@@ -206,19 +244,3 @@ int main(int argc, char *argv[]){
 	app->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

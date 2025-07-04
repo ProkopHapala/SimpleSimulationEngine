@@ -838,26 +838,28 @@ class Slider : public Node { public:
 
 void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4d* ps ){  
     //  bSelf: should the rail for the slider be on this component or the bound component ?
-    //printf("StructuralComponent::updateSlidersPaths() bSelf=%i bShared=%i @ps=%li \n", bSelf, bShared, (long)ps ); 
+    printf("DEBUG StructuralComponent[%i]::updateSlidersPaths() bSelf=%i bShared=%i @ps=%li \n", id, bSelf, bShared, (long)ps );
     Node** nds = (Node**)&nodes;
     Slider* share = 0; 
     for(int i=0; i<4; i++){ 
         //printf( "update nds[%i] \n", i );
         Node* nd = nds[i];
         if( nd==0 ) continue; 
+        printf( "  DEBUG nds[%i] is not null, kind=%i\n", i, nd->component_kind() );
         if( nd->component_kind() == (int)ComponetKind::Slider ){ 
             Slider * sl = (Slider*)nd;
+            printf( "  DEBUG Slider[%i] found\n", sl->id );
             if( (share==0)||(!bShared) ){ 
                 if( bSelf ){
-                    //printf( "  if( bSelf ) == true \n" );
+                    printf( "    DEBUG bSelf=true, ps!=0. pointRange(%i,%i)\n", pointRange.x, pointRange.y );
                     if(ps!=0){
                         int inear = findNearestPoint( (Vec3d)nd->pos, ps );
                         //nd->pos   = (Vec3d)ps[inear].f;
                         int side  = ( inear - pointRange.x )%4;
-                        //printf( "side = %i i0=%i imin=%i\n", side, inear-pointRange.x, pointRange.x );
+                        printf( "    DEBUG -> inear=%i, side=%i\n", inear, side );
                         //side = 0;
                         sl->updatePath( this, side ); 
-                        //printf( "sl[%i] update \n", i  );
+                        printf( "    DEBUG sl->path.n is now %i\n", sl->path.n );
                     }else{ printf("ERROR in StructuralComponent[%i]::updateSlidersPaths() bSelf=true but ps==0 \n", id ); exit(0); }
                 }else{ 
                     sl->updatePath( sl->boundTo, sl->along.y ); 
@@ -865,6 +867,7 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4d* 
                 share=sl;  
             }else if(bShared){ 
                 sl->path.bindSharedPath( &share->path ); 
+                printf( "    DEBUG bound shared path, sl->path.n is now %i\n", sl->path.n );
             }
             if(ps){ 
                 sl->path.cur = sl->path.findNearestPoint( (Vec3d)nd->pos, ps ); 

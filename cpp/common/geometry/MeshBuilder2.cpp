@@ -592,7 +592,7 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
 
     Vec2i Builder2::conect_vertex( int iv, int stickType, int n, int* iverts ){
         int ie = edges.size();
-        for(int i=0;i<n;i++){ edge(iv,iverts[i],stickType); }
+        for(int i=0;i<n;i++){ /*if (iv == iverts[i]) continue;*/ edge(iv,iverts[i],stickType); } // The check `if (iv == iverts[i]) continue;` is removed here as the caller (make_anchor_point) now ensures the anchor point itself is not in the selection list.
         return Vec2i{ie,ie+n-1};
     }
 
@@ -609,7 +609,12 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
         int iv=-1;
         if(Rcolapse>0){ iv = findVert(p, Rcolapse); }  // use existing vert if found
         if(iv<0      ){ iv = vert( p );             }  // create new vert if not found
-        conect_vertex( iv, stickType, selection.size(), selection.data() );
+
+    // Root cause fix: Remove the anchor point itself from the selection list
+    // if it was included by select_in_sphere/cylinder (which it will be if it's an existing vertex)
+    auto it = std::remove(selection.begin(), selection.end(), iv);
+    selection.erase(it, selection.end());
+    conect_vertex( iv, stickType, selection.size(), selection.data() );
         return iv;
     }
 

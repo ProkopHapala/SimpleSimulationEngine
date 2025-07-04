@@ -58,13 +58,10 @@ inline bool isnan(const Vec2d&  v){ return isnan(v.x)||isnan(v.y)               
 // CPU ticks timer
 // http://stackoverflow.com/questions/6432669/variance-in-rdtsc-overhead
 
-#define DBGL printf( "DEBUG LINE %i \n", __LINE__);
-
-#define DEBUG printf( "DEBUG LINE %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ );
-
+//#define DBGL printf( "DEBUG LINE %i \n", __LINE__);
+//#define DEBUG printf( "DEBUG LINE %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ );
 //void dbg(char* s){ printf("DEBUG (%s) \n", s); };
-
-#define DBG(format,args...) { printf("DEBUG "); printf(format,## args); }
+//#define DBG(format,args...) { printf("DEBUG "); printf(format,## args); }
 
 /*
 int  dbg(int priority, const char *format, ...){

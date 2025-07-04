@@ -17,8 +17,10 @@ message("OPTIONS: -DRELEASE=${RELEASE} -DWITH_SDL=${WITH_SDL} -DWITH_OMP=${WITH_
 
 if(RELEASE)
     set(CMAKE_BUILD_TYPE Release)
+    add_definitions(-DRELEASEBUILD)
 else()
     set(CMAKE_BUILD_TYPE Debug)
+    add_definitions(-DDEBUGBUILD)
 endif()
 
 set(default_build_type Release)

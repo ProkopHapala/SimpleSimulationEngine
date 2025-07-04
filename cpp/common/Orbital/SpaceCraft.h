@@ -359,7 +359,7 @@ int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const 
         ((Slider**)&(o->nodes))[i] = nd[i];
     }
 
-    if (!nd[0] || !nd[1] || !nd[2] || cs[0] < 0 || cs[1] < 0 || cs[2] < 0) { printf("ERROR in make_Ring2: The first 3 anchor points must have defined positions (cs > 0) to define the circle.\n"); delete o; return -1; }
+    if (!nd[0] || !nd[1] || !nd[2] || cs[0] < 0 || cs[1] < 0 || cs[2] < 0) { printf("ERROR in make_Ring2: The first 3 anchor points must have defined positions (cs > 0) to define the circle.\n"); delete o; exit(0); return -1; }
     o->R = circle_3point(nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b);
     o->pose.rot.c.set_cross(o->pose.rot.b, o->pose.rot.a);
 
