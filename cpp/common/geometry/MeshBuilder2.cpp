@@ -450,9 +450,12 @@ int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
 int Builder2::select_in_sphere( const Vec3d& p0, double r, int i0, int imax ){
     int n=0;
     if(imax==-1){ n=verts.size(); }
+    printf( "Builder2::select_in_sphere() p0(%g,%g,%g) r=%g  i0=%i imax=%i \n", p0.x,p0.y,p0.z, r, i0, imax );
     for(int i=i0;i<imax;i++){
         Vec3d  d =  verts[i].pos-p0;
-        if( d.norm2() > r*r ) continue; // check bounds along the axis
+        double r2 = d.norm2();
+        printf( "Builder2::select_in_sphere() vert[%3i] r=%10g pos: %10g %10g %10g \n", i, sqrt(r2), verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
+        if( r2 > r*r ) continue; // check bounds along the axis
         selection.push_back(i);
         n++;
     }

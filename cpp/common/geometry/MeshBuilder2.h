@@ -124,7 +124,7 @@ class Builder2{ public:
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
-        //printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
+        printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
         // { // check vertex min distance
         //     if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
         //     double Rmin=1e-3;

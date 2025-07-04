@@ -72,7 +72,7 @@ void solve_float(){
     }
 }
 
-int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double* node_size, int ngirdes, Vec2i* girdes, int nropes, Vec2i* ropes ){
+int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double* node_size, int ngirdes, Vec2i* girdes, int* girer_nsegs,  int nropes, Vec2i* ropes ){
     printf("### make_Skeleton() creating %d nodes, %d girders, %d ropes\n", nnode, ngirdes, nropes);
     
     // Initialize workshop if needed (you might want to move this outside)
@@ -100,7 +100,9 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double
         // Get a proper up vector (not parallel to dir)
         if(fabs(dir.z) < 0.9){ up = {0.0, 0.0, 1.0}; } 
         else                 { up = {1.0, 0.0, 0.0}; }
-        theSpaceCraft->add_Girder(e.x, e.y, up, nseg, mseg, wh, stickTypes);
+        int nseg_i = nseg;
+        if(girer_nsegs){ nseg_i = girer_nsegs[i]; }
+        theSpaceCraft->add_Girder(e.x, e.y, up, nseg_i, mseg, wh, stickTypes);
         //printf("  Added girder between nodes %d and %d\n", e.x, e.y);
     }
     
@@ -176,19 +178,20 @@ int main(int argc, char *argv[]){
         const int nnodes = 5;
         Vec3d nodes[nnodes] = {
             {0.0,    0.0,    0.0}, // 0
-            {0.0,    0.0,  200.0}, // 2
-            {0.0,    0.0, -150.0}, // 1
+            {0.0,    0.0,  200.0}, // 1
+            {0.0,    0.0, -150.0}, // 2
             {0.0, -100.0,    0.0}, // 3
             {0.0,  100.0,    0.0}  // 4
         };
         double node_sizes[nnodes] = {10.0, 5., 5.0, 5.0, 5.0 };
         const int nGirders = 4;
-        Vec2i girdes[nGirders] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
+        Vec2i girdes[nGirders] = {{0,1}, {0,2}, {0,3}, {0,4}};
+        int girer_nsegs[nGirders] = {8, 6, 4, 4};
         const int nRopes = 4;
         Vec2i ropes[nRopes] = { {1,3}, {1,4}, {2,3}, {2,4} };
 
         // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
-        make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, nRopes, ropes );
+        make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, girer_nsegs, nRopes, ropes );
 
         // Attach a wheel to the girders
         const int   wheel_girders[4] = {2,3,1,0};
