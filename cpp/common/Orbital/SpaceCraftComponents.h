@@ -1,4 +1,3 @@
-﻿
 #ifndef  SpaceCraftComponents_h
 #define  SpaceCraftComponents_h
 
@@ -236,7 +235,7 @@ class Object{ public:
 
     virtual ~Object(){  };
     virtual void print(bool bShort=false)const{ printf("Object(id=%i,kind=%i)",id,kind); }
-    virtual int component_kind(){ return -1; }
+    virtual int component_kind() const { return -1; }
     //virtual Object (){ kind = component_kind(); }
 };
 
@@ -259,11 +258,11 @@ class ShipComponent : public Object { public:
     Vec2i chunkRange{-1,-1}; // --,,--
 
     virtual ~ShipComponent(){};
-    virtual void print(bool bShort=false)const{ 
+    virtual void print(bool bShort=false)const override{ 
         if(bShort){ printf("ShipComponent(id=%i)",id);}
         else      { printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat );} 
     }
-    virtual int  component_kind() const { return (int)ComponetKind::ShipComponent; }; 
+    virtual int  component_kind() const override { return (int)ComponetKind::ShipComponent; }; 
     virtual bool is_structural()  const { return false; };
     inline bool  is_kind(int kind_){ return component_kind()==kind_; }
 };
@@ -298,7 +297,7 @@ class StructuralComponent : public ShipComponent { public:
     void ray( const Vec3d& ro, const Vec3d& rd ){}
 
     virtual void print(bool bShort=false)const override;
-    virtual int  component_kind() const override { return (int)ComponetKind::StructuralComponent; };
+    virtual int component_kind() const override { return (int)ComponetKind::StructuralComponent; };
     virtual bool is_structural()  const override { return true; };
 
     virtual double rotMat( Mat3d& rot)const = 0;
@@ -309,7 +308,7 @@ class StructuralComponent : public ShipComponent { public:
     virtual void update_nodes(); 
     virtual void updateSlidersPaths( bool bSelf, bool bShared=false, Quat4d* ps=0 );
 
-    virtual int findNearestPoint( Vec3d p, Quat4d* ps=0 ){
+    virtual int findNearestPoint( Vec3d p, Quat4d* ps=0 ) const {
         //printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
         //printf(" -- "); print();
         int i0 = pointRange.x;
@@ -375,7 +374,7 @@ class Weld : public ShipComponent { public:
     double Rmax;
     vec2<StructuralComponent*> comps;
 
-    virtual void print(bool bShort=false)const{ if(bShort){printf("Weld(id=%i)",id);}else{
+    virtual void print(bool bShort=false)const override{ if(bShort){printf("Weld(id=%i)",id);}else{
         int ic1 = comps.x ? comps.x->id : -1;
         int ic2 = comps.y ? comps.y->id : -1;
         printf("Weld(id=%i) comps(%i,%i) Rmax=%g face_mat=%i \n", id, ic1,ic2, Rmax, face_mat );} 
@@ -396,6 +395,7 @@ class Node : public ShipComponent{ public:
     //Node(Vec3d pos):pos(pos){};
 
     virtual ~Node(){};
+    virtual int component_kind() const override { return (int)ComponetKind::Node; }; 
     int updateBound(Vec3d p0=Vec3dZero){ 
         if(boundTo){ 
             if(along.y<0)along.y=boundTo->nearSide(p0); 
@@ -405,13 +405,13 @@ class Node : public ShipComponent{ public:
         } 
         return along.x; 
     } 
-    virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
+    virtual void print(bool bShort=false)const override{  if(bShort){printf("Node(id=%i)",id);}else{ 
         printf("Node(id=%i) iv=%i pos(%g,%g,%g) \n", id, ivert, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
     }
     virtual int update_vert(){ if(boundTo){ int i0=boundTo->pointRange.x; if(i0>=0){ ivert=along.x+i0; }else{ ivert=-1; }; }; return ivert; };    
 };
 
-void StructuralComponent::print(bool bShort)const{ 
+void StructuralComponent::print(bool bShort)const { 
     if(bShort){ printf("StructuralComponent(id=%i)",id); }else{
         printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x->id,nodes.y->id,nodes.z->id,nodes.w->id );
     } 
@@ -438,7 +438,7 @@ class NodeLinker : public StructuralComponent { public:
         printf("NodeLinker(id=%i) nodes(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); }
     }
     void ray( const Vec3d& ro, const Vec3d& rd ){}
-    virtual int component_kind(){ return (int)ComponetKind::NodeLinker; };
+    virtual int component_kind()const override { return (int)ComponetKind::NodeLinker; };
 
     //virtual double rotMat( Mat3d& rot)const override = 0;
     //virtual int nearSide  ( Vec3d p, const Mat3d* rot=0) const override = 0;
@@ -465,7 +465,7 @@ class Girder : public NodeLinker { public:
     virtual void print(bool bShort=false)const override { if(bShort){printf("Girder(id=%i)",id);}else{
         printf( "Girder(%i) nodes(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i) pointRange(%i,%i)\n", id, nodes.x->id, nodes.y->id, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w, pointRange.x,pointRange.y ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Girder; };
+    virtual int component_kind()const override { return (int)ComponetKind::Girder; };
 
     virtual double rotMat( Mat3d& rot)const override{
         rot.c = nodes.y->pos - nodes.x->pos;
@@ -547,7 +547,7 @@ class Ring : public StructuralComponent { public:
         pose.rot.c.x, pose.rot.c.y, pose.rot.c.z,
         R, wh.x, wh.y, st.x,st.y,st.z,st.w );}
     }
-    virtual int component_kind(){ return (int)ComponetKind::Ring; };
+    virtual int component_kind()const override{ return (int)ComponetKind::Ring; };
 
     virtual double rotMat( Mat3d& rot)const override{ rot=Mat3dIdentity; return 0; };
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 )const override{ return -1; };
@@ -578,7 +578,7 @@ class Rope : public NodeLinker { public:
     virtual void print(bool bShort=false)const override { if(bShort){printf("Rope(id=%i)",id);}else{
         printf("Rope(id=%i) nodes(%i,%i) L=%g \n", id, nodes.x->id,nodes.y->id, length ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Rope; };
+    virtual int component_kind() const override { return (int)ComponetKind::Rope; };
 
     virtual double rotMat( Mat3d& rot)const override{ rot.c = nodes.y->pos - nodes.x->pos; double l=rot.c.normalize(); return l; };
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const override{ return 0; };
@@ -613,7 +613,7 @@ class Modul: public ShipComponent { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Modul(id=%i)",id);}else{
         printf("Modul(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Modul; }; 
+    virtual int component_kind() const override { return (int)ComponetKind::Modul; }; 
 };
 
 class Tank : public Modul { public:
@@ -627,22 +627,22 @@ class Tank : public Modul { public:
     virtual void print(bool bShort=false)const override { if(bShort){printf("Tank(id=%i)",id);}else{
         printf("Tank(id=%i) %g [m^3] of Commodity[%i] \n", id, filled, commodityId ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Tank; }; 
+    virtual int component_kind() const override { return (int)ComponetKind::Tank; }; 
 };
 
 
 class Balloon : public Modul { public:
-    virtual void print(bool bShort=false)const  override { if(bShort){printf("Balloon(id=%i)",id);}else{
+    virtual void print(bool bShort=false)const override { if(bShort){printf("Balloon(id=%i)",id);}else{
         printf("Balloon(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Balloon; };
+    virtual int component_kind() const override { return (int)ComponetKind::Balloon; };
 };
 
 class Rock : public Modul { public:
     virtual void print(bool bShort=false)const override { if(bShort){printf("Rock(id=%i)",id);}else{
         printf("Rock(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
     }
-    virtual int component_kind(){ return (int)ComponetKind::Rock; };
+    virtual int component_kind() const override { return (int)ComponetKind::Rock; };
 };
 
 class Pipe : public ShipComponent { public:
@@ -655,7 +655,7 @@ class Pipe : public ShipComponent { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Pipe(id=%i)",id);}else{
         printf("Pipe(id=%i) Comp_a(kind=%i,id=%i) Comp_b(kind=%i,id=%i) nvert=%i maxFlow=%g \n", id, kind, a->kind,a->id, b->kind,b->id, path.n, maxFlow ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Rope; };
+    virtual int component_kind() const override { return (int)ComponetKind::Rope; };
 };
 
 //class Hub : public ShipComponent { public:
@@ -678,7 +678,7 @@ class Plate : public ShipComponent { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Plate(id=%i)",id);}else{
         printf("Plate(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Plate; };
+    virtual int component_kind() const override { return (int)ComponetKind::Plate; };
 };
 
 class Radiator : public Plate{ public:
@@ -686,21 +686,21 @@ class Radiator : public Plate{ public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Radiator(id=%i)",id);}else{
         printf("Radiator(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f)) T=%g  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y, temperature ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Radiator; };
+    virtual int component_kind() const override { return (int)ComponetKind::Radiator; };
 };
 
 class Shield : public Plate{ public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Shield(id=%i)",id);}else{
         printf("Shield(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Shield; };
+    virtual int component_kind() const override { return (int)ComponetKind::Shield; };
 };
 
 class Collector : public Plate{ public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Collector(id=%i)",id);}else{
         printf("Collector(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Collector; };
+    virtual int component_kind() const override { return (int)ComponetKind::Collector; };
 };
 
 // ==== Motors
@@ -715,7 +715,7 @@ class Thruster : public Modul { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Thruster(id=%i)",id);}else{
         printf("Thruster(id=%i) type=%i kidn=%i face_mat=%i P=%g[W] F=%g C=%g \n", id, type, kind, face_mat, power, thrust, consumption ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Thruster; };
+    virtual int component_kind() const override { return (int)ComponetKind::Thruster; };
 };
 
 class Rotor : public ShipComponent { public:
@@ -728,7 +728,7 @@ class Rotor : public ShipComponent { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Rotor(id=%i)",id);}else{
         printf("Rotor(id=%i) kidn=%i face_mat=%i I=%g P=%g[W] tq=%g \n", id, kind, face_mat, Inertia, power, torque ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Rotor; };
+    virtual int component_kind() const override { return (int)ComponetKind::Rotor; };
 };
 
 /*
@@ -739,7 +739,7 @@ class Slider : public ShipComponent { public:
     double Force;
 
     virtual void print()const override{ printf("Slider(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind, face_mat, girder, power, Force ); };
-    virtual int component_kind(){ return (int)ComponetKind::Slider; };
+    virtual int component_kind() const override { return (int)ComponetKind::Slider; };
 };
 */
 
@@ -799,7 +799,7 @@ class Slider : public Node { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Slider(id=%i)",id);}else{
         printf("Slider(id=%i) kind=%i girder=%i F=%g[N] P=%g[W] \n", id, kind, forceMax, powerMax ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Slider; };
+    virtual int component_kind() const override { return (int)ComponetKind::Slider; };
 
     void updatePath( StructuralComponent* o, int side=-1 ){
         //printf("Slider[%i]::updatePath()\n", id );
@@ -965,7 +965,7 @@ class Slider_old : public Node { public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Slider(id=%i)",id);}else{
         printf("Slider(id=%i) kidn=%i girder=%i P=%g[W] F=%g \n", id, kind, ifix, forceMax, powerMax ); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Slider; };
+    virtual int component_kind() const override { return (int)ComponetKind::Slider; };
 };
 */
 
@@ -993,7 +993,7 @@ class Accelerator : public ShipComponent{ public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Accelerator(id=%i)",id);}else{
         printf("Accelerator(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) L=%g P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Accelerator; };
+    virtual int component_kind() const override { return (int)ComponetKind::Accelerator; };
     //std::vector<int> anchors; // anchor points
 };
 
@@ -1008,7 +1008,7 @@ class Gun : public Accelerator{ public:
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Gun(id=%i)",id);}else{
         printf("Gun(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) A=%g[m^2] D=%g[1] L=%g[m] P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, Aperture, divergence, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); }
     }
-    virtual int component_kind(){ return (int)ComponetKind::Gun; };
+    virtual int component_kind() const override { return (int)ComponetKind::Gun; };
 };
 
 

@@ -399,10 +399,11 @@ void nodeBlock_to_mesh(Node* o, Builder2& mesh, SpaceCraft* craft) {
     int pre_verts_size = mesh.verts.size();
     int pre_edges_size = mesh.edges.size();
     int pre_chunks_size = mesh.chunks.size();
+    printf("nodeBlock_to_mesh() start iv0=%i ie0=%i ic0=%i ", pre_verts_size, pre_edges_size, pre_chunks_size ); o->print();
     if(o->boundTo == 0){
         //Mat3d rot = Mat3dIdentity;
         //printf("nodeBlock_to_mesh() o->boundTo=%i craft=%p\n", o->boundTo, craft );
-        printf("nodeBlock_to_mesh() craft->nodeMeshes.size()=%i craft->defaultNodeMesh=%i\n", craft->nodeMeshes.size(), craft->defaultNodeMesh );
+        //printf("nodeBlock_to_mesh() craft->nodeMeshes.size()=%i craft->defaultNodeMesh=%i\n", craft->nodeMeshes.size(), craft->defaultNodeMesh );
         CMesh& nodeMesh = craft->nodeMeshes[ craft->defaultNodeMesh ];
         Vec3d size = Vec3d{1,1,1}*o->size;
         //printf("nodeBlock_to_mesh() nodeMesh.nvert=%i nodeMesh.nedge=%i nodeMesh.nfaces=%i\n", nodeMesh.nvert, nodeMesh.nedge, nodeMesh.nfaces);
@@ -414,6 +415,7 @@ void nodeBlock_to_mesh(Node* o, Builder2& mesh, SpaceCraft* craft) {
     o->pointRange = {pre_verts_size, (int)mesh.verts.size()};
     o->stickRange = {pre_edges_size, (int)mesh.edges.size()};
     o->chunkRange = {pre_chunks_size, (int)mesh.chunks.size()};
+    printf("nodeBlock_to_mesh() end iv0=%i ie0=%i ic0=%i \n", o->pointRange.x, o->stickRange.x, o->chunkRange.x );
 }
 
 // Helper function to process Girder objects
