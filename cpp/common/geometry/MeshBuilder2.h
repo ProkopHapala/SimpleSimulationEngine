@@ -23,6 +23,7 @@
 #include "CMesh.h"
 
 #include "globals.h"
+#include "Buckets.h"
 
 //#include "MeshBuilder.h"
 
@@ -86,7 +87,9 @@ class Builder2{ public:
     bool use_vert2edge  = false;
     bool bPolygonToTris = true;
     std::unordered_map<uint64_t,int> vert2edge;        // map from pair of vert index to vert index in edges
-    std::vector<std::unordered_set<int>> edgesOfVerts; // edges of each vertex
+    
+    //std::vector<std::unordered_set<int>> edgesOfVerts; // edges of each vertex
+    Buckets edgesOfVerts;
 
     // Edit settings
     bool bExitError    = true;

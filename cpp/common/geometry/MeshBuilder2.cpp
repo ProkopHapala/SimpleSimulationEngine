@@ -7,6 +7,7 @@
 #include "raytrace.h"
 #include "testUtils.h"
 
+
 namespace Mesh {
 
 void Builder2::clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
@@ -123,25 +124,34 @@ void Builder2::buildVerts2Edge(){
     }
 }
 
+// void Builder2::build_edgesOfVerts(){
+//     edgesOfVerts.clear();
 void Builder2::build_edgesOfVerts(){
-    edgesOfVerts.clear();
-    edgesOfVerts.resize(verts.size());
-    for( int i=0; i<edges.size(); i++ ){
-        Vec2i e = edges[i].lo;
-        edgesOfVerts[e.x].insert(i);
-        edgesOfVerts[e.y].insert(i);
+    int nv = verts.size();
+    int ne = edges.size();
+    int no = ne*2;
+    // build an object-to-cell map: each edge twice (one per endpoint)
+    int* obj2cellLocal = new int[no];
+    for(int ie=0; ie<ne; ie++){
+        Vec2i e = edges[ie].lo;
+        obj2cellLocal[2*ie]   = e.x;
+        obj2cellLocal[2*ie+1] = e.y;
     }
+    // allocate buckets using obj2cell mapping
+    edgesOfVerts.realloc(nv, no, true);
+    edgesOfVerts.bindObjs(no, obj2cellLocal);
+    edgesOfVerts.updateCells();
 }
 
-int Builder2::loadNeighbours( int iv, int* ivs, int* ies, int n ){
-    auto& es = edgesOfVerts[iv];
-    if( n==-1 ){ n = es.size(); }
-    int i=0;
-    for( auto& e : es ){ 
-        int ie=e; 
-        if( ivs ){ ivs[i]=edges[ie].lo.other(iv); }
-        if( ies ){ ies[i]=ie; } 
-        i++;
+int Builder2::loadNeighbours(int iv, int* ivs, int* ies, int n) {
+    int total = edgesOfVerts.cellNs[iv];
+    if(n == -1 || n > total) n = total;
+    int base = edgesOfVerts.cellI0s[iv];
+    for(int i = 0; i < n; i++) {
+        int he = edgesOfVerts.cell2obj[base + i];
+        int ie = he >> 1; // half-edge index to edge index
+        if(ivs) ivs[i] = edges[ie].lo.other(iv);
+        if(ies) ies[i] = ie;
     }
     return n;
 }
@@ -154,8 +164,7 @@ int Builder2::bevel_vert(int iv, double L, double h ) {
     // - h: offset height in the direction perpendicular to surface normal
     
     // Get edges connected to this vertex
-    auto& es = edgesOfVerts[iv];
-    int n = es.size();
+    int n = edgesOfVerts.cellNs[iv];
     if (n < 2) return -1; // Can't bevel a vertex with fewer than 2 edges
     
     int ivs[n]; // neighbor vertex indices
@@ -230,9 +239,7 @@ int Builder2::bevel_vert(int iv, double L, double h ) {
 
 int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     // First ensure we have the necessary edge information
-    if (edgesOfVerts.empty()) {
-        build_edgesOfVerts();
-    }
+    //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
     std::vector<int> ivs;
     {   // --- list all vertices connected to the edges
         std::unordered_set<int> ivset;
@@ -275,7 +282,8 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
 
 
 Vec3d Builder2::vertNormalByEdges( int iv, bool bNormalizeEach){
-    int ne = edgesOfVerts[iv].size();
+    //int ne = edgesOfVerts[iv].size();
+    int ne = edgesOfVerts.cellNs[iv];
     int ivs[ ne ];
     loadNeighbours( iv, ivs, 0, ne );
     Vec3d nrm = Vec3dZero;

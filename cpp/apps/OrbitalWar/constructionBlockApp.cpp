@@ -393,6 +393,7 @@ int main(int argc, char *argv[]){
         int ies[nedge] = {0,1,2};
         truss.add_verts(npoint, nodes);
         truss.add_edges(nedge, edges);
+        truss.build_edgesOfVerts();
         truss.bevel( nedge, ies, 10.0, 10.0, 5.0);
     }};
 
