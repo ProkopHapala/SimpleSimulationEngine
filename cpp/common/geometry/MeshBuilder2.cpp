@@ -298,6 +298,14 @@ int Builder2::select_edge_by_verts( int iv, int n, int* ies ){
     return -1;
 }
 
+int select_edge( int ie, int n, int* ies ){
+    for(int j=0; j<n; j++){
+        int je = ies[j];
+        if(ie==je){ return j; }
+    }
+    return -1;
+}
+
 int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     printf("Builder2::bevel() ne=%i L=%g h=%g nseg=%i\n", ne, L, h, nseg);
     // First ensure we have the necessary edge information
@@ -349,10 +357,11 @@ int nesum = 0;
         int ie = ies[i];
         Vec2i e = edges[ie].lo;
         // select index of side of created ngon by bevel_vert for each vertex of the edge
-        int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1] - ie0s[kx]; int ix = select_edge_by_verts(e.x, nx, iess.data() + ie0x );
-        int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1] - ie0s[ky]; int iy = select_edge_by_verts(e.y, ny, iess.data() + ie0y );
+        //int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1] - ie0s[kx]; int ix = select_edge_by_verts(e.x, nx, iess.data() + ie0x );
+        //int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1] - ie0s[ky]; int iy = select_edge_by_verts(e.y, ny, iess.data() + ie0y );
+        int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1]-ie0s[kx]; int ix = select_edge(ie, nx, iess.data() + ie0x );
+        int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1]-ie0s[ky]; int iy = select_edge(ie, ny, iess.data() + ie0y );
         // select vertex index of created ngon by bevel_vert for each vertex of the edge
-        
         int iv0x = iv0s[kx] + ix;
         int iv0y = iv0s[ky] + iy;
         int nvx  = ie0s[kx+1] - iv0x;
