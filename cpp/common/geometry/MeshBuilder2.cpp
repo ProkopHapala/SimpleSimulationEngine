@@ -1,6 +1,8 @@
+#include <cctype>
 #include "MeshBuilder2.h"
 
 #include <algorithm>
+#include <unordered_map>
 #include <unordered_map>
 
 #include "arrayAlgs.h"
@@ -134,13 +136,14 @@ void Builder2::build_edgesOfVerts(){
     int* obj2cellLocal = new int[no];
     for(int ie=0; ie<ne; ie++){
         Vec2i e = edges[ie].lo;
-        obj2cellLocal[2*ie]   = e.x;
+        obj2cellLocal[2*ie  ] = e.x;
         obj2cellLocal[2*ie+1] = e.y;
     }
     // allocate buckets using obj2cell mapping
     edgesOfVerts.realloc(nv, no, true);
     edgesOfVerts.bindObjs(no, obj2cellLocal);
     edgesOfVerts.updateCells();
+    //delete[] obj2cellLocal;
 }
 
 int Builder2::loadNeighbours(int iv, int* ivs, int* ies, int n) {
@@ -155,131 +158,6 @@ int Builder2::loadNeighbours(int iv, int* ivs, int* ies, int n) {
     }
     return n;
 }
-
-int Builder2::bevel_vert(int iv, double L, double h ) {
-    // This function implements beveling similar to Blender's BMesh bevel operation
-    // Parameters:
-    // - iv: index of vertex to bevel
-    // - L: length of each side of the created polygon (bevel distance)
-    // - h: offset height in the direction perpendicular to surface normal
-    
-    // Get edges connected to this vertex
-    int n = edgesOfVerts.cellNs[iv];
-    if (n < 2) return -1; // Can't bevel a vertex with fewer than 2 edges
-    
-    int ivs[n]; // neighbor vertex indices
-    int ies[n]; // edge indices
-    
-    // Load neighbor vertices and edge indices
-    loadNeighbours(iv, ivs, ies, n);
-    
-    // Get normal at the vertex
-    Vec3d normal = vertNormalByEdges(iv);
-    normal.normalize();
-    
-    // Sort edges by angle around normal
-    sortVertEdgesByNormal(verts[iv].pos, normal, n, ies);
-    
-    // Also sort the vertex indices accordingly
-    for (int i = 0; i < n; i++) {
-        ivs[i] = getOtherEdgeVert(ies[i], iv);
-    }
-    
-    // The central point (vertex position with offset along normal)
-    Vec3d centralPoint = verts[iv].pos + normal * h;
-    
-    // Create n new vertices for the n-gon (one for each edge)
-    int newVerts[n];
-    
-    // For tracking the new edges we create
-    int nnewEdges = 0;
-    int newEdges[n];
-    
-    // Create vertices of the n-gon
-    for (int i = 0; i < n; i++) {
-        // Get direction from central vertex to neighbor
-        Vec3d dir = verts[ivs[i]].pos - verts[iv].pos;
-        dir.normalize();
-        
-        // Project dir onto the plane perpendicular to normal
-        dir.makeOrtho(normal);
-        dir.normalize();
-        
-        // Previous and next directions (for averaging to get corner directions)
-        Vec3d prevDir = verts[ivs[(i-1+n)%n]].pos - verts[iv].pos;
-        prevDir.makeOrtho(normal);
-        prevDir.normalize();
-        
-        Vec3d nextDir = verts[ivs[(i+1)%n]].pos - verts[iv].pos;
-        nextDir.makeOrtho(normal);
-        nextDir.normalize();
-        
-        // Average direction for corner
-        Vec3d cornerDir = prevDir + dir;
-        cornerDir.normalize();
-        
-        // Position of new vertex
-        Vec3d newPos = centralPoint + cornerDir * L;
-        
-        // Add new vertex
-        newVerts[i] = vert(newPos);
-    }
-    
-    // Connect the new vertices to form the n-gon
-    for (int i = 0; i < n; i++) {
-        int next = (i + 1) % n;
-        int newEdgeId = edge(newVerts[i], newVerts[next]);
-        newEdges[nnewEdges++] = newEdgeId;
-    }
-    // Create polygon faces
-    // Central n-gon
-    polygon(n, newEdges);
-    return n; // Return the number of sides in the n-gon
-}
-
-int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
-    // First ensure we have the necessary edge information
-    //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
-    std::vector<int> ivs;
-    {   // --- list all vertices connected to the edges
-        std::unordered_set<int> ivset;
-        for(int i=0; i<ne; i++){
-            int ie = ies[i];
-            Vec2i e = edges[ie].lo;
-            ivset.insert(e.x);
-            ivset.insert(e.y);
-        }
-        ivs.resize(ivset.size());
-        int i=0;
-        for(auto& iv : ivset){ ivs[i++]=iv; }
-    }
-    // --- bevel each vertex
-    Vec2i eranges[ivs.size()];
-    Vec2i vranges[ivs.size()];
-    for(auto& iv : ivs){
-        int ie0 = edges.size();
-        int iv0 = verts.size();
-        bevel_vert( iv, L, h );        
-        eranges[iv] = Vec2i{ie0,(int)edges.size()};
-        vranges[iv] = Vec2i{iv0,(int)verts.size()};
-    }
-    // // --- bevel edges and connect them to beveled vertices
-    // for(int i=0; i<ne; i++){
-    //     int ie = ies[i];
-    //     Vec2i e = edges[ie].lo;
-    //     int iv0 = e.x;
-    //     int iv1 = e.y;
-    //     int ie0 = eranges[iv0].x;
-    //     int ie1 = eranges[iv1].x;
-    //     int iv0_ = vranges[iv0].x;
-    //     int iv1_ = vranges[iv1].x;
-    //     edge( iv0_, iv1_, ie0, ie1 );
-    //     edge( iv0_, iv1_, ie0, ie1 );
-    // }
-    return 0;
-}
-
-
 
 Vec3d Builder2::vertNormalByEdges( int iv, bool bNormalizeEach){
     //int ne = edgesOfVerts[iv].size();
@@ -325,6 +203,181 @@ void Builder2::sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies ){
     insertSort( n,   ixs, angs );
     permute   ( ies_, ies, ixs, 0, n );
 }
+
+int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
+    // This function implements beveling similar to Blender's BMesh bevel operation
+    // Parameters:
+    // - iv: index of vertex to bevel
+    // - L: length of each side of the created polygon (bevel distance)
+    // - h: offset height in the direction perpendicular to surface normal
+    
+    // Get edges connected to this vertex
+    int ne = edgesOfVerts.cellNs[iv];
+    printf("Builder2::bevel_vert() iv=%i ne=%i\n", iv, ne);
+    //if      (n<2 ){ return -1; }  // Can't bevel a vertex with fewer than 2 edges
+    //DEBUG
+    int  ivs [ne]; // neighbor vertex indices
+    int  ies_[ne]; // edge indices
+    ies = (ies) ? ies : ies_;
+    loadNeighbours(iv, ivs, ies, ne);           // Load neighbor vertices and edge indices
+    Vec3d p = verts[iv].pos; // copy to avoid invalidation on vert() calls
+    //DEBUG
+    if(ne<3){ // special case - instead of n-gon create just edge
+        Vec3d nor,u;
+        if(ne==1){
+            Vec3d d1 = verts[ivs[0]].pos - p; d1.normalize();
+            nor=nor0;
+            u.set_cross(d1,nor0);
+        }else{ // n==2
+            Vec3d d1 = verts[ivs[0]].pos - p; d1.normalize();
+            Vec3d d2 = verts[ivs[1]].pos - p; d2.normalize();
+            nor.set_cross(d1,d2);
+            double l2nor=nor.norm2();
+            if(l2nor<1e-6){ nor=nor0;}else{ nor.mul(1/sqrt(l2nor)); }
+            Vec3d d=d1+d2;
+            u.set_cross(d,nor); u.normalize();
+        }
+        int iv1 = vert(p + u*L + nor*h );
+        int iv2 = vert(p - u*L + nor*h );
+        edge(iv1, iv2);
+        return ne;
+    }
+    //DEBUG
+    Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
+    nor.normalize(); 
+    sortVertEdgesByNormal(verts[iv].pos, nor, ne, ies);  // Sort edges by angle around normal
+    for (int i=0; i<ne; i++) {ivs[i] = getOtherEdgeVert(ies[i], iv);} // Also sort the vertex indices accordingly
+    Vec3d centralPoint = p + nor * h; // use copy p // The central point (vertex position with offset along normal)
+    int newVerts[ne];  // Create n new vertices for the n-gon (one for each edge)
+    int nnewEdges = 0;
+    int newEdges[ne];
+    //DEBUG
+    // Create vertices of the n-gon
+    for (int i=0; i<ne; i++) {
+        // Get direction from central vertex to neighbor
+        Vec3d dir = verts[ivs[i]].pos - p;
+        dir.normalize();
+        // Project dir onto the plane perpendicular to normal
+        dir.makeOrtho(nor);
+        dir.normalize();
+        // Previous and next directions (for averaging to get corner directions)
+        Vec3d prevDir = verts[ivs[(i-1+ne)%ne]].pos - p; // use p
+        prevDir.makeOrtho(nor);
+        prevDir.normalize();
+        Vec3d nextDir = verts[ivs[(i+1)%ne]].pos - p; // use p
+        nextDir.makeOrtho(nor);
+        nextDir.normalize();
+        // Average direction for corner
+        Vec3d cornerDir = prevDir + dir;
+        cornerDir.normalize();
+        // Position of new vertex
+        Vec3d newPos = centralPoint + cornerDir * L;
+        // Add new vertex
+        newVerts[i] = vert(newPos);
+    }
+    //DEBUG
+    // Connect the new vertices to form the n-gon
+    for (int i=0; i<ne; i++) {
+        int next = (i+1) % ne;
+        int newEdgeId = edge(newVerts[i], newVerts[next]);
+        newEdges[nnewEdges++] = newEdgeId;
+    }
+    //DEBUG
+    // Create polygon faces
+    // Central n-gon
+    polygon(ne, newEdges);
+    return ne; // Return the number of sides in the n-gon
+}
+
+int Builder2::select_edge_by_verts( int iv, int n, int* ies ){
+    for(int i=0; i<n; i++){
+        int ie = ies[i];
+        Vec2i e = edges[ie].lo;
+        if(e.x == iv || e.y == iv){ return i; }
+    }
+    return -1;
+}
+
+int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
+    printf("Builder2::bevel() ne=%i L=%g h=%g nseg=%i\n", ne, L, h, nseg);
+    // First ensure we have the necessary edge information
+    //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
+    std::vector<int> ivs;
+    int nv=0;
+    //DEBUG
+    {   // --- list all vertices connected to the edges
+        std::unordered_set<int> ivset;
+        for(int i=0; i<ne; i++){
+            int ie = ies[i];
+            Vec2i e = edges[ie].lo;
+            ivset.insert(e.x);
+            ivset.insert(e.y);
+        }
+        nv=(int)ivset.size();
+        ivs.resize(nv);
+        int i=0;
+        for(auto& iv : ivset){ ivs[i++]=iv; }
+    }
+    //DEBUG
+    // --- bevel each vertex
+    int nmaxev = 16;
+std::vector<int> iess(nv * nmaxev);
+// map original vertex id to its position in ivs
+std::unordered_map<int,int> iv2pos;
+for(int k=0; k<nv; k++) iv2pos[ivs[k]] = k;
+// ranges for each vertex's bevel edges and verts
+std::vector<int> ie0s(nv+1), iv0s(nv+1);
+ie0s[0] = 0;
+iv0s[0] = verts.size();
+int nesum = 0;
+    //Vec2i eranges[ivs.size()];
+    //Vec2i vranges[ivs.size()];
+
+    //DEBUG
+    for(int k=0;k<nv;k++){ int iv = ivs[k];
+        printf("-- bevel vertex %i\n", iv);
+        //int ie0 = edges.size();
+        int nei = bevel_vert(iv, L, h, iess.data()+nesum);
+        nesum += nei;
+        ie0s[k+1] = nesum;
+        iv0s[k+1] = verts.size();
+    }
+    //DEBUG
+    // --- bevel edges and connect them to beveled vertices, make sure we connect them in the same direction
+    for(int i=0; i<ne; i++){
+        printf("-- bevel edge %i\n", i);
+        int ie = ies[i];
+        Vec2i e = edges[ie].lo;
+        // select index of side of created ngon by bevel_vert for each vertex of the edge
+        int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1] - ie0s[kx]; int ix = select_edge_by_verts(e.x, nx, iess.data() + ie0x );
+        int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1] - ie0s[ky]; int iy = select_edge_by_verts(e.y, ny, iess.data() + ie0y );
+        // select vertex index of created ngon by bevel_vert for each vertex of the edge
+        
+        int iv0x = iv0s[kx] + ix;
+        int iv0y = iv0s[ky] + iy;
+        int nvx  = ie0s[kx+1] - iv0x;
+        int nvy  = ie0s[ky+1] - iv0y;
+        int ivx0 = iv0x + ix;
+        int ivx1 = iv0x + (ix+1)%nvx;
+        int ivy0 = iv0y + iy;
+        int ivy1 = iv0y + (iy+1)%nvy;
+        printf("bevel #i %i edge %i(%i,%i) : ivxs(%i,%i|i0=%i,n=%i) ivys(%i,%i|i0=%i,n=%i)\n", i, ie, e.x, e.y, ivx0,ivx1, ie0x, nvx, ivy0, ivy0,ie0y, nvy);
+        // check orientation of the edges
+        Vec3d dx = verts[ivx1].pos - verts[ivx0].pos;
+        Vec3d dy = verts[ivy1].pos - verts[ivy0].pos;
+        double c = dx.dot(dy); 
+        if(c<0){ // are oriented in the same direction ?
+            //_swap(ivx0, ivx1);
+            _swap(ivy0, ivy1);
+        }
+        // connect the edges
+        edge( ivx0, ivy0 );
+        edge( ivx1, ivy1 );
+    }
+    return 0;
+}
+
+
 
 int Builder2::polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris ){
     int i0 = strips.size();

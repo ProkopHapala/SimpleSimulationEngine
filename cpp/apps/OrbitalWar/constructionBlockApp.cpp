@@ -180,6 +180,9 @@ void ConstructionBlockApp::initGUI(){
     viewControls = new CheckBoxList();
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
+
+    trussView.bViewPointLabels  = true;
+    trussView.bViewFaceLabels   = true;
     
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
     viewControls->addBox("Pivot Point",   &bViewPivotPoint);
@@ -190,7 +193,9 @@ void ConstructionBlockApp::initGUI(){
     viewControls->addBox("Faces",         &trussView.bViewFaces);
     viewControls->addBox("Tris",          &trussView.bViewTris);
     viewControls->addBox("Face Normals",  &trussView.bViewFaceNormals);
+
     viewControls->addBox("Point Labels",  &trussView.bViewPointLabels);
+    viewControls->addBox("Edge Labels",   &trussView.bViewEdgeLabels);
     viewControls->addBox("Face Labels",   &trussView.bViewFaceLabels);
     viewControls->addBox("Tri Labels",    &trussView.bViewTriLabels);
     gui.addPanel(viewControls);
@@ -390,11 +395,14 @@ int main(int argc, char *argv[]){
             {-30.0, -80.0,  0.0}, // 3
         };
         Vec2i edges[nedge] = {{0,1}, {0,2}, {0,3}};
-        int ies[nedge] = {0,1,2};
+        
         truss.add_verts(npoint, nodes);
         truss.add_edges(nedge, edges);
         truss.build_edgesOfVerts();
-        truss.bevel( nedge, ies, 10.0, 10.0, 5.0);
+
+        const int nbev = 2;
+        int ies[nbev] = {0,1};
+        truss.bevel( nbev, ies, 10.0, 10.0, 5.0);
     }};
 
     funcs["-skelet"]   = {1, [&](const char** ss){ 

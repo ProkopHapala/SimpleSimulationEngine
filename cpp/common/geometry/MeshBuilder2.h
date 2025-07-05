@@ -271,8 +271,10 @@ class Builder2{ public:
     int loadNeighbours( int iv, int* ivs, int* ies, int n=-1 );
     Vec3d vertNormalByEdges( int iv, bool bNormalizeEach=false);
     void sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies );
-    int bevel_vert(int iv, double L, double h);
-    int bevel( int ne, int* ies, double L, double h, int nseg=1 );
+    int bevel_vert(int iv, double L, double h, int* ies=0, Vec3d nor0=Vec3dZ );
+    int bevel( int ne, int* ies, double L, double h, int nseg=1);
+
+    int select_edge_by_verts( int iv, int n, int* ies );
 
     int plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub );
     int plateBetweenEdges( int nsub=1, double r=0.1, bool bSort=true );

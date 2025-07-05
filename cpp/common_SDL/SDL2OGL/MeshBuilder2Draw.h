@@ -212,6 +212,7 @@ class Renderer{
     bool bViewFaces        = true;
     bool bViewFaceNormals  = false;
     bool bViewPointLabels  = false;
+    bool bViewEdgeLabels   = false;
     bool bViewFaceLabels   = false;
     bool bViewTriLabels    = false;
 
@@ -245,6 +246,10 @@ class Renderer{
         if(bViewPointLabels) {
             glColor3f(0.f,0.f,0.f);
             drawPointLabels( *mesh, 0.02 );
+        }
+        if(bViewEdgeLabels) {
+            glColor3f(1.f,0.f,0.f);
+            drawEdgeLabels( *mesh, 0.02 );
         }
         if(bViewFaceLabels) {
             glColor3f(1.f,0.f,0.f);
