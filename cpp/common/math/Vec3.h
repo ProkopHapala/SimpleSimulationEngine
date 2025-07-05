@@ -314,11 +314,11 @@ class Vec3T{
 
 	inline VEC& rotateTo( const VEC& rot0, double coef ){
         //rot.add_mul( rot0, coef ); rot.normalize();
-        VEC ax; ax.set_cross( *this, rot0 );
-        double sa2 = ax.norm2();
+        VEC ax; ax.set_cross( *this, rot0 ); 
+        T sa2 = ax.norm2();
         if( sa2 < coef*coef ){
             ax.mul( 1/sqrt(sa2) ); // this is safe if coef is large enough
-            double ca = sqrt( 1-coef*coef );
+            T ca = sqrt( 1-coef*coef );
             rotate_csa( ca, coef, ax );
         }else{
             set(rot0);
@@ -327,14 +327,28 @@ class Vec3T{
     }
 
     inline void getInPlaneRotation( const VEC& rot0, const VEC& xhat, const VEC& yhat, double& ca, double& sa ){
-        double x0 = rot0.dot(xhat);
-        double y0 = rot0.dot(yhat);
-        double x_ = dot(xhat);
-        double y_ = dot(yhat);
+        T x0 = rot0.dot(xhat);
+        T y0 = rot0.dot(yhat);
+        T x_ = dot(xhat);
+        T y_ = dot(yhat);
         // http://mathworld.wolfram.com/ComplexDivision.html
-        double renorm = 1.0/sqrt( (x0*x0 + y0*y0)*(x_*x_ + y_*y_) );
+        T renorm = 1.0/sqrt( (x0*x0 + y0*y0)*(x_*x_ + y_*y_) );
         ca = ( x0*x_ + y0*y_ ) * renorm;
         sa = ( y0*x_ - x0*y_ ) * renorm;
+    }
+
+    inline T angle( const VEC& xhat, const VEC& yhat ){
+        // angle in plane defined by xhat and yhat
+        T c = dot(xhat);
+        T s = dot(yhat);
+        return atan2(s,c);
+    }
+
+    inline T angsort( const VEC& xhat, const VEC& yhat ){
+        // fast approximation of angle in plane defined by xhat and yhat useful for sorting
+        T c = dot(xhat);
+        T s = dot(yhat);
+        return (s>0?0:2) - c;
     }
 
 	inline T along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }

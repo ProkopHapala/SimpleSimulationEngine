@@ -1,8 +1,8 @@
 # `Mesh::Builder2` - The Unified Mesh Toolkit
 
-## 1. Overview
+## MeshBuilder2 Documentation
 
-The `Mesh::Builder2` class is a powerful and versatile toolkit for the procedural generation, manipulation, and editing of 3D geometric data within the SimpleSimulationEngine. It is designed to be a central hub for creating everything from simple primitive shapes to complex, high-resolution truss structures.
+The `MeshBuilder2` class is a versatile tool designed for generating and manipulating 3D meshes within the SimpleSimulationEngine. Unlike typical polygon mesh modelers primarily focused on rendering, `MeshBuilder2` is specifically tailored for physics simulations, emphasizing volumetric 3D meshes (trusses) for volumetric 3D element simulations and truss simulations. It focuses more on points connected by edges (mass points and distance constraints - tubes, sticks) rather than solely on polygons. However, it is now also being adapted for radiosity and light-scattering simulations, which will involve more extensive use of surfaces (polygons).
 
 It consolidates functionality that might otherwise be spread across multiple classes, providing a unified API for:
 -   **Low-level primitive creation**: Adding individual vertices, edges, and triangles.
@@ -55,6 +55,17 @@ The corresponding `chunk` descriptor would point to this data. For a 4-vertex fa
 
 ## 3. Key Concepts and Workflows
 
+The `MeshBuilder2` provides a comprehensive set of tools for modifying mesh topology and geometry. These functions enable operations similar to those found in advanced 3D modeling software, adapted for the specific needs of both rendering and physics simulations with polygon surfaces (e.g. in Radiosity and Light-Scattering simulations) and finite element simulations (e.g. dynamics of trusses, mass-spring systems, etc).
+
+The `MeshBuilder2` provides a complete suite of tools for interactive mesh editing, driven by user input.
+
+1.  **Set Mode**: The user selects a `SelectionMode` (`vert`, `edge`, or `face`) using the `I`, `O`, `P` keys in the demo app.
+2.  **Pick**: The user clicks, and `pickSelect()` is called. This uses ray-tracing (`pickVertex`, `pickEdge`, `pickTriangle`) to find the element under the cursor. The picked element's index is stored.
+3.  **Select**: The picked index is added to the `selection` vector and `selset` set. The user can select multiple elements if `bAdditiveSelect` is true. A selection box can also be used with `selectRect()`.
+4.  **Operate**: The user presses a key to perform an action on the selection.
+    -   **`F` key -> `selectionToFace()`**: If a loop of edges is selected, this function sorts them and creates a new polygon face.
+    -   **`E` key -> `extrudeFace(ipick, ...)`**: If a face is selected, this function extrudes it. It gets the face's vertices from its chunk, creates new vertices offset along the normal, creates a new face, and calls `bridge_quads` to connect the old and new faces, forming the sides of the extrusion.
+
 ### 3.1. Snapping and Finding Vertices
 
 Many functions, especially the `snap...Face` family, rely on finding existing vertices rather than creating new ones.
@@ -66,117 +77,185 @@ Many functions, especially the `snap...Face` family, rely on finding existing ve
 
 These functions are the bridge between the high-level `ConstructionBlock` and the low-level mesh. They are responsible for creating the physical connector geometry on the face of a block.
 
--   `snapBoxFace(p0, rot, La, Lb)`: Creates a simple, flat quad face. It uses `findVert` to locate the four corner vertices of the face on the existing block's mesh and then uses `findOrAddEdges` and `polygon` to create the face chunk.
+-   `snapBoxFace(p0, rot, La, Lb)`: Creates a simple, flat quad face, snapping to existing vertices.
+-   `frustrumFace(p0, rot, La, Lb, h, Lbh, Lah)`: Creates a frustum-shaped face.
+-   `snapFrustrumFace(p0, rot, La, Lb, h, Lbh, Lah, bFace)`: Creates a frustum-shaped face, snapping to existing vertices.
+-   `prismFace(p0, rot, La, Lb, h, Lbh)`: Creates a prism-shaped face.
+-   `snapPrismFace(p0, rot, La, Lb, h, Lbh, bFace)`: Creates a prism-shaped face, snapping to existing vertices.
+-   `quad(q, face_type, edge_type)`: Creates a quadrilateral face from four vertex indices.
+-   `bridgeFacingPolygons(p0, p1, ch1, ch2, nseg, stickTypes, maks)`: Bridges two facing polygons between two points.
+-   `bridgeFacingPolygons(nrod, edges, points, nseg, chs, stickTypes, maks)`: Bridges multiple facing polygons using edge and point data.
+-   `facingNodes(cmesh, nnod, points, out_chs, nplane, planes, planeVs)`: Identifies nodes facing a certain direction within a CMesh. It uses `findVert` to locate the four corner vertices of the face on the existing block's mesh and then uses `findOrAddEdges` and `polygon` to create the face chunk.
 -   `snapPrismFace(p0, rot, ...)`**: Creates a prism-shaped connector that provides two new faces for connections. It finds two vertices on the block and creates four new vertices to form the prism. It then generates two quad face chunks.
 -   `snapFrustrumFace(p0, rot, ...)`**: Creates a more complex frustum-shaped connector that provides five new faces. It finds two vertices on the block and creates six new vertices to form the frustum, generating five quad face chunks.
 
 The `bFace` parameter in these functions controls whether the connecting quad polygons are actually generated and stored as chunks. This is essential for the `ConstructionBlock` workflow, which needs these chunks to connect girders.
 
-### 3.3. Interactive Editing
+## 4 MeshBuilder2 Functions
 
-The builder provides a complete suite of tools for interactive mesh editing, driven by user input.
-
-1.  **Set Mode**: The user selects a `SelectionMode` (`vert`, `edge`, or `face`) using the `I`, `O`, `P` keys in the demo app.
-2.  **Pick**: The user clicks, and `pickSelect()` is called. This uses ray-tracing (`pickVertex`, `pickEdge`, `pickTriangle`) to find the element under the cursor. The picked element's index is stored.
-3.  **Select**: The picked index is added to the `selection` vector and `selset` set. The user can select multiple elements if `bAdditiveSelect` is true. A selection box can also be used with `selectRect()`.
-4.  **Operate**: The user presses a key to perform an action on the selection.
-    -   **`F` key -> `selectionToFace()`**: If a loop of edges is selected, this function sorts them and creates a new polygon face.
-    -   **`E` key -> `extrudeFace(ipick, ...)`**: If a face is selected, this function extrudes it. It gets the face's vertices from its chunk, creates new vertices offset along the normal, creates a new face, and calls `bridge_quads` to connect the old and new faces, forming the sides of the extrusion.
-
-## 4. Method Reference (Grouped by Functionality)
-
-### Primitive Creation
+### 4.1 Primitive Creation
 -   `vert(pos, ...)`: Adds a vertex.
 -   `edge(v1, v2, ...)`: Adds an edge between two vertices.
 -   `tri(v1, v2, v3, ...)`: Adds a triangle.
+-   `addVerts(n, ps)`: Adds multiple vertices from an array of positions.
+-   `addEdges(n, iedges, types, types2, iv0)`: Adds multiple edges from arrays of vertex index pairs and types.
+-   `addFaces(n, nVerts, iverts, bPolygonToTris, iv0)`: Adds multiple faces (polygons) from arrays of vertex counts and vertex indices.
+-   `addCMesh(cmesh, bFaces, p0, sc, rot, edge_type)`: Adds a complete CMesh object to the builder, with optional transformations.
+-   `add_box(p0, p1, bEdges, bFaces)`: Adds a rectangular box.
+-   `girder1(p0, p1, up, n, width, stickTypes, bCaps)`: Creates a 3D truss-like girder structure between two points.
+-   `triangle_strip(p0, p1, up, n, width, stickType, bCaps)`: Generates a flat, zig-zagging triangle strip.
 -   `chunk(...)`: Adds a metadata chunk pointing to a strip of primitives.
--   `quad(...)`: A helper to create a quad from four vertices (as two triangles).
+-   `quad(q, face_type, edge_type)`: Creates a quadrilateral face from four vertex indices.
+-   `addPointCross(const Vec3d& p, double d)`: Adds a 3D cross shape at a given position `p` for debugging visualization.
+-   `addArrow(const Vec3d& p1, const Vec3d& p2, double d)`: Adds an arrow from `p1` to `p2` for debugging visualization.
+-   `addSphere(const Vec3d& p, double r, int n)`: Adds a sphere at a given position `p` with radius `r` and `n` subdivisions.
+-   `addCone(const Vec3d& p, double r, double h, int n)`: Adds a cone at a given position `p` with radius `r`, height `h`, and `n` subdivisions.
+-   `addCylinder(const Vec3d& p, double r, double h, int n)`: Adds a cylinder at a given position `p` with radius `r`, height `h`, and `n` subdivisions.
 
-### Complex Shape Generation
+### 4.2  Complex Shape Generation
 -   `box(p, ls, rot)`: Creates a box with 8 vertices and 12 edges.
--   `rope(ip0, ip1, ...)`: Creates a sequence of connected edges between two vertices.
 -   `ring(...)`: Creates a circular loop of vertices and edges.
 -   `tube(...)`: Creates a tube by connecting a series of rings.
 -   `plate(...)`: Creates a subdivided flat surface between four corner points.
--   `girder1(...)`: Creates a complex, lightweight girder structure.
--   `wheel(...)`: Creates a wheel-shaped truss structure.
+-   `plate_quad(ip00, ip01, ip10, ip11, typs, n, fillType)`: Creates a subdivided plate from four vertex indices.
+-   `plateOnGriders(ns, prange1, prange2, byN, offs, span1, span2, stickTypes)`: Creates a plate structure on top of existing girders.
+-   `girder1_caps(ip0, ip1, kind)`: Creates a girder structure between two existing vertex indices, adding caps.
+-   `girder1(ip0, ip1, up, n, width, stickTypes)`: Creates a girder structure between two existing vertex indices.
+-   `wheel(p0, p1, ax, n, wh, stickTypes)`: Creates a wheel-shaped truss structure between two points.
+-   `ngon(p0, p1, ax, n, stickType)`: Creates an N-sided polygon (ngon) structure.
+-   `rope(p0, p1, nseg, ropeType, anchorType, Rcolapse, r)`: Creates a rope-like structure between two points with specified segments and types.
+-   `ropes(nv, vs, ne, nseg, ends, ropeType, anchorType, Rcolapse, r)`: Creates multiple rope-like structures between arrays of vertices and ends.
+-   `vstrip(p0, p1, n, et)`: Creates a vertical strip of edges.
+-   `fstrip(ip0, ip1, n, ft, et)`: Creates a strip of faces between two vertex indices.
 -   `panel(...)`: Creates a subdivided panel with truss-like internal structure.
 
-### Mesh Editing and Topology
--   `extrudeFace(ich, L, ...)`: Extrudes a face chunk outwards by distance `L`.
--   `extrudeVertLoop(...)`: A lower-level function to extrude a loop of vertices.
--   `bridge_quads(q1, q2, ...)`: Creates a segmented bridge/tunnel between two quads.
--   `move_verts(...)`: Translates a specified set of vertices by a given shift vector.
--   `scale_verts(...)`: Scales a specified set of vertices relative to a pivot point `p` by scale factors `s`.
--   `rotate_verts(...)`: Rotates a specified set of vertices around a pivot point `p` by a given rotation matrix `rot`.
--   `duplicateBlock(...)`: Duplicates an existing block of geometry (vertices, edges, triangles) and returns the index of the new block.
--   `selectionToFace()`: Creates a new face from the currently selected edge loop.
--   `polygon(n, iedges)`: Creates a polygon face from an array of edge indices.
-
-### Selection & Picking
+### 4.3 Selection and Picking
+These functions allow for precise selection of mesh elements (vertices, edges, faces) for subsequent operations.
 -   `pickVertex(ray0, hRay, R)`: Finds the closest vertex to a ray.
 -   `pickEdge(ro, rh, Rmax)`: Finds the closest edge to a ray.
--   `pickTriangle(ro, rh, ...)`: Finds the triangle intersected by a ray.
+-   `pickTriangle(ro, rh, bReturnFace)`: Finds the triangle intersected by a ray, with an option to return the face.
+-   `pickEdgeSelect(ro, rh, Rmax)`: Selects an edge by ray intersection.
+-   `findClosestVert(p0, i0, n)`: Finds the closest vertex to a point within a specified range.
+-   `closestInSelection(p0, Rmax, n, sel)`: Finds the closest vertex to a point within the current selection.
 -   `pickSelect(ro, rh, Rmax)`: Main picking function that dispatches to the above based on `selection_mode`.
 -   `selectRect(p0, p1, rot)`: Selects all elements within a screen-space rectangle.
+-   `selectRectEdge(p0, p1, rot)`: Selects edges within a screen-space rectangle.
+-   `selectRectVert(p0, p1, rot)`: Selects vertices within a screen-space rectangle.
+-   `select_in_sphere(p0, r, i0, imax)`: Selects vertices within a specified sphere.
+-   `select_in_cylinder(p0, fw, r, l, i0, imax)`: Selects vertices within a specified cylinder.
+-   `select_in_box(p0, fw, up, Lmin, Lmax)`: Selects vertices within a specified bounding box.
 -   `clearSelection()`: Clears the current selection.
+-   `toggleSelSet(i)`: Toggles the selection status of an element.
+-   `makeSelectrionUnique()`: Ensures that selected elements are unique.
+-   `selectVertsAlongLine(p0, p1, r, bSort)`: Selects vertices along a line segment.
+-   `selectVertsAlongPolyline(r, bSort)`: Selects vertices along a polyline.
 
-### Topological Utilities
+### 4.4 Geometric Transformations and Utilities
+These functions modify the positions of mesh elements.
+-   `move_verts(indices, shift)`: Translates a specified set of vertices by a given shift vector.
+-   `scale_verts(indices, p, s)`: Scales a specified set of vertices relative to a pivot point `p` by scale factors `s`.
+-   `rotate_verts(indices, p, rot)`: Rotates a specified set of vertices around a pivot point `p` by a given rotation matrix `rot`.
+-   `getCOG(n, ivs)`: Calculates the center of gravity for a set of vertices.
+-   `getChunkNormal(ich)`: Calculates the normal vector of a specified chunk. (redudant?)
+-   `polygonNormal(ich)`: Calculates the normal vector of a polygon chunk.
 -   `findVert(p0, Rmax, ...)`: Finds the closest vertex to a point within a given radius.
--   `findEdgeByVerts(verts)`: Finds the index of an edge connecting two vertices. Can use a fast map (`_map`) or slow brute-force (`_brute`).
--   `sortEdgeLoop(n, iedges, ...)`: Sorts an array of edge indices into a contiguous loop.
--   `buildVerts2Edge()`: Populates the `vert2edge` map for fast lookups.
+-   `facingNodes(cmesh, nnod, points, out_chs, nplane, planes, planeVs)`: Identifies nodes facing a certain direction within a CMesh.
 
-### Debugging and Export
+### 4.5 Topological Utilities
+-   `findEdgeByVerts(verts)`: Finds the index of an edge connecting two vertices. Can use a fast map (`_map`) or slow brute-force (`_brute`).
+-   `sortEdgeLoop(n, iedges, iverts)`: Sorts an array of edge indices into a contiguous loop, optionally returning vertex indices.
+-   `sortPotentialEdgeLoop(n, edges, iverts)`: Sorts a potential edge loop.
+-   `findEdgeByVerts_brute(verts)`: Finds an edge by its two vertex indices using a brute-force search.
+-   `findEdgeByVerts_map(verts)`: Finds an edge by its two vertex indices using a map for faster lookup.
+-   `findOrAddEdges(verts, t, t2)`: Finds an edge by its vertices, or adds it if it doesn't exist.
+-   `buildVerts2Edge()`: Builds `vert2edge` map map for fast lookup of edges connected to vertices.
+-   `alling_polygons(n, ivs1, ivs2, ipiv)`: Aligns two sets of polygons based on their vertex indices.
+-   `loadChunk(ich, iedges, iverts)`: Loads data from a specified chunk into edge and vertex arrays.
+-   `polygonChunk(n, iedges, ivs, bPolygonToTris)`: Creates a polygon chunk from edge and vertex indices.
+-   `polygonToTris(i)`: Converts a polygon chunk to triangles.
+-   `findMostFacingNormal(hray, nch, chs, cosMin, bTwoSide)`: Finds the chunk with the normal most facing a given ray from a list of chunks.
+-   `findMostFacingNormal(hray, chrange, cosMin, bTwoSide)`: Finds the chunk with the normal most facing a given ray within a chunk range.
+-   `clear()`: Clears all mesh data (vertices, edges, triangles, chunks, etc.).
+
+### 4.6 Topological Operations
+These functions modify the connectivity and structure of the mesh.
+-   `extrudeFace(ich, L, stickTypes, maks)`: Extrudes a face chunk outwards by distance `L`. This creates new vertices, edges, and faces, forming a new volume or extended surface.
+-   `extrudeVertLoop(n, iverts, d, bEdges, bFace, bTris, bSort)`: A lower-level function to extrude a loop of vertices.
+-   `bridge_quads(q1, q2, nseg, stickTypes, mask, bAlling)`: Creates a segmented bridge/tunnel between two quads. This is crucial for connecting distinct parts of the mesh or creating complex internal structures.
+-   `selectionToFace()`: Creates a new polygon face from the currently selected edge loop. This is useful for closing holes or creating new surfaces from existing boundaries.
+-   `polygon(n, iedges)`: Creates a polygon face from an array of edge indices.
+-   `plateBetweenVertStrips(n, ivs1, ivs2, nsub)`: Creates a plate (subdivided surface) between two strips of vertices.
+-   `plateBetweenEdges(nsub, r, bSort)`: Creates a plate between selected edges.
+-   `conect_vertex(iv, stickType, n, iverts)`: Connects a vertex to a set of other vertices.
+-   `conected_vertex(p, stickType, n, iverts)`: Connects a new vertex at `p` to a set of other vertices.
+-   `make_anchor_point(p, stickType, Rcolapse, r, fw, l, i0, n)`: Creates an anchor point, potentially connecting to nearby vertices.
+-   `make_anchor_points(nv, vs, ivrts, anchorType, Rcolapse, r, fw, l)`: Creates multiple anchor points.
+-   `bondsBetweenVertRanges(v1s, v2s, Rmax, et)`: Creates bonds (edges) between vertices in two specified ranges.
+-   `duplicateBlock(iblock)`: Duplicates an existing block of geometry (vertices, edges, triangles) and returns the index of the new block.
+-   `snapBoxFace(p0, rot, La, Lb)`: Creates a simple, flat quad face, snapping to existing vertices.
+-   `frustrumFace(p0, rot, La, Lb, h, Lbh, Lah)`: Creates a frustum-shaped face.
+-   `snapFrustrumFace(p0, rot, La, Lb, h, Lbh, Lah, bFace)`: Creates a frustum-shaped face, snapping to existing vertices.
+-   `prismFace(p0, rot, La, Lb, h, Lbh)`: Creates a prism-shaped face.
+-   `snapPrismFace(p0, rot, La, Lb, h, Lbh, bFace)`: Creates a prism-shaped face, snapping to existing vertices.
+-   `bridgeFacingPolygons(p0, p1, ch1, ch2, nseg, stickTypes, maks)`: Bridges two facing polygons between two points.
+-   `bridgeFacingPolygons(nrod, edges, points, nseg, chs, stickTypes, maks)`: Bridges multiple facing polygons using edge and point data.
+
+### 4.7 Debugging and I/O
 -   `printSizes()`: Prints the number of elements in each data vector.
 -   `printVerts()`, `printEdges()`, `printSelection()`: Print detailed information for debugging.
--   `export_pos()`, `export_edges()`: Export geometry data to external arrays.
--   `addPointCross(const Vec3d& p, double d)`: Adds a 3D cross shape at a given position `p` with size `d` for debugging visualization.
--   `addArrow(const Vec3d& p1, const Vec3d& p2, double d)`: Adds an arrow from `p1` to `p2` with a head size `d` for debugging visualization.
+-   `printSelectedVerts()`: Prints detailed information about selected vertices.
+-   `printChunkRange(ich, ich2)`: Prints information about chunks within a specified range.
+-   `checkAllPointsConnected(bExit, bPrint)`: Checks if all points in the mesh are connected, with options to exit on failure or print details.
+-   `export_pos(ps, i0, i1)`: Exports vertex positions to a Vec3d  array.
+-   `export_pos(ps, i0, i1)`: Exports vertex positions to a float4 array.
+-   `export_edges(eds, i0, i1)`: Exports edge data to an array.
+-   `export_tris(tri, i0, i1)`: Exports triangle data to an array.
+-   `write_obj(fname, mask)`: Exports mesh data to a Wavefront OBJ file with specified components.
+-   `read_obj(fname, mask)`: Imports mesh data from a Wavefront OBJ file with specified components.
 
-## 5. Code Quality & Refactoring Suggestions
+## 6. ToDo and Future Work
 
-The `MeshBuilder2` class is highly functional but could benefit from some refactoring to improve clarity and reduce code duplication.
+This section outlines potential future enhancements and additions to the `MeshBuilder2` class, particularly focusing on comprehensive mesh editing tools similar to those found in advanced 3D modeling software like Blender's BMesh, while keeping in mind the dual purpose of the engine for both volumetric physics simulations and surface-based rendering (radiosity/light-scattering).
 
-### Suggestion 1: Refactor `snap...Face` Methods
+### General Mesh Editing Operations
 
-The methods `snapPrismFace` and `snapFrustrumFace` in `MeshBuilder2.cpp` share a significant amount of logic for finding base vertices and creating new vertices and edges.
+-   **Bevel (Vertices, Edges, Faces)**: Implement functions to bevel selected vertices, edges, or faces, creating new geometry with rounded or chamfered corners. This is crucial for creating more realistic and complex shapes for rendering.
+-   **Extrude Along Normal/Path**: Enhance the existing extrude functionality to allow extrusion along a specified normal or a custom path, providing more control over the shape of the extruded geometry.
+-   **Dissolve (Vertices, Edges, Faces)**: Implement functions to dissolve selected vertices, edges, or faces, removing them while attempting to preserve the surrounding geometry. This can simplify meshes and remove unnecessary detail.
+-   **Subdivide (Edges, Faces)**: Add functionality to subdivide edges and faces, increasing mesh density and allowing for finer detail. This is particularly useful for smooth shading and high-resolution rendering.
+-   **Merge/Collapse (Vertices, Edges)**: Implement tools to merge or collapse selected vertices or edges, reducing polygon count and simplifying mesh topology.
+-   **Bridge Edge Loops**: Extend `bridge_quads` to handle more general edge loops, allowing for seamless connections between arbitrary open boundaries.
+-   **Inset Faces**: Create new faces inset from existing ones, useful for creating borders or paneling effects.
+-   **Loop Cut and Slide**: Implement a tool to insert new edge loops across a mesh, with the ability to slide them along the surface.
+-   **Knife Tool**: A freehand cutting tool to divide faces and edges.
 
-**Problem:** Code duplication makes maintenance harder and increases the chance of bugs.
+### SpaceCraft Building
 
-**Proposed Solution:** Create a private helper function that takes the common parameters (base position, rotation, vertices to find, new vertex offsets) and handles the vertex creation and basic edge connections. The public `snap...Face` methods would then call this helper and add only the logic specific to their shape (i.e., creating the final polygon chunks).
+#### Build Plates (shields, radiators)
 
-```cpp
-// Potential helper function signature in MeshBuilder2.h (private)
-void snapConnectorBase(const Vec3d& p0, const Mat3d& rot, double R_snap,
-                       const std::vector<Vec3d>& find_offsets, std::vector<int>& found_ivs,
-                       const std::vector<Vec3d>& new_v_ps,   std::vector<int>& new_ivs);
-```
+- we want to create trinagular panel (plate, sail) in between two line segments (aka girders) starting at common point (corner)
+- we select points of the mesh which are closer than `r` from each line segment using `select_in_cylinder` 
+- we sort these vertexes according to the distance from conter, and take the minimum of number of vertexes in each selection (we need same number of points along both girders)
+- we create trinagular grid defined by the to vertex-strips, i.e. connecting the vertexes in the same order as they diverge from corner using rope, the number of rope segments should be equal to index of the endpoint in the sorted selection
+- we create edges connecting vertexes of the ropes to create triangular grid
+- we also fill the trinagles between these edges by tris  
 
-### Suggestion 2: Improve Naming Clarity in `ConstructionBlock.h`
+#### Build Magnetic Nozzle
 
-The function `replaceId` in `ConstructionBlock.h` has a name that does not clearly communicate its purpose. It actually *replaces* a logical edge ID with a geometric chunk ID and *returns* the old ID.
+- Magnetic nozzle is basically fan of triangular grids deformed by UV-function to parabolic shape (see `DrawUV.h`)
+- we first typically create fan of girders (typically 6-8)
 
-**Problem:** A confusing function name makes the code harder to understand, especially in the critical `replace_chunk` workflow.
 
-**Proposed Solution:** Rename the function to something more descriptive, such as `assignChunkToSlot` or `mapEdgeToChunk`.
 
-```diff
---- a/home/prokophapala/git/SimpleSimulationEngine/cpp/common/geometry/ConstructionBlock.h
-+++ b/home/prokophapala/git/SimpleSimulationEngine/cpp/common/geometry/ConstructionBlock.h
-@@ -253,9 +253,11 @@
-         return true;
-     }
- 
--    int replaceId( int id, Vec2i where ){
-+    // Replaces the logical edge ID in a slot with a new ID (typically a geometric chunk ID)
-+    // and returns the old logical ID that was stored there.
-+    int assignChunkToSlot( int new_id, Vec2i where ){
-         int oid = faces[where.i].ids[where.j];
--        if( oid<0 ) faces[where.i].nid++;
-+        faces[where.i].ids[where.j] = new_id;
-         return oid;
-     }
- 
-```
-*Note: The logic in the original `replaceId` seems to have a side effect of incrementing `nid` if the slot was empty, which might be a bug. The suggested change clarifies the primary intent.*
+### Physics Simulation Specific Tools
+
+-   **Volumetric Meshing Tools**: Develop more advanced tools for generating and manipulating volumetric meshes (e.g., tetrahedral meshes) for finite element analysis, beyond the current truss-based approach.
+-   **Constraint-Based Editing**: Integrate mesh editing with physical constraints, allowing users to intuitively modify geometry while respecting physical properties or simulation requirements.
+-   **Topology Optimization**: Tools to automatically optimize mesh topology for better simulation performance or accuracy.
+
+### Radiosity and Light-Scattering Specific Tools
+
+-   **UV Unwrapping and Editing**: Essential tools for preparing meshes for texture mapping and lightmap generation.
+-   **Normal Editing**: Functions to manipulate vertex normals for improved shading and lighting calculations.
+-   **Decimation/Simplification**: Algorithms to reduce polygon count while preserving visual fidelity, important for real-time rendering and performance.
+-   **Mesh Repair Tools**: Functions to automatically detect and fix common mesh issues like non-manifold geometry, flipped normals, and holes, which are critical for accurate radiosity calculations.

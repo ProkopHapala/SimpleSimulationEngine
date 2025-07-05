@@ -1,6 +1,7 @@
 #include "MeshBuilder2.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 #include "arrayAlgs.h"
 #include "raytrace.h"
@@ -122,6 +123,201 @@ void Builder2::buildVerts2Edge(){
     }
 }
 
+void Builder2::build_edgesOfVerts(){
+    edgesOfVerts.clear();
+    edgesOfVerts.resize(verts.size());
+    for( int i=0; i<edges.size(); i++ ){
+        Vec2i e = edges[i].lo;
+        edgesOfVerts[e.x].insert(i);
+        edgesOfVerts[e.y].insert(i);
+    }
+}
+
+int Builder2::loadNeighbours( int iv, int* ivs, int* ies, int n ){
+    auto& es = edgesOfVerts[iv];
+    if( n==-1 ){ n = es.size(); }
+    int i=0;
+    for( auto& e : es ){ 
+        int ie=e; 
+        if( ivs ){ ivs[i]=edges[ie].lo.other(iv); }
+        if( ies ){ ies[i]=ie; } 
+        i++;
+    }
+    return n;
+}
+
+int Builder2::bevel_vert(int iv, double L, double h ) {
+    // This function implements beveling similar to Blender's BMesh bevel operation
+    // Parameters:
+    // - iv: index of vertex to bevel
+    // - L: length of each side of the created polygon (bevel distance)
+    // - h: offset height in the direction perpendicular to surface normal
+    
+    // Get edges connected to this vertex
+    auto& es = edgesOfVerts[iv];
+    int n = es.size();
+    if (n < 2) return -1; // Can't bevel a vertex with fewer than 2 edges
+    
+    int ivs[n]; // neighbor vertex indices
+    int ies[n]; // edge indices
+    
+    // Load neighbor vertices and edge indices
+    loadNeighbours(iv, ivs, ies, n);
+    
+    // Get normal at the vertex
+    Vec3d normal = vertNormalByEdges(iv);
+    normal.normalize();
+    
+    // Sort edges by angle around normal
+    sortVertEdgesByNormal(verts[iv].pos, normal, n, ies);
+    
+    // Also sort the vertex indices accordingly
+    for (int i = 0; i < n; i++) {
+        ivs[i] = getOtherEdgeVert(ies[i], iv);
+    }
+    
+    // The central point (vertex position with offset along normal)
+    Vec3d centralPoint = verts[iv].pos + normal * h;
+    
+    // Create n new vertices for the n-gon (one for each edge)
+    int newVerts[n];
+    
+    // For tracking the new edges we create
+    int nnewEdges = 0;
+    int newEdges[n];
+    
+    // Create vertices of the n-gon
+    for (int i = 0; i < n; i++) {
+        // Get direction from central vertex to neighbor
+        Vec3d dir = verts[ivs[i]].pos - verts[iv].pos;
+        dir.normalize();
+        
+        // Project dir onto the plane perpendicular to normal
+        dir.makeOrtho(normal);
+        dir.normalize();
+        
+        // Previous and next directions (for averaging to get corner directions)
+        Vec3d prevDir = verts[ivs[(i-1+n)%n]].pos - verts[iv].pos;
+        prevDir.makeOrtho(normal);
+        prevDir.normalize();
+        
+        Vec3d nextDir = verts[ivs[(i+1)%n]].pos - verts[iv].pos;
+        nextDir.makeOrtho(normal);
+        nextDir.normalize();
+        
+        // Average direction for corner
+        Vec3d cornerDir = prevDir + dir;
+        cornerDir.normalize();
+        
+        // Position of new vertex
+        Vec3d newPos = centralPoint + cornerDir * L;
+        
+        // Add new vertex
+        newVerts[i] = vert(newPos);
+    }
+    
+    // Connect the new vertices to form the n-gon
+    for (int i = 0; i < n; i++) {
+        int next = (i + 1) % n;
+        int newEdgeId = edge(newVerts[i], newVerts[next]);
+        newEdges[nnewEdges++] = newEdgeId;
+    }
+    // Create polygon faces
+    // Central n-gon
+    polygon(n, newEdges);
+    return n; // Return the number of sides in the n-gon
+}
+
+int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
+    // First ensure we have the necessary edge information
+    if (edgesOfVerts.empty()) {
+        build_edgesOfVerts();
+    }
+    std::vector<int> ivs;
+    {   // --- list all vertices connected to the edges
+        std::unordered_set<int> ivset;
+        for(int i=0; i<ne; i++){
+            int ie = ies[i];
+            Vec2i e = edges[ie].lo;
+            ivset.insert(e.x);
+            ivset.insert(e.y);
+        }
+        ivs.resize(ivset.size());
+        int i=0;
+        for(auto& iv : ivset){ ivs[i++]=iv; }
+    }
+    // --- bevel each vertex
+    Vec2i eranges[ivs.size()];
+    Vec2i vranges[ivs.size()];
+    for(auto& iv : ivs){
+        int ie0 = edges.size();
+        int iv0 = verts.size();
+        bevel_vert( iv, L, h );        
+        eranges[iv] = Vec2i{ie0,(int)edges.size()};
+        vranges[iv] = Vec2i{iv0,(int)verts.size()};
+    }
+    // // --- bevel edges and connect them to beveled vertices
+    // for(int i=0; i<ne; i++){
+    //     int ie = ies[i];
+    //     Vec2i e = edges[ie].lo;
+    //     int iv0 = e.x;
+    //     int iv1 = e.y;
+    //     int ie0 = eranges[iv0].x;
+    //     int ie1 = eranges[iv1].x;
+    //     int iv0_ = vranges[iv0].x;
+    //     int iv1_ = vranges[iv1].x;
+    //     edge( iv0_, iv1_, ie0, ie1 );
+    //     edge( iv0_, iv1_, ie0, ie1 );
+    // }
+    return 0;
+}
+
+
+
+Vec3d Builder2::vertNormalByEdges( int iv, bool bNormalizeEach){
+    int ne = edgesOfVerts[iv].size();
+    int ivs[ ne ];
+    loadNeighbours( iv, ivs, 0, ne );
+    Vec3d nrm = Vec3dZero;
+    Vec3d c = verts[iv].pos;
+    for(int ia=0; ia<ne; ia++){
+        Vec3d a = verts[ivs[ia]].pos;
+        for(int ib=0; ib<ne; ib++){
+            Vec3d b = verts[ivs[(ia+1)%ne]].pos;
+            Vec3d nr = cross(b-a, c-a);
+            if (bNormalizeEach){ nr.normalize(); }
+            nrm.add(nr);
+        }
+    }
+    nrm.normalize();
+    return nrm;
+}
+
+void Builder2::sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies ){
+    Vec3d u,v; 
+    double angs[n];
+    for(int i=0; i<n; i++){
+        int ie  = ies[i];    
+        Vec2i e = edges[ie].lo;
+        int iv  = e.other(e.x);
+        Vec3d di = verts[iv].pos - p;
+        if(i==0){
+            di.makeOrtho(nor);
+            u=di.normalized();
+            v=cross(nor,u);
+            v.normalize();
+            angs[i]=0;
+        }else{
+            angs[i]=di.angsort(u,v);
+        }
+    }
+    int    ixs [n];
+    int    ies_ [n];
+    for(int i=0; i<n; i++){ ixs[i]=i; ies_[i]=ies[i]; }  
+    insertSort( n,   ixs, angs );
+    permute   ( ies_, ies, ixs, 0, n );
+}
+
 int Builder2::polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris ){
     int i0 = strips.size();
     int ich = chunk( Quat4i{i0, i0+n, n, (int)ChunkType::face} );
@@ -174,6 +370,45 @@ Vec3d Builder2::polygonNormal( int ich ){
     //printf("polygonNormal(ich=%d): Final normalized normal: (%g,%g,%g)\n", ich, nrm.x,nrm.y,nrm.z);
     return nrm;
 }
+
+//Vec3d getChunkNormal( Quat4i ch ){
+    Vec3d Builder2::getChunkNormal( int ich ){
+        Quat4i ch = chunks[ich];
+        if( ch.w==(int)ChunkType::face ){
+            const Vec3d& a = verts[strips[ch.x  ]].pos;
+            const Vec3d& b = verts[strips[ch.x+1]].pos;
+            const Vec3d& c = verts[strips[ch.x+2]].pos;
+            Vec3d nr = cross(b-a, c-a); 
+            nr.normalize(); 
+            return nr;
+        }
+        return Vec3dZero;
+    }
+    
+
+
+int Builder2::extrudeFace( int ich, double L, Quat4i stickTypes, Quat4i maks ){
+    int ivs[4];
+    int n    = loadChunk( ich, ivs );
+    Vec3d nr = getChunkNormal( ich ); 
+    int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
+    bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
+    return ich2;
+}
+
+int Builder2::loadChunk( int ich, int* iedges, int* iverts ){
+    Quat4i ch = chunks[ich];
+    if( ch.w==(int)ChunkType::face ){
+        for(int i=0; i<ch.z; i++){
+            if(iedges){ iedges[i]=strips[ch.x+i     ]; }
+            if(iverts){ iverts[i]=strips[ch.x+ch.z+i]; }
+        }
+        return ch.z;
+    }
+    return 0;
+};
+
+
 
 int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin, bool bTwoSide ){
     //printf("Builder2::findMostFacingNormal() nch=%i cosMin=%g bTwoSide=%i\n", nch, cosMin, bTwoSide );
@@ -1535,40 +1770,6 @@ int Builder2::extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bF
     return iv0;
 }
 
-int Builder2::extrudeFace( int ich, double L, Quat4i stickTypes, Quat4i maks ){
-    int ivs[4];
-    int n    = loadChunk( ich, ivs );
-    Vec3d nr = getChunkNormal( ich ); 
-    int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
-    bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
-    return ich2;
-}
-
-int Builder2::loadChunk( int ich, int* iedges, int* iverts ){
-    Quat4i ch = chunks[ich];
-    if( ch.w==(int)ChunkType::face ){
-        for(int i=0; i<ch.z; i++){
-            if(iedges){ iedges[i]=strips[ch.x+i     ]; }
-            if(iverts){ iverts[i]=strips[ch.x+ch.z+i]; }
-        }
-        return ch.z;
-    }
-    return 0;
-};
-
-//Vec3d getChunkNormal( Quat4i ch ){
-Vec3d Builder2::getChunkNormal( int ich ){
-    Quat4i ch = chunks[ich];
-    if( ch.w==(int)ChunkType::face ){
-        const Vec3d& a = verts[strips[ch.x  ]].pos;
-        const Vec3d& b = verts[strips[ch.x+1]].pos;
-        const Vec3d& c = verts[strips[ch.x+2]].pos;
-        Vec3d nr = cross(b-a, c-a); 
-        nr.normalize(); 
-        return nr;
-    }
-    return Vec3dZero;
-}
 
 
 // ============== From  SpaceCraft2Mesh2.h

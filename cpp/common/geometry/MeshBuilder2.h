@@ -81,9 +81,12 @@ class Builder2{ public:
     std::vector<Quat4i> chunks;  // {iv0,ie0,n,type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
 
+    
+
     bool use_vert2edge  = false;
     bool bPolygonToTris = true;
-    std::unordered_map<uint64_t,int> vert2edge; // map from pair of vert index to vert index in verts
+    std::unordered_map<uint64_t,int> vert2edge;        // map from pair of vert index to vert index in edges
+    std::vector<std::unordered_set<int>> edgesOfVerts; // edges of each vertex
 
     // Edit settings
     bool bExitError    = true;
@@ -140,8 +143,32 @@ class Builder2{ public:
         _assert( int ie=findEdgeByVerts_brute({a,b}) , ie<0 , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) already exists ie=%i \n", (int)edges.size(), a,b, ie )  );
         edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
     }
+
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
+
+    inline void add_verts(int n, Vec3d* ps, Vec3d* nors=0, Vec2d* uvs=0){
+        for(int i=0;i<n;i++){ 
+            Vec3d nor = nors ? nors[i] : Vec3dZero;
+            Vec2d uv  = uvs  ? uvs[i]  : Vec2dZero;
+            vert( ps[i], nor, uv ); 
+        } 
+    }
+    inline void add_edges(int n, Vec2i* es, int* types=0, int* types2=0){ 
+        for(int i=0;i<n;i++){ 
+            int t = types ? types[i]  : -1;
+            int t2= types2? types2[i] : -1;
+            edge( es[i].x, es[i].y, t, t2 ); 
+        } 
+    }
+
+    inline void add_tris(int n, Vec3i* ts, int* types=0){ 
+        for(int i=0;i<n;i++){ 
+            int t = types ? types[i] : -1;
+            tri( ts[i].x, ts[i].y, ts[i].z, t ); 
+        } 
+    }
+    
     inline int stick( Vec3d a, Vec3d b, int t=-1 ){ 
         int ia = vert(a); 
         int ib = vert(b);
@@ -216,8 +243,15 @@ class Builder2{ public:
     int duplicateBlock( int iblock );
 
     int extrudeVertLoop( int n, int* iverts, Vec3d d, bool bEdges, bool bFace, bool bTris, bool bSort );
-    int loadChunk( int ich, int* iedges=0, int* iverts=0 );
+    
+    int   loadChunk( int ich, int* iedges=0, int* iverts=0 );
+    int   polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
+    int   polygon( int n, int* iedges );
+    int   polygonToTris( int i );
+    Vec3d polygonNormal( int ich );
     Vec3d getChunkNormal( int ich );
+    int   findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin=0.0, bool bTwoSide=false );
+    int   findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin=0.0, bool bTwoSide=false );
 
     void clear();
 
@@ -230,16 +264,17 @@ class Builder2{ public:
     int findEdgeByVerts( const Vec2i verts );
     int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
+    void build_edgesOfVerts();
+    int loadNeighbours( int iv, int* ivs, int* ies, int n=-1 );
+    Vec3d vertNormalByEdges( int iv, bool bNormalizeEach=false);
+    void sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies );
+    int bevel_vert(int iv, double L, double h);
+    int bevel( int ne, int* ies, double L, double h, int nseg=1 );
 
     int plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub );
     int plateBetweenEdges( int nsub=1, double r=0.1, bool bSort=true );
 
-    int polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
-    int polygon( int n, int* iedges );
-    int polygonToTris( int i );
-    Vec3d polygonNormal( int ich );
-    int   findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin=0.0, bool bTwoSide=false );
-    int   findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin=0.0, bool bTwoSide=false );
+
     Vec2i addVerts( int n, const Vec3d* ps );
     Vec2i addEdges( int n, const Vec2i* iedges, const int* types,  const int* types2, int iv0=0 );
     Vec2i addFaces( int n, const int* nVerts,   const int* iverts, bool bPolygonToTris, int iv0=0 );

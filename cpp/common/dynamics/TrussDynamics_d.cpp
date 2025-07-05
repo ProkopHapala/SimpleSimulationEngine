@@ -912,6 +912,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
         double inv_dt = 1/dt;
+        double cdamp = fmax( 1-damping*dt, 0. );
         cleanForce();
 
         for (int iter = 0; iter < niter; iter++) {
@@ -1033,6 +1034,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 double l2 = v.norm2();
                 l2sum += l2;
                 v.mul(inv_dt);
+                v.mul( cdamp );
                 //v.mul( sqrt(  vel[i].norm2()/( v.norm2() + 1e-8 ) ) ); // This is unphysicsl
                 if(kFix){ if( kFix[i] > 1e-8){ v=Vec3dZero; } }
                 vel[i].f = v;

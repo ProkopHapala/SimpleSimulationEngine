@@ -380,6 +380,22 @@ int main(int argc, char *argv[]){
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
 
+    funcs["-bevel"] = {0, [&](const char**){
+        const int npoint      = 4;
+        const int nedge       = 3;
+        Vec3d nodes[npoint] = {
+            {0.0,    0.0,   0.0}, // 0
+            {100.0,  0.0,   0.0}, // 1
+            {-30.0, +80.0,  0.0}, // 2
+            {-30.0, -80.0,  0.0}, // 3
+        };
+        Vec2i edges[nedge] = {{0,1}, {0,2}, {0,3}};
+        int ies[nedge] = {0,1,2};
+        truss.add_verts(npoint, nodes);
+        truss.add_edges(nedge, edges);
+        truss.bevel( nedge, ies, 10.0, 10.0, 5.0);
+    }};
+
     funcs["-skelet"]   = {1, [&](const char** ss){ 
         int bUseSkelet = (ss[0][0]=='T')||(ss[0][0]=='t')||(ss[0][0]=='1'); 
         printf("funcs[-skelet]: Truss from Skelet(%i):\n", bUseSkelet);

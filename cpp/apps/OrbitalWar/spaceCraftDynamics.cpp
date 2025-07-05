@@ -163,6 +163,7 @@ int main(int argc, char *argv[]){
     funcs["-G"       ]={1,[&](const char** ss){ Vec3d  G;  sscanf( ss[0], "%lf,%lf,%lf", &G.x, &G.y, &G.z ); W.sim.accel.f=G; W.sim_f.accel.f=(Vec3f)G; printf( "COMMAND LINE: -G( sim.accel: %f %f %f ) \n", W.sim.accel.x, W.sim.accel.y, W.sim.accel.z );    } };
     funcs["-omega"   ]={1,[&](const char** ss){ Quat4d o;  sscanf( ss[0], "%lf,%lf,%lf", &o.x, &o.y, &o.z ); o.w=o.f.normalize(); W.sim.omega=o; W.sim_f.omega=(Quat4f)o; printf( "COMMAND LINE: -omega( sim.omega: %f %f %f %f ) \n", W.sim.omega.x, W.sim.omega.y, W.sim.omega.z, W.sim.omega.w );    } };
     funcs["-drag"    ]={1,[&](const char** ss){ sscanf( ss[0], "%lf", &W.sim.Cdrag );  printf( "COMMAND LINE: -drag( sim.Cdrag: %f ) \n", W.sim.Cdrag );    } };
+    funcs["-damp"    ]={1,[&](const char** ss){ sscanf( ss[0], "%lf", &W.sim.damping );  printf( "COMMAND LINE: -damp( sim.damping: %f ) \n", W.sim.damping );    } };
    
     funcs["-debug_orig"]={0,[&](const char** ss){ bUseOriginalLuaWrappers=true; printf( "COMMAND LINE: -debug_orig \n" ); } };
 
@@ -191,57 +192,33 @@ int main(int argc, char *argv[]){
         int girer_nsegs[nGirders] = {8, 6, 4, 4};
         const int nRopes = 4;
         Vec2i ropes[nRopes] = { {1,3}, {1,4}, {2,3}, {2,4} };
-
         // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
         make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, girer_nsegs, nRopes, ropes );
-
         bool bWheel=true;
-        if(bWheel){
-            // Attach a wheel to the girders
+        if(bWheel){ // attach wheel to girders using at least 3 points
             const int   wheel_girders[4] = {2,3,1,0};
-            // We must provide at least 3 points to define the circle. The 4th can be calculated by intersection.
-            // We set the first three to the midpoint (0.5) of their respective girders.
             const float wheel_pos[4]     = {0.5f, 0.5f, 0.3f, -1.0f};
             Vec3d p0_ring_center_guess = {0.0, 0.0, -50.0}; // A point "near" the desired ring center to help resolve which side of the girder to attach to
             theSpaceCraft->make_Ring2(wheel_girders, wheel_pos, p0_ring_center_guess, 32, {2.0, 2.0}, "GS1_long", {0,0,0,0}, 0);
         }
-
-        // Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
         CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
         theSpaceCraft->nodeMeshes.push_back(oct);
-        
         W.mesh.clear();
         BuildCraft_blocks( W.mesh, *theSpaceCraft, 30.0 );
         W.mesh.printSizes();
         W.initSimulators();
-
         if(bWheel){
-            // --- Initialize slider paths now that the mesh and simulation points exist.
-            printf("--- Initializing Slider Paths ---\n");
-            for( Ring* o : theSpaceCraft->rings ){
-                // bSelf=true: The path is on the ring itself. bShared=true: All sliders on this ring share the same path.
-                o->updateSlidersPaths( true, true, W.sim.points );
-            }
+            for( Ring* o : theSpaceCraft->rings ){ o->updateSlidersPaths( true, true, W.sim.points );}
             sliders2edgeverts( *theSpaceCraft, W.sim );
         }
-
         W.sim.user_update = SpaceCraftControl;
-
-        // ---------- Backup from constructionBlockApp.cpp, this should perhaps go to BuildCraft_truss in SpaceCraft2Mesh2.h
-        //bool bUseSpecialPlanes=false;
-        // CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
-        // truss.facingNodes( oct, nnodes, node_positions, chs );
-        // truss.bridgeFacingPolygons( nedges, edges, node_positions, 4, chs );
-        // printf("  truss.printSizes():  "); truss.printSizes();
-        // truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
-        //printf("Extruding chunk %i by 2.0 units...\n", chs.a);
-        //truss.extrudeFace(chs.a, 2.0);
     }};
 
     funcs["-s"]={1,[&](const char** ss){ 
         W.reloadShip( ss[0] );
         W.initSimulators( );
     }};
+
     process_args( argc, argv, funcs );
     if( W.sim.nPoint == 0 ){ W.initSimDefault(); }
 

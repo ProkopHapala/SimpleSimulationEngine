@@ -108,7 +108,7 @@ class TrussDynamics_d: public Picker { public:
     //double dt      = 2e-3;    double kGlobal = 1e+7;
     double dt      = 0.5e-3;  double kGlobal = 1e+8;
     //double damping = 1e-4;
-    double damping  = 0.05;
+    double damping  = 0.0;
     int nSolverIters = 10;
 
     std::vector<int> damped_bonds;
