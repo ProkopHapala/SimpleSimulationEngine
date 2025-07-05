@@ -195,6 +195,16 @@ void SpaceCraftDynamicsApp::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
+
+    SpaceCraftSimulator& s = *simulator;
+    if( keys[ SDL_SCANCODE_KP_5 ] ){ s.wheel_speed.y+=-s.wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ s.wheel_speed.y+= s.wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ s.wheel_speed.x+=-s.wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ s.wheel_speed.x+= s.wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ s.wheel_speed.z+=-s.wheel_speed_setup.z; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ s.wheel_speed.z+= s.wheel_speed_setup.z; }
+    if( keys[ SDL_SCANCODE_KP_0 ] ){ s.wheel_speed=Vec3dZero; }
+
 };
 
 void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){

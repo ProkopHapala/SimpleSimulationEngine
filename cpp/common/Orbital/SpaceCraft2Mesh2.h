@@ -260,6 +260,7 @@ int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=1
 
 void applySliders2sim( SpaceCraft& craft, TrussDynamics_d& sim, double* control_speed ){
     double dt = sim.dt;
+    //printf("applySliders2sim() dt=%g\n", dt);
     for( int i=0; i<craft.sliders.size(); i++ ){
         Slider* o = craft.sliders[i];
         int icon = o->icontrol; if(icon>=0){  o->speed = control_speed[icon]; }  // Controls

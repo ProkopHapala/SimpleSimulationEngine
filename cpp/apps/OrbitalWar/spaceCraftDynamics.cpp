@@ -56,11 +56,12 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 double elementSize  = 5.;
 
 SpaceCraftSimulator W;
+SpaceCraftDynamicsApp * app;
 
-Vec3d wheel_speed      {0.0,0.0,0.0};
-Vec3d wheel_speed_setup{ 5.0, 5.0, 5.0 };
-
-void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, W.sim, (double*)&wheel_speed ); }
+void SpaceCraftControl(double dt){ 
+    printf("SpaceCraftControl() dt=%g wheel_speed( %10g , %10g , %10g )\n", dt, W.wheel_speed.x, W.wheel_speed.y, W.wheel_speed.z );
+    applySliders2sim( *theSpaceCraft, W.sim, (double*)&W.wheel_speed ); 
+}
 
 void solve_float(){
     //printf( "solve_float() \n" );
@@ -118,18 +119,19 @@ int make_Skeleton( SpaceCraft* theSpaceCraft, int nnode, Vec3d* node_pos, double
     return 1; // Success
 }
 
-void keyStateHandling_local( const Uint8 *keys ){
-    // This is a bit of a hack, assuming wheel_speed is a global in the main app file
-    // A better solution would be a proper control system.
-    wheel_speed = Vec3dZero;
-    if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
-	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
-    if( keys[ SDL_SCANCODE_KP_0 ] ){ wheel_speed.x=0; wheel_speed.y=0; wheel_speed.z=0; }
-}
+// void keyStateHandling_local( const Uint8 *keys ){
+//     printf("keyStateHandling_local()\n");
+//     // This is a bit of a hack, assuming wheel_speed is a global in the main app file
+//     // A better solution would be a proper control system.
+//     //wheel_speed = Vec3dZero;
+//     if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y+=-wheel_speed_setup.y; }
+//     if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y+= wheel_speed_setup.y; }
+//     if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x+=-wheel_speed_setup.x; }
+// 	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x+= wheel_speed_setup.x; }
+// 	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z+=-wheel_speed_setup.z; }
+// 	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z+= wheel_speed_setup.z; }
+//     if( keys[ SDL_SCANCODE_KP_0 ] ){ wheel_speed.x=0; wheel_speed.y=0; wheel_speed.z=0; }
+// }
 
 
 
@@ -146,7 +148,7 @@ int main(int argc, char *argv[]){
     printf( "argc %i \n", argc );
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
-	SpaceCraftDynamicsApp * app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100 );
+	app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100 );
     app->bindSimulators( &W ); 
 
     LambdaDict funcs;
@@ -193,16 +195,18 @@ int main(int argc, char *argv[]){
         // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
         make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, girer_nsegs, nRopes, ropes );
 
-        // Attach a wheel to the girders
-        const int   wheel_girders[4] = {2,3,1,0};
-        // We must provide at least 3 points to define the circle. The 4th can be calculated by intersection.
-        // We set the first three to the midpoint (0.5) of their respective girders.
-        const float wheel_pos[4]     = {0.5f, 0.5f, 0.3f, -1.0f};
-        Vec3d p0_ring_center_guess = {0.0, 0.0, -50.0}; // A point "near" the desired ring center to help resolve which side of the girder to attach to
-        theSpaceCraft->make_Ring2(wheel_girders, wheel_pos, p0_ring_center_guess, 32, {2.0, 2.0}, "GS1_long", {0,0,0,0}, 0);
+        bool bWheel=true;
+        if(bWheel){
+            // Attach a wheel to the girders
+            const int   wheel_girders[4] = {2,3,1,0};
+            // We must provide at least 3 points to define the circle. The 4th can be calculated by intersection.
+            // We set the first three to the midpoint (0.5) of their respective girders.
+            const float wheel_pos[4]     = {0.5f, 0.5f, 0.3f, -1.0f};
+            Vec3d p0_ring_center_guess = {0.0, 0.0, -50.0}; // A point "near" the desired ring center to help resolve which side of the girder to attach to
+            theSpaceCraft->make_Ring2(wheel_girders, wheel_pos, p0_ring_center_guess, 32, {2.0, 2.0}, "GS1_long", {0,0,0,0}, 0);
+        }
 
-        // ----- Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
-
+        // Build mesh from SpaceCraft and TrussDynamics_d to prepare simulation
         CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
         theSpaceCraft->nodeMeshes.push_back(oct);
         
@@ -211,13 +215,15 @@ int main(int argc, char *argv[]){
         W.mesh.printSizes();
         W.initSimulators();
 
-        // --- Initialize slider paths now that the mesh and simulation points exist.
-        printf("--- Initializing Slider Paths ---\n");
-        for( Ring* o : theSpaceCraft->rings ){
-            // bSelf=true: The path is on the ring itself. bShared=true: All sliders on this ring share the same path.
-            o->updateSlidersPaths( true, true, W.sim.points );
+        if(bWheel){
+            // --- Initialize slider paths now that the mesh and simulation points exist.
+            printf("--- Initializing Slider Paths ---\n");
+            for( Ring* o : theSpaceCraft->rings ){
+                // bSelf=true: The path is on the ring itself. bShared=true: All sliders on this ring share the same path.
+                o->updateSlidersPaths( true, true, W.sim.points );
+            }
+            sliders2edgeverts( *theSpaceCraft, W.sim );
         }
-        sliders2edgeverts( *theSpaceCraft, W.sim );
 
         W.sim.user_update = SpaceCraftControl;
 

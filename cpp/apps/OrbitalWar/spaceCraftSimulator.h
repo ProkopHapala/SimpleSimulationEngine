@@ -89,6 +89,10 @@ class SpaceCraftSimulator { public:
     TrussDynamics_d sim;
     TrussDynamics_f sim_f;
 
+    Vec3d wheel_speed      { 0.0, 0.0, 0.0    };
+    Vec3d wheel_speed_setup{ 0.5, 0.5, 0.5 };
+
+
     std::vector<int> fixPoints;
 
     bool   bDouble = false;

@@ -1045,7 +1045,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
                 points[i].f = ps_cor[i];
             }            
             time += dt;
-            printf( "STEP: %6i time: %16.8f l2sum: %20.8e\n", iter, time, l2sum );
+            //printf( "STEP: %6i time: %16.8f l2sum: %20.8e\n", iter, time, l2sum );
         } // for iter ( time stepping )
         //exit(0);
     }

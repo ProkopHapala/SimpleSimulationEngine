@@ -86,7 +86,8 @@ export LD_PRELOAD
 
 
 #./$name.x   -omega 0.0,0.0,50.5 -dt 0.01   -oct_nodes
-./spaceCraftDynamics.x -omega 0.0,0.0,50.5 -dt 0.01   -oct_nodes | tee OUT
+#./spaceCraftDynamics.x -omega 0.0,0.0,1.0 -dt 0.001 -perframe 10   -oct_nodes | tee OUT
+./spaceCraftDynamics.x  -dt 0.001 -perframe 10   -oct_nodes | tee OUT
 
 
 
