@@ -233,10 +233,11 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
             Vec3d d2 = verts[ivs[1]].pos - p; d2.normalize();
             nor.set_cross(d1,d2);
             double l2nor=nor.norm2();
-            if(l2nor<1e-6){ nor=nor0;}else{ nor.mul(1/sqrt(l2nor)); }
-            Vec3d d=d1+d2;
+            if(l2nor<1e-6){ nor=nor0;}else{ nor.mul(1/sqrt(l2nor)); if(nor.dot(nor0)<0){ nor.mul(-1); } }
+            Vec3d d=d1-d2;
             u.set_cross(d,nor); u.normalize();
         }
+
         int iv1 = vert(p + u*L + nor*h );
         int iv2 = vert(p - u*L + nor*h );
         edge(iv1, iv2);
@@ -245,6 +246,7 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
     //DEBUG
     Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
     nor.normalize(); 
+    if(nor.dot(nor0)<0){ nor.mul(-1); }
     sortVertEdgesByNormal(verts[iv].pos, nor, ne, ies);  // Sort edges by angle around normal
     for (int i=0; i<ne; i++) {ivs[i] = getOtherEdgeVert(ies[i], iv);} // Also sort the vertex indices accordingly
     Vec3d centralPoint = p + nor * h; // use copy p // The central point (vertex position with offset along normal)
@@ -362,15 +364,15 @@ int nesum = 0;
         int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1]-ie0s[kx]; int ix = select_edge(ie, nx, iess.data() + ie0x );
         int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1]-ie0s[ky]; int iy = select_edge(ie, ny, iess.data() + ie0y );
         // select vertex index of created ngon by bevel_vert for each vertex of the edge
-        int iv0x = iv0s[kx] + ix;
-        int iv0y = iv0s[ky] + iy;
-        int nvx  = ie0s[kx+1] - iv0x;
-        int nvy  = ie0s[ky+1] - iv0y;
+        int iv0x = iv0s[kx  ];
+        int iv0y = iv0s[ky  ];
+        int nvx  = iv0s[kx+1] - iv0x;
+        int nvy  = iv0s[ky+1] - iv0y;
         int ivx0 = iv0x + ix;
         int ivx1 = iv0x + (ix+1)%nvx;
         int ivy0 = iv0y + iy;
         int ivy1 = iv0y + (iy+1)%nvy;
-        printf("bevel #i %i edge %i(%i,%i) : ivxs(%i,%i|i0=%i,n=%i) ivys(%i,%i|i0=%i,n=%i)\n", i, ie, e.x, e.y, ivx0,ivx1, ie0x, nvx, ivy0, ivy0,ie0y, nvy);
+        printf("bevel #i %i edge %i(%i,%i) : ivxs(%i,%i|i0=%i,n=%i) ivys(%i,%i|i0=%i,n=%i)\n", i, ie, e.x, e.y, ivx0,ivx1, ie0x,nvx, ivy0,ivy1, ie0y,nvy);
         // check orientation of the edges
         Vec3d dx = verts[ivx1].pos - verts[ivx0].pos;
         Vec3d dy = verts[ivy1].pos - verts[ivy0].pos;

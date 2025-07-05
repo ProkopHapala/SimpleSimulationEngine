@@ -142,7 +142,8 @@ class Builder2{ public:
         //         exit(0);
         //     }
         // }
-        _assert(                         {}          , a!=b , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same\n", edges.size(), a,b ) );
+        //_assert( {},(a<verts.size()) && (b<verts.size()) ,    printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) out of bounds 0..vert.size(%i)\n", edges.size(), a,b, verts.size() ) );
+        _assert(                         {}          , a!=b , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same\n",  edges.size(), a,b ) );
         _assert( int ie=findEdgeByVerts_brute({a,b}) , ie<0 , printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) already exists ie=%i \n", (int)edges.size(), a,b, ie )  );
         edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
     }

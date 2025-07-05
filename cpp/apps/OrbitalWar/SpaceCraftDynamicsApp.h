@@ -74,6 +74,7 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     void drawSim  ( TrussDynamics_d&   sim );
     void drawSim_f( TrussDynamics_f& sim );
+    void plotSliders( const TrussDynamics_d& sim, const SpaceCraft& craft );
     //virtual void initSimDefault();
 
 	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
@@ -125,6 +126,24 @@ void SpaceCraftDynamicsApp::drawSim_f( TrussDynamics_f& sim ){
     if(bViewFixedPoints && (sim.kFix!=0) ) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2f{ 1.0, 1e+300 }, 10.0f );
 };
 
+void SpaceCraftDynamicsApp::plotSliders( const TrussDynamics_d& sim, const SpaceCraft& craft ){
+    glLineWidth(3.0);
+    glColor4f(1.0f, 0.0f, 1.0f, 1.0f); // Set color to red (RGBA)
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        const Slider* o = craft.sliders[i];
+        //Vec3d p = o->pos;
+        Vec3d po = sim.points[o->pointRange.x].f;
+        const EdgeVertBond& ev = sim.edgeVertBonds[i];
+        Vec3d p1 = sim.points[ev.verts.x].f;
+        Vec3d p2 = sim.points[ev.verts.y].f;
+        Vec3d pc = p1*(1-ev.c) + p2*ev.c; // interpolated point
+        //Draw3D::drawLine( p1, o->pos );
+        //Draw3D::drawLine( p2, o->pos );
+        Draw3D::drawLine( pc, po );
+    }
+    glLineWidth(1.0);
+}
+
 SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //Lua1.init();
     fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
@@ -157,6 +176,7 @@ void SpaceCraftDynamicsApp::draw(){
             Estrain = _sim->evalBondTension();
         }
         drawSim( *_sim   );
+        plotSliders( *_sim, *theSpaceCraft );
     }else{
         if(bRun){
             //_sim_f->run_Cholesky_omp_simd(perFrame);

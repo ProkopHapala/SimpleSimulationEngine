@@ -181,8 +181,11 @@ void ConstructionBlockApp::initGUI(){
     viewControls->caption = "View Controls";
     viewControls->initCheckBoxList(5, 5, 150);
 
+
     trussView.bViewPointLabels  = true;
-    trussView.bViewFaceLabels   = true;
+    trussView.bViewEdgeLabels   = true;
+    //trussView.bViewFaceLabels   = true;
+    //trussView.bViewTriLabels    = true;
     
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
     viewControls->addBox("Pivot Point",   &bViewPivotPoint);
@@ -386,22 +389,27 @@ int main(int argc, char *argv[]){
     }};
 
     funcs["-bevel"] = {0, [&](const char**){
-        const int npoint      = 4;
-        const int nedge       = 3;
+        const int npoint      = 7;
         Vec3d nodes[npoint] = {
             {0.0,    0.0,   0.0}, // 0
             {100.0,  0.0,   0.0}, // 1
             {-30.0, +80.0,  0.0}, // 2
             {-30.0, -80.0,  0.0}, // 3
+
+            {-30.0, +160.0,  0.0}, // 4
+
+            {150.0, +80.0,  0.0}, // 5
+            {150.0, -80.0,  0.0} // 6
         };
-        Vec2i edges[nedge] = {{0,1}, {0,2}, {0,3}};
+        const int nedge       = 6;
+        Vec2i edges[nedge] = {{0,1}, {0,2}, {0,3},     {2,4}, {1,5}, {1,6} };
         
         truss.add_verts(npoint, nodes);
         truss.add_edges(nedge, edges);
         truss.build_edgesOfVerts();
 
-        const int nbev = 2;
-        int ies[nbev] = {0,1};
+        const int nbev = 6;
+        int ies[nbev] = {0,1,2,3,4,5};
         truss.bevel( nbev, ies, 10.0, 10.0, 5.0);
     }};
 

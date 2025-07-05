@@ -169,6 +169,10 @@ These functions modify the positions of mesh elements.
 -   `findEdgeByVerts_map(verts)`: Finds an edge by its two vertex indices using a map for faster lookup.
 -   `findOrAddEdges(verts, t, t2)`: Finds an edge by its vertices, or adds it if it doesn't exist.
 -   `buildVerts2Edge()`: Builds `vert2edge` map map for fast lookup of edges connected to vertices.
+-   `build_edgesOfVerts()`: Builds adjacency list mapping vertices to connected edges.
+-   `loadNeighbours(iv, ivs, ies, n)`: Gets neighboring vertices and edges for vertex `iv`.
+-   `vertNormalByEdges(iv, bNormalizeEach)`: Computes vertex normal from connected edges.
+-   `sortVertEdgesByNormal(p, nor, n, ies)`: Sorts edges around vertex normal.
 -   `alling_polygons(n, ivs1, ivs2, ipiv)`: Aligns two sets of polygons based on their vertex indices.
 -   `loadChunk(ich, iedges, iverts)`: Loads data from a specified chunk into edge and vertex arrays.
 -   `polygonChunk(n, iedges, ivs, bPolygonToTris)`: Creates a polygon chunk from edge and vertex indices.
@@ -179,10 +183,12 @@ These functions modify the positions of mesh elements.
 
 ### 4.6 Topological Operations
 These functions modify the connectivity and structure of the mesh.
--   `extrudeFace(ich, L, stickTypes, maks)`: Extrudes a face chunk outwards by distance `L`. This creates new vertices, edges, and faces, forming a new volume or extended surface.
--   `extrudeVertLoop(n, iverts, d, bEdges, bFace, bTris, bSort)`: A lower-level function to extrude a loop of vertices.
--   `bridge_quads(q1, q2, nseg, stickTypes, mask, bAlling)`: Creates a segmented bridge/tunnel between two quads. This is crucial for connecting distinct parts of the mesh or creating complex internal structures.
--   `selectionToFace()`: Creates a new polygon face from the currently selected edge loop. This is useful for closing holes or creating new surfaces from existing boundaries.
+-   `extrudeFace(ich, L, stickTypes, maks)`: Extrudes a face chunk outwards by distance `L`.
+-   `extrudeVertLoop(n, iverts, d, bEdges, bFace, bTris, bSort)`: Extrudes a loop of vertices.
+-   `bevel_vert(iv, L, h, ies, nor0)`: Bevels a single vertex with given width and height.
+-   `bevel(ne, ies, L, h, nseg)`: Bevels multiple edges with given width and height.
+-   `bridge_quads(q1, q2, nseg, stickTypes, mask, bAlling)`: Creates a bridge between two quads.
+-   `selectionToFace()`: Creates a new polygon face from the currently selected edge loop.
 -   `polygon(n, iedges)`: Creates a polygon face from an array of edge indices.
 -   `plateBetweenVertStrips(n, ivs1, ivs2, nsub)`: Creates a plate (subdivided surface) between two strips of vertices.
 -   `plateBetweenEdges(nsub, r, bSort)`: Creates a plate between selected edges.

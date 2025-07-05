@@ -21,6 +21,7 @@ void drawPointLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
 }
 
 void drawEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
+    //printf( "drawEdgeLabels()\n" );
     for(int i=0; i<mesh.edges.size(); i++){
         Vec2i e =  mesh.edges[i].lo;
         Vec3d p = (mesh.verts[e.x].pos + mesh.verts[e.y].pos)*0.5;
@@ -248,7 +249,7 @@ class Renderer{
             drawPointLabels( *mesh, 0.02 );
         }
         if(bViewEdgeLabels) {
-            glColor3f(1.f,0.f,0.f);
+            glColor3f(0.f,.5f,0.f);
             drawEdgeLabels( *mesh, 0.02 );
         }
         if(bViewFaceLabels) {
@@ -256,7 +257,7 @@ class Renderer{
             drawFaceLabels( *mesh, 0.02 );
         }
         if(bViewTriLabels) {
-            glColor3f(0.f,0.5f,0.f);
+            glColor3f(0.7f,0.5f,0.f);
             drawTriLabels( *mesh, 0.02 );
         }
     }
