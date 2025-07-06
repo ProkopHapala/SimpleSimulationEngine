@@ -48,7 +48,7 @@ void edgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
 
 void drawSelectedEdges( const Mesh::Builder2& mesh ){
     glBegin(GL_LINES);
-    for(int ie: mesh.selset){
+    for(int ie: mesh.curSelection->vec){
         Vec2i e = mesh.edges[ie].lo;
         Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
     }

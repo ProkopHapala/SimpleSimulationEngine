@@ -209,13 +209,15 @@ void ConstructionBlockApp::initGUI(){
     contextMenu = new MultiPanel( "Context Menu", 0, 0, fontSizeDef*20, fontSizeDef*2, -1 );
     contextMenu->hideOnCommand = true;
     //contextMenu->addPanel( "select along line",  {0.0,1.0, 0.0},  0,1,0,0,0 )->command = [&](GUIAbstractPanel* p){ W->ffl.print_nonbonded();   return 0; }; 
-    contextMenu->addButton( "selectVertsAlongPolyline", [&](GUIAbstractPanel* p){ 
-        printf( "selectVertsAlongPolyline \n" );
-        printf( "select along line BEFORE \n" ); truss.printSelectedVerts();
-        truss.selectVertsAlongPolyline( 0.1, true ); 
-        printf( "select along line AFTER \n" ); truss.printSelectedVerts();
-        return 0; 
-    } );
+
+    // contextMenu->addButton( "selectVertsAlongPolyline", [&](GUIAbstractPanel* p){ 
+    //     printf( "selectVertsAlongPolyline \n" );
+    //     printf( "select along line BEFORE \n" ); truss.printSelectedVerts();
+    //     truss.selectVertsAlongPolyline( 0.1, true ); 
+    //     printf( "select along line AFTER \n" ); truss.printSelectedVerts();
+    //     return 0; 
+    // } );
+
     contextMenu->addButton( "plateBetweenEdges", [&](GUIAbstractPanel* p){ 
         printf( "plateBetweenEdges \n" );
         printf( "plateBetweenEdges BEFORE \n" ); truss.printSelectedVerts();
@@ -400,6 +402,11 @@ int main(int argc, char *argv[]){
 
         //Parabola_Wire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5 );
         //Parabola_ExtrudedWire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
+
+        truss.build_edgesOfVerts();
+        truss.selectRectEdge( Vec3dMin, Vec3dMax );
+        truss.bevel( truss.curSelection->vec.size(), truss.curSelection->vec.data(), 0.3, 0.3, 1 );
+
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
 
@@ -425,6 +432,7 @@ int main(int argc, char *argv[]){
 
         const int nbev = 6;
         int ies[nbev] = {0,1,2,3,4,5};
+
         truss.bevel( nbev, ies, 10.0, 10.0, 5.0);
     }};
 

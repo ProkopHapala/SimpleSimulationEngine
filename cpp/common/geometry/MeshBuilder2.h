@@ -25,6 +25,8 @@
 #include "globals.h"
 #include "Buckets.h"
 
+#include "Selection.h"
+
 //#include "MeshBuilder.h"
 
 using LoopDict = std::unordered_map<int,Slots<int,2>>;
@@ -66,7 +68,7 @@ struct VertT{ // double8
 };
 using Vert = VertT<double>; 
 
-class Builder2{ public:
+class Builder2 : public SelectionBanks { public:
     //bool bnor = true;
     //bool bUVs = true;
     //bool bSplitSize = false;
@@ -100,14 +102,24 @@ class Builder2{ public:
     enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
 
-    std::vector<int>        selection; //  vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
-    std::unordered_set<int> selset;    // edge index for vert
+    // bool bSelectionSet = true;
+    // std::vector<int>        selection; // vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
+    // std::unordered_set<int> selset;    // edge index for vert
+
+    // --- from SelectionBanks
+    // int icurSelection    = 0;
+    // Selection* curSelection = 0;
+    // std::vector<Selection> selections;
 
     //int draw_mode = TRIANGLES;
     Vec3f  penColor;
     
 
     // ======= Inline Functions
+
+    Builder2(int nSel=10) : SelectionBanks(nSel){}
+        
+    
 
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
@@ -208,6 +220,7 @@ class Builder2{ public:
     }  
 
     inline int selectVertRange(int i0, int iend){
+        std::vector<int>& selection = curSelection->vec;
         for(int i=i0;i<iend;i++){ selection.push_back(i); }
         return selection.size();
     }
@@ -224,7 +237,7 @@ class Builder2{ public:
 
 
     int selectVertsAlongLine( Vec3d p0, Vec3d p1, double r=0.1, bool bSort=true );
-    int selectVertsAlongPolyline( double r=0.1, bool bSort=true );
+    int selectVertsAlongPolyline( double r, bool bSort, int n, int* edges );
     int select_in_box     ( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
     
     Vec2i conect_vertex  ( int iv, int stickType, int n, int* iverts );
@@ -304,9 +317,9 @@ class Builder2{ public:
     int pickEdgeSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
     int pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax );
     // select by rectangle (box)
-    int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
-    int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot );
-    int selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  );
+    int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot=Mat3dIdentity );
+    int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot=Mat3dIdentity );
+    int selectRect( const Vec3d& p0, const Vec3d& p1,     const Mat3d& rot=Mat3dIdentity );
     
 
     int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 );

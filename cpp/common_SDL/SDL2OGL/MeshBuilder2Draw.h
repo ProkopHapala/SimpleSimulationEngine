@@ -70,7 +70,7 @@ void drawTriLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
 }
 
 void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
-    for(int ie: mesh.selset){
+    for(int ie: mesh.curSelection->vec){
         Vec2i e =  mesh.edges[ie].lo;
         Vec3d p = (mesh.verts[e.x].pos + mesh.verts[e.y].pos)*0.5;
         Draw3D::drawInt( p, ie, fontTex, sz );
@@ -78,8 +78,9 @@ void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
 }
 
 void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02, bool bOrder=false ){
-    if( bOrder ){ for(int i=0; i<mesh.selection.size(); i++){ Draw3D::drawInt( mesh.verts[mesh.selection[i] ].pos, i,  fontTex, sz ); } }
-    else        { for(int iv: mesh.selset                  ){ Draw3D::drawInt( mesh.verts[iv                ].pos, iv, fontTex, sz ); } }
+    std::vector<int>& selection = mesh.curSelection->vec;
+    if( bOrder ){ for(int i=0; i<selection.size(); i++){ Draw3D::drawInt( mesh.verts[selection[i] ].pos, i,  fontTex, sz ); } }
+    else        { for(int iv: selection               ){ Draw3D::drawInt( mesh.verts[iv           ].pos, iv, fontTex, sz ); } }
 }
 
 void drawPolygonBorder( const Mesh::Builder2& mesh, int ich ){
@@ -179,16 +180,16 @@ void drawVertLoop( const Mesh::Builder2& mesh, int n, int* ivs, int drawAs=GL_LI
 
 void drawSelectedEdges( const Mesh::Builder2& mesh ){
     glBegin(GL_LINES);
-    for(int ie: mesh.selset){
+    for(int ie: mesh.curSelection->vec){
         Vec2i e = mesh.edges[ie].lo;
-        Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+        Draw3D::drawLine( mesh.verts[e.x].pos, mesh.verts[e.y].pos );
     }
     glEnd();
 }
 
 void drawSelectedVerts( const Mesh::Builder2& mesh ){
     glBegin(GL_POINTS);
-    for(int iv: mesh.selection){
+    for(int iv: mesh.curSelection->vec){
         //printf( "drawSelectedVerts() iv=%i \n", iv );
         Draw3D::vertex( mesh.verts[iv].pos );
     }

@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <unordered_map>
-#include <unordered_map>
 
 #include "arrayAlgs.h"
 #include "raytrace.h"
@@ -205,6 +204,11 @@ void Builder2::sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies ){
 }
 
 int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
+    // Check vertex index bounds
+    if (iv < 0 || iv >= verts.size()) {
+        printf("ERROR: in bevel_vert: vertex index %d is out of bounds [0, %zu)\n", iv, verts.size());
+        return -1;
+    }
     // This function implements beveling similar to Blender's BMesh bevel operation
     // Parameters:
     // - iv: index of vertex to bevel
@@ -215,13 +219,13 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
     int ne = edgesOfVerts.cellNs[iv];
     printf("Builder2::bevel_vert() iv=%i ne=%i\n", iv, ne);
     //if      (n<2 ){ return -1; }  // Can't bevel a vertex with fewer than 2 edges
-    //DEBUG
+    DEBUG
     int  ivs [ne]; // neighbor vertex indices
     int  ies_[ne]; // edge indices
     ies = (ies) ? ies : ies_;
     loadNeighbours(iv, ivs, ies, ne);           // Load neighbor vertices and edge indices
     Vec3d p = verts[iv].pos; // copy to avoid invalidation on vert() calls
-    //DEBUG
+    DEBUG
     if(ne<3){ // special case - instead of n-gon create just edge
         Vec3d nor,u;
         if(ne==1){
@@ -243,7 +247,7 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
         edge(iv1, iv2);
         return ne;
     }
-    //DEBUG
+    DEBUG
     Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
     nor.normalize(); 
     if(nor.dot(nor0)<0){ nor.mul(-1); }
@@ -253,7 +257,7 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
     int newVerts[ne];  // Create n new vertices for the n-gon (one for each edge)
     int nnewEdges = 0;
     int newEdges[ne];
-    //DEBUG
+    DEBUG
     // Create vertices of the n-gon
     for (int i=0; i<ne; i++) {
         // Get direction from central vertex to neighbor
@@ -277,14 +281,14 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
         // Add new vertex
         newVerts[i] = vert(newPos);
     }
-    //DEBUG
+    DEBUG
     // Connect the new vertices to form the n-gon
     for (int i=0; i<ne; i++) {
         int next = (i+1) % ne;
         int newEdgeId = edge(newVerts[i], newVerts[next]);
         newEdges[nnewEdges++] = newEdgeId;
     }
-    //DEBUG
+    DEBUG
     // Create polygon faces
     // Central n-gon
     polygon(ne, newEdges);
@@ -308,10 +312,26 @@ int select_edge( int ie, int n, int* ies ){
     return -1;
 }
 
+// int Builder2::select_verts_of_edge( int ne, int* ies){
+//     std::unordered_set<int> ivset;
+//     for(int i=0; i<ne; i++){
+//         int ie = ies[i];
+//         Vec2i e = edges[ie].lo;
+//         ivset.insert(e.x);
+//         ivset.insert(e.y);
+//     }
+//     nv=(int)ivset.size();
+//     ivs.resize(nv);
+//     int i=0;
+//     for(auto& iv : ivset){ ivs[i++]=iv; }
+// }
+    
+
 int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     printf("Builder2::bevel() ne=%i L=%g h=%g nseg=%i\n", ne, L, h, nseg);
     // First ensure we have the necessary edge information
     //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
+    if( edgesOfVerts.ncell != verts.size() ) { printf("ERROR in Builder2::bevel() edgesOfVerts is not initialized, call build_edgesOfVerts() first\n"); exit(0); }
     std::vector<int> ivs;
     int nv=0;
     //DEBUG
@@ -343,7 +363,7 @@ int nesum = 0;
     //Vec2i eranges[ivs.size()];
     //Vec2i vranges[ivs.size()];
 
-    //DEBUG
+    DEBUG
     for(int k=0;k<nv;k++){ int iv = ivs[k];
         printf("-- bevel vertex %i\n", iv);
         //int ie0 = edges.size();
@@ -352,7 +372,7 @@ int nesum = 0;
         ie0s[k+1] = nesum;
         iv0s[k+1] = verts.size();
     }
-    //DEBUG
+    DEBUG
     // --- bevel edges and connect them to beveled vertices, make sure we connect them in the same direction
     for(int i=0; i<ne; i++){
         printf("-- bevel edge %i\n", i);
@@ -611,22 +631,18 @@ Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, M
 }
 
 int Builder2::selectionToFace(){
-    //printf( "selToFace() n=%i \n", selection.size() );
-    int n = selset.size();
+    int n = curSelection->size();
     if(n>ngon_max){
         printf( "WARRNING: selectionToFace() n(%i) > ngon_max(%i) => return \n", n, ngon_max );
         return 0;
     }
-    selection.clear();
-    for( int i : selset ){ selection.push_back(i);}
-    polygon( n, selection.data() );
+    polygon( n, curSelection->data() );
     return 0;
 }
 
 int Builder2::clearSelection(){
-    int n = selection.size();
-    selection.clear();
-    selset.clear();
+    int n = curSelection->size();
+    curSelection->clear();
     return n;
 }
 
@@ -651,7 +667,7 @@ int Builder2::pickEdge( const Vec3d& ro, const Vec3d& rh, double Rmax ){
 }
 
 int Builder2::toggleSelSet(  int i ){
-    if( selset.find(i)!=selset.end() ){ selset.erase(i); return -1; }else{ selset.insert(i); return 1; }; return 0;
+    return curSelection->toggle(i);
 }
 
 int Builder2::pickTriangle( const Vec3d& ro, const Vec3d& rh, bool bReturnFace ){
@@ -685,17 +701,11 @@ int Builder2::pickSelect( const Vec3d& ro, const Vec3d& rh, double Rmax ){
         case SelectionMode::edge: ipick= pickEdgeSelect( ro, rh, Rmax ); break;
         case SelectionMode::face: ipick= pickTriangle  ( ro, rh, true ); break;
     }
-    if( bAdditiveSelect && (ipick>=0) ){ 
-        // is ipick in selset?
-        if( selset.find(ipick)!=selset.end() ){ 
-            selset.erase(ipick); 
-            selection.erase( std::remove( selection.begin(), selection.end(), ipick ), selection.end() );
-        }else{ 
-            selset.insert(ipick);
-            selection.push_back(ipick); 
-        }
+    if( ipick>=0 ){
+        if( bAdditiveSelect  ){ curSelection->add(ipick);    }
+        else                  { curSelection->toggle(ipick); }
     }
-    return -1;
+    return ipick;
 }
 
 int Builder2::selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){ 
@@ -715,7 +725,7 @@ int Builder2::selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot
         rot.dot_to( verts[b.i].pos,pa);
         rot.dot_to( verts[b.j].pos,pb);
         if( pa.isBetween(Tp0,Tp1) && pb.isBetween(Tp0,Tp1) ){
-            selset.insert( i );
+            curSelection->add(i);
             nfound++;
         }
     }
@@ -737,7 +747,7 @@ int Builder2::selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot
         Vec3d p;
         rot.dot_to( verts[i].pos,p);
         if( p.isBetween(Tp0,Tp1) ){
-            selset.insert( i );
+            curSelection->add(i);
             nfound++;
         }
     }
@@ -745,7 +755,7 @@ int Builder2::selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot
 }
 
 int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
-    selset.clear();
+    curSelection->clear();
     //printf( "pickSelect() selection_mode %i  \n", selection_mode);
     switch( (SelectionMode)selection_mode ){
         case SelectionMode::edge: return selectRectEdge( p0, p1, rot ); break;
@@ -763,7 +773,7 @@ int Builder2::select_in_sphere( const Vec3d& p0, double r, int i0, int imax ){
         double r2 = d.norm2();
         printf( "Builder2::select_in_sphere() vert[%3i] r=%10g pos: %10g %10g %10g \n", i, sqrt(r2), verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
         if( r2 > r*r ) continue; // check bounds along the axis
-        selection.push_back(i);
+        curSelection->add(i);
         n++;
     }
     return n;
@@ -778,7 +788,7 @@ int Builder2::select_in_cylinder( const Vec3d& p0, const Vec3d& fw, double r, do
         if( (cH<0) || (cH>l) ) continue; // check bounds along the axis
         double cR = d.norm2() - cH*cH; //
         if( cR>r*r ) continue;         // check bounds in the plane
-        selection.push_back(i);
+        curSelection->add(i);
         n++;
     }
     return n;
@@ -792,18 +802,18 @@ int Builder2::select_in_box( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, 
         Vec3d  d  =  verts[i].pos-p0;
         Vec3d  Td{ lf.dot(d), up.dot(d), fw.dot(d) }; 
         if( Td.isBetween( Lmin, Lmax ) ){ 
-            selection.push_back(i);
+            curSelection->add(i);
             n++;
         }
     }
     return n;
 }
 
-void Builder2::makeSelectrionUnique(){
-    std::sort( selection.begin(), selection.end() );
-    auto it = std::unique( selection.begin(), selection.end() );
-    selection.resize( std::distance(selection.begin(), it) );
-}
+// void Builder2::makeSelectrionUnique(){
+//     std::sort( selection.begin(), selection.end() );
+//     auto it = std::unique( selection.begin(), selection.end() );
+//     selection.resize( std::distance(selection.begin(), it) );
+// }
 
 int Builder2::findClosestVert(const Vec3d& p0,int i0,int n){
     if(n==-1) n=verts.size();
@@ -815,7 +825,8 @@ int Builder2::findClosestVert(const Vec3d& p0,int i0,int n){
 
 int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
     //printf( "Mesh::Builder2::findVert() p(%g,%g,%g) Rmax: %g  \n", p0.x,p0.y,p0.z, Rmax );
-    if(n==-1){ n  =selection.size(); sel=selection.data(); }
+    //if(n==-1){ n  =selection.size(); sel=selection.data(); }
+    if(n==-1){ n=curSelection->vec.size(); sel=curSelection->vec.data(); }
     double r2min=Rmax;
     int imin=-1;
     for(int ii=0;ii<n;ii++){ 
@@ -845,24 +856,27 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
             d.add_mul( ax, -x ); // orthogonal component
             double r2 = d.norm2(); 
             if( r2>R2 ) continue;
+            //curSelection->add(i);
             sel.push_back(i);
             if(bSort) xalong.push_back(x);
         }
         if(bSort){  // we need to sort selection by xalong
             sortArrayByAnother( sel.size(), sel.data(), xalong.data() );
         }
-        selection.insert( selection.end(), sel.begin(), sel.end() );
+        //selection.insert( selection.end(), sel.begin(), sel.end() );
+
         return sel.size();
     };
 
-    int Builder2::selectVertsAlongPolyline( double r, bool bSort ){
-        std::vector<int> sel = selection; // we need to backup selection so we can accumulate all found points into global selection
-        for(int i=1; i<sel.size(); i++){
-            Vec3d p0 = verts[sel[i-1]].pos;
-            Vec3d p1 = verts[sel[i  ]].pos;
+    int Builder2::selectVertsAlongPolyline( double r, bool bSort, int n, int* edges ){
+        //std::vector<int> sel = selection; // we need to backup selection so we can accumulate all found points into global selection
+        //int n = curSelection->vec.size();
+        for(int i=1; i<n; i++){
+            Vec3d p0 = verts[edges[i-1]].pos;
+            Vec3d p1 = verts[edges[i  ]].pos;
             selectVertsAlongLine( p0, p1, r, bSort );
         }
-        return selection.size();
+        return curSelection->vec.size();
     }
 
     int Builder2::plateBetweenVertStrips( int n, int* ivs1, int* ivs2, int nsub ){
@@ -875,6 +889,7 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
     }
 
     int Builder2::plateBetweenEdges( int nsub, double r, bool bSort ){
+        std::vector<int>& selection = curSelection->vec;
         printf( "plateBetweenEdges() nsub=%i  r=%f  bSort=%i  sel.size=%i\n", nsub, r, bSort, selection.size() );
         std::vector<int> sel = selection;
         std::vector<int> strip1;
@@ -916,6 +931,7 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
         int iv = -1;
         if (Rcolapse>0) { iv = findVert(p, Rcolapse); } // use existing vert if found
         if (iv<0)       { 
+            std::vector<int>& selection = curSelection->vec;
             selection.clear();
             if( fw ){ select_in_cylinder( p, *fw, r, l, i0, n ); }
             else    { select_in_sphere(p, r, i0, n);             }
@@ -1563,12 +1579,14 @@ void Builder2::read_obj(const char* fname, uint8_t mask) {
 }
 
 void Builder2::printSelection(){
+    std::vector<int>& selection = curSelection->vec;
     printf( "Mesh::Builder2::printSelection() n=%i mode=%i :", selection.size(), selection_mode );
     for(int ii=0; ii<selection.size(); ii++){  printf( "%i ", selection[ii] ); }
     printf( "\n" );
 }
 
 void Builder2::printSelectedVerts(){
+    std::vector<int>& selection = curSelection->vec;
     printf( "Mesh::Builder2::printSelectedVerts() n=%i\n", selection.size() );
     for(int ii=0; ii<selection.size(); ii++){
         int i=selection[ii];

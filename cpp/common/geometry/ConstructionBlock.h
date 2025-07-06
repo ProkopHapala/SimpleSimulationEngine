@@ -396,7 +396,7 @@ namespace Mesh{
             drawFace( block, i, block.pos+rot_.c*L.a, rot_, {L.y,L.z}, bStoreFaceIds );
         }
 
-        mesh.selection.clear();
+        mesh.curSelection->clear();
     }
 
     void drawBlockBuilder( BlockBuilder& skelet, int nseg=4, bool bAllign=true ){
