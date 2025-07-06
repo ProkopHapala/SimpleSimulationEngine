@@ -10,6 +10,50 @@
 
 namespace Mesh {
 
+enum class WireFlags : uint16_t {
+    NONE            = 0,
+    CLOSED_CIRCUM   = 1 << 0,  // 1: Close circumference (periodic in angular direction)
+    CAPPED_CENTER   = 1 << 1,  // 2: Add central vertex and connect to first ring
+    RADIAL_EDGES    = 1 << 2,  // 4: Add radial edges between rings
+    AZIMUTHAL_EDGES = 1 << 3,  // 8: Add edges along each ring
+    DIAGONAL1_EDGES = 1 << 4,  // 16: Add diagonal edges (top-right to bottom-left)
+    DIAGONAL2_EDGES = 1 << 5,  // 32: Add diagonal edges (top-left to bottom-right)
+    FIRST_RING      = 1 << 6,  // 64: Add edges for first radial loop
+    LAST_RING       = 1 << 7,  // 128: Add edges for last radial loop
+    ALTERNATE_DIAG  = 1 << 8,  // 256: Add alternate edges
+    
+    // Common combinations
+    BASIC_GRID      = AZIMUTHAL_EDGES | RADIAL_EDGES,
+    FULL_GRID       = BASIC_GRID | DIAGONAL1_EDGES | DIAGONAL2_EDGES,
+    DEFAULT_WIRE    = BASIC_GRID | CLOSED_CIRCUM | FIRST_RING | LAST_RING,
+    STAR            = CLOSED_CIRCUM | RADIAL_EDGES | FIRST_RING,
+    TRIMESH         = BASIC_GRID | DIAGONAL1_EDGES | ALTERNATE_DIAG | FIRST_RING | LAST_RING | CLOSED_CIRCUM
+};
+#define _unpack_WireFlags \
+    bool bPeriodicB   = (bool)(flags & WireFlags::CLOSED_CIRCUM);    \
+    bool bHasCenter   = (bool)(flags & WireFlags::CAPPED_CENTER);    \
+    bool bAzimEdges   = (bool)(flags & WireFlags::AZIMUTHAL_EDGES);  \
+    bool bRadialEdges = (bool)(flags & WireFlags::RADIAL_EDGES);     \
+    bool bDiagEdges1  = (bool)(flags & WireFlags::DIAGONAL1_EDGES);  \
+    bool bDiagEdges2  = (bool)(flags & WireFlags::DIAGONAL2_EDGES);  \
+    bool bFirstRing   = (bool)(flags & WireFlags::FIRST_RING);     \
+    bool bLastRing    = (bool)(flags & WireFlags::LAST_RING);      \
+    bool bAlternateDiag= (bool)(flags & WireFlags::ALTERNATE_DIAG);
+
+
+inline WireFlags operator|(WireFlags a, WireFlags b) {
+    return static_cast<WireFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+}
+
+inline WireFlags operator&(WireFlags a, WireFlags b) {
+    return static_cast<WireFlags>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
+}
+
+inline WireFlags operator^(WireFlags a, WireFlags b) {
+    return static_cast<WireFlags>(static_cast<uint16_t>(a) ^ static_cast<uint16_t>(b));
+}
+
+
 // template<typename UVfunc> Vec3f getUVFuncNormal(Vec2f uv, float h, UVfunc func) { 
 //     Vec2f o; Vec3f nor,da,db; 
 //     o=uv; o.a+=h; da.set(func(o)); 
@@ -19,6 +63,12 @@ namespace Mesh {
 //     nor.set_cross(db,da); nor.normalize(); 
 //     return nor; 
 // }
+
+
+
+
+
+
 
 template<typename UVfunc> void UVFunc2smooth(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
@@ -49,7 +99,6 @@ template<typename UVfunc> void UVFunc2smooth(Builder2& builder, Vec2i n, Vec2f U
         /// TODO: Make triangle strip
         //builder.chunk({builder.tris.size()-2*n.a*n.b, 2*n.a*n.b, -1, (int)Builder2::ChunkType::face});
     }
-    
 }
 
 template<typename UVfunc> void UVFunc2wire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
@@ -76,7 +125,7 @@ template<typename UVfunc> void UVFunc2wire(Builder2& builder, Vec2i n, Vec2f UVm
     
 }
 
-template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
+template<typename UVfunc> void UVFunc2wireExtruded(Builder2& builder, Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b}); float eps = 0.001;
     std::vector<int> verts((n.a+1)*(n.b+1)*2); int iv = 0;
     for(int ia=0; ia<=n.a; ia++) { 
@@ -101,6 +150,90 @@ template<typename UVfunc> void drawExtrudedWireUVFunc(Builder2& builder, Vec2i n
     //builder.chunk({builder.tris.size()-4*n.a*n.b, 4*n.a*n.b, -1, (int)Builder2::ChunkType::face});
 }
 
+// New flexible wireframe functions with center/edge closure control
+template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, WireFlags flags=WireFlags::DEFAULT_WIRE ) {
+    Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
+    _unpack_WireFlags
+    int  startIndex = builder.verts.size();
+    int  centerIndex = -1;
+
+    // Create center vertex if needed
+    if(bHasCenter) {
+        Vec3d p_center; convert(func({0.0,0.0}), p_center);
+        centerIndex = builder.vert(p_center);
+    }
+    
+    // Create grid vertices
+    int nCols = bPeriodicB ? n.b : n.b+1;
+    for(int ia=(bHasCenter?1:0); ia<=n.a; ia++) {
+        Vec2f uv = {UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia};
+        for(int ib=0; ib<nCols; ib++) {
+            Vec3d p; convert(func(uv), p);
+            builder.vert(p);
+            uv.b += duv.b;
+        }
+    }
+    printf("UVFunc2wire_new(): n.a=%i n.b=%i | bAlternateDiag=%i bDiagEdges1=%i bDiagEdges2=%i bPeriodicB=%i bHasCenter=%i bAzimEdges=%i bRadialEdges=%i bFirstRing=%i bLastRing=%i\n", n.a, n.b, bAlternateDiag, bDiagEdges1, bDiagEdges2, bPeriodicB, bHasCenter, bAzimEdges, bRadialEdges, bFirstRing, bLastRing);
+    // Create edges
+    for(int ir=0; ir<=n.a-(bHasCenter?1:0); ir++) {
+        int rowStart = startIndex + (bHasCenter?1:0) + ir * nCols;
+        
+        // Connect to center for first ring
+        if(bHasCenter && ir==0) {
+            for(int ib=0; ib<nCols; ib++) { builder.edge(centerIndex, rowStart + ib); }
+        }
+        
+        // Create edges within current row
+        bool bDoAzumith = bAzimEdges;
+        if     ( ir==0     ) bDoAzumith = bFirstRing;
+        else if( ir==n.a-1 ) bDoAzumith = bLastRing;
+        //printf("UVFunc2wire_new()[ir=%i] bDoAzumith=%i | bAzimEdges=%i bFirstRing=%i bLastRing=%i\n", ir, bDoAzumith, bAzimEdges, bFirstRing, bLastRing);
+        if(bDoAzumith) {
+            //printf("UVFunc2wire_new()[ir=%i] bDoAzumith=%i \n", ir, bDoAzumith);
+            for(int ib=0; ib<nCols-1; ib++) { builder.edge(rowStart + ib, rowStart + ib+1); }
+            if (bPeriodicB)                 { builder.edge(rowStart + nCols-1, rowStart);    }
+        }
+        // Create edges between rows
+        if(ir > 0 && bRadialEdges) {
+            int prevRow = startIndex + (bHasCenter?1:0) + (ir-1) * nCols;
+            for(int ib=0; ib<nCols; ib++) { builder.edge(prevRow + ib, rowStart + ib); }
+        }
+        // Create diagonal edges 
+        if(ir > 0 && (bDiagEdges1||bDiagEdges2)) {
+            int prevRow = startIndex + (bHasCenter?1:0) + (ir-1) * nCols;
+
+            int nc=nCols-1;
+            if(bPeriodicB) nc++;
+            for(int ib=0; ib<nc; ib++) {
+                int i0=0,i1=1;
+                if( bAlternateDiag && ( (bool)((ir^ib)&1) ) ) { i0=1; i1=0; }
+                if(ib>=(nCols-1)){ int i0_=i0; i0=i1*(nCols-1)-ib; i1=i0_*(nCols-1)-ib; }
+                if(bDiagEdges1) builder.edge(prevRow + ib+i1, rowStart + ib+i0);
+                if(bDiagEdges2) builder.edge(prevRow + ib+i0, rowStart + ib+i1);
+            }
+            // Periodic boundary connections
+            // if(bPeriodicB) {
+            //     int i0=0,i1 = 1;
+            //     if( bAlternateDiag && ( (bool)( (ir^(nCols-1))&1) ) ) { i0 = 1; i1 = 0; }
+            //     // // Apply the same alternating logic to boundaries
+            //     // if(bAlternateDiag) {
+            //     //     bool swap = (ir ^ (nCols-1)) & 1;
+            //     //     if(swap) { i0 = 1; i1 = 0; }
+            //     // }
+            //     // // Create boundary connections using the same pattern
+            //     if(bDiagEdges1) builder.edge(prevRow + i0*(nCols-1), rowStart + i1*(nCols-1));
+            //     if(bDiagEdges2) builder.edge(prevRow + i1*(nCols-1), rowStart + i0*(nCols-1));
+            // }
+        }
+    }
+}
+
+void Parabola_Wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, WireFlags flags=WireFlags::DEFAULT_WIRE) {
+    float K = L/(R*R);
+    UVmin.a *= R; UVmax.a *= R;
+    auto uvfunc = [K](Vec2f uv) { return ParabolaUVfunc(uv, K); };
+    UVFunc2wire_new(builder, n, UVmin, UVmax, voff, uvfunc, flags);
+}
 
 void Cone2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);}; 
@@ -165,49 +298,55 @@ void Hyperbola2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float 
 
 void Cone_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void Sphere_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return SphereUVfunc(uv,R);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void Torus_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return TorusUVfunc(uv,r,R);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void Teardrop_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return TeardropUVfunc(uv,R1,R2,L);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void NACASegment_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, float thick) { 
     auto uvfunc = [&](Vec2f uv){return NACA4digitUVfunc(uv,coefs1,coefs2,L);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void HarmonicTube_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, float thick) { 
     auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+}
+
+void Parabola_Wire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff) { 
+    float K = L/(R*R); UVmin.a*=R; UVmax.a*=R; 
+    auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);}; 
+    UVFunc2wire(builder, n,UVmin,UVmax,voff,uvfunc); 
 }
 
 void Parabola_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, float thick) { 
     float K = L/(R*R); UVmin.a*=R; UVmax.a*=R; 
     auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);}; 
-    drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+    UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
 }
 
 void Hyperbola_ExtrudedWire(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, float thick) {
     if(r>0){ 
         float K = R/L; UVmin.a*=L; UVmax.a*=L; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaLUVfunc(uv,r,K);}; 
-        drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+        UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
     }else{ 
         r=-r; float K = L/R; UVmin.a*=R; UVmax.a*=R; 
         auto uvfunc = [&](Vec2f uv){return HyperbolaRUVfunc(uv,r,K);}; 
-        drawExtrudedWireUVFunc(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
+        UVFunc2wireExtruded(builder, n,thick,UVmin,UVmax,voff,uvfunc); 
     }
 }
 
@@ -309,39 +448,6 @@ void Sphere_oct(Builder2& builder, int n, float r, const Vec3f& pos, bool wire) 
         SphereTriangle(builder,n,r,pos, a, b,nc); SphereTriangle(builder,n,r,pos,na, b,nc);
         SphereTriangle(builder,n,r,pos, a,nb,nc); SphereTriangle(builder,n,r,pos,na,nb,nc);
     }
-}
-
-void Capsula(Builder2& builder, Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped) {
-    Vec3f ax=p1-p0; float L=ax.normalize();
-    Vec3f up,lf; ax.getSomeOrtho(up,lf);
-    float dPhi=2*M_PI/nPhi, R=(r1+r2)*0.5f, dR=(r2-r1)*0.5f;
-    int nTheta=(theta2-theta1)/dTheta;
-    int i0=builder.verts.size();
-    for(int iTheta=0; iTheta<=nTheta; iTheta++) {
-        float cT=cos(theta1+iTheta*dTheta), sT=sin(theta1+iTheta*dTheta);
-        float r=R+dR*cT, z=L*0.5f*sT;
-        for(int iPhi=0; iPhi<=nPhi; iPhi++) {
-            float cP=cos(iPhi*dPhi), sP=sin(iPhi*dPhi);
-            Vec3f d=up*cP+lf*sP;
-            Vec3f p=p0+ax*((L+z)*0.5f)+d*r;
-            Vec3f n=d+ax*sT; n.normalize();
-            builder.vert(Vec3d{p.x,p.y,p.z}, Vec3d{n.x,n.y,n.z});
-            if(iTheta<nTheta && iPhi<nPhi) {
-                int i=i0+iTheta*(nPhi+1)+iPhi;
-                builder.tri(i,i+1,i+nPhi+1); builder.tri(i+1,i+nPhi+2,i+nPhi+1);
-            }
-        }
-    }
-    if(capped) {
-        int ic1=builder.verts.size(), ic2=ic1+1;
-        builder.vert(Vec3d{p0.x,p0.y,p0.z}, Vec3d{-ax.x,-ax.y,-ax.z});
-        builder.vert(Vec3d{p1.x,p1.y,p1.z}, Vec3d{ax.x,ax.y,ax.z});
-        for(int iPhi=0; iPhi<nPhi; iPhi++) {
-            builder.tri(i0+iPhi,i0+iPhi+1,ic1);
-            builder.tri(i0+(nTheta)*(nPhi+1)+iPhi,ic2,i0+(nTheta)*(nPhi+1)+iPhi+1);
-        }
-    }
-    builder.chunk({builder.tris.size()-(2*nTheta*nPhi+(capped?2*nPhi:0)), 2*nTheta*nPhi+(capped?2*nPhi:0), -1, (int)Builder2::ChunkType::face});
 }
 
 } // namespace Mesh

@@ -384,11 +384,26 @@ int main(int argc, char *argv[]){
         // --- Create truss by extruding Parabola (e.g. to build magnetic nozzle for nuclear spacecraft)
         // Parabola2Mesh(truss,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  true ); // Wireframe
         // Parabola2Mesh(truss,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // Solid (crashes due to normal calculation in MeshBuilder.h)
-        Parabola_ExtrudedWire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
+        //Parabola_Wire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0 );
+        //Parabola_Wire_new( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*1.5}, 10.0, 10.0, 0.0, true,  true  );
+        
+        //Parabola_Wire_new( truss, {8,5}, Vec2f{0.1,0.0}, Vec2f{1.0,M_PI*1.5}, 10.0, 10.0, 0.0, false, false );
+        //Parabola_Wire_new( truss, {8,5}, Vec2f{0.1,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, true, true );
+        
+        //Parabola_Wire_new( truss, {3,6}, Vec2f{0.2,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, WireFlags::DEFAULT_WIRE );
+        
+        //Parabola_Wire_new( truss, {3,8}, Vec2f{0.2,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, WireFlags::STAR | WireFlags::DIAGONAL1_EDGES | WireFlags::ALTERNATE_DIAG );
+        //Parabola_Wire_new( truss, {3,6}, Vec2f{0.2,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, WireFlags::TRIMESH );
+
+        Parabola_Wire_new( truss, {3,6}, Vec2f{0.2,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, WireFlags::STAR  );
+        //Parabola_Wire_new( truss, {3,16}, Vec2f{0.2,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, WireFlags::TRIMESH );
+
+        //Parabola_Wire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5 );
+        //Parabola_ExtrudedWire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
 
-    funcs["-bevel"] = {0, [&](const char**){
+    funcs["-bevel"] = {0, [&](const char**){ 
         const int npoint      = 7;
         Vec3d nodes[npoint] = {
             {0.0,    0.0,   0.0}, // 0
