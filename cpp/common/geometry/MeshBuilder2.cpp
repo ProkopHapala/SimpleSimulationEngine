@@ -355,7 +355,7 @@ void Builder2::normalsTowardPoint( int nv, int* ivs, Vec3d p, double sc ){
     }
 }
 
-int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
+int Builder2::bevel( int ne, int* ies, double L, double h, int nseg, BevelFlags flags ){
     printf("Builder2::bevel() ne=%i L=%g h=%g nseg=%i\n", ne, L, h, nseg);
     // First ensure we have the necessary edge information
     //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
@@ -389,11 +389,7 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     // bool bFacesFlat  = true; // make polygon on flat surface created by bevel
     // bool bFacesWedge = true; // make polygon on wedge surface between the beveled and original vertices and edges 
 
-    bool bEdgeWedge  = true; // make edge on wedge between the beveled and original vertices
-    bool bDiagWedge  = false; // make diagonal edges on wedge surface between the beveled and original vertices
-    bool bDiagFlat   = false; // make diagonal edges on flat surface created by bevel
-    bool bFacesFlat  = false; // make polygon on flat surface created by bevel
-    bool bFacesWedge = true; // make polygon on wedge surface between the beveled and original vertices and edges 
+    _unpack_BevelFlags 
 
     DEBUG
     for(int k=0;k<nv;k++){ 

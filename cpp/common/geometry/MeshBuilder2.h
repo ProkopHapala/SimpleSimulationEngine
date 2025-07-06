@@ -35,6 +35,18 @@ using LoopDict = std::unordered_map<int,Slots<int,2>>;
 
 namespace Mesh{
 
+// Flags controlling Builder2::bevel options
+enum class BevelFlags : uint16_t { EdgeWedge=1<<0, DiagWedge=1<<1, DiagFlat=1<<2, FacesFlat=1<<3, FacesWedge=1<<4 };
+inline BevelFlags operator|(BevelFlags a, BevelFlags b){ return static_cast<BevelFlags>(static_cast<uint16_t>(a)|static_cast<uint16_t>(b)); }
+inline BevelFlags operator&(BevelFlags a, BevelFlags b){ return static_cast<BevelFlags>(static_cast<uint16_t>(a)&static_cast<uint16_t>(b)); }
+#define _unpack_BevelFlags \
+    bool bEdgeWedge  = (bool)(flags & BevelFlags::EdgeWedge); \
+    bool bDiagWedge  = (bool)(flags & BevelFlags::DiagWedge); \
+    bool bDiagFlat   = (bool)(flags & BevelFlags::DiagFlat); \
+    bool bFacesFlat  = (bool)(flags & BevelFlags::FacesFlat); \
+    bool bFacesWedge = (bool)(flags & BevelFlags::FacesWedge);
+
+
 static double RvertCollapse = 1e-3;
 
     struct ObjMask {
@@ -286,7 +298,7 @@ class Builder2 : public SelectionBanks { public:
     Vec3d vertNormalByEdges( int iv, bool bNormalizeEach=false);
     void sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies );
     int bevel_vert(int iv, double L, double h, bool bPoly=true, bool bEdgeWedge=false, int* ies=0, Vec3d nor=Vec3dZero );
-    int bevel( int ne, int* ies, double L, double h, int nseg=1);
+    int bevel( int ne, int* ies, double L, double h, int nseg=1, BevelFlags flags = BevelFlags::EdgeWedge|BevelFlags::FacesWedge );
 
     int select_edge_by_verts( int iv, int n, int* ies );
     int select_verts_of_edge( int ne, int* ies, std::vector<int>* ivs=0 );
