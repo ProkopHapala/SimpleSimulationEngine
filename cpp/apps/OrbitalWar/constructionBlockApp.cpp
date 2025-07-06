@@ -374,6 +374,10 @@ void ConstructionBlockApp::eventHandling ( const SDL_Event& event  ){
 // ===================== MAIN
 
 int main(int argc, char *argv[]){    
+    // unbuffered
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+
     printf( "argc %i \n", argc );
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;

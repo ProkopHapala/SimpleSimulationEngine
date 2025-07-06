@@ -79,7 +79,10 @@ bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts ){
         int ie;
         if( v.data[0]==oe ){ ie = v.data[1]; }
         else               { ie = v.data[0]; }
-        if( ie==-1 ){ return false; } // edge loop ends
+        if( ie==-1 ){ 
+            _assert( {},false, printf("sortEdgeLoop() edge loop ends %i/%i\n", i, n); for(int j=0;j<i;j++){ int je=iedges[j]; printf("#i %3i ie %3i ivs(%3i,%3i) \n", j, je, edges[je].x, edges[je].y ); } );
+            return false; 
+        } // edge loop ends
         iedges[i] = ie;
         oe = ie;
         iv = getOtherEdgeVert(ie,iv);
@@ -220,13 +223,13 @@ int Builder2::bevel_vert(int iv, double L, double h, bool bPoly, bool bEdgeWedge
     int ne = edgesOfVerts.cellNs[iv];
     printf("Builder2::bevel_vert() iv=%i ne=%i\n", iv, ne);
     //if      (n<2 ){ return -1; }  // Can't bevel a vertex with fewer than 2 edges
-    DEBUG
+    //DEBUG
     int  ivs [ne]; // neighbor vertex indices
     int  ies_[ne]; // edge indices
     ies = (ies) ? ies : ies_;
     loadNeighbours(iv, ivs, ies, ne);           // Load neighbor vertices and edge indices
     Vec3d p = verts[iv].pos; // copy to avoid invalidation on vert() calls
-    DEBUG
+    //DEBUG
     if(  nor.norm2()<1e-9 ){ nor = verts[iv].nor; }
     if(ne<3){ // special case - instead of n-gon create just edge
         Vec3d u;
@@ -253,7 +256,7 @@ int Builder2::bevel_vert(int iv, double L, double h, bool bPoly, bool bEdgeWedge
         }
         return ne;
     }
-    DEBUG
+    //DEBUG
     // Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
     // nor.normalize(); 
     // if(nor.dot(nor0)<0){ nor.mul(-1); }
@@ -264,7 +267,7 @@ int Builder2::bevel_vert(int iv, double L, double h, bool bPoly, bool bEdgeWedge
     int newVerts[ne];  // Create n new vertices for the n-gon (one for each edge)
     int nnewEdges = 0;
     int newEdges[ne];
-    DEBUG
+    //DEBUG
     // Create vertices of the n-gon
     for (int i=0; i<ne; i++) {
         // Get direction from central vertex to neighbor
@@ -288,14 +291,14 @@ int Builder2::bevel_vert(int iv, double L, double h, bool bPoly, bool bEdgeWedge
         // Add new vertex
         newVerts[i] = vert(newPos);
     }
-    DEBUG
+    //DEBUG
     // Connect the new vertices to form the n-gon
     for (int i=0; i<ne; i++) {
         int next = (i+1) % ne;
         int newEdgeId = edge(newVerts[i], newVerts[next]);
         newEdges[nnewEdges++] = newEdgeId;
     }
-    DEBUG
+    //DEBUG
     // Create polygon faces
     // Central n-gon
     if(bPoly){ polygon(ne, newEdges); }
@@ -369,6 +372,12 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     std::vector<int> ie0s(nv+1);
     std::vector<int> iv0s(nv+1);
     std::vector<int> ins (nv+1);
+    // number of wedge spokes per vertex (special case for ne<3)
+    std::vector<int> wedgeCount(nv);
+    // starting edge index of the ring (between new bevel vertices) for each original vertex
+    std::vector<int> ring0s(nv);
+    // starting edge index of the wedge spokes (original vertex to new bevel vertices)
+    std::vector<int> wedge0s(nv);
     int nesum = 0;
     //Vec2i eranges[ivs.size()];
     //Vec2i vranges[ivs.size()];
@@ -393,9 +402,16 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
         //int ie0 = edges.size();
         ie0s[k] = nesum;
         iv0s[k] = verts.size();
-        int nek = bevel_vert(iv, L, h, bFacesFlat, bEdgeWedge, iess.data()+nesum );
+        // remember where new edges will start in global list
+        int ieStart = edges.size();
+        int nek     = bevel_vert(iv, L, h, bFacesFlat, bEdgeWedge, iess.data()+nesum );
+        int ieEnd   = edges.size();
         nesum += nek;
-        ins[k] = nek;
+        ins[k] = nek;              // number of sides (== number of ring edges)
+        ring0s [k]  = ieStart;      // first ring edge
+        wedge0s[k] = bEdgeWedge ? (ieStart + nek) : -1;   // first wedge spoke edge
+        // compute wedge spoke count: for ne<3 there are 2 spokes, else one per ring edge
+        wedgeCount[k] = ins[k]<3 ? 2 : ins[k];
         //ie0s[k+1] = nesum;
         //iv0s[k+1] = verts.size();
     }
@@ -427,9 +443,9 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
             //_swap(ivx0, ivx1);
             _swap(ivy0, ivy1);
         }
-        // connect the edges forming the back surface
-        edge( ivx0, ivy0 );
-        edge( ivx1, ivy1 );
+        // connect the edges forming the back surface (store indices for later)
+        int ieBack0 = edge( ivx0, ivy0 );
+        int ieBack1 = edge( ivx1, ivy1 );
 
         // -------------------------------------------------------------
         //  Optional additional edges (diagonals)                     
@@ -448,36 +464,58 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
             edge( ivx0, ivy1 );
             edge( ivx1, ivy0 );
         }
-
         // -------------------------------------------------------------
         //  Optional polygon faces                                     
-        // -------------------------------------------------------------
+        // -------------------------------------------------------------        
+        bool bOptimizedOutFindEdge = false;
+        //bool bOptimizedOutFindEdge = true;
         if( bFacesWedge ){
-            // First wedge quad : (e.x, ivx0, ivy0, e.y)
-            int ie1 = findEdgeByVerts({e.x , ivx0});
-            int ie2 = findEdgeByVerts({ivx0, ivy0});
-            int ie3 = findEdgeByVerts({ivy0, e.y });
-            int ie4 = ie;                         // original edge (e.x,e.y)
-            int iedges_quad1[4] = {ie1, ie2, ie3, ie4};
-            polygon(4, iedges_quad1);
-
-            // Second wedge quad : (e.x, ivx1, ivy1, e.y)
-            int ie5 = findEdgeByVerts({e.x , ivx1});
-            int ie6 = findEdgeByVerts({ivx1, ivy1});
-            int ie7 = findEdgeByVerts({ivy1, e.y });
-            int ie8 = ie;
-            int iedges_quad2[4] = {ie5, ie6, ie7, ie8};
-            polygon(4, iedges_quad2);
+            {   // First wedge quad : (e.x, ivx0, ivy0, e.y)
+                Quat4i ies;
+                if( bOptimizedOutFindEdge ){
+                    ies.x = wedge0s[kx] + ix;                // spoke e.x->ivx0
+                    ies.y = ieBack0;                         // ivx0->ivy0
+                    ies.z = wedge0s[ky] + iy;                // spoke ivy0->e.y
+                }else{
+                    ies.x = findEdgeByVerts({e.x , ivx0});        // OLD slow lookup
+                    ies.y = findEdgeByVerts({ivx0, ivy0});
+                    ies.z = findEdgeByVerts({ivy0, e.y });
+                }
+                ies.w = ie;                              // original edge
+                printf("wedge face 1 : %i %i %i %i\n", ies.x, ies.y, ies.z, ies.w);
+                polygon(4, ies.array);
+            }
+            { // Second wedge quad : (e.x, ivx1, ivy1, e.y)
+                Quat4i ies;
+                if( bOptimizedOutFindEdge ){
+                    ies.x = wedge0s[kx] + ((ix+1)%wedgeCount[kx]);        // spoke e.x->ivx1
+                    ies.y = ieBack1;                          // ivx1->ivy1
+                    ies.z = wedge0s[ky] + ((iy+1)%wedgeCount[ky]);        // spoke ivy1->e.y
+                }else{
+                    ies.x = findEdgeByVerts({e.x , ivx1});
+                    ies.y = findEdgeByVerts({ivx1, ivy1});
+                    ies.z = findEdgeByVerts({ivy1, e.y });
+                }
+                ies.w = ie;                              // original edge
+                printf("wedge face 2 : %i %i %i %i\n", ies.x, ies.y, ies.z, ies.w);
+                polygon(4, ies.array);
+            }
         }
-
         if( bFacesFlat ){
+            Quat4i ies;
             // Back quad : (ivx0, ivx1, ivy1, ivy0)
-            int ieA = findEdgeByVerts({ivx0, ivx1});
-            int ieB = findEdgeByVerts({ivx1, ivy1});
-            int ieC = findEdgeByVerts({ivy1, ivy0});
-            int ieD = findEdgeByVerts({ivy0, ivx0});
-            int iedges_quad[4] = {ieA, ieB, ieC, ieD};
-            polygon(4, iedges_quad);
+            if( bOptimizedOutFindEdge ){
+                ies.x = ring0s[kx] + ix;                 // ivx0->ivx1 ring edge
+                ies.y = ieBack1;                         // ivx1->ivy1
+                ies.z = ring0s[ky] + iy;                 // ivy1->ivy0 ring edge (orientation handled by sorter)
+                ies.w = ieBack0;
+            }else{
+                ies.x = findEdgeByVerts({ivx0, ivx1});
+                ies.y = findEdgeByVerts({ivx1, ivy1});
+                ies.z = findEdgeByVerts({ivy1, ivy0});
+                ies.w = findEdgeByVerts({ivy0, ivx0});
+            }
+            polygon(4, ies.array);
         }
     }
     return 0;
