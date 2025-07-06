@@ -381,10 +381,10 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     // bool bFacesWedge = true; // make polygon on wedge surface between the beveled and original vertices and edges 
 
     bool bEdgeWedge  = true; // make edge on wedge between the beveled and original vertices
-    bool bDiagWedge  = true; // make diagonal edges on wedge surface between the beveled and original vertices
-    bool bDiagFlat   = true; // make diagonal edges on flat surface created by bevel
+    bool bDiagWedge  = false; // make diagonal edges on wedge surface between the beveled and original vertices
+    bool bDiagFlat   = false; // make diagonal edges on flat surface created by bevel
     bool bFacesFlat  = false; // make polygon on flat surface created by bevel
-    bool bFacesWedge = false; // make polygon on wedge surface between the beveled and original vertices and edges 
+    bool bFacesWedge = true; // make polygon on wedge surface between the beveled and original vertices and edges 
 
     DEBUG
     for(int k=0;k<nv;k++){ 
@@ -393,9 +393,9 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
         //int ie0 = edges.size();
         ie0s[k] = nesum;
         iv0s[k] = verts.size();
-        int nei = bevel_vert(iv, L, h, bFacesFlat, bEdgeWedge, iess.data()+nesum );
-        nesum += nei;
-        ins[k] = nei;
+        int nek = bevel_vert(iv, L, h, bFacesFlat, bEdgeWedge, iess.data()+nesum );
+        nesum += nek;
+        ins[k] = nek;
         //ie0s[k+1] = nesum;
         //iv0s[k+1] = verts.size();
     }
@@ -427,36 +427,58 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
             //_swap(ivx0, ivx1);
             _swap(ivy0, ivy1);
         }
-        // connect the edges
+        // connect the edges forming the back surface
         edge( ivx0, ivy0 );
         edge( ivx1, ivy1 );
-        // Add additional edges and faces as per flags
-        // if (bEdgeWedge) {
-        //     edge(e.x, ivx0);
-        //     //edge(e.x, ivx1);
-        //     //edge(e.y, ivy0);
-        //     edge(e.y, ivy1);
-        // }
 
-        // if (bFacesWedge) {
-        //     // First wedge quad: [e.x, ivx0, ivy0, e.y]
-        //     int ie1 = findOrAddEdges(Vec2i{e.x, ivx0}, 0, 0);
-        //     int ie2 = findOrAddEdges(Vec2i{ivx0, ivy0}, 0, 0);
-        //     int ie3 = findOrAddEdges(Vec2i{ivy0, e.y}, 0, 0);
-        //     int ie4 = ie;
+        // -------------------------------------------------------------
+        //  Optional additional edges (diagonals)                     
+        // -------------------------------------------------------------
+        if( bDiagWedge ){
+            // diagonals on each wedge quad
+            edge( e.x, ivy0 ); // first wedge quad diagonal
+            edge( e.x, ivy1 ); // second wedge quad diagonal
 
-        //     int iedges_quad1[] = {ie1, ie2, ie3, ie4};
-        //     polygon(4, iedges_quad1);
+            edge( e.y, ivx0 ); // first wedge quad diagonal
+            edge( e.y, ivx1 ); // second wedge quad diagonal
 
-        //     // Second wedge quad: [e.x, ivx1, ivy1, e.y]
-        //     int ie5 = findOrAddEdges(Vec2i{e.x, ivx1}, 0, 0);
-        //     int ie6 = findOrAddEdges(Vec2i{ivx1, ivy1}, 0, 0);
-        //     int ie7 = findOrAddEdges(Vec2i{ivy1, e.y}, 0, 0);
-        //     int ie8 = ie;
+        }
+        if( bDiagFlat ){
+            // diagonal across the newly created back quad
+            edge( ivx0, ivy1 );
+            edge( ivx1, ivy0 );
+        }
 
-        //     int iedges_quad2[] = {ie5, ie6, ie7, ie8};
-        //     polygon(4, iedges_quad2);
-        // }
+        // -------------------------------------------------------------
+        //  Optional polygon faces                                     
+        // -------------------------------------------------------------
+        if( bFacesWedge ){
+            // First wedge quad : (e.x, ivx0, ivy0, e.y)
+            int ie1 = findEdgeByVerts({e.x , ivx0});
+            int ie2 = findEdgeByVerts({ivx0, ivy0});
+            int ie3 = findEdgeByVerts({ivy0, e.y });
+            int ie4 = ie;                         // original edge (e.x,e.y)
+            int iedges_quad1[4] = {ie1, ie2, ie3, ie4};
+            polygon(4, iedges_quad1);
+
+            // Second wedge quad : (e.x, ivx1, ivy1, e.y)
+            int ie5 = findEdgeByVerts({e.x , ivx1});
+            int ie6 = findEdgeByVerts({ivx1, ivy1});
+            int ie7 = findEdgeByVerts({ivy1, e.y });
+            int ie8 = ie;
+            int iedges_quad2[4] = {ie5, ie6, ie7, ie8};
+            polygon(4, iedges_quad2);
+        }
+
+        if( bFacesFlat ){
+            // Back quad : (ivx0, ivx1, ivy1, ivy0)
+            int ieA = findEdgeByVerts({ivx0, ivx1});
+            int ieB = findEdgeByVerts({ivx1, ivy1});
+            int ieC = findEdgeByVerts({ivy1, ivy0});
+            int ieD = findEdgeByVerts({ivy0, ivx0});
+            int iedges_quad[4] = {ieA, ieB, ieC, ieD};
+            polygon(4, iedges_quad);
+        }
     }
     return 0;
 }
