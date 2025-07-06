@@ -285,7 +285,7 @@ class Builder2 : public SelectionBanks { public:
     int loadNeighbours( int iv, int* ivs, int* ies, int n=-1 );
     Vec3d vertNormalByEdges( int iv, bool bNormalizeEach=false);
     void sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies );
-    int bevel_vert(int iv, double L, double h, int* ies=0, Vec3d nor=Vec3dZero );
+    int bevel_vert(int iv, double L, double h, bool bPoly=true, bool bEdgeWedge=false, int* ies=0, Vec3d nor=Vec3dZero );
     int bevel( int ne, int* ies, double L, double h, int nseg=1);
 
     int select_edge_by_verts( int iv, int n, int* ies );

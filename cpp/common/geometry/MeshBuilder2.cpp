@@ -7,6 +7,7 @@
 #include "arrayAlgs.h"
 #include "raytrace.h"
 #include "testUtils.h"
+//#include <convolve2D.h>
 
 
 namespace Mesh {
@@ -203,7 +204,7 @@ void Builder2::sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies ){
     permute   ( ies_, ies, ixs, 0, n );
 }
 
-int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor ) {
+int Builder2::bevel_vert(int iv, double L, double h, bool bPoly, bool bEdgeWedge, int* ies, Vec3d nor ) {
     // Check vertex index bounds
     if (iv < 0 || iv >= verts.size()) {
         printf("ERROR: in bevel_vert: vertex index %d is out of bounds [0, %zu)\n", iv, verts.size());
@@ -246,6 +247,10 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor ) {
         int iv1 = vert(p + u*L + nor*h );
         int iv2 = vert(p - u*L + nor*h );
         edge(iv1, iv2);
+        if(bEdgeWedge){
+            edge(iv, iv1);
+            edge(iv, iv2);
+        }
         return ne;
     }
     DEBUG
@@ -293,7 +298,10 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor ) {
     DEBUG
     // Create polygon faces
     // Central n-gon
-    polygon(ne, newEdges);
+    if(bPoly){ polygon(ne, newEdges); }
+    if(bEdgeWedge){
+        for(int i=0; i<ne; i++){ edge( iv, newVerts[i] ); }    
+    }
     return ne; // Return the number of sides in the n-gon
 }
 
@@ -358,20 +366,38 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     std::unordered_map<int,int> iv2pos;
     for(int k=0; k<nv; k++) iv2pos[ivs[k]] = k;
     // ranges for each vertex's bevel edges and verts
-    std::vector<int> ie0s(nv+1), iv0s(nv+1);
-    iv0s[0] = verts.size();
+    std::vector<int> ie0s(nv+1);
+    std::vector<int> iv0s(nv+1);
+    std::vector<int> ins (nv+1);
     int nesum = 0;
     //Vec2i eranges[ivs.size()];
     //Vec2i vranges[ivs.size()];
 
+
+    // bool bEdgeWedge  = true; // make edge on wedge between the beveled and original vertices
+    // bool bDiagWedge  = true; // make diagonal edges on wedge surface between the beveled and original vertices
+    // bool bDiagFlat   = true; // make diagonal edges on flat surface created by bevel
+    // bool bFacesFlat  = true; // make polygon on flat surface created by bevel
+    // bool bFacesWedge = true; // make polygon on wedge surface between the beveled and original vertices and edges 
+
+    bool bEdgeWedge  = true; // make edge on wedge between the beveled and original vertices
+    bool bDiagWedge  = true; // make diagonal edges on wedge surface between the beveled and original vertices
+    bool bDiagFlat   = true; // make diagonal edges on flat surface created by bevel
+    bool bFacesFlat  = false; // make polygon on flat surface created by bevel
+    bool bFacesWedge = false; // make polygon on wedge surface between the beveled and original vertices and edges 
+
     DEBUG
-    for(int k=0;k<nv;k++){ int iv = ivs[k];
+    for(int k=0;k<nv;k++){ 
+        int iv = ivs[k];
         printf("-- bevel vertex %i\n", iv);
         //int ie0 = edges.size();
-        int nei = bevel_vert(iv, L, h, iess.data()+nesum );
+        ie0s[k] = nesum;
+        iv0s[k] = verts.size();
+        int nei = bevel_vert(iv, L, h, bFacesFlat, bEdgeWedge, iess.data()+nesum );
         nesum += nei;
-        ie0s[k+1] = nesum;
-        iv0s[k+1] = verts.size();
+        ins[k] = nei;
+        //ie0s[k+1] = nesum;
+        //iv0s[k+1] = verts.size();
     }
     DEBUG
 
@@ -379,17 +405,15 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     for(int i=0; i<ne; i++){
         printf("-- bevel edge %i\n", i);
         int ie = ies[i];
-        Vec2i e = edges[ie].lo;
+        const Vec2i e = edges[ie].lo;
         // select index of side of created ngon by bevel_vert for each vertex of the edge
-        //int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1] - ie0s[kx]; int ix = select_edge_by_verts(e.x, nx, iess.data() + ie0x );
-        //int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1] - ie0s[ky]; int iy = select_edge_by_verts(e.y, ny, iess.data() + ie0y );
-        int kx = iv2pos[e.x]; int ie0x = ie0s[kx], nx = ie0s[kx+1]-ie0s[kx]; int ix = select_edge(ie, nx, iess.data() + ie0x );
-        int ky = iv2pos[e.y]; int ie0y = ie0s[ky], ny = ie0s[ky+1]-ie0s[ky]; int iy = select_edge(ie, ny, iess.data() + ie0y );
+        int kx = iv2pos[e.x]; int nx=ins[kx]; int ie0x=ie0s[kx]; int ix=select_edge(ie,nx, iess.data()+ie0x );
+        int ky = iv2pos[e.y]; int ny=ins[ky]; int ie0y=ie0s[ky]; int iy=select_edge(ie,ny, iess.data()+ie0y );
         // select vertex index of created ngon by bevel_vert for each vertex of the edge
-        int iv0x = iv0s[kx  ];
-        int iv0y = iv0s[ky  ];
-        int nvx  = iv0s[kx+1] - iv0x;
-        int nvy  = iv0s[ky+1] - iv0y;
+        int nvx = (nx==1)?2:nx;
+        int nvy = (ny==1)?2:ny;
+        int iv0x = iv0s[kx];
+        int iv0y = iv0s[ky];
         int ivx0 = iv0x + ix;
         int ivx1 = iv0x + (ix+1)%nvx;
         int ivy0 = iv0y + iy;
@@ -406,6 +430,33 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
         // connect the edges
         edge( ivx0, ivy0 );
         edge( ivx1, ivy1 );
+        // Add additional edges and faces as per flags
+        // if (bEdgeWedge) {
+        //     edge(e.x, ivx0);
+        //     //edge(e.x, ivx1);
+        //     //edge(e.y, ivy0);
+        //     edge(e.y, ivy1);
+        // }
+
+        // if (bFacesWedge) {
+        //     // First wedge quad: [e.x, ivx0, ivy0, e.y]
+        //     int ie1 = findOrAddEdges(Vec2i{e.x, ivx0}, 0, 0);
+        //     int ie2 = findOrAddEdges(Vec2i{ivx0, ivy0}, 0, 0);
+        //     int ie3 = findOrAddEdges(Vec2i{ivy0, e.y}, 0, 0);
+        //     int ie4 = ie;
+
+        //     int iedges_quad1[] = {ie1, ie2, ie3, ie4};
+        //     polygon(4, iedges_quad1);
+
+        //     // Second wedge quad: [e.x, ivx1, ivy1, e.y]
+        //     int ie5 = findOrAddEdges(Vec2i{e.x, ivx1}, 0, 0);
+        //     int ie6 = findOrAddEdges(Vec2i{ivx1, ivy1}, 0, 0);
+        //     int ie7 = findOrAddEdges(Vec2i{ivy1, e.y}, 0, 0);
+        //     int ie8 = ie;
+
+        //     int iedges_quad2[] = {ie5, ie6, ie7, ie8};
+        //     polygon(4, iedges_quad2);
+        // }
     }
     return 0;
 }

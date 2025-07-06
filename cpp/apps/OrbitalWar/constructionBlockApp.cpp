@@ -418,31 +418,40 @@ int main(int argc, char *argv[]){
     }};
 
     funcs["-bevel"] = {0, [&](const char**){ 
-        const int npoint      = 7;
+        const int npoint      = 4;
+        //const int npoint      = 7;
         Vec3d nodes[npoint] = {
             {0.0,    0.0,   0.0}, // 0
             {100.0,  0.0,   0.0}, // 1
             {-30.0, +80.0,  0.0}, // 2
             {-30.0, -80.0,  0.0}, // 3
 
-            {-30.0, +160.0,  0.0}, // 4
-
-            {150.0, +80.0,  0.0}, // 5
-            {150.0, -80.0,  0.0} // 6
+            // {-30.0, +160.0,  0.0}, // 4
+            // {150.0, +80.0,  0.0}, // 5
+            // {150.0, -80.0,  0.0} // 6
         };
-        const int nedge       = 6;
-        Vec2i edges[nedge] = {{0,1}, {0,2}, {0,3},     {2,4}, {1,5}, {1,6} };
+        //const int nedge       = 6;
+        const int nedge       = 3;
+        Vec2i edges[nedge] = {
+            {0,1}, {0,2}, {0,3}
+        //, {2,4}, {1,5}, {1,6} 
+        };
         
         truss.add_verts(npoint, nodes);
         truss.add_edges(nedge, edges);
         truss.build_edgesOfVerts();
 
-        const int nbev = 6;
-        int ies[nbev] = {0,1,2,3,4,5};
+        //const int nbev = 6;
+        const int nbev = 3;
+        int ies[nbev] = {
+            0,1,2
+            //,3,4,5
+        };
 
         truss.select_verts_of_edge( nbev, ies ); // select vertices of edges to curSelection
         truss.printSelection();
-        truss.normalsTowardPoint( truss.curSelection->vec.size(), truss.curSelection->vec.data(), Vec3dZero );
+        pivot_point = {0.0, 0.0, 100.0};
+        truss.normalsTowardPoint( truss.curSelection->vec.size(), truss.curSelection->vec.data(), pivot_point );
 
         truss.bevel( nbev, ies, 10.0, 10.0, 5.0);
     }};
