@@ -184,6 +184,7 @@ void ConstructionBlockApp::initGUI(){
 
     trussView.bViewPointLabels  = true;
     trussView.bViewEdgeLabels   = true;
+    trussView.bViewVertNormals  = true;
     //trussView.bViewFaceLabels   = true;
     //trussView.bViewTriLabels    = true;
     
@@ -196,6 +197,7 @@ void ConstructionBlockApp::initGUI(){
     viewControls->addBox("Faces",         &trussView.bViewFaces);
     viewControls->addBox("Tris",          &trussView.bViewTris);
     viewControls->addBox("Face Normals",  &trussView.bViewFaceNormals);
+    viewControls->addBox("Vert Normals",  &trussView.bViewVertNormals);
 
     viewControls->addBox("Point Labels",  &trussView.bViewPointLabels);
     viewControls->addBox("Edge Labels",   &trussView.bViewEdgeLabels);
@@ -404,8 +406,13 @@ int main(int argc, char *argv[]){
         //Parabola_ExtrudedWire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.5, 0.1 );
 
         truss.build_edgesOfVerts();
+        
         truss.selectRectEdge( Vec3dMin, Vec3dMax );
-        truss.bevel( truss.curSelection->vec.size(), truss.curSelection->vec.data(), 0.3, 0.3, 1 );
+        truss.printSelection();
+        pivot_point = Vec3d{0.0,0.0,+3.0};
+        truss.normalsTowardPoint( truss.curSelection->vec.size(), truss.curSelection->vec.data(), pivot_point );
+
+        truss.bevel( truss.curSelection->vec.size(), truss.curSelection->vec.data(), 0.1, 0.5, 1 );
 
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
@@ -432,6 +439,10 @@ int main(int argc, char *argv[]){
 
         const int nbev = 6;
         int ies[nbev] = {0,1,2,3,4,5};
+
+        truss.select_verts_of_edge( nbev, ies ); // select vertices of edges to curSelection
+        truss.printSelection();
+        truss.normalsTowardPoint( truss.curSelection->vec.size(), truss.curSelection->vec.data(), Vec3dZero );
 
         truss.bevel( nbev, ies, 10.0, 10.0, 5.0);
     }};

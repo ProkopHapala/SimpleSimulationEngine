@@ -165,9 +165,11 @@ void drawFaceNormals( const Mesh::Builder2& mesh){
 }
 
 void drawVertLoop( const Mesh::Builder2& mesh, int n, int* ivs ){
+    //glBegin(GL_LINE_LOOP);
     for(int i=0;i<n;i++){
         Draw3D::vertex( mesh.verts[ivs[i]].pos );
     }
+    //glEnd();
 }
 
 void drawVertLoop( const Mesh::Builder2& mesh, int n, int* ivs, int drawAs=GL_LINE_LOOP ){
@@ -182,7 +184,9 @@ void drawSelectedEdges( const Mesh::Builder2& mesh ){
     glBegin(GL_LINES);
     for(int ie: mesh.curSelection->vec){
         Vec2i e = mesh.edges[ie].lo;
-        Draw3D::drawLine( mesh.verts[e.x].pos, mesh.verts[e.y].pos );
+        //Draw3D::drawLine( mesh.verts[e.x].pos, mesh.verts[e.y].pos );
+        Draw3D::vertex( mesh.verts[e.x].pos );
+        Draw3D::vertex( mesh.verts[e.y].pos );
     }
     glEnd();
 }
@@ -200,7 +204,23 @@ void drawEdges( const Mesh::Builder2& mesh ){
     glBegin(GL_LINES);
     for(int i=0;i<mesh.edges.size();i++){
         Vec2i e = mesh.edges[i].lo;
-        Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+        //Draw3D::drawLine( mesh.verts[e.i].pos, mesh.verts[e.j].pos );
+        Draw3D::vertex( mesh.verts[e.x].pos );
+        Draw3D::vertex( mesh.verts[e.y].pos );
+    }
+    glEnd();
+}
+
+void drawVertNormals( const Mesh::Builder2& mesh ){
+    //printf( "drawVertNormals() %i\n", mesh.verts.size() );
+    glBegin(GL_LINES);
+    for(int i=0;i<mesh.verts.size();i++){
+        Vec3d p = mesh.verts[i].pos;
+        Vec3d n = mesh.verts[i].nor;
+        //printf( " %i p: %f %f %f n: %f %f %f\n", i, p.x, p.y, p.z, n.x, n.y, n.z );
+        //Draw3D::drawLine( p, p+n );
+        Draw3D::vertex( p );
+        Draw3D::vertex( p+n );
     }
     glEnd();
 }
@@ -213,6 +233,7 @@ class Renderer{
     bool bViewTris         = true;
     bool bViewFaces        = true;
     bool bViewFaceNormals  = false;
+    bool bViewVertNormals  = false;
     bool bViewPointLabels  = false;
     bool bViewEdgeLabels   = false;
     bool bViewFaceLabels   = false;
@@ -232,6 +253,10 @@ class Renderer{
         if(bViewFaceNormals) {
             glColor3f( 0.0,0.5,1.0 );
             drawFaceNormals( *mesh );
+        }
+        if(bViewVertNormals) {
+            glColor3f( 1.0,0.0,1.0 );
+            drawVertNormals( *mesh );
         }
         glDisable(GL_LIGHTING);
         glDisable(GL_CULL_FACE);

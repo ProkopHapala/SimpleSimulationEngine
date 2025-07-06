@@ -62,15 +62,20 @@ class Selection{public:
 
     inline bool contains(int i)const{ return map.count(i); }
     inline int  find    (int i)const{ auto it = map.find(i); if(it==map.end()) return -1; return it->second; }
-    inline int  size(){ return vec.size(); }
+    inline int  size()const{ return vec.size(); }
     inline int* data(){ return vec.data(); }
 
     inline void clear(){ map.clear(); vec.clear(); }
-    inline void unionWith(Selection& other){ for(int i : other.vec){ add(i); } }
+    //inline void unionWith(Selection& other        ){ for(int i : other.vec){ add(i); } }
+    // inline void unionWith(std::co<int>& other ){ for(int i : other){ add(i); } }
+    // inline void unionWith(std::m<int>& other ){ for(int i : other){ add(i); } }
+    // inline void unionWith(std::vector<int>& other ){ for(int i : other){ add(i); } }
 
-    inline void insert_n( int n, int* is ){ for(int i=0; i<n; i++){ add(is[i]); } }
+    template <typename Container> 
+    inline void insert( const Container& other ){ for(int i : other){ add(i); } }
+    inline void insert( int n, const int* is   ){ for(int i=0; i<n; i++){ add(is[i]); } }
 
-    inline void invert( int nmax, int n=-1, int* is=0 ){
+    inline void invert( int nmax, int n=-1, const int* is=0 ){
         bool* mask = new bool[nmax];
         for(int i=0; i<nmax; i++){ mask[i]=true; }
         if(n<0){ n=vec.size(); is=vec.data(); }
@@ -80,9 +85,9 @@ class Selection{public:
         delete[] mask;
     }
 
-
     //inline void substract_remove    (Selection& other){ for(int i : vec){ if(other.contains(i)){ remove(i); } } }
-    inline int substract(Selection& other, bool bInv=false){ 
+    template <typename Container> 
+    inline int substract(const Container& other, bool bInv=false){ 
         std::vector<int> new_vec;
         int nerased = 0;
         for(int i : vec){ 
@@ -92,7 +97,8 @@ class Selection{public:
         vec = new_vec;
         return nerased;
     }
-    inline int intersectWith(Selection& other){ return substract(other, true); }
+    template <typename Container> 
+    inline int intersectWith(const Container& other){ return substract(other, true); }
 };
 
 class SelectionBanks{public:

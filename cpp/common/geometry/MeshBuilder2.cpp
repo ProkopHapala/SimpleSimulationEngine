@@ -203,7 +203,7 @@ void Builder2::sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies ){
     permute   ( ies_, ies, ixs, 0, n );
 }
 
-int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
+int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor ) {
     // Check vertex index bounds
     if (iv < 0 || iv >= verts.size()) {
         printf("ERROR: in bevel_vert: vertex index %d is out of bounds [0, %zu)\n", iv, verts.size());
@@ -226,18 +226,19 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
     loadNeighbours(iv, ivs, ies, ne);           // Load neighbor vertices and edge indices
     Vec3d p = verts[iv].pos; // copy to avoid invalidation on vert() calls
     DEBUG
+    if(  nor.norm2()<1e-9 ){ nor = verts[iv].nor; }
     if(ne<3){ // special case - instead of n-gon create just edge
-        Vec3d nor,u;
+        Vec3d u;
         if(ne==1){
             Vec3d d1 = verts[ivs[0]].pos - p; d1.normalize();
-            nor=nor0;
-            u.set_cross(d1,nor0);
+            //nor=nor0;
+            u.set_cross(d1,nor);
         }else{ // n==2
             Vec3d d1 = verts[ivs[0]].pos - p; d1.normalize();
             Vec3d d2 = verts[ivs[1]].pos - p; d2.normalize();
-            nor.set_cross(d1,d2);
-            double l2nor=nor.norm2();
-            if(l2nor<1e-6){ nor=nor0;}else{ nor.mul(1/sqrt(l2nor)); if(nor.dot(nor0)<0){ nor.mul(-1); } }
+            // nor.set_cross(d1,d2);
+            // double l2nor=nor.norm2();
+            // if(l2nor<1e-6){ nor=nor0;}else{ nor.mul(1/sqrt(l2nor)); if(nor.dot(nor0)<0){ nor.mul(-1); } }
             Vec3d d=d1-d2;
             u.set_cross(d,nor); u.normalize();
         }
@@ -248,9 +249,10 @@ int Builder2::bevel_vert(int iv, double L, double h, int* ies, Vec3d nor0 ) {
         return ne;
     }
     DEBUG
-    Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
-    nor.normalize(); 
-    if(nor.dot(nor0)<0){ nor.mul(-1); }
+    // Vec3d nor = vertNormalByEdges(iv);      // Get normal at the vertex
+    // nor.normalize(); 
+    // if(nor.dot(nor0)<0){ nor.mul(-1); }
+
     sortVertEdgesByNormal(verts[iv].pos, nor, ne, ies);  // Sort edges by angle around normal
     for (int i=0; i<ne; i++) {ivs[i] = getOtherEdgeVert(ies[i], iv);} // Also sort the vertex indices accordingly
     Vec3d centralPoint = p + nor * h; // use copy p // The central point (vertex position with offset along normal)
@@ -312,20 +314,35 @@ int select_edge( int ie, int n, int* ies ){
     return -1;
 }
 
-// int Builder2::select_verts_of_edge( int ne, int* ies){
-//     std::unordered_set<int> ivset;
-//     for(int i=0; i<ne; i++){
-//         int ie = ies[i];
-//         Vec2i e = edges[ie].lo;
-//         ivset.insert(e.x);
-//         ivset.insert(e.y);
-//     }
-//     nv=(int)ivset.size();
-//     ivs.resize(nv);
-//     int i=0;
-//     for(auto& iv : ivset){ ivs[i++]=iv; }
-// }
-    
+int Builder2::select_verts_of_edge( int ne, int* ies, std::vector<int>* ivs ){
+    std::unordered_set<int> ivset;
+    for(int i=0; i<ne; i++){
+        int ie = ies[i];
+        Vec2i e = edges[ie].lo;
+        ivset.insert(e.x);
+        ivset.insert(e.y);
+    }
+    int nv=(int)ivset.size();
+    if( ivs==0 ){
+        //for(int iv : ivset){ curSelection->add(iv); }
+        curSelection->insert(ivset);
+    }else{
+        ivs->resize(nv);
+        int i=0;
+        for(int iv : ivset){ (*ivs)[i]=iv; i++;  }
+    }
+    return nv;
+}
+
+void Builder2::normalsTowardPoint( int nv, int* ivs, Vec3d p, double sc ){
+    for(int i=0; i<nv; i++){
+        int iv = ivs[i];
+        Vec3d v = verts[iv].pos - p;
+        v.normalize();
+        v.mul(sc);
+        verts[iv].nor = v;
+    }
+}
 
 int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     printf("Builder2::bevel() ne=%i L=%g h=%g nseg=%i\n", ne, L, h, nseg);
@@ -333,33 +350,17 @@ int Builder2::bevel( int ne, int* ies, double L, double h, int nseg ){
     //if (edgesOfVerts.empty()) {  build_edgesOfVerts();}
     if( edgesOfVerts.ncell != verts.size() ) { printf("ERROR in Builder2::bevel() edgesOfVerts is not initialized, call build_edgesOfVerts() first\n"); exit(0); }
     std::vector<int> ivs;
-    int nv=0;
-    //DEBUG
-    {   // --- list all vertices connected to the edges
-        std::unordered_set<int> ivset;
-        for(int i=0; i<ne; i++){
-            int ie = ies[i];
-            Vec2i e = edges[ie].lo;
-            ivset.insert(e.x);
-            ivset.insert(e.y);
-        }
-        nv=(int)ivset.size();
-        ivs.resize(nv);
-        int i=0;
-        for(auto& iv : ivset){ ivs[i++]=iv; }
-    }
-    //DEBUG
+    int nv= select_verts_of_edge( ne, ies, &ivs );
     // --- bevel each vertex
     int nmaxev = 16;
-std::vector<int> iess(nv * nmaxev);
-// map original vertex id to its position in ivs
-std::unordered_map<int,int> iv2pos;
-for(int k=0; k<nv; k++) iv2pos[ivs[k]] = k;
-// ranges for each vertex's bevel edges and verts
-std::vector<int> ie0s(nv+1), iv0s(nv+1);
-ie0s[0] = 0;
-iv0s[0] = verts.size();
-int nesum = 0;
+    std::vector<int> iess(nv * nmaxev);
+    // map original vertex id to its position in ivs
+    std::unordered_map<int,int> iv2pos;
+    for(int k=0; k<nv; k++) iv2pos[ivs[k]] = k;
+    // ranges for each vertex's bevel edges and verts
+    std::vector<int> ie0s(nv+1), iv0s(nv+1);
+    iv0s[0] = verts.size();
+    int nesum = 0;
     //Vec2i eranges[ivs.size()];
     //Vec2i vranges[ivs.size()];
 
@@ -367,12 +368,13 @@ int nesum = 0;
     for(int k=0;k<nv;k++){ int iv = ivs[k];
         printf("-- bevel vertex %i\n", iv);
         //int ie0 = edges.size();
-        int nei = bevel_vert(iv, L, h, iess.data()+nesum);
+        int nei = bevel_vert(iv, L, h, iess.data()+nesum );
         nesum += nei;
         ie0s[k+1] = nesum;
         iv0s[k+1] = verts.size();
     }
     DEBUG
+
     // --- bevel edges and connect them to beveled vertices, make sure we connect them in the same direction
     for(int i=0; i<ne; i++){
         printf("-- bevel edge %i\n", i);
