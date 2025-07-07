@@ -131,7 +131,8 @@ void Builder2::buildVerts2Edge(){
 
 // void Builder2::build_edgesOfVerts(){
 //     edgesOfVerts.clear();
-void Builder2::build_edgesOfVerts(){
+void Builder2::build_edgesOfVerts( bool bClear){
+    //if(bClear){ edgesOfVerts.clear(); }
     int nv = verts.size();
     int ne = edges.size();
     int no = ne*2;
@@ -951,6 +952,88 @@ int Builder2::findVert(const Vec3d& p0, double Rmax, int n, int* sel ){
     return imin;
 }
 
+
+
+int Builder2::selectVertEdgeAngle( int iv, Vec3d hdir, double cosMin, int ie_ignore ){
+    // select edges connected to vertex iv with closest angle (cosine) to hdir
+    int ne = edgesOfVerts.cellNs[iv];
+    int ivs [ne]; // neighbor vertex indices
+    int ies [ne]; // edge indices
+    loadNeighbours(iv, ivs, ies, ne);      
+    {
+        printf("selectVertEdgeAngle() iv: %i ne: %i ie_ignore: %i vs[", iv, ne, ie_ignore );
+        for(int i=0;i<ne;i++){ printf(" %i", ivs[i] );}  printf("] es[");
+        for(int i=0;i<ne;i++){ printf(" %i", ies[i] );}   printf("]\n");
+    }
+    double c2cut = cosMin*cosMin;
+    int    ibest=-1;
+    double cbest=-10.0;; 
+    for(int i=0;i<ne;i++){
+        int ie = ies[i];
+        if(ie==ie_ignore){ continue; }
+        Vec2i e  = edges[ie].lo;
+        Vec3d d = verts[e.x].pos - verts[e.y].pos;
+        double c = d.dot(hdir);
+        //if(bAbs){ // both-sided edges
+            c = c*c/d.norm2();
+            if(c<c2cut){ continue; }
+        // }else{   // one-sided edges
+        //     c /= d.norm(); 
+        //     if(c<cosMin){ continue; }
+        // }   
+        if(c>cbest){
+            //ibest  = i;
+            ibest  = ie;
+            cbest = c;
+        }
+    }
+    printf("selectVertEdgeAngle() iv: %i hdir: %f %f %f cbest: %f ibest: %i\n", iv, hdir.x, hdir.y, hdir.z, cbest, ibest );
+    return ibest;
+}
+
+int Builder2::selectEdgeStrip( int ie, int iv, double cosMin, int nmax, bool bUpdateDir ){
+    // select stright edge strip connected to edge ie
+    // cosMin: minimum cosine of angle between edges
+    // nmaxs: maximum number of edges in each direction (tot,forward,backward)
+    // algorithm: walk the graph. for each endpoint, take the edge with the smallest angle to the previous edge, then take the other endpoint and repeat
+    //            stop when the angle is too large or the number of edges is too large, or edges repeat (loop)
+    printf("--- selectEdgeStrip() ie: %i iv: %i cosMin: %f nmax: %i\n", ie, iv, cosMin, nmax );
+    int nfound=0;
+    for(int i=0;i<nmax;i++){
+        Vec2i e = edges[ie].lo;
+        int iv_ = e.other(iv);
+        Vec3d hdir = verts[iv_].pos - verts[iv].pos;
+        hdir.normalize();
+        printf("selectEdgeStrip() i: %i iv: %i iv_: %i\n", i, iv, iv_ );
+        int ie2 = selectVertEdgeAngle( iv_, hdir, cosMin, ie );
+        if(ie2==-1){ break; }
+        printf("selectEdgeStrip() insert: ie2: %i\n", ie2 );
+        if( !curSelection->add(ie2) ){ break; }
+        ie = ie2; iv = iv_;
+        nfound++;
+    }
+    return nfound;
+}
+
+int Builder2::selectEdgeStrip2( int ie, double cosMin, Vec3i nmaxs, bool bUpdateDir ){
+    // select stright edge strip connected to edge ie
+    // cosMin: minimum cosine of angle between edges
+    // nmaxs: maximum number of edges in each direction (tot,forward,backward)
+    // algorithm: walk the graph. for each endpoint, take the edge with the smallest angle to the previous edge, then take the other endpoint and repeat
+    //            stop when the angle is too large or the number of edges is too large, or edges repeat (loop)
+    int ntot  = nmaxs.x;
+    int n1max = nmaxs.y; if(n1max<0) n1max=ntot;
+    int n2max = nmaxs.z; if(n2max<0) n2max=ntot;
+    //printf("selectEdgeStrip() ie: %i cosMin: %f nmaxs: %i %i %i\n", ie, cosMin, nmaxs.x, nmaxs.y, nmaxs.z );
+    Vec2i e = edges[ie].lo;
+    printf("=== selectEdgeStrip() ie: %i e(%i,%i): cosMin: %f nmaxs: %i %i %i\n", ie, e.x, e.y, cosMin, nmaxs.x, nmaxs.y, nmaxs.z );
+    int nfound=0;
+    if(curSelection->add(ie)){ nfound++; };
+    nfound += selectEdgeStrip( ie, e.x, cosMin, n1max, bUpdateDir );
+    nfound += selectEdgeStrip( ie, e.y, cosMin, n2max, bUpdateDir );
+    return nfound;
+}
+
     int Builder2::selectVertsAlongLine( Vec3d p0, Vec3d p1, double r, bool bSort ){
         std::vector<int> sel; // we need to make local selection so we can add to global selection
         sel.clear();
@@ -1687,11 +1770,18 @@ void Builder2::read_obj(const char* fname, uint8_t mask) {
     printf("Mesh::Builder2::read_obj(%s) DONE\n", fname);
 }
 
-void Builder2::printSelection(){
+void Builder2::printSelection( bool bDetail ){
     std::vector<int>& selection = curSelection->vec;
-    printf( "Mesh::Builder2::printSelection() n=%i mode=%i :", selection.size(), selection_mode );
-    for(int ii=0; ii<selection.size(); ii++){  printf( "%i ", selection[ii] ); }
-    printf( "\n" );
+    printf( "Mesh::Builder2::printSelection() n=%i mode=%i : ", selection.size(), selection_mode );
+    if(bDetail)printf("\n");
+    for(int ii=0; ii<selection.size(); ii++){  
+        printf( "%i ", selection[ii] ); 
+        if(bDetail){ 
+            if     (selection_mode==(int)SelectionMode::vert){ printVert(selection[ii]); } 
+            else if(selection_mode==(int)SelectionMode::edge){ printEdge(selection[ii]); }
+        }
+    }
+    printf( " ]\n" );
 }
 
 void Builder2::printSelectedVerts(){
@@ -1703,18 +1793,17 @@ void Builder2::printSelectedVerts(){
     }
 }
 
+void Builder2::printVert(int iv){ Vert&   v = verts[iv]; printf( "vert %i pos: %16.10f %16.10f %16.10f\n", iv, v.pos.x, v.pos.y, v.pos.z ); } 
+void Builder2::printEdge(int ie){ Quat4i& e = edges[ie]; printf( "edge %i ivs: %3i %3i ts: %i %i \n", ie, e.x, e.y, e.z, e.w ); }
+
 void Builder2::printVerts(){
     printf( "Mesh::Builder2::printVerts() n=%i\n", verts.size() );
-    for(int i=0; i<verts.size(); i++){
-        printf( "%3i pos: %16.10f %16.10f %16.10f\n", i, verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
-    }
+    for(int i=0; i<verts.size(); i++){ printVert(i); }
 }
 
 void Builder2::printEdges(){
     printf( "Mesh::Builder2::printEdges() n=%i\n", edges.size() );
-    for(int i=0; i<edges.size(); i++){
-        printf( "%3i -> ivs: %3i %3i t: %i t2: %i \n", i, edges[i].x, edges[i].y, edges[i].z, edges[i].z  );
-    }
+    for(int i=0; i<edges.size(); i++){ printEdge(i); }
 }
 
 void Builder2::printChunkRange( int ich, int ich2 ){

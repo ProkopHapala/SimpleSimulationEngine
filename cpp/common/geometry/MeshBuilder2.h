@@ -259,6 +259,10 @@ class Builder2 : public SelectionBanks { public:
 
     int selectVertsAlongLine( Vec3d p0, Vec3d p1, double r=0.1, bool bSort=true );
     int selectVertsAlongPolyline( double r, bool bSort, int n, int* edges );
+    int selectVertEdgeAngle( int iv, Vec3d hdir, double cosMin=0.9, int ie_ignore=-1 );
+    int selectEdgeStrip( int ie, int iv, double cosMin=0.9, int nmax=10, bool bUpdateDir=true );
+    int selectEdgeStrip2( int ie, double cosMin=0.9, Vec3i nmaxs=Vec3i{10,-1,-1}, bool bUpdateDir=true );
+    
     int select_in_box     ( const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const Vec3d& Lmin, const Vec3d& Lmax );
     
     Vec2i conect_vertex  ( int iv, int stickType, int n, int* iverts );
@@ -302,7 +306,7 @@ class Builder2 : public SelectionBanks { public:
     int findEdgeByVerts( const Vec2i verts );
     int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
-    void build_edgesOfVerts();
+    void build_edgesOfVerts(bool bClear=true);
     int loadNeighbours( int iv, int* ivs, int* ies, int n=-1 );
     Vec3d vertNormalByEdges( int iv, bool bNormalizeEach=false);
     void sortVertEdgesByNormal( Vec3d p, Vec3d nor, int n, int* ies );
@@ -343,7 +347,6 @@ class Builder2 : public SelectionBanks { public:
     int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot=Mat3dIdentity );
     int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot=Mat3dIdentity );
     int selectRect( const Vec3d& p0, const Vec3d& p1,     const Mat3d& rot=Mat3dIdentity );
-    
 
     int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 );
     int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 );
@@ -383,8 +386,11 @@ class Builder2 : public SelectionBanks { public:
     void write_obj( const char* fname, uint8_t mask = 0xFF );
     void read_obj( const char* fname, uint8_t mask = 0xFF );
     
-    void printSelection();
+    void printSelection( bool bDetail=false );
     void printSelectedVerts();
+
+    void printVert(int iv);
+    void printEdge(int ie);
 
     void printSizes();
     void printVerts();

@@ -418,6 +418,15 @@ int main(int argc, char *argv[]){
 
         truss.bevel( truss.curSelection->vec.size(), truss.curSelection->vec.data(), 0.1, 0.5, 1 );
 
+
+        // select edge strip
+        truss.curSelection->clear();
+        printf("!!!!!!!!!! select edge strip\n");
+        truss.build_edgesOfVerts();
+        truss.selection_mode = (int)Mesh::Builder2::SelectionMode::edge;
+        truss.selectEdgeStrip2( 15, 0.9, {10,-1,-1} );
+        truss.printSelection(true);
+
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
 
