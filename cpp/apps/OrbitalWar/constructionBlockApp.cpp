@@ -430,6 +430,13 @@ int main(int argc, char *argv[]){
         printf("Parabola Extrude Test: "); truss.printSizes();
     }};
 
+    funcs["-panel"] = {0, [&](const char**){ 
+        printf("funcs[-panel]: Panel Extrude Test: "); 
+        truss.clear();
+        //truss.panel( {0.0,0.0,0.0}, {100.0,0.0,0.0}, {0.0,100.0,0.0}, {100.0,100.0,0.0}, {4,3}, 10.0, Quat4i{0,0,0,0} );
+        Tube(truss, {4,16}, {-1.0,0.0}, {1.0,1.5*M_PI}, {10.0,10.0}, 10.0, 2.0, Quat4i{0,0,0,0} );
+    }};
+
     funcs["-bevel"] = {0, [&](const char**){ 
         const int npoint      = 4;
         //const int npoint      = 7;

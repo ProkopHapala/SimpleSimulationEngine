@@ -17,6 +17,8 @@ Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
 
 // =========  Quadric
 
+
+
 inline Vec3f ConeUVfunc( Vec2f p, float R1, float R2, float L ){
     Vec2f csb; csb.fromAngle(p.b);
     float R = (1-p.a)*R1 + p.a*R2;

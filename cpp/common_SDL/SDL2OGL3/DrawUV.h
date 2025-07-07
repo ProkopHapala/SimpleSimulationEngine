@@ -241,6 +241,165 @@ template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f
     }
 }
 
+
+/**
+//  * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.
+//  * // TODO: make also triangular panel
+//  * 
+//  * @param p00 The first corner point.
+//  * @param p01 The second corner point.
+//  * @param p10 The third corner point.
+//  * @param p11 The fourth corner point.
+//  * @param n The number of subdivisions along each side of the panel.
+//  * @param width The width of the truss elements.
+//  */
+// int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes ){
+//     // ToDo: ad p00,p01,p10,p11 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
+//     //printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
+//     //int kind_long   = 0;
+//     //int kind_perp   = 1;
+//     //int kind_zigIn  = 2;
+//     //int kind_zigOut = 3;
+//     Vec2d step = {1.0/n.a,1.0/n.b};
+//     int di = 2*n.a-1;
+//     //int ibloc = block();   // this is better to call manually from outside
+//     int i0  = verts.size();
+//     //int i00 = verts.size();
+//     for (int ib=0; ib<n.b; ib++){
+//         double db,mb;
+//         db = ib*step.b;     mb=1-db;
+//         Vec3d p0  = p00*mb + p10*db;
+//         Vec3d p1  = p01*mb + p11*db;
+//         db += 0.5*step.b; mb=1-db;
+//         Vec3d p0_ = p00*mb + p10*db;
+//         Vec3d p1_ = p01*mb + p11*db;
+//         for (int ia=0; ia<n.a; ia++){
+//             double da,ma;
+//             da = ia*step.a; ma = 1-da;
+//             Vec3d p   = p0 *ma + p1 *da;
+//             //points.push_back( p              );
+//             vert( p );
+//             int bi = i0+di; if( ib==n.b-2 )bi-=ia;
+//             int dia = 2;    if( ib==n.b-1 )dia=1;
+//             if (ia<(n.a-1)) edge( i0,i0+dia,stickTypes.y );
+//             if (ib<(n.b-1)) edge( i0,bi    ,stickTypes.y );
+//             if( (ia<(n.a-1))&&(ib<(n.b-1)) ){ // diagonal
+//                 Vec3d p_  = p0_*ma + p1_*da;
+//                 da += 0.5*step.a; ma=1-da;
+//                 Vec3d p__ = p0_*ma + p1_*da;
+//                 Vec3d up; up.set_cross( p_-p, p__-p ); up.normalize();
+//                 //points.push_back( p__ + up*width );
+//                 vert( p__ + up*width );
+//                 if( ia<(n.a-2) ) edge( i0+1,i0+1+dia,stickTypes.z );
+//                 if( ib<(n.b-2) ) edge( i0+1,bi+1    ,stickTypes.z );
+//                 edge( i0+1,i0     ,stickTypes.w );
+//                 edge( i0+1,i0+dia ,stickTypes.w );
+//                 edge( i0+1,bi     ,stickTypes.w );
+//                 if( ib==n.b-2 )dia=1;
+//                 edge( i0+1,bi+dia ,stickTypes.w );
+//                 i0++;
+//             }
+//             i0++;
+//         }
+//     }
+//     return i0;
+// }
+
+
+template<typename UVfunc> 
+int UV_panel( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, double width, Quat4i stickTypes, UVfunc func ){
+    // === Build double-layer truss panel mapped by a generic UV function ===
+    // number of vertices along U (a) and V (b)
+    const int na = n.x;
+    const int nb = n.y;
+
+    // step in UV space between base-grid vertices
+    Vec2f du = { (UVmax.x-UVmin.x)/(na-1), 0.0f };
+    Vec2f dv = { 0.0f, (UVmax.y-UVmin.y)/(nb-1) };
+
+    const int base0 = builder.verts.size();
+
+    // --- 1) base grid vertices ---
+    std::vector<int> baseIdx(na*nb);
+    for(int ib=0; ib<nb; ++ib){
+        for(int ia=0; ia<na; ++ia){
+            Vec2f uv = { UVmin.x + ia*du.x, UVmin.y + ib*dv.y };
+            int idx  = builder.verts.size();
+            baseIdx[ib*na+ia] = idx;
+            builder.vert( (Vec3d)func(uv) );
+        }
+    }
+
+    // --- 2) center layer (raised) vertices ---
+    std::vector<int> cenIdx( (na-1)*(nb-1) );
+    for(int ib=0; ib<nb-1; ++ib){
+        for(int ia=0; ia<na-1; ++ia){
+            // Fetch the four corner positions of the cell
+            Vec2f uv00 = { UVmin.x + ia    *du.x, UVmin.y + ib    *dv.y };
+            Vec2f uv10 = { UVmin.x + (ia+1)*du.x, UVmin.y + ib      *dv.y };
+            Vec2f uv01 = { UVmin.x + ia      *du.x, UVmin.y + (ib+1)*dv.y };
+            // sample positions
+            Vec3d p00 = (Vec3d)func(uv00);
+            Vec3d p10 = (Vec3d)func(uv10);
+            Vec3d p01 = (Vec3d)func(uv01);
+            // bilinear center (approx)
+            Vec2f uvC = { uv00.x + 0.5f*du.x, uv00.y + 0.5f*dv.y };
+            Vec3d  pc = (Vec3d)func( uvC );
+            // estimate normal from the two edge vectors in the cell
+            Vec3d uvec = p10 - p00;
+            Vec3d vvec = p01 - p00;
+            Vec3d  n; n.set_cross( uvec, vvec ); n.normalize();
+            pc.add_mul( n, width );
+            int idx = builder.verts.size();
+            cenIdx[ ib*(na-1) + ia ] = idx;
+            builder.vert( pc );
+        }
+    }
+
+    // --- 3) base grid edges (longitudinal & transversal) ---
+    for(int ib=0; ib<nb; ++ib){
+        for(int ia=0; ia<na; ++ia){
+            int v = baseIdx[ib*na+ia];
+            if( ia<na-1 ) builder.edge( v, baseIdx[ib*na+ia+1], stickTypes.y );
+            if( ib<nb-1 ) builder.edge( v, baseIdx[(ib+1)*na+ia], stickTypes.y );
+        }
+    }
+
+    // --- 4) connect center vertices to base vertices & diagonal stiffeners ---
+    for(int ib=0; ib<nb-1; ++ib){
+        for(int ia=0; ia<na-1; ++ia){
+            int c  = cenIdx[ ib*(na-1)+ia ];
+            int v00 = baseIdx[ ib   *na + ia   ];
+            int v10 = baseIdx[ ib   *na + ia+1 ];
+            int v01 = baseIdx[(ib+1)*na + ia   ];
+            int v11 = baseIdx[(ib+1)*na + ia+1 ];
+
+            // spokes from center to the four corners
+            builder.edge( c, v00, stickTypes.w );
+            builder.edge( c, v10, stickTypes.w );
+            builder.edge( c, v01, stickTypes.w );
+            builder.edge( c, v11, stickTypes.w );
+
+            // diagonal connections between centers for zig-zag stiffening
+            if( ia<na-2 ){                // horizontal diag to next center
+                builder.edge( c, cenIdx[ ib*(na-1)+ia+1 ], stickTypes.z );
+            }
+            if( ib<nb-2 ){                // vertical diag to next row center
+                builder.edge( c, cenIdx[ (ib+1)*(na-1)+ia ], stickTypes.z );
+            }
+        }
+    }
+
+    return base0;
+}
+
+
+void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2d Rs, float L, float width, Quat4i stickTypes ) {
+    auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };
+    UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
+}
+
+
 void Parabola_Wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, int wire_flags=WireFlags::DEFAULT_WIRE) {
     float K = L/(R*R);
     UVmin.a *= R; UVmax.a *= R;
