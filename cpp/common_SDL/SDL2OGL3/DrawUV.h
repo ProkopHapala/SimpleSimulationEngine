@@ -10,7 +10,28 @@
 
 namespace Mesh {
 
-enum class WireFlags : uint16_t {
+// enum class WireFlags : uint16_t {
+//     NONE            = 0,
+//     CLOSED_CIRCUM   = 1 << 0,  // 1: Close circumference (periodic in angular direction)
+//     CAPPED_CENTER   = 1 << 1,  // 2: Add central vertex and connect to first ring
+//     RADIAL_EDGES    = 1 << 2,  // 4: Add radial edges between rings
+//     AZIMUTHAL_EDGES = 1 << 3,  // 8: Add edges along each ring
+//     DIAGONAL1_EDGES = 1 << 4,  // 16: Add diagonal edges (top-right to bottom-left)
+//     DIAGONAL2_EDGES = 1 << 5,  // 32: Add diagonal edges (top-left to bottom-right)
+//     FIRST_RING      = 1 << 6,  // 64: Add edges for first radial loop
+//     LAST_RING       = 1 << 7,  // 128: Add edges for last radial loop
+//     ALTERNATE_DIAG  = 1 << 8,  // 256: Add alternate edges
+    
+//     // Common combinations
+//     BASIC_GRID      = AZIMUTHAL_EDGES | RADIAL_EDGES,
+//     FULL_GRID       = BASIC_GRID | DIAGONAL1_EDGES | DIAGONAL2_EDGES,
+//     DEFAULT_WIRE    = BASIC_GRID | CLOSED_CIRCUM | FIRST_RING | LAST_RING,
+//     STAR            = CLOSED_CIRCUM | RADIAL_EDGES | FIRST_RING,
+//     TRIMESH         = BASIC_GRID | DIAGONAL1_EDGES | ALTERNATE_DIAG | FIRST_RING | LAST_RING | CLOSED_CIRCUM
+// };
+
+
+namespace WireFlags{enum{
     NONE            = 0,
     CLOSED_CIRCUM   = 1 << 0,  // 1: Close circumference (periodic in angular direction)
     CAPPED_CENTER   = 1 << 1,  // 2: Add central vertex and connect to first ring
@@ -21,15 +42,15 @@ enum class WireFlags : uint16_t {
     FIRST_RING      = 1 << 6,  // 64: Add edges for first radial loop
     LAST_RING       = 1 << 7,  // 128: Add edges for last radial loop
     ALTERNATE_DIAG  = 1 << 8,  // 256: Add alternate edges
-    
     // Common combinations
     BASIC_GRID      = AZIMUTHAL_EDGES | RADIAL_EDGES,
     FULL_GRID       = BASIC_GRID | DIAGONAL1_EDGES | DIAGONAL2_EDGES,
     DEFAULT_WIRE    = BASIC_GRID | CLOSED_CIRCUM | FIRST_RING | LAST_RING,
     STAR            = CLOSED_CIRCUM | RADIAL_EDGES | FIRST_RING,
     TRIMESH         = BASIC_GRID | DIAGONAL1_EDGES | ALTERNATE_DIAG | FIRST_RING | LAST_RING | CLOSED_CIRCUM
-};
-#define _unpack_WireFlags \
+};};
+
+#define _unpack_WireFlags(flags) \
     bool bPeriodicB   = (bool)(flags & WireFlags::CLOSED_CIRCUM);    \
     bool bHasCenter   = (bool)(flags & WireFlags::CAPPED_CENTER);    \
     bool bAzimEdges   = (bool)(flags & WireFlags::AZIMUTHAL_EDGES);  \
@@ -41,17 +62,9 @@ enum class WireFlags : uint16_t {
     bool bAlternateDiag= (bool)(flags & WireFlags::ALTERNATE_DIAG);
 
 
-inline WireFlags operator|(WireFlags a, WireFlags b) {
-    return static_cast<WireFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
-}
-
-inline WireFlags operator&(WireFlags a, WireFlags b) {
-    return static_cast<WireFlags>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
-}
-
-inline WireFlags operator^(WireFlags a, WireFlags b) {
-    return static_cast<WireFlags>(static_cast<uint16_t>(a) ^ static_cast<uint16_t>(b));
-}
+//inline WireFlags operator|(WireFlags a, WireFlags b) { return static_cast<WireFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b)); }
+//inline WireFlags operator&(WireFlags a, WireFlags b) { return static_cast<WireFlags>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b)); }
+//inline WireFlags operator^(WireFlags a, WireFlags b) { return static_cast<WireFlags>(static_cast<uint16_t>(a) ^ static_cast<uint16_t>(b)); }
 
 
 // template<typename UVfunc> Vec3f getUVFuncNormal(Vec2f uv, float h, UVfunc func) { 
@@ -151,9 +164,9 @@ template<typename UVfunc> void UVFunc2wireExtruded(Builder2& builder, Vec2i n, f
 }
 
 // New flexible wireframe functions with center/edge closure control
-template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, WireFlags flags=WireFlags::DEFAULT_WIRE ) {
+template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, int wire_flags=WireFlags::DEFAULT_WIRE ) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
-    _unpack_WireFlags
+    _unpack_WireFlags(wire_flags)
     int  startIndex = builder.verts.size();
     int  centerIndex = -1;
 
@@ -228,11 +241,11 @@ template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f
     }
 }
 
-void Parabola_Wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, WireFlags flags=WireFlags::DEFAULT_WIRE) {
+void Parabola_Wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, int wire_flags=WireFlags::DEFAULT_WIRE) {
     float K = L/(R*R);
     UVmin.a *= R; UVmax.a *= R;
     auto uvfunc = [K](Vec2f uv) { return ParabolaUVfunc(uv, K); };
-    UVFunc2wire_new(builder, n, UVmin, UVmax, voff, uvfunc, flags);
+    UVFunc2wire_new(builder, n, UVmin, UVmax, voff, uvfunc, wire_flags);
 }
 
 void Cone2Mesh(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire) { 
