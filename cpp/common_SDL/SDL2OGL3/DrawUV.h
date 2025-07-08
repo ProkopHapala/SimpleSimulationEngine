@@ -8,28 +8,14 @@
 #include "MeshBuilder2.h"
 #include "geometry/UVfuncs.h"
 
+
+// ToDo: 
+// 1) UVfunc should return Vec3d 
+// 2) UVfunc should be able to return normal
+// 3) UVfunc should have input Vec3d instead of Vec2f, 3-components (U,V,h) is along normal direction to the surface
+
+
 namespace Mesh {
-
-// enum class WireFlags : uint16_t {
-//     NONE            = 0,
-//     CLOSED_CIRCUM   = 1 << 0,  // 1: Close circumference (periodic in angular direction)
-//     CAPPED_CENTER   = 1 << 1,  // 2: Add central vertex and connect to first ring
-//     RADIAL_EDGES    = 1 << 2,  // 4: Add radial edges between rings
-//     AZIMUTHAL_EDGES = 1 << 3,  // 8: Add edges along each ring
-//     DIAGONAL1_EDGES = 1 << 4,  // 16: Add diagonal edges (top-right to bottom-left)
-//     DIAGONAL2_EDGES = 1 << 5,  // 32: Add diagonal edges (top-left to bottom-right)
-//     FIRST_RING      = 1 << 6,  // 64: Add edges for first radial loop
-//     LAST_RING       = 1 << 7,  // 128: Add edges for last radial loop
-//     ALTERNATE_DIAG  = 1 << 8,  // 256: Add alternate edges
-    
-//     // Common combinations
-//     BASIC_GRID      = AZIMUTHAL_EDGES | RADIAL_EDGES,
-//     FULL_GRID       = BASIC_GRID | DIAGONAL1_EDGES | DIAGONAL2_EDGES,
-//     DEFAULT_WIRE    = BASIC_GRID | CLOSED_CIRCUM | FIRST_RING | LAST_RING,
-//     STAR            = CLOSED_CIRCUM | RADIAL_EDGES | FIRST_RING,
-//     TRIMESH         = BASIC_GRID | DIAGONAL1_EDGES | ALTERNATE_DIAG | FIRST_RING | LAST_RING | CLOSED_CIRCUM
-// };
-
 
 namespace WireFlags{enum{
     NONE            = 0,
@@ -242,70 +228,6 @@ template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f
 }
 
 
-/**
-//  * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.
-//  * // TODO: make also triangular panel
-//  * 
-//  * @param p00 The first corner point.
-//  * @param p01 The second corner point.
-//  * @param p10 The third corner point.
-//  * @param p11 The fourth corner point.
-//  * @param n The number of subdivisions along each side of the panel.
-//  * @param width The width of the truss elements.
-//  */
-// int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes ){
-//     // ToDo: ad p00,p01,p10,p11 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
-//     //printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
-//     //int kind_long   = 0;
-//     //int kind_perp   = 1;
-//     //int kind_zigIn  = 2;
-//     //int kind_zigOut = 3;
-//     Vec2d step = {1.0/n.a,1.0/n.b};
-//     int di = 2*n.a-1;
-//     //int ibloc = block();   // this is better to call manually from outside
-//     int i0  = verts.size();
-//     //int i00 = verts.size();
-//     for (int ib=0; ib<n.b; ib++){
-//         double db,mb;
-//         db = ib*step.b;     mb=1-db;
-//         Vec3d p0  = p00*mb + p10*db;
-//         Vec3d p1  = p01*mb + p11*db;
-//         db += 0.5*step.b; mb=1-db;
-//         Vec3d p0_ = p00*mb + p10*db;
-//         Vec3d p1_ = p01*mb + p11*db;
-//         for (int ia=0; ia<n.a; ia++){
-//             double da,ma;
-//             da = ia*step.a; ma = 1-da;
-//             Vec3d p   = p0 *ma + p1 *da;
-//             //points.push_back( p              );
-//             vert( p );
-//             int bi = i0+di; if( ib==n.b-2 )bi-=ia;
-//             int dia = 2;    if( ib==n.b-1 )dia=1;
-//             if (ia<(n.a-1)) edge( i0,i0+dia,stickTypes.y );
-//             if (ib<(n.b-1)) edge( i0,bi    ,stickTypes.y );
-//             if( (ia<(n.a-1))&&(ib<(n.b-1)) ){ // diagonal
-//                 Vec3d p_  = p0_*ma + p1_*da;
-//                 da += 0.5*step.a; ma=1-da;
-//                 Vec3d p__ = p0_*ma + p1_*da;
-//                 Vec3d up; up.set_cross( p_-p, p__-p ); up.normalize();
-//                 //points.push_back( p__ + up*width );
-//                 vert( p__ + up*width );
-//                 if( ia<(n.a-2) ) edge( i0+1,i0+1+dia,stickTypes.z );
-//                 if( ib<(n.b-2) ) edge( i0+1,bi+1    ,stickTypes.z );
-//                 edge( i0+1,i0     ,stickTypes.w );
-//                 edge( i0+1,i0+dia ,stickTypes.w );
-//                 edge( i0+1,bi     ,stickTypes.w );
-//                 if( ib==n.b-2 )dia=1;
-//                 edge( i0+1,bi+dia ,stickTypes.w );
-//                 i0++;
-//             }
-//             i0++;
-//         }
-//     }
-//     return i0;
-// }
-
-
 template<typename UVfunc> 
 int UV_panel( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, double width, Quat4i stickTypes, UVfunc func ){
     // === Build double-layer truss panel mapped by a generic UV function ===
@@ -394,32 +316,6 @@ int UV_panel( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, double width
 }
 
 
-/*
-UV_slab
-axial[3]:
-(1,0,0)
-(0,1,0)
-(0,0,1)
-face-diagonal[6]:
-(1,1,0)
-(1,0,1)
-(0,1,1)
-( 1,-1, 0)
-( 0, 1,-1)
-(-1, 0, 1)
-space-diagonal[8]:
-( 1, 1, 1)
-( 1, 1,-1)
-( 1,-1, 1)
-( 1,-1,-1)
-(-1, 1, 1)
-(-1, 1,-1)
-(-1,-1, 1)
-(-1,-1,-1)
-*/
-
-
-
 // === General cubic-grid based slab builder ===
 // dirMask : bitmask selecting which edge directions to include using following order of directions
 // 0:(1,0,0)  1:(0,1,0)  2:(0,0,1)
@@ -431,41 +327,8 @@ space-diagonal[8]:
 //    y : axial planar (x or y)
 //    z : planar diagonals (x-y plane)
 //    w : any edge touching both layers (face or space diagonals)
-template<typename UVfunc>
-int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int dirMask, Quat4i stickTypes, UVfunc func ){
-    const int na = n.x;
-    const int nb = n.y;
-    const int nz = 2;                 // just bottom & top layer
 
-    // UV spacing
-    Vec2f du = { (UVmax.x-UVmin.x)/(na-1), 0.0f };
-    Vec2f dv = { 0.0f, (UVmax.y-UVmin.y)/(nb-1) };
-
-    const int base0 = builder.verts.size();
-
-    // Allocate vertex index grids for both layers
-    std::vector<int> idx0(na*nb);
-    std::vector<int> idx1(na*nb);
-
-    // Build vertices
-    for(int iy=0; iy<nb; ++iy){
-        for(int ix=0; ix<na; ++ix){
-            Vec2f uv = { UVmin.x + ix*du.x, UVmin.y + iy*dv.y };
-            Vec3d p  = (Vec3d)func( uv );
-
-            Vec3d u  = (Vec3d)func( uv + du )-p; //u.normalize();
-            Vec3d v  = (Vec3d)func( uv + dv )-p; //v.normalize();
-            Vec3d nor; nor.set_cross(u,v); nor.normalize();
-
-            int iFlat = iy*na + ix;
-            idx0[iFlat] = builder.vert( p );                       // bottom
-            //idx1[iFlat] = builder.vert( Vec3d{ p.x, p.y, p.z + width } ); // top (straight up)
-
-            Vec3d p1 = p + nor*up.z + u*up.x + v*up.y;
-            idx1[iFlat] = builder.vert( p1 ); // top (straight up)
-        }
-    }
-
+int slabEdges( Builder2& builder, Vec2i n, int* idx0, int* idx1, int dirMask, Quat4i stickTypes ){
     // Unique positive directions (13)
     static const Vec3i DIRS[13] = {
         // axial
@@ -485,27 +348,27 @@ int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int
         { 1,-1, 1 }, // 11 x-y+z
         { 1,-1,-1 }  // 12 x-y-z
     };
-
-    auto getVert = [&](int ix,int iy,int iz){ int i = iy*na + ix; return (iz==0)? idx0[i] : idx1[i]; };
-
+    const int nz = 2;  
+    auto getVert = [&](int ix,int iy,int iz){ int i = iy*n.x + ix; return (iz==0)? idx0[i] : idx1[i]; };
     auto edgeTypeByDir = [&](const Vec3i& d){
         int comps = (d.x!=0) + (d.y!=0) + (d.z!=0);
         if(comps==1){ return d.z ? stickTypes.x : stickTypes.y; }         // axis
         if(comps==2){ return d.z ? stickTypes.w : stickTypes.z; }         // face diag
         return stickTypes.w;                                              // space diag
     };
-
+    // just bottom & top layer
     // Build edges according to mask
+    const int ie0 = builder.edges.size();
     for(int iz=0; iz<nz; ++iz){
-        for(int iy=0; iy<nb; ++iy){
-            for(int ix=0; ix<na; ++ix){
+        for(int iy=0; iy<n.y; ++iy){
+            for(int ix=0; ix<n.x; ++ix){
                 for(int id=0; id<13; ++id){
                     if(!(dirMask & (1<<id))) continue;
                     const Vec3i& d = DIRS[id];
                     int jx = ix + d.x;
                     int jy = iy + d.y;
                     int jz = iz + d.z;
-                    if(jx<0||jx>=na||jy<0||jy>=nb||jz<0||jz>=nz) continue; // stay inside slab
+                    if(jx<0||jx>=n.x||jy<0||jy>=n.y||jz<0||jz>=nz) continue; // stay inside slab
                     int a = getVert(ix,iy,iz);
                     int b = getVert(jx,jy,jz);
                     builder.edge( a, b, edgeTypeByDir(d) );
@@ -513,19 +376,57 @@ int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int
             }
         }
     }
+    return ie0;
+}
 
-    return base0;
+template<typename UVfunc>
+int UV_slab_verts( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int* idx, UVfunc func ){
+    const int iv0 = builder.verts.size();
+    for(int iy=0; iy<n.y; ++iy){
+        for(int ix=0; ix<n.x; ++ix){
+            Vec2f uv = { uv0.x + ix*duv.x, uv0.y + iy*duv.y };
+            Vec3d p  = (Vec3d)func( uv );
+            int iFlat = iy*n.x + ix;
+            idx[iFlat] = builder.vert( p );                       // bottom
+        }
+    }
+    return iv0;
+}
+
+template<typename UVfunc1, typename UVfunc2>
+int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int dirMask, Quat4i stickTypes, UVfunc1 func1, UVfunc2 func2 ){
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1),  
+                  (UVmax.y-UVmin.y)/(n.y-1) };
+    std::vector<int> idx0(n.x*n.y); // perhaps we do not need this, if we have iv0, iv1
+    std::vector<int> idx1(n.x*n.y);
+    int iv0 = UV_slab_verts(builder,n,UVmin            ,duv,idx0.data(),func1);
+    int iv1 = UV_slab_verts(builder,n,UVmin+duv*up.xy(),duv,idx1.data(),func2);
+    slabEdges( builder, n, idx0.data(), idx1.data(), dirMask, stickTypes );
+    return iv0;
 }
 
 void QuadSlab(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, Vec3f up, int dirMask, Quat4i stickTypes ) {
-    auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
-    UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc);
+    Vec3f nor; nor.set_cross(p10-p00,p01-p00); nor.normalize();
+    auto uvfunc1 = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
+    auto uvfunc2 = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11) + nor*up.z; };
+    UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
+}
+
+void SlabTube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, Vec3f up, int dirMask, Quat4i stickTypes ) {
+    //auto uvfunc = [&](Vec2f uv){ Vec2f uv_= {uv.x+uv.y*0.5, uv.y*0.86602540378}; return ConeUVfunc(uv_,Rs.a,Rs.b,L); };
+    //auto uvfunc = [&](Vec2f uv){ Vec2f uv_= {uv.x*0.86602540378, uv.y+uv.x*0.5}; return ConeUVfunc(uv_,Rs.a,Rs.b,L); };
+    float dudv = 0.5*(n.x-1.)/(n.y-1.);
+    auto uvfunc1 = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a     ,Rs.b     ,L); };
+    auto uvfunc2 = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a+up.z,Rs.b+up.z,L); };
+    UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
 }
 
 void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, float width, Quat4i stickTypes ) {
     auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
 }
+
+
 
 void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, float width, Quat4i stickTypes ) {
     auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };

@@ -3,6 +3,12 @@
 #define  UVfuncs_h
 
 
+// ToDo: 
+// 1) UVfunc should return Vec3d 
+// 2) UVfunc should be able to return normal
+// 3) UVfunc should have input Vec3d instead of Vec2f, 3-components (U,V,h) is along normal direction to the surface
+
+
 template<typename UVfunc>
 Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
     Vec2f o;
