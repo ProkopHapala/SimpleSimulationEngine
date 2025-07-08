@@ -108,6 +108,8 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
     bool bViewTruss        = true;
     bool bViewPivotPoint   = true;
     bool bViewSelection    = true;
+    bool bViewAxis         = true;
+
     
     // bool bViewEdges        = true;
     // bool bViewTris         = true;
@@ -182,8 +184,8 @@ void ConstructionBlockApp::initGUI(){
     viewControls->initCheckBoxList(5, 5, 150);
 
 
-    trussView.bViewPointLabels  = true;
-    trussView.bViewEdgeLabels   = true;
+    //trussView.bViewPointLabels  = true;
+    //trussView.bViewEdgeLabels   = true;
     trussView.bViewVertNormals  = true;
     //trussView.bViewFaceLabels   = true;
     //trussView.bViewTriLabels    = true;
@@ -203,6 +205,9 @@ void ConstructionBlockApp::initGUI(){
     viewControls->addBox("Edge Labels",   &trussView.bViewEdgeLabels);
     viewControls->addBox("Face Labels",   &trussView.bViewFaceLabels);
     viewControls->addBox("Tri Labels",    &trussView.bViewTriLabels);
+
+    viewControls->addBox("Axis",          &bViewAxis);
+
     gui.addPanel(viewControls);
 
     //mp= new MultiPanel( "Edit", gx.x0, ylay.x0, gx.x1, 0,-13); 
@@ -266,7 +271,7 @@ void ConstructionBlockApp::draw(){
         }
     }
     if(bViewPivotPoint) { Draw3D::drawPointCross( pivot_point, 0.5 ); }
-    //glLineWidth(5.0); Draw3D::drawAxis(10.0);
+    if(bViewAxis) { glLineWidth(5.0); Draw3D::drawAxis(10.0); }
 };
 
 void ConstructionBlockApp::drawHUD(){
@@ -434,7 +439,13 @@ int main(int argc, char *argv[]){
         printf("funcs[-panel]: Panel Extrude Test: "); 
         truss.clear();
         //truss.panel( {0.0,0.0,0.0}, {100.0,0.0,0.0}, {0.0,100.0,0.0}, {100.0,100.0,0.0}, {4,3}, 10.0, Quat4i{0,0,0,0} );
-        Tube(truss, {4,16}, {-1.0,0.0}, {1.0,1.5*M_PI}, {10.0,10.0}, 10.0, 2.0, Quat4i{0,0,0,0} );
+        //Tube(truss, {4,16}, {-1.0,0.0}, {1.0,1.5*M_PI}, {10.0,10.0}, 10.0, 2.0, Quat4i{0,0,0,0} );
+        //QuadPanel(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {80.0,0.0,0.0}, {0.0,100.0,0.0}, {120.0,120.0,0.0}, 10.0, Quat4i{0,0,0,0} );
+        //QuadPanel(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 10.0, Quat4i{0,0,0,0} );
+        //QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {80.0,0.0,0.0}, {0.0,100.0,0.0}, {120.0,120.0,0.0}, 10.0, 0b111,  Quat4i{0,0,0,0} );
+        //QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 10.0, 0b111, Quat4i{0,0,0,0} );
+        //QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 10.0, 0b1111, Quat4i{0,0,0,0} );
+        QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, {0.333333,0.333333,7.0}, 0b101010111, Quat4i{0,0,0,0} );
     }};
 
     funcs["-bevel"] = {0, [&](const char**){ 

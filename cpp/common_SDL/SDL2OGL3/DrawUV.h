@@ -394,11 +394,143 @@ int UV_panel( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, double width
 }
 
 
-void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2d Rs, float L, float width, Quat4i stickTypes ) {
-    auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };
+/*
+UV_slab
+axial[3]:
+(1,0,0)
+(0,1,0)
+(0,0,1)
+face-diagonal[6]:
+(1,1,0)
+(1,0,1)
+(0,1,1)
+( 1,-1, 0)
+( 0, 1,-1)
+(-1, 0, 1)
+space-diagonal[8]:
+( 1, 1, 1)
+( 1, 1,-1)
+( 1,-1, 1)
+( 1,-1,-1)
+(-1, 1, 1)
+(-1, 1,-1)
+(-1,-1, 1)
+(-1,-1,-1)
+*/
+
+
+
+// === General cubic-grid based slab builder ===
+// dirMask : bitmask selecting which edge directions to include using following order of directions
+// 0:(1,0,0)  1:(0,1,0)  2:(0,0,1)
+// 3:(1,1,0)  4:(1,0,1)  5:(0,1,1)
+// 6:(1,-1,0) 7:(0,1,-1) 8:(-1,0,1)
+// 9:(1,1,1) 10:(1,1,-1) 11:(1,-1,1) 12:(1,-1,-1)
+// stickTypes : mapping of edge "kind" to Builder2 edge-type slot
+//    x : vertical (z-axis)
+//    y : axial planar (x or y)
+//    z : planar diagonals (x-y plane)
+//    w : any edge touching both layers (face or space diagonals)
+template<typename UVfunc>
+int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int dirMask, Quat4i stickTypes, UVfunc func ){
+    const int na = n.x;
+    const int nb = n.y;
+    const int nz = 2;                 // just bottom & top layer
+
+    // UV spacing
+    Vec2f du = { (UVmax.x-UVmin.x)/(na-1), 0.0f };
+    Vec2f dv = { 0.0f, (UVmax.y-UVmin.y)/(nb-1) };
+
+    const int base0 = builder.verts.size();
+
+    // Allocate vertex index grids for both layers
+    std::vector<int> idx0(na*nb);
+    std::vector<int> idx1(na*nb);
+
+    // Build vertices
+    for(int iy=0; iy<nb; ++iy){
+        for(int ix=0; ix<na; ++ix){
+            Vec2f uv = { UVmin.x + ix*du.x, UVmin.y + iy*dv.y };
+            Vec3d p  = (Vec3d)func( uv );
+
+            Vec3d u  = (Vec3d)func( uv + du )-p; //u.normalize();
+            Vec3d v  = (Vec3d)func( uv + dv )-p; //v.normalize();
+            Vec3d nor; nor.set_cross(u,v); nor.normalize();
+
+            int iFlat = iy*na + ix;
+            idx0[iFlat] = builder.vert( p );                       // bottom
+            //idx1[iFlat] = builder.vert( Vec3d{ p.x, p.y, p.z + width } ); // top (straight up)
+
+            Vec3d p1 = p + nor*up.z + u*up.x + v*up.y;
+            idx1[iFlat] = builder.vert( p1 ); // top (straight up)
+        }
+    }
+
+    // Unique positive directions (13)
+    static const Vec3i DIRS[13] = {
+        // axial
+        { 1, 0, 0 }, // 0 x
+        { 0, 1, 0 }, // 1 y
+        { 0, 0, 1 }, // 2 z
+        // face diag
+        { 1, 1, 0 }, // 3 x+y
+        { 1,-1, 0 }, // 4 x-y
+        { 1, 0, 1 }, // 5 x+z
+        {-1, 0, 1 }, // 6 z-x
+        { 0, 1, 1 }, // 7 y+z
+        { 0, 1,-1 }, // 8 y-z
+        // space diag
+        { 1, 1, 1 }, // 9 x+y+z
+        { 1, 1,-1 }, // 10 x+y-z
+        { 1,-1, 1 }, // 11 x-y+z
+        { 1,-1,-1 }  // 12 x-y-z
+    };
+
+    auto getVert = [&](int ix,int iy,int iz){ int i = iy*na + ix; return (iz==0)? idx0[i] : idx1[i]; };
+
+    auto edgeTypeByDir = [&](const Vec3i& d){
+        int comps = (d.x!=0) + (d.y!=0) + (d.z!=0);
+        if(comps==1){ return d.z ? stickTypes.x : stickTypes.y; }         // axis
+        if(comps==2){ return d.z ? stickTypes.w : stickTypes.z; }         // face diag
+        return stickTypes.w;                                              // space diag
+    };
+
+    // Build edges according to mask
+    for(int iz=0; iz<nz; ++iz){
+        for(int iy=0; iy<nb; ++iy){
+            for(int ix=0; ix<na; ++ix){
+                for(int id=0; id<13; ++id){
+                    if(!(dirMask & (1<<id))) continue;
+                    const Vec3i& d = DIRS[id];
+                    int jx = ix + d.x;
+                    int jy = iy + d.y;
+                    int jz = iz + d.z;
+                    if(jx<0||jx>=na||jy<0||jy>=nb||jz<0||jz>=nz) continue; // stay inside slab
+                    int a = getVert(ix,iy,iz);
+                    int b = getVert(jx,jy,jz);
+                    builder.edge( a, b, edgeTypeByDir(d) );
+                }
+            }
+        }
+    }
+
+    return base0;
+}
+
+void QuadSlab(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, Vec3f up, int dirMask, Quat4i stickTypes ) {
+    auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
+    UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc);
+}
+
+void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, float width, Quat4i stickTypes ) {
+    auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
 }
 
+void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, float width, Quat4i stickTypes ) {
+    auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };
+    UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
+}
 
 void Parabola_Wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, int wire_flags=WireFlags::DEFAULT_WIRE) {
     float K = L/(R*R);

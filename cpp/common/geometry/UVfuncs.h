@@ -17,7 +17,13 @@ Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
 
 // =========  Quadric
 
-
+inline Vec3f QuadUVfunc( Vec2f p, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11 ){
+    Vec2f m=Vec2fOnes-p;
+    return p00*(m.a*m.b) 
+         + p01*(m.a*p.b) 
+         + p10*(p.a*m.b) 
+         + p11*(p.a*p.b);
+}
 
 inline Vec3f ConeUVfunc( Vec2f p, float R1, float R2, float L ){
     Vec2f csb; csb.fromAngle(p.b);
