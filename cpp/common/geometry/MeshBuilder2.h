@@ -348,6 +348,37 @@ class Builder2 : public SelectionBanks { public:
     int selectRectVert( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot=Mat3dIdentity );
     int selectRect( const Vec3d& p0, const Vec3d& p1,     const Mat3d& rot=Mat3dIdentity );
 
+
+
+    inline int   _number_of_points()     { return verts.size(); };
+    inline Vec3d _get_point       (int i){ return verts[i].pos; };
+    inline int   _number_of_edges ()     { return edges.size(); };
+    inline Vec2i _get_edge        (int i){ return edges[i].lo;  };
+    inline bool  _add_to_selection(int i){ return curSelection->add(i); };
+
+
+
+
+
+    // template<typename MESH, typename DistFunc, typename Selection> int _selectRectVerts( MESHr& mesh, DistFunc& distFunc){ 
+    int selectRectVerts( Vec3d& p0, double Rmax ){    
+        return _selectRectVerts( *this, [&](Vec3d p){ return (p-p0).norm2();},Rmax);
+    }
+
+    // int selectRectVerts( Vec3d p0, Vec3d p1, const Mat3d& rot=Mat3dIdentity ){
+    //     _order(p0.x,p1.x);
+    //     _order(p0.y,p1.y);
+    //     return _selectRectVerts( *this, [p0,p1,rot](Vec3d p){  
+    //         Vec3d Tp0,Tp1;
+    //         rot.dot_to(p0,Tp0);
+    //         rot.dot_to(p1,Tp1);
+    //         Tp0.z=-1e+300;
+    //         Tp1.z=+1e+300;
+    //         return (p-p0).norm2();}
+    //     );
+    // }
+
+
     int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 );
     int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 );
     int fstrip( int ip0, int ip1, int n, int ft=-1, Vec2i et={-1,-1} );

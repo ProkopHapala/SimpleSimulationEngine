@@ -7,6 +7,52 @@
 #include <unordered_map>
 #include <vector>
 
+
+// template<typename Builder, typename DistFunc>
+// int selectRectEdge( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot, Builder& builder, DistFunc& distFunc ){ 
+//     //printf( "Mesh::Builder2::selectRectEdge() p0(%g,%g,%g) p1(%g,%g,%g) \n", p0.x,p0.y,p0.z, p1.x,p1.y,p1.z );
+//     Vec3d Tp0,Tp1;
+//     //Mat3d rot = (Mat3d)cam.rot;
+//     rot.dot_to(p0,Tp0);
+//     rot.dot_to(p1,Tp1);
+//     _order(Tp0.x,Tp1.x);
+//     _order(Tp0.y,Tp1.y);
+//     Tp0.z=-1e+300;
+//     Tp1.z=+1e+300;
+//     int nfound=0;
+//     for(int i=0; i<edges.size(); i++ ){
+//         Vec2i b = edges[i].lo;
+//         Vec3d pa,pb;
+//         rot.dot_to( verts[b.i].pos,pa);
+//         rot.dot_to( verts[b.j].pos,pb);
+//         if( pa.isBetween(Tp0,Tp1) && pb.isBetween(Tp0,Tp1) ){
+//             curSelection->add(i);
+//             nfound++;
+//         }
+//     }
+//     return nfound;
+// }
+
+template<typename MESH, typename DistFunc>
+int _selectRectVerts( MESH& mesh, const DistFunc& distFunc, double Rmax=1.0){ 
+    double rmin   = 1e+300; 
+    int    nfound = 0;
+    int nverts = mesh._number_of_points();
+    for(int i=0; i<nverts; i++ ){
+        Vec3d p = mesh._get_point(i);
+        double r = distFunc(p);
+        if( r<rmin ) rmin = r;
+        if( r<Rmax ){
+            mesh._add_to_selection(i);
+            nfound++;
+        }
+    }
+    return nfound;
+}
+
+
+
+
 inline int make_unique(int n, int* ids){
     std::unordered_set<int> set; set.reserve(n);
     std::vector<int> ids_;       ids_.reserve(n);
@@ -99,6 +145,11 @@ class Selection{public:
     }
     template <typename Container> 
     inline int intersectWith(const Container& other){ return substract(other, true); }
+
+
+
+    
+
 };
 
 class SelectionBanks{public:
@@ -110,4 +161,3 @@ class SelectionBanks{public:
 };
 
 #endif
-
