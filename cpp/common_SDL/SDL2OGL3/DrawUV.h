@@ -293,17 +293,9 @@ int UV_sheet_clip( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask
 }
 
 // Single-layer 2D neighborhood with 4 sticks (axial and diagonal)
-int stickEdges2D( Builder2& builder, Vec2i n, int* idx, int dirMask, Quat4i stickTypes ){
-    // 4 directions in 2D (axial and diagonal)
-    static const Vec2i DIRS[4] = {
-        {1,0},  // 0 x
-        {0,1},  // 1 y
-        {1,1},  // 2 x+y
-        {1,-1}  // 3 x-y
-    };
-    //auto getVert       = [&](int ix,int iy ){ return idx[iy*n.x + ix]; };
-    //auto edgeTypeByDir = [&](const Vec2i& d){ return (d.x && d.y) ? stickTypes.z : stickTypes.y; }; // diagonal or axial
-    const int ie0 = builder.edges.size();
+int stickEdges2D( Builder2& builder, Vec2i n, int* idx, int dirMask, Quat4i stickTypes, bool bPeriodicX=false, bool bPeriodicY=false ){
+    static const Vec2i DIRS[4] = {{1,0},{0,1},{1,1},{1,-1}};
+    int ie0 = builder.edges.size();
     for(int iy=0; iy<n.y; ++iy){
         for(int ix=0; ix<n.x; ++ix){
             for(int id=0; id<4; ++id){
@@ -311,39 +303,45 @@ int stickEdges2D( Builder2& builder, Vec2i n, int* idx, int dirMask, Quat4i stic
                 const Vec2i& d = DIRS[id];
                 int jx = ix + d.x;
                 int jy = iy + d.y;
-                if(jx<0||jx>=n.x||jy<0||jy>=n.y) continue;
-                //int a = getVert(ix,iy);
-                //int b = getVert(jx,jy);
+                if(bPeriodicX){ jx = (jx + n.x)%n.x; }else if(jx<0 || jx>=n.x) continue;
+                if(bPeriodicY){ jy = (jy + n.y)%n.y; }else if(jy<0 || jy>=n.y) continue;
                 int a = idx[iy*n.x + ix];
                 int b = idx[jy*n.x + jx];
-                //builder.edge(a, b, edgeTypeByDir(d));
-                builder.edge(a, b, (d.x && d.y) ? stickTypes.z : stickTypes.y  );
+                builder.edge(a,b,(d.x && d.y)?stickTypes.z:stickTypes.y);
             }
         }
     }
     return ie0;
 }
 
+
 template<typename UVfunc>
-int UV_sheet( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask, Quat4i stickTypes, UVfunc func, int imin=0, int imax=100 ){
+int UV_sheet( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask, Quat4i stickTypes, UVfunc func, bool bPeriodicX=false, bool bPeriodicY=false ){
     std::vector<int> idx(n.x*n.y);
     int iv0 = UV_slab_verts(builder,n,uv0,duv,idx.data(),func);
-    stickEdges2D(builder,n,idx.data(),dirMask,stickTypes);
+    stickEdges2D(builder,n,idx.data(),dirMask,stickTypes,bPeriodicX,bPeriodicY);
     return iv0;
 }
 
 void QuadSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, int dirMask, Quat4i stickTypes, int imin=0, int imax=100 ) {
     auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y-1) };
-    //UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
-    UV_sheet_clip(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
+    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,false,false);
+    //UV_sheet_clip(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
 }
 
-void TubeSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, int dirMask, Quat4i stickTypes ) {
-    float dudv = 0.5*(n.x-1.)/(n.y-1.);
+void TubeSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, int dirMask=0b1011, float twist=0.5, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
+    float dudv = (twist*(n.x-1.))/n.y;
     auto uvfunc = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a,Rs.b,L); };
-    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y-1) };
-    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc);
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y) }; // use n.x for periodic wrap and n.y-1 for length spacing
+    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,false,true);
+} 
+
+void TorusSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, int dirMask=0b1011, float twist=0.5, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
+    float dudv = (twist*(n.y))/n.x;
+    auto uvfunc = [&](Vec2f uv){ uv.x+=uv.y*dudv; uv.y*=2*M_PI; uv.x*=2*M_PI; return TorusUVfunc(uv,Rs.a,Rs.b); };
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x), (UVmax.y-UVmin.y)/(n.y) }; // use n.x for periodic wrap and n.y-1 for length spacing
+    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,true,true);
 } 
 
 
