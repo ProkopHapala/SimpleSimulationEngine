@@ -613,7 +613,7 @@ int Builder2::loadChunk( int ich, int* iedges, int* iverts ){
 
 
 int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin, bool bTwoSide ){
-    //printf("Builder2::findMostFacingNormal() nch=%i cosMin=%g bTwoSide=%i\n", nch, cosMin, bTwoSide );
+    printf("Builder2::findMostFacingNormal() nch=%i cosMin=%g bTwoSide=%i\n", nch, cosMin, bTwoSide );
     int ibest=-1;
     double cmax = -1.0;
     for(int i=0; i<nch; i++){
@@ -621,10 +621,10 @@ int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin,
         //printf("findMostFacingNormal[%3i]: ich %3i \n", i, ich );
         Vec3d nr = polygonNormal(ich); // This will now print its own debug info
         double c = hray.dot(nr);
-        //printf("  [DEBUG] findMostFacingNormal: hray=(%g,%g,%g), normal=(%g,%g,%g), dot_product (c)=%g\n", hray.x,hray.y,hray.z, nr.x,nr.y,nr.z, c);
-        //printf("  [DEBUG] findMostFacingNormal: cosMin=%g, bTwoSide=%d, current_cmax=%g\n", cosMin, bTwoSide, cmax);
+        printf("  [DEBUG] findMostFacingNormal: hray=(%g,%g,%g), normal=(%g,%g,%g), dot_product (c)=%g\n", hray.x,hray.y,hray.z, nr.x,nr.y,nr.z, c);
+        printf("  [DEBUG] findMostFacingNormal: cosMin=%g, bTwoSide=%d, current_cmax=%g\n", cosMin, bTwoSide, cmax);
         if(bTwoSide) c=fabs(c);
-        //printf("  [DEBUG] findMostFacingNormal: After bTwoSide adjustment, c=%g\n", c);
+        printf("  [DEBUG] findMostFacingNormal: After bTwoSide adjustment, c=%g\n", c);
         if( c>cosMin && c>cmax){ ibest=chs[i]; cmax=c; }
     }
     if(bExitError){
@@ -633,7 +633,7 @@ int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin,
                 int ich = chs[i];
                 Quat4i ch = chunks[ich];
                 Vec3d nr = polygonNormal(ich);
-                //printf("chunk[%i] id %i ch(%3i,%3i,%3i,%3i) nr(%g,%g,%g) \n", i, ich,    ch.x, ch.y, ch.z, ch.w, nr.x, nr.y, nr.z );
+                printf("chunk[%i] id %i ch(%3i,%3i,%3i,%3i) nr(%g,%g,%g) \n", i, ich,    ch.x, ch.y, ch.z, ch.w, nr.x, nr.y, nr.z );
             }
             exit(0); 
         }
@@ -675,20 +675,24 @@ Vec2i Builder2::addFaces( int nf, const int* nVerts, const int* verts, bool bPol
     int ich0 = chunks.size();
     for (int i = 0; i < nf; ++i) {
         int nvi = nVerts[i];
+        printf("  addFaces: Processing plane %i/%i, nvi=%i\n", i, nf, nvi);
+        // printf("  addFaces: Vertices for plane %i: ", i);
+        // for(int k=0; k<nvi; ++k) { printf("%i ", verts[k]); }
+        // printf("\n");
         int verts_[nvi]; for(int i=0; i<nvi; i++){ verts_[i] = verts[i]+iv0; }
         int iedges[nvi];
         for (int j = 0; j < nvi; ++j) {
             Vec2i vpair = {verts_[j], verts_[(j + 1) % nvi]};
-            //printf( "Builder2::addFaces() vpair(%3i,%3i) iv0 %3i\n", vpair.a, vpair.b, iv0 );
+            printf( "Builder2::addFaces() vpair(%3i,%3i) iv0 %3i\n", vpair.a, vpair.b, iv0 );
             iedges[j]   = findEdgeByVerts(vpair);
             if (iedges[j] == -1) {printf("ERROR: -extrude_octahedron could not find edge between %d and %d. This should not happen for a well-defined CMesh.\n", vpair.a, vpair.b);exit(0); }
         }
         int chunk_id = polygonChunk(nvi, iedges, verts_, true); // true to triangulate
         //plane_chunks.push_back(chunk_id);
-        //printf("  Added plane %i with %i vertices as chunk %i\n", i, nvi, chunk_id);
+        printf("  Added plane %i with %i vertices as chunk %i\n", i, nvi, chunk_id);
         verts += nvi;
     }
-    return Vec2i{ich0, (int)chunks.size()-1};
+    return Vec2i{ich0, (int)chunks.size()};
 };
 
 Quat4i Builder2::addCMesh(const CMesh& cmesh, bool bFaces, Vec3d p0, Vec3d sc, Mat3d* rot, int edge_type ) {
@@ -877,11 +881,11 @@ int Builder2::selectRect( const Vec3d& p0, const Vec3d& p1, const Mat3d& rot  ){
 int Builder2::select_in_sphere( const Vec3d& p0, double r, int i0, int imax ){
     int n=0;
     if(imax==-1){ n=verts.size(); }
-    printf( "Builder2::select_in_sphere() p0(%g,%g,%g) r=%g  i0=%i imax=%i \n", p0.x,p0.y,p0.z, r, i0, imax );
+    //printf( "Builder2::select_in_sphere() p0(%g,%g,%g) r=%g  i0=%i imax=%i \n", p0.x,p0.y,p0.z, r, i0, imax );
     for(int i=i0;i<imax;i++){
         Vec3d  d =  verts[i].pos-p0;
         double r2 = d.norm2();
-        printf( "Builder2::select_in_sphere() vert[%3i] r=%10g pos: %10g %10g %10g \n", i, sqrt(r2), verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
+        //printf( "Builder2::select_in_sphere() vert[%3i] r=%10g pos: %10g %10g %10g \n", i, sqrt(r2), verts[i].pos.x, verts[i].pos.y, verts[i].pos.z );
         if( r2 > r*r ) continue; // check bounds along the axis
         curSelection->add(i);
         n++;
@@ -2438,7 +2442,8 @@ void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, V
         Quat4i i0s = addCMesh( cmesh, !bSpecialNodes, points[i] ); // bFaces=false, we only want the wireframe initially
         //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
         if(bSpecialNodes){ out_chs[i] = addFaces( nplane, planes, planeVs, true, i0s.x ); }
-        else             { out_chs[i] = Vec2i{ i0s.w, (int)chunks.size()-1};                }
+        else             { out_chs[i] = Vec2i{ i0s.w, (int)chunks.size()};              }
+        //out_chs[i].y++; // make range end exclusive
         printf( "facingNodes() %i chs(%i,%i)\n", i, out_chs[i].a, out_chs[i].b );
         //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
     }

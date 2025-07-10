@@ -145,7 +145,7 @@ class Builder2 : public SelectionBanks { public:
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
     inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ 
-        printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
+        //printf( "Mesh::Builder2::vert() %3i pos: %16.10f %16.10f %16.10f \n", verts.size(), pos.x,pos.y,pos.z );
         // _assert( // check vertex min distance
         //     double Rmin=1e-3;
         //     for(int i=0;i<verts.size();i++){
@@ -163,7 +163,7 @@ class Builder2 : public SelectionBanks { public:
         verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; 
     }
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ 
-        printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
+        //printf( "Mesh::Builder2::edge() [%3i] (%3i,%3i) t: %i t2: %i \n", edges.size(), a,b,t,t2 );
         // { // check vertex min distance
         //     if(a==b){ printf( "Mesh::Builder2::edge() ERROR [%3i] iverts(%3i,%3i) are the same! \n", edges.size(), a,b ); exit(0); }
         //     double Rmin=1e-3;

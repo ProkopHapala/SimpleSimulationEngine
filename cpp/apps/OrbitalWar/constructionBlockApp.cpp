@@ -399,7 +399,7 @@ int main(int argc, char *argv[]){
         // Parabola2Mesh(truss,{6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0,  false ); // Solid (crashes due to normal calculation in MeshBuilder.h)
         //Parabola_Wire( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*2-0.1}, 10.0, 10.0, 0.0 );
         //Parabola_Wire_new( truss, {6,10}, Vec2f{0.0,0.0}, Vec2f{1.0,M_PI*1.5}, 10.0, 10.0, 0.0, true,  true  );
-        
+
         //Parabola_Wire_new( truss, {8,5}, Vec2f{0.1,0.0}, Vec2f{1.0,M_PI*1.5}, 10.0, 10.0, 0.0, false, false );
         //Parabola_Wire_new( truss, {8,5}, Vec2f{0.1,0.0}, Vec2f{1.0,M_PI*2.0}, 10.0, 10.0, 0.0, true, true );
         
@@ -599,13 +599,13 @@ int main(int argc, char *argv[]){
         Vec2i edges[nedges] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
         Vec2i chs[nnodes];
         bool bUseSpecialPlanes=true;
-        //bool bUseSpecialPlanes=false;
         if(bUseSpecialPlanes){
             truss.facingNodes( Solids::Octahedron, nnodes, node_positions, chs, Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs );
         }else{
             CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
             truss.facingNodes( oct, nnodes, node_positions, chs );
         }
+        //for(int i=0;i<nnodes;i++){ chs[i].y++; } // make range end exclusive
         truss.bridgeFacingPolygons( nedges, edges, node_positions, 4, chs );
         printf("  truss.printSizes():  "); truss.printSizes();
         truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
