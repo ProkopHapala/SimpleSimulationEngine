@@ -45,8 +45,7 @@ namespace WireFlags{enum{
     bool bDiagEdges2  = (bool)(flags & WireFlags::DIAGONAL2_EDGES);  \
     bool bFirstRing   = (bool)(flags & WireFlags::FIRST_RING);     \
     bool bLastRing    = (bool)(flags & WireFlags::LAST_RING);      \
-    bool bAlternateDiag= (bool)(flags & WireFlags::ALTERNATE_DIAG);
-
+    bool bAlternateDiag= (bool)(flags & WireFlags::ALTERNATE_DIAG)
 
 //inline WireFlags operator|(WireFlags a, WireFlags b) { return static_cast<WireFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b)); }
 //inline WireFlags operator&(WireFlags a, WireFlags b) { return static_cast<WireFlags>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b)); }
@@ -152,7 +151,7 @@ template<typename UVfunc> void UVFunc2wireExtruded(Builder2& builder, Vec2i n, f
 // New flexible wireframe functions with center/edge closure control
 template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, int wire_flags=WireFlags::DEFAULT_WIRE ) {
     Vec2f duv = UVmax-UVmin; duv.mul({1.0f/n.a,1.0f/n.b});
-    _unpack_WireFlags(wire_flags)
+    _unpack_WireFlags(wire_flags);
     int  startIndex = builder.verts.size();
     int  centerIndex = -1;
 
@@ -226,6 +225,130 @@ template<typename UVfunc> void UVFunc2wire_new(Builder2& builder, Vec2i n, Vec2f
         }
     }
 }
+
+
+
+
+/* --- Original dense UV_sheet kept unchanged above --- */
+
+// New variant: generate single-layer sheet with diagonal clipping (ix+iy > imin && ix+iy < imax)
+// Stores vertices row-wise; idx0[iy] contains global index of first vertex in row iy
+// Neighbor lookup is O(1) using per-row first index and ix0s[ix]
+// NOTE: imin/imax are strict inequalities in the condition above
+//       Set imin=-1, imax=1e9 for no clipping (full grid)
+
+template<typename UVfunc>
+int UV_sheet_clip_verts( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, std::vector<Vec3i>& idx, UVfunc func, int imin, int imax ){
+    const int iv0 = builder.verts.size();
+    idx.resize(n.y);
+    
+    for(int iy=0; iy<n.y; ++iy){
+        int ix0 = std::max( 0,     imin+1 - iy );
+        int ix1 = std::min( n.x-1, imax-1 - iy );
+        if(ix0>ix1){ idx[iy] = {-1,-1,-1}; continue; }
+        
+        idx[iy] = {builder.verts.size(), ix0, ix1};
+        for(int ix=ix0; ix<=ix1; ++ix){
+            Vec2f uv = { uv0.x + ix*duv.x, uv0.y + iy*duv.y };
+            Vec3d p  = (Vec3d)func( uv );
+            builder.vert(p);
+        }
+    }
+    return iv0;
+}
+
+int UV_sheet_clip_edges( Builder2& builder, Vec2i n, const std::vector<Vec3i>& idx, int dirMask, Quat4i stickTypes ){
+    static const Vec2i DIRS[4] = { {1,0}, {0,1}, {1,1}, {1,-1} };
+    const int ie0 = builder.edges.size();
+    
+    for(int iy=0; iy<n.y; ++iy){
+        const Vec3i& row = idx[iy];
+        if(row.x<0) continue;
+        for(int ix=row.y; ix<=row.z; ++ix){
+            int a = row.x + (ix - row.y);
+            for(int id=0; id<4; ++id){
+                if(!(dirMask & (1<<id))) continue;
+                const Vec2i& d = DIRS[id];
+                int jx = ix + d.x;
+                int jy = iy + d.y;
+                if(jy<0 || jy>=n.y) continue;
+                const Vec3i& jrow = idx[jy];
+                if(jrow.x<0) continue;
+                if(jx<jrow.y || jx>jrow.z) continue;
+                int b = jrow.x + (jx - jrow.y);
+                int edgeType = (d.x && d.y) ? stickTypes.z : stickTypes.y; // diagonal or axial
+                builder.edge(a,b,edgeType);
+            }
+        }
+    }
+    return ie0;
+}
+
+template<typename UVfunc>
+int UV_sheet_clip( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask, Quat4i stickTypes, UVfunc func, int imin=0, int imax=100 ){
+    std::vector<Vec3i> idx;
+    int iv0 = UV_sheet_clip_verts(builder,n,uv0,duv,idx,func,imin,imax);
+    UV_sheet_clip_edges(builder,n,idx,dirMask,stickTypes);
+    return iv0;
+}
+
+// Single-layer 2D neighborhood with 4 sticks (axial and diagonal)
+int stickEdges2D( Builder2& builder, Vec2i n, int* idx, int dirMask, Quat4i stickTypes ){
+    // 4 directions in 2D (axial and diagonal)
+    static const Vec2i DIRS[4] = {
+        {1,0},  // 0 x
+        {0,1},  // 1 y
+        {1,1},  // 2 x+y
+        {1,-1}  // 3 x-y
+    };
+    //auto getVert       = [&](int ix,int iy ){ return idx[iy*n.x + ix]; };
+    //auto edgeTypeByDir = [&](const Vec2i& d){ return (d.x && d.y) ? stickTypes.z : stickTypes.y; }; // diagonal or axial
+    const int ie0 = builder.edges.size();
+    for(int iy=0; iy<n.y; ++iy){
+        for(int ix=0; ix<n.x; ++ix){
+            for(int id=0; id<4; ++id){
+                if(!(dirMask & (1<<id))) continue;
+                const Vec2i& d = DIRS[id];
+                int jx = ix + d.x;
+                int jy = iy + d.y;
+                if(jx<0||jx>=n.x||jy<0||jy>=n.y) continue;
+                //int a = getVert(ix,iy);
+                //int b = getVert(jx,jy);
+                int a = idx[iy*n.x + ix];
+                int b = idx[jy*n.x + jx];
+                //builder.edge(a, b, edgeTypeByDir(d));
+                builder.edge(a, b, (d.x && d.y) ? stickTypes.z : stickTypes.y  );
+            }
+        }
+    }
+    return ie0;
+}
+
+template<typename UVfunc>
+int UV_sheet( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask, Quat4i stickTypes, UVfunc func, int imin=0, int imax=100 ){
+    std::vector<int> idx(n.x*n.y);
+    int iv0 = UV_slab_verts(builder,n,uv0,duv,idx.data(),func);
+    stickEdges2D(builder,n,idx.data(),dirMask,stickTypes);
+    return iv0;
+}
+
+void QuadSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, int dirMask, Quat4i stickTypes, int imin=0, int imax=100 ) {
+    auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y-1) };
+    //UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
+    UV_sheet_clip(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
+}
+
+void TubeSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, int dirMask, Quat4i stickTypes ) {
+    float dudv = 0.5*(n.x-1.)/(n.y-1.);
+    auto uvfunc = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a,Rs.b,L); };
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y-1) };
+    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc);
+} 
+
+
+
+
 
 
 template<typename UVfunc> 
@@ -425,8 +548,6 @@ void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, 
     auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
 }
-
-
 
 void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, float width, Quat4i stickTypes ) {
     auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };
