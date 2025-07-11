@@ -347,7 +347,7 @@ class MainWindow(QtWidgets.QWidget):
         
         # Handle different cases based on the selected mode
         if selected_mode == "Plain":
-            self.makeShaderCode_Plain()
+            self.makeShaderCode_Plain( self.txtCode.toPlainText() )
             #print("updateShader(mode='RayTrace 3D'): NOT IMPLEMENTED")
         elif selected_mode == "SDF 2D":
             print("updateShader(mode='RayTrace 3D'): NOT IMPLEMENTED")
