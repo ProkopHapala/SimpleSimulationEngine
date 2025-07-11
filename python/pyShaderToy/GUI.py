@@ -13,9 +13,10 @@ TODO:
 
 '''
 
-from PyQt4          import QtGui, QtCore, QtOpenGL
-from PyQt4.QtOpenGL import QGLWidget,QGLFormat
-from PyQt4.QtCore   import QTimer
+from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5.QtOpenGL import QGLWidget,QGLFormat
+from PyQt5.QtCore   import QTimer
+
 import OpenGL.GL as gl
 import OpenGL.arrays.vbo as glvbo
 
@@ -37,7 +38,7 @@ def create_window(window_class):
     app_created = False
     app = QtCore.QCoreApplication.instance()
     if app is None:
-        app = QtGui.QApplication(sys.argv)
+        app = QtWidgets.QApplication(sys.argv)
         app_created = True
     app.references = set()
     window = window_class()
@@ -115,7 +116,7 @@ class GLPlotWidget(QGLWidget):
         gl.glViewport(0, 0, width, height)        # paint within the whole window
         gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
 
-class MainWindow(QtGui.QWidget):
+class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         qgl_format = QGLFormat()
@@ -123,21 +124,21 @@ class MainWindow(QtGui.QWidget):
 
         w = QtGui.QFont(); self.font=w; w.setFamily('Lucida'); w.setFixedPitch(True); w.setPointSize(10)
 
-        l0 = QtGui.QHBoxLayout();  self.setLayout(l0)
-        w = GLPlotWidget(qgl_format); self.glview = w; l0.addWidget(self.glview); w.setSizePolicy(QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
+        l0 = QtWidgets.QHBoxLayout();  self.setLayout(l0)
+        w = GLPlotWidget(qgl_format); self.glview = w; l0.addWidget(self.glview); w.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding)
         
-        l1 = QtGui.QVBoxLayout(); l0.addLayout(l1)
-        w = QtGui.QTextEdit(self);            self.txtCode = w; l1.addWidget(w); w.setFont(self.font); w.setLineWrapMode(QtGui.QTextEdit.NoWrap)  
+        l1 = QtWidgets.QVBoxLayout(); l0.addLayout(l1)
+        w = QtWidgets.QTextEdit(self);            self.txtCode = w; l1.addWidget(w); w.setFont(self.font); w.setLineWrapMode(QtWidgets.QTextEdit.NoWrap)  
 
-        l2 = QtGui.QHBoxLayout(); l1.addLayout(l2)
-        w = QtGui.QPushButton('play',self);   self.btPlay     = w; l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
-        w = QtGui.QPushButton('update',self); self.btShUpdate = w; l2.addWidget(w); w.setToolTip('update shader from code'); w.clicked.connect(self.updateShader); 
-        w = QtGui.QPushButton('save',self);   self.btShSave   = w; l2.addWidget(w); w.setToolTip('save shader from code');   w.clicked.connect(self.saveShaderDlg); 
-        w = QtGui.QPushButton('load',self);   self.btShLoad   = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg); 
-        w = QtGui.QLineEdit(); self.bxShToy = w; l2.addWidget(w);  w.returnPressed.connect(self.downloadShaderEvent )
-        #l3 = QtGui.QHBoxLayout(); l1.addLayout(l3)
-        #w = QtGui.QLineEdit(); 
-        #w = QtGui.QPushButton('fromShadeToy',self);   self.btSave  = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
+        l2 = QtWidgets.QHBoxLayout(); l1.addLayout(l2)
+        w = QtWidgets.QPushButton('play',self);   self.btPlay     = w; l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
+        w = QtWidgets.QPushButton('update',self); self.btShUpdate = w; l2.addWidget(w); w.setToolTip('update shader from code'); w.clicked.connect(self.updateShader); 
+        w = QtWidgets.QPushButton('save',self);   self.btShSave   = w; l2.addWidget(w); w.setToolTip('save shader from code');   w.clicked.connect(self.saveShaderDlg); 
+        w = QtWidgets.QPushButton('load',self);   self.btShLoad   = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg); 
+        w = QtWidgets.QLineEdit(); self.bxShToy = w; l2.addWidget(w);  w.returnPressed.connect(self.downloadShaderEvent )
+        #l3 = QtWidgets.QHBoxLayout(); l1.addLayout(l3)
+        #w = QtWidgets.QLineEdit(); 
+        #w = QtWidgets.QPushButton('fromShadeToy',self);   self.btSave  = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
         
         #self.loadShaderToy ("Torus_intersection.glslf")
         self.loadShader    ("Torus_intersection.glslf")
@@ -152,20 +153,20 @@ class MainWindow(QtGui.QWidget):
         self.glview.timer.stop()
 
     def saveShaderDlg(self):
-        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Shader ... ', os.getcwd(), selectedFilter='*.glslf')
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Shader ... ', os.getcwd(), filter='*.glslf')
         if fname:
-            print "saving shader to file : ", fname
+            print("saving shader to file : ", fname)
             with open(fname, "w") as fo: fo.write(self.glview.fragment_code)
     
     def loadShaderDlg(self):
-        fname= QtGui.QFileDialog.getOpenFileName(self, 'Load Shader ... ', os.getcwd(), selectedFilter='*.glslf')
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Shader ... ', os.getcwd(), filter='*.glslf')
         if fname:
-            print "loading shader to file : ",fname
+            print("loading shader to file : ",fname)
             self.loadShader(fname)
             self.updateShader()
 
     def updateShader(self):
-        self.glview.fragment_code = unicode( self.txtCode.toPlainText()).encode('utf8');
+        self.glview.fragment_code = str( self.txtCode.toPlainText()).encode('utf8');
         self.glview.updateShader()  
 
     def loadShader(self, fname ):
@@ -191,7 +192,7 @@ class MainWindow(QtGui.QWidget):
         self.glview.updateShader( )
 
 if __name__ == '__main__':
-    app = QtGui.QApplication(['pyShaderToy'])
+    app = QtWidgets.QApplication(['pyShaderToy'])
     window = MainWindow()
     window.show()
     app.exec_()

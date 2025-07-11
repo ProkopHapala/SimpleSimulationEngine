@@ -186,6 +186,8 @@ class MainWindow(QtWidgets.QWidget):
         self.btShSave   =w= QtWidgets.QPushButton('save', self);   l2.addWidget(w); w.setToolTip('save shader from code');   w.clicked.connect(self.saveShaderDlg)
         self.btShLoad   =w= QtWidgets.QPushButton('load', self);   l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
         self.btPlay     =w= QtWidgets.QPushButton('play', self);   l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
+        self.btUpdate   =w= QtWidgets.QPushButton('Update', self); l2.addWidget(w); w.clicked.connect(self.updateShader);
+        self.btReload   =w= QtWidgets.QPushButton('Reload', self); l2.addWidget(w); w.setToolTip('reload shader from file'); w.clicked.connect(self.reloadShader)
 
         # Create the dropdown list (QComboBox)
         self.cbMode =w= QtWidgets.QComboBox(self)
@@ -271,7 +273,11 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_selected_shader(self):
         print(f"load_selected_shader()")
-        filename =  os.path.join("./shaders", self.cbDir.currentText(), self.cbFile.currentText())
+        dirname = os.path.join("./shaders", self.cbDir.currentText())
+        filename = os.path.join(dirname, self.cbFile.currentText())
+        if os.path.isdir(filename):
+            print(f"Selected item is a directory: {filename}")
+            return
         self.load_shader_Plain( filename )
         self.glview.updateShader()
 
@@ -301,6 +307,11 @@ class MainWindow(QtWidgets.QWidget):
             print("loading shader from file:", fname)
             with open(fname, 'r') as f: self.txtCode.setPlainText(f.read())
             self.updateShader()
+
+    def reloadShader(self):
+        print("Reloading shader from file")
+        self.load_selected_shader()
+        self.updateShader()
 
     def makeShaderCode_SDF3D(self, scene_code, bPython=True ):
         if bPython:
