@@ -1,11 +1,11 @@
 {
     "parameters": {
-        "iResolution" : "vec3"
+        "driver" : ["vec4",[0.0,0.0,0.2,1.0],0.1]
     },
     "Pipeline": [
-        ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["iResolution"] ],
-        ["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["iResolution"] ],
-        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["iResolution"] ]
+        ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+        ["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["driver"] ],
+        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["driver"] ]
         //["fluid/view.glslf"    , "colorA", {"iChannel0":"fieldC", "iChannel1":"colorB"}, ["iResolution"] ],
         //["common/copy.glslf"   , "colorB", {"iChannel0":"colorA"}, ["iResolution"]]
     ]

@@ -1,6 +1,7 @@
 #version 330
 uniform vec3  iResolution;
 uniform sampler2D iChannel0;
+uniform vec4 driver;
 
 
 //#include "fluid/common.glslf"
@@ -69,6 +70,8 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     data.xyw = textureLod(smp, uv - dt*data.xy*w, 0.).xyw; //advection
     
     vec2 newForce = vec2(0);
+
+    newForce +=  0.75*vec2(.0003, 0.00015)/(mag2(uv-driver.xy)+0.0001);
     // #ifndef MOUSE_ONLY
     // #if 1
     // newForce.xy += 0.75*vec2(.0003, 0.00015)/(mag2(uv-point1(time))+0.0001);

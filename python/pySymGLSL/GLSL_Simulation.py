@@ -72,6 +72,7 @@ class GLSL_Simulation:
         self._quad_content = vao_content
 
     def build_pipeline(self, pipeline: list, base_dir):
+        print("build_pipeline(): ", pipeline," base_dir: ", base_dir)
         # Auto-load any shader programs mentioned in Pipeline but not declared
         for prog_name, _, _, _ in pipeline:
             if prog_name not in self.programs:

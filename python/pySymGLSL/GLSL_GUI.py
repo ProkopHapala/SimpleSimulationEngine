@@ -31,7 +31,7 @@ from typing import Dict, List
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtOpenGL import QGLFormat, QGLWidget
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog
 
 import moderngl
 import numpy as np
@@ -164,8 +164,8 @@ class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         # this is relative to the script location
-        #fname="pipelines/fluid_new.json"
-        fname="pipelines/gauss.json"
+        fname="pipelines/fluid.json"
+        #fname="pipelines/gauss.json"
         this_dir = Path(__file__).parent
         self.default_pipeline = this_dir / fname
         self.setWindowTitle("pySymGLSL GUI")
@@ -296,7 +296,9 @@ class MainWindow(QtWidgets.QWidget):
         try:
             data = json.loads(json_text)
         except Exception as exc:
-            QMessageBox.critical(self, "JSON error", f"Failed to parse editors content as JSON:\n{exc}")
+            #QMessageBox.critical(self, "JSON error", f"Failed to parse editors content as JSON:\n{exc}")
+            print("on_rebake(): Failed to parse editors content as JSON: ", exc)
+            print("json.loads() failed: ", json_text)
             return
 
         # Rebuild simulation using the new pipeline
@@ -304,7 +306,10 @@ class MainWindow(QtWidgets.QWidget):
         try:
             baked, tex_names = self.gl_view.sim.build_pipeline(data["Pipeline"], shader_dir)
         except Exception as exc:
-            QMessageBox.critical(self, "Bake error", f"Failed to build pipeline:\n{exc}")
+            #QMessageBox.critical(self, "Bake error", f"Failed to build pipeline:\n{exc}")
+            print("on_rebake():  Failed to build pipeline: ", exc)
+            print("baked: ", baked)
+            print("tex_names: ", tex_names)
             return
 
         self.gl_view.baked_graph = baked
@@ -342,43 +347,46 @@ class MainWindow(QtWidgets.QWidget):
 
     def load_pipeline(self, fname):
         # Read raw JSON file
+        print("load_pipeline(): ", fname)
         raw = Path(fname).read_text()
-        
         # Parse to get data structure for simulation
+        #try:
+        print("raw: ", raw)
+        data = json.loads(raw)
+        baked, params_dict, tex_names = self.load_pipeline_json(fname)
+        self.gl_view.baked_graph = baked
+        
+        # Update display combo
+        self.cb_display.clear()
+        self.cb_display.addItems(tex_names)
+        if tex_names:
+            self.cb_display.setCurrentIndex(0)
+        
+        # Extract raw sections for display preserving original formatting
         try:
-            data = json.loads(raw)
-            baked, params_dict, tex_names = self.load_pipeline_json(fname)
-            self.gl_view.baked_graph = baked
-            
-            # Update display combo
-            self.cb_display.clear()
-            self.cb_display.addItems(tex_names)
-            if tex_names:
-                self.cb_display.setCurrentIndex(0)
-            
-            # Extract raw sections for display preserving original formatting
-            try:
-                # parameters { ... }
-                key_pos = raw.find('"parameters"')
-                p_start, p_end = extract_json_block(raw, key_pos, '{', '}')
-                params_text = raw[p_start+1:p_end].strip('\n\r').strip() if p_start is not None else ''
-                # Pipeline [ ... ]
-                key_pos2 = raw.find('"Pipeline"')
-                b_start, b_end = extract_json_block(raw, key_pos2, '[', ']')
-                pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''                
-                # Set text boxes
-                self.txt_uniforms.setPlainText(params_text)
-                self.txt_pipeline.setPlainText(pipeline_text)
-            except Exception as e:
-                print("Error extracting raw sections:", e)
-                # Fallback to pretty-printed version
-                self.txt_pipeline.setPlainText(json.dumps(data.get("Pipeline", []), indent=2))
-                
-            # Still need to populate param widgets from parsed data
-            self.populate_params_from_json(params_dict)
-            self.gl_view.updateGL()
+            # parameters { ... }
+            key_pos = raw.find('"parameters"')
+            p_start, p_end = extract_json_block(raw, key_pos, '{', '}')
+            params_text = raw[p_start+1:p_end].strip('\n\r').strip() if p_start is not None else ''
+            # Pipeline [ ... ]
+            key_pos2 = raw.find('"Pipeline"')
+            b_start, b_end = extract_json_block(raw, key_pos2, '[', ']')
+            pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''                
+            # Set text boxes
+            self.txt_uniforms.setPlainText(params_text)
+            self.txt_pipeline.setPlainText(pipeline_text)
         except Exception as e:
-            print("Failed to load pipeline", e)
+            print("Error extracting raw sections:", e)
+            # Fallback to pretty-printed version
+            self.txt_pipeline.setPlainText(json.dumps(data.get("Pipeline", []), indent=2))
+            
+        # Still need to populate param widgets from parsed data
+        self.populate_params_from_json(params_dict)
+        self.gl_view.updateGL()
+        #except Exception as e:
+        #    print("load_pipeline() failed to load pipeline", e)
+        #    print("params_dict: ", params_dict)
+
 
     # --- JSON pipeline loader ------------------------------------------
     def on_load_json_pipeline(self):
@@ -456,7 +464,9 @@ class MainWindow(QtWidgets.QWidget):
                 json.loads(json_text)
                 with open(fname, 'w') as f: f.write(json_text)
             except Exception as e:
-                QMessageBox.critical(self, 'Error', f'Failed to save pipeline: {str(e)}')
+                #QMessageBox.critical(self, 'Error', f'Failed to save pipeline: {str(e)}')
+                print("on_save_pipeline(): Failed to save pipeline: ", e)
+                print("json.loads() failed: ", json_text)
 
     def on_load_uniforms(self):
         print("on_load_uniforms")
