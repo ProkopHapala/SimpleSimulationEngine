@@ -11,6 +11,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// #include <ranges>
+// #include <functional>
+// #include <algorithm>
+
+
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -26,6 +31,10 @@
 #include "Buckets.h"
 
 #include "Selection.h"
+
+
+
+
 
 //#include "MeshBuilder.h"
 
@@ -164,6 +173,25 @@ class Builder2 : public SelectionBanks { public:
     //     );
     // }
         
+    //auto edges_range() { return std::views::all(edges); }
+    //auto verts_range() { return std::views::all(verts); }
+
+    
+    void selectEdgesBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+        curSelection->selectByPredicate(
+            std::views::all(edges), 
+            [&](const Quat4i& edge) -> bool {
+                const Vec3d& pA = verts[edge.lo.i].pos;
+                const Vec3d& pB = verts[edge.lo.j].pos;
+                return (sdf(pA) < threshold) && (sdf(pB) < threshold);
+            }
+        );
+    }
+
+    void selectVertsBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+        curSelection->selectByPredicate(std::views::all(verts), [&](const Vert& vert) -> bool {return (sdf(vert.pos) < threshold); });
+    }
+
     
 
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }

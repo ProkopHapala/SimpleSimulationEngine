@@ -359,6 +359,13 @@ class Vec3T{
 		return ab.dot(ap) / ab.norm(ab);
 	}
 
+
+    inline VEC abs()const{ return {fabs(x),fabs(y),fabs(z)}; }
+    inline VEC max()const{ return {fmax(x),fmax(y),fmax(z)}; }
+    inline VEC min()const{ return {fmin(x),fmin(y),fmin(z)}; }
+    inline VEC max( const VEC& a )const{ return {fmax(x,a.x),fmax(y,a.y),fmax(z,a.z)}; }
+    inline VEC min( const VEC& a )const{ return {fmin(x,a.x),fmin(y,a.y),fmin(z,a.z)}; }
+
 	inline int maxComponent(){ return (x>y)?((x>z)?0:2):((y>z)?1:2); };
 	inline int minComponent(){ return (x<y)?((x<z)?0:2):((y<z)?1:2); };
 

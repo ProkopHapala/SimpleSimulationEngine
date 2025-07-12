@@ -15,6 +15,7 @@ OMP_NUM_THREADS=$ncpu
 export OMP_NUM_THREADS
 
 # ====== Compilation
+start_time=$(date +%s.%N)
 wd=`pwd`
 cd $dir
 pwd
@@ -23,6 +24,11 @@ make -j$ncpu $name   # 2>$wd/compile_err.log
 cd $wd
 rm $name.x
 ln -s $dir/$name ./$name.x
+end_time=$(date +%s.%N)
+elapsed_time=$(echo "scale=2; $end_time - $start_time" | bc)
+echo "Compilation time: $elapsed_time [s]"
+#exit 0
+
 
 # ====== ASan (Memory Sanitizer)
 LD_PRELOAD=$(g++ -print-file-name=libasan.so)
