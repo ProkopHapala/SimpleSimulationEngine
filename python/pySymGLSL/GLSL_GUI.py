@@ -31,7 +31,7 @@ from typing import Dict, List
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtOpenGL import QGLFormat, QGLWidget
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 import moderngl
 import numpy as np
@@ -176,6 +176,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.txt_pipeline = QtWidgets.QPlainTextEdit()
         self.txt_pipeline.setPlaceholderText("pipeline line syntax: prog frag_path output [inputs…] | [uniforms…]")
+        self.txt_pipeline.setWordWrapMode(QtGui.QTextOption.NoWrap)
         btn_box2 = QtWidgets.QHBoxLayout()
         self.btn_rebake = QtWidgets.QPushButton("Reload & Bake")
         self.btn_load_pipeline = QtWidgets.QPushButton("Load")
@@ -313,27 +314,59 @@ class MainWindow(QtWidgets.QWidget):
 
 
     def load_pipeline(self, fname):
-        # display Render pipeline JSON section
+        # Read raw JSON file
+        raw = Path(fname).read_text()
+        
+        # Parse to get data structure for simulation
         try:
-            import re, json as _json
-            raw = Path(fname).read_text()
-            raw = re.sub(r'//.*$', '', raw, flags=re.MULTILINE)
-            raw = re.sub(r',\s*(?=[}\]])', '', raw)
-            _data = _json.loads(raw)
-            self.txt_pipeline.setPlainText(_json.dumps(_data.get("Pipeline", []), indent=2))
-        except Exception as _exc:
-            print("failed to show pipeline", _exc)
-        # parse and build
-        baked, params_dict, tex_names = self.load_pipeline_json(fname)
-        self.gl_view.baked_graph = baked
-        # populate param widgets
-        self.populate_params_from_json(params_dict)
-        # update display combo
-        self.cb_display.clear()
-        self.cb_display.addItems(tex_names)
-        if tex_names:
-            self.cb_display.setCurrentIndex(0)
-        self.gl_view.updateGL()
+            data = json.loads(raw)
+            baked, params_dict, tex_names = self.load_pipeline_json(fname)
+            self.gl_view.baked_graph = baked
+            
+            # Update display combo
+            self.cb_display.clear()
+            self.cb_display.addItems(tex_names)
+            if tex_names:
+                self.cb_display.setCurrentIndex(0)
+            
+            # Extract raw sections for display preserving original formatting
+            try:
+                # --- helper to extract balanced block ---
+                def extract_block(src, start_pos, open_sym, close_sym):
+                    open_idx = src.find(open_sym, start_pos)
+                    if open_idx == -1: return None, None
+                    depth = 0
+                    for i in range(open_idx, len(src)):
+                        if src[i] == open_sym: depth += 1
+                        elif src[i] == close_sym: depth -= 1
+                        if depth == 0:
+                            return open_idx, i
+                    return None, None
+
+                # parameters { ... }
+                key_pos = raw.find('"parameters"')
+                p_start, p_end = extract_block(raw, key_pos, '{', '}')
+                params_text = raw[p_start+1:p_end].strip('\n\r').strip() if p_start is not None else ''
+
+                # Pipeline [ ... ]
+                key_pos2 = raw.find('"Pipeline"')
+                b_start, b_end = extract_block(raw, key_pos2, '[', ']')
+                pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''
+
+                
+                # Set text boxes
+                self.txt_uniforms.setPlainText(params_text)
+                self.txt_pipeline.setPlainText(pipeline_text)
+            except Exception as e:
+                print("Error extracting raw sections:", e)
+                # Fallback to pretty-printed version
+                self.txt_pipeline.setPlainText(json.dumps(data.get("Pipeline", []), indent=2))
+                
+            # Still need to populate param widgets from parsed data
+            self.populate_params_from_json(params_dict)
+            self.gl_view.updateGL()
+        except Exception as e:
+            print("Failed to load pipeline", e)
 
     # --- JSON pipeline loader ------------------------------------------
     def on_load_json_pipeline(self):
@@ -376,7 +409,6 @@ class MainWindow(QtWidgets.QWidget):
             lines.append(line)
 
         # show lists
-        self.txt_uniforms.setPlainText("\n".join(lines))
         self.update_sim_uniforms()
 
     def refresh_display_combo(self):
@@ -391,10 +423,24 @@ class MainWindow(QtWidgets.QWidget):
                 self.txt_pipeline.setPlainText(f.read())
 
     def on_save_pipeline(self):
-        fname, _ = QFileDialog.getSaveFileName(self, 'Save Pipeline', '', 'Text (*.txt)')
+        fname, _ = QFileDialog.getSaveFileName(self, 'Save Pipeline', '', 'JSON (*.json)')
         if fname:
-            with open(fname, 'w') as f:
-                f.write(self.txt_pipeline.toPlainText())
+            try:
+                # Get raw sections from text boxes
+                params_text = self.txt_uniforms.toPlainText().strip()
+                pipeline_text = self.txt_pipeline.toPlainText().strip()
+                
+                # Combine into valid JSON
+                json_text = f'{{\n    "parameters": {params_text},\n    "Pipeline": {pipeline_text}\n}}'
+                
+                # Validate by parsing
+                json.loads(json_text)
+                
+                # Write to file
+                with open(fname, 'w') as f:
+                    f.write(json_text)
+            except Exception as e:
+                QMessageBox.critical(self, 'Error', f'Failed to save pipeline: {str(e)}')
 
     def on_load_uniforms(self):
         fname, _ = QFileDialog.getOpenFileName(self, 'Load Uniforms', '', 'Text (*.txt)')
