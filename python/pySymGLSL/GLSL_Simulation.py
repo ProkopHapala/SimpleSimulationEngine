@@ -175,19 +175,20 @@ class GLSL_Simulation:
             loc = program[uni]
             # Pre-bind a setter that handles scalar and vector uniforms
             # Determine expected component count from loc.fmt if available
-        fmt = getattr(loc, 'fmt', None)
-        try:
-            count = int(fmt[:-1]) if fmt and isinstance(fmt, str) and fmt[:-1].isdigit() else 1
-        except:
-            count = 1
-        def setter(dv, loc=loc, name=uni, count=count):
-            val = dv[name]
-            if not isinstance(val, (tuple, list)):
-                val = (val,) * count
-            elif len(val) != count:
-                raise ValueError(f"Uniform '{name}' expects {count} components, got {len(val)}")
-            loc.value = val
-        uniform_setters.append(setter)
+            fmt = getattr(loc, 'fmt', None)
+            print(f"DEBUG: Uniform '{uni}', fmt: {fmt}")
+            try:
+                count = int(fmt[:-1]) if fmt and isinstance(fmt, str) and fmt[:-1].isdigit() else 1
+            except:
+                count = 1
+            def setter(dv, loc=loc, name=uni, count=count):
+                val = dv[name]
+                if not isinstance(val, (tuple, list)):
+                    val = (val,) * count
+                elif len(val) != count:
+                    raise ValueError(f"Uniform '{name}' expects {count} components, got {len(val)}")
+                loc.value = val
+            uniform_setters.append(setter)
 
         # Also fix sampler uniforms for texture bindings 0..N (static)
         for i, tex in enumerate(input_textures):

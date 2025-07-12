@@ -187,6 +187,8 @@ class MainWindow(QtWidgets.QWidget):
         self.params_panel = QtWidgets.QWidget()
         self.params_layout = QtWidgets.QFormLayout(self.params_panel)
         self.chk_auto = QtWidgets.QCheckBox("auto")
+        self.chk_auto.setChecked(True)
+
         self.cb_display = QtWidgets.QComboBox()  # choose texture to display
 
         # Layout --------------------------------------------------------------
