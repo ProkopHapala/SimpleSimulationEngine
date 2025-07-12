@@ -1,0 +1,24 @@
+{
+    "parameters": {
+        "iResolution" : "vec3"
+    },
+    "Buffers": {
+        "fieldA": ["Texture2D",  "R32G32B32A32_SFLOAT"],
+        "fieldB": ["Texture2D",  "R32G32B32A32_SFLOAT"],
+        "fieldC": ["Texture2D",  "R32G32B32A32_SFLOAT"]
+        //"colorA":["Texture2D",   "R32G32B32A32_SFLOAT"],
+        //"colorB":["Texture2D",   "R32G32B32A32_SFLOAT"]
+    },
+    "Shaders": {
+        "solveFluid":["fluid/solveFluid.glslf", ["iResolution","iChannel0"]],
+        //"view":      ["fluid/view.glslf",       ["iResolution","iChannel0", "iChannel1"]],
+        //"copy":      ["common/copy.glslf",      ["iChannel0"]]
+    },
+    "Pipeline": [
+        ["solveFluid", "fieldA", {"iChannel0":"fieldC"}, ["iResolution"] ],
+        ["solveFluid", "fieldB", {"iChannel0":"fieldA"}, ["iResolution"] ],
+        ["solveFluid", "fieldC", {"iChannel0":"fieldB"}, ["iResolution"] ]
+        //["view",       "colorA", {"iChannel0":"fieldC", "iChannel1":"colorB"}, ["iResolution"] ],
+        //["copy",       "colorB", {"iChannel0":"colorA"}, ["iResolution"]]
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "parameters": {
+        "iResolution" : "vec3"
+    },
+    "Pipeline": [
+        ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["iResolution"] ],
+        ["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["iResolution"] ],
+        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["iResolution"] ]
+        //["fluid/view.glslf"    , "colorA", {"iChannel0":"fieldC", "iChannel1":"colorB"}, ["iResolution"] ],
+        //["common/copy.glslf"   , "colorB", {"iChannel0":"colorA"}, ["iResolution"]]
+    ]
+}
