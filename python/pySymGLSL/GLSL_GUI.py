@@ -40,10 +40,21 @@ import re
 
 from .GLSL_Simulation import GLSL_Simulation, _DEFAULT_VS
 
+# --- helper to extract balanced block ---
+def extract_json_block(src, start_pos, open_sym, close_sym):
+    open_idx = src.find(open_sym, start_pos)
+    if open_idx == -1: return None, None
+    depth = 0
+    for i in range(open_idx, len(src)):
+        if src[i] == open_sym: depth += 1
+        elif src[i] == close_sym: depth -= 1
+        if depth == 0:
+            return open_idx, i
+    return None, None
+
 # -----------------------------------------------------------------------------
 # OpenGL rendering widget
 # -----------------------------------------------------------------------------
-
 class GLRenderWidget(QGLWidget):
     def __init__(self, parent=None, *, sim_size=(512, 512)):
         fmt = QGLFormat()
@@ -237,37 +248,28 @@ class MainWindow(QtWidgets.QWidget):
         self.load_pipeline(self.default_pipeline)
 
     def parse_uniform_lines(self):
-        res = []
-        for ln in self.txt_uniforms.toPlainText().splitlines():
-            ln = ln.strip()
-            if not ln or ln.startswith("#"):
-                continue
-            parts = ln.split()
-            name = parts[0]
-            default = float(parts[3]) if len(parts) > 3 else 0.0
-            minv = float(parts[1]) if len(parts) > 1 else 0.0
-            maxv = float(parts[2]) if len(parts) > 2 else 1.0
-            res.append((name, minv, maxv, default))
-        return res
+        """Parse uniforms text box content as JSON and return parameters dict."""
+        params_text = self.txt_uniforms.toPlainText().strip()
+        #if not params_text:  return {}
+        # Wrap in braces if not already a JSON object
+        if not (params_text.startswith('{') and params_text.endswith('}')):
+            params_text = '{' + params_text + '}'
+        return json.loads(params_text)
 
     def on_update_uniforms(self):
-        # Clear old
+        print("on_update_uniforms")
         for w in self.param_widgets.values():
-            w.deleteLater()
+            if isinstance(w, list):
+                for spin in w: spin.deleteLater()
+            else:
+                w.deleteLater()
         self.param_widgets.clear()
-
-        for name, minv, maxv, default in self.parse_uniform_lines():
-            spin = QtWidgets.QDoubleSpinBox()
-            spin.setRange(minv, maxv)
-            spin.setValue(default)
-            spin.setDecimals(4)
-            spin.valueChanged.connect(self.on_param_changed)
-            self.params_layout.addRow(name, spin)
-            self.param_widgets[name] = spin
-
+        params_dict = self.parse_uniform_lines()
+        self.populate_params_from_json(params_dict)
         self.update_sim_uniforms()
 
     def on_param_changed(self):
+        print("on_param_changed()")
         if self.chk_auto.isChecked():
             self.update_sim_uniforms()
 
@@ -283,9 +285,39 @@ class MainWindow(QtWidgets.QWidget):
         self.gl_view.update_uniforms(vals)
 
     def on_rebake(self):
-        lines = self.txt_pipeline.toPlainText().splitlines()
-        self.gl_view.rebuild(lines)
-        self.refresh_display_combo()
+        """Re-compile shaders & bake graph using the contents of the two editors."""
+        print("on_rebake()")
+        params_raw   = self.txt_uniforms.toPlainText().strip()
+        pipeline_raw = self.txt_pipeline.toPlainText().strip()
+        # Build minimal JSON text from editors
+        json_text = (
+            '{ "parameters": {' + params_raw + '}, "Pipeline": [' + pipeline_raw + '] }'
+        )
+        try:
+            data = json.loads(json_text)
+        except Exception as exc:
+            QMessageBox.critical(self, "JSON error", f"Failed to parse editors content as JSON:\n{exc}")
+            return
+
+        # Rebuild simulation using the new pipeline
+        shader_dir = Path(__file__).parent / "shaders"
+        try:
+            baked, tex_names = self.gl_view.sim.build_pipeline(data["Pipeline"], shader_dir)
+        except Exception as exc:
+            QMessageBox.critical(self, "Bake error", f"Failed to build pipeline:\n{exc}")
+            return
+
+        self.gl_view.baked_graph = baked
+
+        # Update display combo
+        self.cb_display.clear()
+        self.cb_display.addItems(tex_names)
+        if tex_names:
+            self.cb_display.setCurrentIndex(0)
+
+        # (Re)create parameter widgets from current parameters
+        self.populate_params_from_json(data.get("parameters", {}))
+        self.gl_view.updateGL()
 
 
         # ------------------------------------------------------------------
@@ -304,11 +336,6 @@ class MainWindow(QtWidgets.QWidget):
         raw = re.sub(r',\s*(?=[}\]])', '', raw)
         data = json.loads(raw)
         base_dir = Path(json_path).parent.parent / "shaders"
-
-        # # 1. Load shader programs (unique names)
-        # for prog_name, (rel_path, _uniforms) in data.get("Shaders", {}).items():
-        #     self.gl_view.sim.load_program(prog_name, fragment_path=base_dir / rel_path)
-        
         baked_pipeline, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)        
         return baked_pipeline, data["parameters"], tex_names
 
@@ -331,29 +358,14 @@ class MainWindow(QtWidgets.QWidget):
             
             # Extract raw sections for display preserving original formatting
             try:
-                # --- helper to extract balanced block ---
-                def extract_block(src, start_pos, open_sym, close_sym):
-                    open_idx = src.find(open_sym, start_pos)
-                    if open_idx == -1: return None, None
-                    depth = 0
-                    for i in range(open_idx, len(src)):
-                        if src[i] == open_sym: depth += 1
-                        elif src[i] == close_sym: depth -= 1
-                        if depth == 0:
-                            return open_idx, i
-                    return None, None
-
                 # parameters { ... }
                 key_pos = raw.find('"parameters"')
-                p_start, p_end = extract_block(raw, key_pos, '{', '}')
+                p_start, p_end = extract_json_block(raw, key_pos, '{', '}')
                 params_text = raw[p_start+1:p_end].strip('\n\r').strip() if p_start is not None else ''
-
                 # Pipeline [ ... ]
                 key_pos2 = raw.find('"Pipeline"')
-                b_start, b_end = extract_block(raw, key_pos2, '[', ']')
-                pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''
-
-                
+                b_start, b_end = extract_json_block(raw, key_pos2, '[', ']')
+                pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''                
                 # Set text boxes
                 self.txt_uniforms.setPlainText(params_text)
                 self.txt_pipeline.setPlainText(pipeline_text)
@@ -370,45 +382,53 @@ class MainWindow(QtWidgets.QWidget):
 
     # --- JSON pipeline loader ------------------------------------------
     def on_load_json_pipeline(self):
+        print("on_load_json_pipeline")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load JSON Pipeline', '', 'JSON (*.json)')
         if not fname:
             return
         self.load_pipeline(fname)
 
+    def create_spin_box(self, value=0.0, step=0.1, max_width=80, vmin=-1e9, vmax=1e9, decimals=4):
+        spin = QtWidgets.QDoubleSpinBox()
+        spin.setDecimals(decimals)
+        spin.setSingleStep(step)
+        spin.setRange(vmin, vmax)
+        spin.setValue(value)
+        spin.setMaximumWidth(max_width)
+        spin.valueChanged.connect(self.on_param_changed)
+        return spin
+
     def populate_params_from_json(self, params_dict):
         """Create spin boxes from *params_dict* and show lines in txt_uniforms."""
-        for w in self.param_widgets.values():
-            w.deleteLater()
+        # Clear existing widgets and layout rows
+        while self.params_layout.rowCount() > 0:
+            self.params_layout.removeRow(0)
         self.param_widgets.clear()
-        lines = []  # for txt_uniforms
-
+        
         for name, spec in params_dict.items():
+            print("name: ", name, "spec: ", spec)
             # Determine arity, defaults, step
             if isinstance(spec, str):
                 typ = spec; cnt = 1 if typ == 'float' else int(typ[-1]); defaults = [0.0]*cnt; step = 0.1
             elif isinstance(spec, list) and len(spec) >= 3:
                 typ, defaults, step = spec[0], spec[1], spec[2]; cnt = 1 if typ == 'float' else int(typ[-1])
-
-
-            # build UI row -----------------------------------------------------
+            # Single value
             if cnt == 1:
-                spin = QtWidgets.QDoubleSpinBox(); spin.setDecimals(4); spin.setSingleStep(step); spin.setRange(-1e9, 1e9); spin.setValue(defaults[0]); spin.setMaximumWidth(80); spin.valueChanged.connect(self.on_param_changed)
+                print("single value: ", name, defaults, step)
+                spin = self.create_spin_box(defaults[0], step)
                 self.params_layout.addRow(name, spin)
                 self.param_widgets[name] = spin
+            # Multiple values
             else:
-                container = QtWidgets.QWidget(); hbox = QtWidgets.QHBoxLayout(container); hbox.setContentsMargins(0,0,0,0); hbox.setSpacing(2)
-                spins = []
-                for i in range(cnt):
-                    spin = QtWidgets.QDoubleSpinBox(); spin.setDecimals(4); spin.setSingleStep(step); spin.setRange(-1e9, 1e9); spin.setValue(defaults[i]); spin.setMaximumWidth(70); spin.valueChanged.connect(self.on_param_changed)
-                    hbox.addWidget(spin); spins.append(spin)
+                print("multiple values: ", name, defaults, step)
+                container = QtWidgets.QWidget()
+                hbox = QtWidgets.QHBoxLayout(container)
+                hbox.setContentsMargins(0,0,0,0)
+                hbox.setSpacing(2)
+                spins = [self.create_spin_box(d, step, 70) for d in defaults]
+                for spin in spins: hbox.addWidget(spin)
                 self.params_layout.addRow(name, container)
                 self.param_widgets[name] = spins
-
-            # Uniform list line
-            line = f"{name} -inf inf " + " ".join(str(v) for v in defaults)
-            lines.append(line)
-
-        # show lists
         self.update_sim_uniforms()
 
     def refresh_display_combo(self):
@@ -417,44 +437,43 @@ class MainWindow(QtWidgets.QWidget):
             self.cb_display.addItems(self.gl_view.sim.textures.keys())
 
     def on_load_pipeline(self):
+        print("on_load_pipeline")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load Pipeline', '', 'Text (*.txt)')
         if fname:
             with open(fname) as f:
                 self.txt_pipeline.setPlainText(f.read())
 
     def on_save_pipeline(self):
+        print("on_save_pipeline")
         fname, _ = QFileDialog.getSaveFileName(self, 'Save Pipeline', '', 'JSON (*.json)')
         if fname:
             try:
                 # Get raw sections from text boxes
-                params_text = self.txt_uniforms.toPlainText().strip()
+                params_text   = self.txt_uniforms.toPlainText().strip()
                 pipeline_text = self.txt_pipeline.toPlainText().strip()
-                
-                # Combine into valid JSON
-                json_text = f'{{\n    "parameters": {params_text},\n    "Pipeline": {pipeline_text}\n}}'
-                
-                # Validate by parsing
+                json_text = f'{{\n    "parameters": {{\n        {params_text}\n    }},\n    "Pipeline": [\n        {pipeline_text}\n    ]\n}}'
+                print("saving json_text: ", json_text)
                 json.loads(json_text)
-                
-                # Write to file
-                with open(fname, 'w') as f:
-                    f.write(json_text)
+                with open(fname, 'w') as f: f.write(json_text)
             except Exception as e:
                 QMessageBox.critical(self, 'Error', f'Failed to save pipeline: {str(e)}')
 
     def on_load_uniforms(self):
+        print("on_load_uniforms")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load Uniforms', '', 'Text (*.txt)')
         if fname:
             with open(fname) as f:
                 self.txt_uniforms.setPlainText(f.read())
 
     def on_save_uniforms(self):
+        print("on_save_uniforms")
         fname, _ = QFileDialog.getSaveFileName(self, 'Save Uniforms', '', 'Text (*.txt)')
         if fname:
             with open(fname, 'w') as f:
                 f.write(self.txt_uniforms.toPlainText())
 
     def on_auto_toggle(self, state):
+        print("on_auto_toggle", state)
         if state and self.param_widgets:
             self.update_sim_uniforms()
 
