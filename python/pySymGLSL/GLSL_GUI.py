@@ -41,16 +41,25 @@ import re
 from .GLSL_Simulation import GLSL_Simulation, _DEFAULT_VS
 
 # --- helper to extract balanced block ---
-def extract_json_block(src, start_pos, open_sym, close_sym):
+def extract_json_block(src, start_pos, open_sym, close_sym, bToText=True ):
+    #print("extract_json_block(): ", start_pos, open_sym, close_sym, bToText)
     open_idx = src.find(open_sym, start_pos)
-    if open_idx == -1: return None, None
+    if open_idx == -1: return None
     depth = 0
     for i in range(open_idx, len(src)):
-        if src[i] == open_sym: depth += 1
+        if   src[i] == open_sym:  depth += 1
         elif src[i] == close_sym: depth -= 1
         if depth == 0:
-            return open_idx, i
-    return None, None
+            if bToText:
+                b_start, b_end = open_idx, i
+                text = src[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''  
+                text = "\n".join([ l.strip() for l in text.split('\n') ])
+                print("extract_json_block() extracted text:\n", text)
+                return text
+            else:
+                return (open_idx,i)
+    print("extract_json_block() failed to extract block")
+    return None
 
 def strip_json_comments(json_str):
     """Remove // and /* */ style comments from JSON string"""
@@ -194,83 +203,99 @@ class MainWindow(QtWidgets.QWidget):
 
         # Widgets -------------------------------------------------------------
         self.gl_view = GLRenderWidget(self)
-        
-
-        self.txt_uniforms = QtWidgets.QPlainTextEdit()
-        self.txt_uniforms.setPlaceholderText("uniform_name min max default … one per line")
-        btn_box1 = QtWidgets.QHBoxLayout()
-        self.btn_update_uniforms = QtWidgets.QPushButton("Update Uniforms")
-        self.btn_load_uniforms = QtWidgets.QPushButton("Load")
-        self.btn_save_uniforms = QtWidgets.QPushButton("Save")
-        btn_box1.addWidget(self.btn_update_uniforms)
-        btn_box1.addWidget(self.btn_load_uniforms)
-        btn_box1.addWidget(self.btn_save_uniforms)
-
-        self.txt_pipeline = QtWidgets.QPlainTextEdit()
-        self.txt_pipeline.setPlaceholderText("pipeline line syntax: prog frag_path output [inputs…] | [uniforms…]")
-        self.txt_pipeline.setWordWrapMode(QtGui.QTextOption.NoWrap)
-        btn_box2 = QtWidgets.QHBoxLayout()
-        self.btn_rebake = QtWidgets.QPushButton("Reload & Bake")
-        self.btn_load_pipeline = QtWidgets.QPushButton("Load")
-        self.btn_save_pipeline = QtWidgets.QPushButton("Save")
-        btn_box2.addWidget(self.btn_rebake)
-        btn_box2.addWidget(self.btn_load_pipeline)
-        btn_box2.addWidget(self.btn_save_pipeline)
-
-        self.params_panel = QtWidgets.QWidget()
+                
+        self.params_panel  = QtWidgets.QWidget()
         self.params_layout = QtWidgets.QFormLayout(self.params_panel)
-        self.chk_auto = QtWidgets.QCheckBox("auto")
-        self.chk_auto.setChecked(True)
-
+        
         self.cb_display = QtWidgets.QComboBox()  # choose texture to display
 
         # Layout --------------------------------------------------------------
         side_layout = QtWidgets.QVBoxLayout()
         side_layout.addWidget(QtWidgets.QLabel("Uniform list:"))
-        side_layout.addWidget(self.txt_uniforms, 1)
-        side_layout.addLayout(btn_box1)
+        
+        #side_layout.addWidget(self.txt_uniforms, 2)
+        self.txt_uniforms  = self.textEdit(read_only=True, layout=side_layout)
+                
         side_layout.addWidget(QtWidgets.QLabel("Render pipeline:"))
-        side_layout.addWidget(self.txt_pipeline, 2)
+        self.txt_pipeline  = self.textEdit(read_only=True,       layout=side_layout)
+        #side_layout.addWidget(self.txt_pipeline, 2)
+        
+        btn_box2 = QtWidgets.QHBoxLayout()
+        #self.btn_update_uniforms  = self.button("Update Uniforms", self.on_update_uniforms, layout=btn_box1)
+        #self.btn_rebake           = self.button("Reload & Bake",    self.on_rebake,             layout=btn_box2)
+        self.btn_rebuild          = self.button("rebuild",         self.on_rebuild,             layout=btn_box2)
+        self.btn_load_pipeline    = self.button("Load",            self.on_load_json_pipeline, layout=btn_box2)
+        self.btn_save_pipeline    = self.button("Save",            self.on_save_pipeline,      layout=btn_box2)
         side_layout.addLayout(btn_box2)
-        side_layout.addWidget(QtWidgets.QLabel("Parameters:"))
-        side_layout.addWidget(QtWidgets.QLabel("Display texture:"))
-        side_layout.addWidget(self.cb_display)
-        # Play checkbox
-        self.chk_play = QtWidgets.QCheckBox("Play")
-        side_layout.addWidget(self.chk_play)
+
+        display_box = QtWidgets.QHBoxLayout()
+        display_box.addWidget(QtWidgets.QLabel("Display texture:"))
+        self.cb_display        = self.comboBox(layout=display_box)
+        self.chk_play          = self.checkBox("Play", False, lambda s: self.gl_view.set_play(bool(s)), layout=display_box)
+        side_layout.addLayout(display_box)
+        
         side_layout.addWidget(QtWidgets.QLabel("Parameters:"))
         side_layout.addWidget(self.params_panel, 2)
-        side_layout.addWidget(self.chk_auto)
-
+        self.chk_auto          = self.checkBox("auto", True, self.on_auto_toggle, layout=side_layout)
         main_layout = QtWidgets.QHBoxLayout(self)
         main_layout.addWidget(self.gl_view, 4)
         main_layout.addLayout(side_layout, 1)
 
-        # Signals -------------------------------------------------------------
-        self.btn_rebake.clicked.connect(self.on_rebake)
-        self.btn_update_uniforms.clicked.connect(self.on_update_uniforms)
-        self.btn_load_pipeline.clicked.connect(self.on_load_json_pipeline)
-        self.btn_save_pipeline.clicked.connect(self.on_save_pipeline)
-        self.btn_load_uniforms.clicked.connect(self.on_load_uniforms)
-        self.btn_save_uniforms.clicked.connect(self.on_save_uniforms)
-        self.chk_auto.stateChanged.connect(self.on_auto_toggle)
-        self.chk_play.stateChanged.connect(lambda s: self.gl_view.set_play(bool(s)))
-
         # internal
         # Schedule default pipeline load after GL context is ready
-        QtCore.QTimer.singleShot(0, self._init_default)
+        QtCore.QTimer.singleShot(0, self.deferred_gl_init)
 
         self.param_widgets: Dict[str, QtWidgets.QDoubleSpinBox] = {}
 
-        
+    def button(self, text, callback=None, tooltip=None, layout=None):
+       #print("button() ", text, "with callback", callback, "tooltip", tooltip, "layout", layout)
+        btn = QtWidgets.QPushButton(text)
+        if callback is not None: btn.clicked.connect(callback)
+        if tooltip  is not None: btn.setToolTip(tooltip)
+        if layout   is not None: layout.addWidget(btn)
+        return btn
+
+    def checkBox(self, text, checked=False, callback=None, layout=None):
+        chk = QtWidgets.QCheckBox(text)
+        chk.setChecked(checked)
+        if callback is not None: chk.stateChanged.connect(callback)
+        if layout   is not None: layout.addWidget(chk)
+        return chk
+
+    def comboBox(self, items=None, callback=None, layout=None):
+        cb = QtWidgets.QComboBox()
+        if items is not None:    cb.addItems(items)
+        if callback is not None: cb.currentIndexChanged.connect(callback)
+        if layout   is not None: layout.addWidget(cb)
+        return cb
+
+    def spinBox(self, value=0.0, step=0.1, max_width=80, vmin=-1e9, vmax=1e9, decimals=4, layout=None, label=None):
+        spin = QtWidgets.QDoubleSpinBox()
+        spin.setDecimals(decimals)
+        spin.setSingleStep(step)
+        spin.setRange(vmin, vmax)
+        spin.setValue(value)
+        spin.setMaximumWidth(max_width)
+        spin.valueChanged.connect(self.on_param_changed)
+        if layout is not None:
+            if label is not None: 
+                layout.addRow(label, spin)
+            else:
+                layout.addWidget(spin)
+        return spin
+    
+    def textEdit(self, read_only=False, layout=None, wrap=False):
+        txt = QtWidgets.QTextEdit()
+        txt.setReadOnly(read_only)
+        if not wrap: txt.setWordWrapMode(QtGui.QTextOption.NoWrap)
+        if layout is not None: layout.addWidget(txt)
+        return txt
 
     # ------------------------------------------------------------------
-    def _init_default(self):
+    def deferred_gl_init(self):
         """Initialize GL simulation and load default pipeline after startup"""
-        # Ensure simulation context is ready
-        self.gl_view.initializeGL()
-        # Load default pipeline
-        self.load_pipeline(self.default_pipeline)
+        self.gl_view.initializeGL()     # Ensure simulation context is ready
+        self.load_pipeline(self.default_pipeline)  # Load default pipeline
 
     def parse_uniform_lines(self):
         """Parse uniforms text box content as JSON and return parameters dict."""
@@ -280,6 +305,11 @@ class MainWindow(QtWidgets.QWidget):
         if not (params_text.startswith('{') and params_text.endswith('}')):
             params_text = '{' + params_text + '}'
         return json.loads(params_text)
+
+    def on_rebuild(self):
+        print("on_rebuild()")
+        self.on_update_uniforms()
+        self.on_rebake()
 
     def on_update_uniforms(self):
         print("on_update_uniforms")
@@ -300,6 +330,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def update_sim_uniforms(self):
         """Collect current parameter widget values (scalars or vectors) and send them to GL widget."""
+        print("update_sim_uniforms()")
         vals = {}
         for name, widget in self.param_widgets.items():
             if isinstance(widget, list):
@@ -349,76 +380,32 @@ class MainWindow(QtWidgets.QWidget):
         self.populate_params_from_json(data.get("parameters", {}))
         self.gl_view.updateGL()
 
-
-        # ------------------------------------------------------------------
-    # Pipeline JSON helper
-    # ------------------------------------------------------------------
-    # def load_pipeline_json(self, json_path: str | Path):
-    #     """Load pipeline description from *json_path*.
-
-    #     Returns a tuple (baked_graph, parameters:list[str], texture_names:list[str])
-    #     """
-    #     import re
-    #     raw = Path(json_path).read_text()
-    #     # strip // comments
-    #     raw = re.sub(r'//.*$', '', raw, flags=re.MULTILINE)
-    #     # remove trailing commas before } or ]
-    #     raw = re.sub(r',\s*(?=[}\]])', '', raw)
-    #     data = json.loads(raw)
-    #     base_dir = Path(json_path).parent.parent / "shaders"
-    #     baked_pipeline, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)        
-    #     return baked_pipeline, data["parameters"], tex_names
-
-
     def load_pipeline(self, fname):
         # Read raw JSON file
         print("load_pipeline(): ", fname)
         raw = Path(fname).read_text()
-        # Parse to get data structure for simulation
-        #try:
         raw = strip_json_comments(raw)
-        print("raw: ", raw)
+        #print("raw: ", raw)
         data = json.loads(raw)
         params_dict = data["parameters"]
         #baked, params_dict, tex_names = self.load_pipeline_json(fname)
         base_dir = Path(fname).parent.parent / "shaders"
         baked, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)
-
-
         self.gl_view.baked_graph = baked
-        
         # Update display combo
         self.cb_display.clear()
         self.cb_display.addItems(tex_names)
         if tex_names:
             self.cb_display.setCurrentIndex(0)
-        
-        # Extract raw sections for display preserving original formatting
         try:
-            # parameters { ... }
-            key_pos = raw.find('"parameters"')
-            p_start, p_end = extract_json_block(raw, key_pos, '{', '}')
-            params_text = raw[p_start+1:p_end].strip('\n\r').strip() if p_start is not None else ''
-            # Pipeline [ ... ]
-            key_pos2 = raw.find('"Pipeline"')
-            b_start, b_end = extract_json_block(raw, key_pos2, '[', ']')
-            pipeline_text = raw[b_start+1:b_end].strip('\n\r ') if b_start is not None else ''                
-            # Set text boxes
-            self.txt_uniforms.setPlainText(params_text)
-            self.txt_pipeline.setPlainText(pipeline_text)
+            self.txt_uniforms.setPlainText(extract_json_block(raw, raw.find('"parameters"'), '{', '}', True))
+            self.txt_pipeline.setPlainText(extract_json_block(raw, raw.find('"Pipeline"'), '[', ']', True))
         except Exception as e:
-            print("Error extracting raw sections:", e)
-            # Fallback to pretty-printed version
+            print("Error in load_pipeline() extracting raw sections:", e)
             self.txt_pipeline.setPlainText(json.dumps(data.get("Pipeline", []), indent=2))
-            
-        # Still need to populate param widgets from parsed data
         self.populate_params_from_json(params_dict)
         self.gl_view.updateGL()
-        #except Exception as e:
-        #    print("load_pipeline() failed to load pipeline", e)
-        #    print("params_dict: ", params_dict)
-
-
+ 
     # --- JSON pipeline loader ------------------------------------------
     def on_load_json_pipeline(self):
         print("on_load_json_pipeline")
@@ -426,48 +413,34 @@ class MainWindow(QtWidgets.QWidget):
         if not fname: return
         self.load_pipeline(fname)
 
-    def create_spin_box(self, value=0.0, step=0.1, max_width=80, vmin=-1e9, vmax=1e9, decimals=4):
-        spin = QtWidgets.QDoubleSpinBox()
-        spin.setDecimals(decimals)
-        spin.setSingleStep(step)
-        spin.setRange(vmin, vmax)
-        spin.setValue(value)
-        spin.setMaximumWidth(max_width)
-        spin.valueChanged.connect(self.on_param_changed)
-        return spin
+    def spin_row(self,defaults, step, layout=None, label=None):
+        container = QtWidgets.QWidget()
+        hbox = QtWidgets.QHBoxLayout(container)
+        hbox.setContentsMargins(0,0,0,0)
+        hbox.setSpacing(2)
+        spins = [self.spinBox(d, step, 70, layout=hbox) for d in defaults]
+        #for spin in spins: hbox.addWidget(spin)
+        self.params_layout.addRow(label, container)
+        #if layout: layout.addWidget(container)
+        return spins
 
     def populate_params_from_json(self, params_dict):
         """Create spin boxes from *params_dict* and show lines in txt_uniforms."""
         # Clear existing widgets and layout rows
-        while self.params_layout.rowCount() > 0:
-            self.params_layout.removeRow(0)
+        print("---------------\npopulate_params_from_json()")
+        while self.params_layout.rowCount() > 0: self.params_layout.removeRow(0)
         self.param_widgets.clear()
-        
-        for name, spec in params_dict.items():
-            print("name: ", name, "spec: ", spec)
-            # Determine arity, defaults, step
-            if isinstance(spec, str):
-                typ = spec; cnt = 1 if typ == 'float' else int(typ[-1]); defaults = [0.0]*cnt; step = 0.1
-            elif isinstance(spec, list) and len(spec) >= 3:
-                typ, defaults, step = spec[0], spec[1], spec[2]; cnt = 1 if typ == 'float' else int(typ[-1])
-            # Single value
-            if cnt == 1:
+        for name, (typ,defaults,step) in params_dict.items():
+            print("name: ", name, "typ: ", typ, "defaults: ", defaults, "step: ", step)
+            if len(defaults) == 1:
                 print("single value: ", name, defaults, step)
-                spin = self.create_spin_box(defaults[0], step)
-                self.params_layout.addRow(name, spin)
-                self.param_widgets[name] = spin
-            # Multiple values
+                self.param_widgets[name] = self.spinBox(defaults, step, layout=self.params_layout, label=name)
             else:
                 print("multiple values: ", name, defaults, step)
-                container = QtWidgets.QWidget()
-                hbox = QtWidgets.QHBoxLayout(container)
-                hbox.setContentsMargins(0,0,0,0)
-                hbox.setSpacing(2)
-                spins = [self.create_spin_box(d, step, 70) for d in defaults]
-                for spin in spins: hbox.addWidget(spin)
-                self.params_layout.addRow(name, container)
-                self.param_widgets[name] = spins
+                self.param_widgets[name] = self.spin_row(defaults, step, layout=self.params_layout, label=name)
+        #exit()
         self.update_sim_uniforms()
+        print("populate_params_from_json() DONE")
 
     def refresh_display_combo(self):
         if self.gl_view.sim:

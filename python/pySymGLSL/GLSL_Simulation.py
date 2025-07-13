@@ -59,6 +59,7 @@ class GLSL_Simulation:
         # Resource registries --------------------------------------------------
         self.programs: Dict[str, moderngl.Program] = {}
         self.textures: Dict[str, moderngl.Texture] = {}
+        self.samplers: Dict[str, moderngl.Sampler] = {}
         self.framebuffers: Dict[str, moderngl.Framebuffer] = {}
 
         self._current_pipeline = None
@@ -77,11 +78,13 @@ class GLSL_Simulation:
 
     def setup_texture(self, size: Tuple[int, int], channels=4, dtype="f4", repeat=(False, False), filter=(moderngl.NEAREST, moderngl.NEAREST), anisotropy=1.0):
         tex = self.ctx.texture(size, components=channels, dtype=dtype)
-        tex.filter = filter
-        tex.repeat_x = repeat[0]
-        tex.repeat_y = repeat[1]
-        tex.anisotropy = anisotropy
-        return tex
+        sampler = self.ctx.sampler(
+            repeat_x=repeat[0],
+            repeat_y=repeat[1],
+            filter=filter,
+            anisotropy=anisotropy
+        )
+        return tex, sampler
 
     def build_pipeline(self, pipeline: list, base_dir):
         self._current_pipeline = pipeline
@@ -103,9 +106,10 @@ class GLSL_Simulation:
         for t in tex_names:
             if t not in self.textures:
                 size_x, size_y = self.sim_size
-                tex = self.setup_texture((size_x, size_y), dtype=self.dtype)
+                tex, sampler = self.setup_texture((size_x, size_y), dtype=self.dtype)
                 fbo = self.ctx.framebuffer(color_attachments=[tex])
                 self.textures[t] = tex
+                self.samplers[t] = sampler
                 self.framebuffers[t] = fbo
                 
         # Initialize all textures to avoid undefined behavior in feedback loops
@@ -227,6 +231,7 @@ class GLSL_Simulation:
             output_fbo = self.framebuffers[output_name]
             # input_textures must be retrieved dynamically inside _execute
             input_textures_dynamic = [self.textures[n] for n in input_names]
+            input_samplers_dynamic = [self.samplers[n] for n in input_names]
 
             # Use program for rendering
             # Program is bound via VAO
@@ -236,8 +241,9 @@ class GLSL_Simulation:
                 setter(dynamic_values)
 
             # Bind input textures to units 0..N
-            for i, tex in enumerate(input_textures_dynamic):
+            for i, (tex, sampler) in enumerate(zip(input_textures_dynamic, input_samplers_dynamic)):
                 tex.use(location=i)
+                sampler.use(location=i)
 
             # Render to output
             output_fbo.use()
@@ -282,6 +288,8 @@ class GLSL_Simulation:
             prog.release()
         for tex in self.textures.values():
             tex.release()
+        for sampler in self.samplers.values():
+            sampler.release()
         for fbo in self.framebuffers.values():
             fbo.release()
         self.quad_vao.release()

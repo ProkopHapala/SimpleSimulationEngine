@@ -23,27 +23,33 @@ This project aims to build a flexible and performant framework for physics simul
 
 ## Texture Sampling and Parameters
 
-### Key Differences from OpenCL
-- In GLSL, sampler parameters are set on the texture object from host code (Python)
-- Cannot declare sampler parameters in shader like OpenCL's `__constant sampler_t`
-- All textures share same sampling parameters (no multiple samplers per texture)
-
-### Available Parameters (set via moderngl.Texture):
-- `filter`: Tuple of (min_filter, mag_filter) - NEAREST or LINEAR
-- `repeat_x/y`: Boolean - True=REPEAT, False=CLAMP_TO_EDGE
-- `anisotropy`: Float - Typically 1.0 to 16.0
-
-### Current Defaults in Our System:
+### ModernGL Sampler Objects
+We now use separate sampler objects which provide more flexibility:
 ```python
-tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
-tex.repeat_x = False  # CLAMP_TO_EDGE
-tex.repeat_y = False  # CLAMP_TO_EDGE
-tex.anisotropy = 1.0  # No anisotropic filtering
+sampler = ctx.sampler(
+    repeat_x=False,  # CLAMP_TO_EDGE
+    repeat_y=False,  # CLAMP_TO_EDGE
+    filter=(moderngl.NEAREST, moderngl.NEAREST),
+    anisotropy=1.0
+)
 ```
 
-### Coordinate System:
-- Uses normalized coordinates [0,1] by default
-- Handled by vertex shader: `v_texcoord = (in_position + 1.0) * 0.5`
+### Key Benefits:
+- Samplers can be changed independently of textures
+- Multiple samplers can be used with the same texture
+- Better matches modern OpenGL practices
+
+### Binding Process:
+Textures and samplers are bound together during rendering:
+```python
+tex.use(location=0)
+sampler.use(location=0)
+```
+
+### Default Parameters:
+- Filter: NEAREST (no interpolation)
+- Wrap: CLAMP_TO_EDGE
+- Anisotropy: 1.0 (disabled)
 
 ## Current Issue (Investigated):
 
