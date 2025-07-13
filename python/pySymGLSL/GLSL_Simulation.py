@@ -77,12 +77,12 @@ class GLSL_Simulation:
         self._quad_content = vao_content
         self.iFrame = 0
 
-    def setup_texture(self, size: Tuple[int, int], channels=4, dtype="f4", repeat=(False, False), filter=(moderngl.NEAREST, moderngl.NEAREST), anisotropy=1.0):
+    def setup_texture(self, size: Tuple[int, int], channels=4, dtype="f4", repeat=(False, False), filter=moderngl.LINEAR, anisotropy=1.0):
         tex = self.ctx.texture(size, components=channels, dtype=dtype)
         sampler = self.ctx.sampler(
             repeat_x=repeat[0],
             repeat_y=repeat[1],
-            filter=filter,
+            filter=(filter, filter),
             anisotropy=anisotropy
         )
         return tex, sampler
@@ -114,7 +114,7 @@ class GLSL_Simulation:
                 self.framebuffers[t] = fbo
                 
         # Initialize all textures to avoid undefined behavior in feedback loops
-        self.initialize_textures()
+        self.initialize_textures(v=(0.0,0.0,0.0,0.0))
 
         # 3. Build pass descriptors ------------------------------------------------
         passes = []
@@ -248,7 +248,7 @@ class GLSL_Simulation:
         self._current_graph_definition = graph_definition
         return [self.bake_pass(*g) for g in graph_definition]
 
-    def initialize_textures(self, clear_color=(0.1, 0.0, 0.0, 0.0)):
+    def initialize_textures(self, v=(0.0,0.0,0.0,0.0)): 
         """Initialize all textures with a default value to avoid undefined behavior in feedback loops."""
         # Save the current framebuffer binding
         default_framebuffer = self.ctx.fbo
@@ -256,8 +256,8 @@ class GLSL_Simulation:
         # Clear each texture with the specified color
         for name, fbo in self.framebuffers.items():
             fbo.use()
-            self.ctx.clear(clear_color[0], clear_color[1], clear_color[2], clear_color[3])
-            print(f"Initialized texture '{name}' with color {clear_color}")
+            self.ctx.clear(*v)
+            print(f"Initialized texture '{name}' with data {v}")
         
         # Restore the original framebuffer
         default_framebuffer.use()

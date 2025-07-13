@@ -73,7 +73,7 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     //vec4 data     = vec4(0.5,0.5,0.7,1.0);
     //data    += vec4(0.5,0.5,0.7,1.0);
     vec2 newForce = vec2(0.);
-    newForce     +=  0.000001*driver.zw/(mag2(uv-driver.xy)+0.0001);
+    newForce     +=  0.00001*driver.zw/(mag2(uv-driver.xy)+0.0001);
     //vec4 driver2 =vec4(0.5,0.5,1.0,0.0);
     //newForce     += 0.01*driver2.zw/(mag2(uv-driver2.xy)+0.01);
     //newForce     = uv;
@@ -105,10 +105,9 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     #endif
     data.y *= smoothstep(.5,.48,abs(uv.y-0.5)); //Boundaries
     data = clamp(data, vec4(vec2(-10), 0.5 , -10.), vec4(vec2(10), 3.0 , 10.));
-    
 
-    data.xy += newForce;
-    
+    //data.xy += newForce;
+
     return data;
 }
 
@@ -136,7 +135,7 @@ void main(){
     vec2 uv = gl_FragCoord.xy/iResolution.xy;
     vec2 w = 1.0             /iResolution.xy;
     vec4 data;
-    if(iFrame<20){ data = vec4(0.0,0,1.0,0); }
-    else        { data = solveFluid(iChannel0, uv, w ); }
+    if(iFrame<20){ data = vec4(0.5,0.0,1.0,0.0); }
+    else         { data = solveFluid(iChannel0, uv, w ); }
     gl_FragColor = data;
 }
