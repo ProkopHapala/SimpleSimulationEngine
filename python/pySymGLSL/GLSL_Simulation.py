@@ -155,19 +155,6 @@ class GLSL_Simulation:
         self.programs[name] = program
 
     # ------------------------------------------------------------------
-    # def create_texture(self, name: str, channels: int = 4) -> None:
-    #     """Create *ping-pong* pair of floating-point textures + FBOs.
-
-    #     `name` must NOT include the _a / _b suffix.  They are generated.
-    #     """
-    #     size_x, size_y = self.sim_size
-    #     tex = self.ctx.texture((size_x, size_y), components=channels, dtype=self.dtype)
-    #     tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
-    #     fbo        = self.ctx.framebuffer(color_attachments=[tex])
-    #     self.textures    [name] = tex
-    #     self.framebuffers[name] = fbo
-
-    # ------------------------------------------------------------------
     # Render-pass baking & execution
     # ------------------------------------------------------------------
     def bake_pass(
@@ -294,20 +281,3 @@ class GLSL_Simulation:
             fbo.release()
         self.quad_vao.release()
         self._vao_prog_placeholder.release()
-
-    # def resize(self, w: int, h: int):
-    #     self.sim_size = (w, h)
-    #     # Release old textures and framebuffers
-    #     for tex in self.textures.values():
-    #         tex.release()
-    #     for fbo in self.framebuffers.values():
-    #         fbo.release()
-    #     self.textures.clear()
-    #     self.framebuffers.clear()
-    #     # Rebuild pipeline with new size if a pipeline was previously loaded
-    #     if self._current_pipeline and self._current_base_dir:
-    #         self.build_pipeline(self._current_pipeline, self._current_base_dir)
-    #     # Re-bake the graph with the new textures and framebuffers
-    #     if self._current_graph_definition:
-    #         return self.bake_graph(self._current_graph_definition)
-    #     return []
