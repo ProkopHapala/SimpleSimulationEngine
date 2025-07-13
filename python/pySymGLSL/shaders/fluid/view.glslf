@@ -2,7 +2,7 @@
 //by nimitz 2018 (twitter: @stormoid)
 
 //see "Common" tab for fluid simulation code
-
+#version 330
 uniform vec3  iResolution;
 // input textures
 uniform sampler2D iChannel0;
@@ -33,15 +33,15 @@ vec4 pal2(float x){
     return vec4(pal, 1.);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
+void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 mo = iMouse.xy    / iResolution.xy;
-    vec2 w  = 1.0/iResolution.xy;
     
-    vec2 velo = textureLod(iChannel0, uv, 0.).xy;
-    vec4 col  = textureLod(iChannel1, uv - dt*velo*w*3., 0.); //advection
-    if (fragCoord.y < 1. && fragCoord.x < 1.) col = vec4(0);
+    // vec2 mo = iMouse.xy    / iResolution.xy;
+    // vec2 w  = 1.0/iResolution.xy;
+    
+    // vec2 velo = textureLod(iChannel0, uv, 0.).xy;
+    // vec4 col  = textureLod(iChannel1, uv - dt*velo*w*3., 0.); //advection
+    // if (fragCoord.y < 1. && fragCoord.x < 1.) col = vec4(0);
     
     //vec4 lastMouse = texelFetch(iChannel1, ivec2(0,0), 0).xyzw;
     // if (iMouse.z > 1. && lastMouse.z > 1.)
@@ -54,13 +54,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // col += .0025/(0.0005+pow(length(uv - point2(iTime)),1.75))*dt*0.12*pal2(iTime*0.05 + 0.675);
     // #endif
     
-    if (iFrame < 20){ col = vec4(0.); }
+    // if (iFrame < 20){ col = vec4(0.); }
     
-    col = clamp(col, 0.,5.);
-    col = max(col - (0.0001 + col*0.004)*.5, 0.); //decay
+    // col = clamp(col, 0.,5.);
+    // col = max(col - (0.0001 + col*0.004)*.5, 0.); //decay
     
-    if (fragCoord.y < 1. && fragCoord.x < 1.) col = iMouse;
+    // if (fragCoord.y < 1. && fragCoord.x < 1.) col = iMouse;
 
-    fragColor = col;
+    //fragColor = col;
     
+}
+
+
+
+void main(){
+    vec2 fragCoord = gl_FragCoord.xy;
+    vec2 uv = gl_FragCoord.xy/iResolution.xy;
+    
+    // texture components are (vx,vy,density,vorticity) 
+    vec4 F = textureLod(iChannel0, uv, 0.); 
+    //col =    vec4( F.www, 1.0 );
+    //col =    vec4( F.xwy, 1.0 );
+    float vr = dot(F.xy, F.xy);
+    //col =    vec4( vr,vr,vr, 1.0 );
+    vec4 col =    vec4( -F.w*5.,(1.-F.z)*50.0,F.w*5., 1.0 );
+    //col =    F; 
+
+    gl_FragColor = col;
 }

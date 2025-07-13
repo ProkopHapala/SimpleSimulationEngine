@@ -50,29 +50,29 @@ float mag2(vec2 p){return dot(p,p);}
 vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
 
     // texture components are (vx,vy,density,vorticity)
-	// const float K = 0.2;
-	// const float v = 0.55;
+	const float K = 0.2;
+	const float v = 0.55;
     
     vec4 data = textureLod(smp, uv, 0.0);
-    // vec4 tr = textureLod(smp, uv + vec2(w.x , 0), 0.0);
-    // vec4 tl = textureLod(smp, uv - vec2(w.x , 0), 0.0);
-    // vec4 tu = textureLod(smp, uv + vec2(0 , w.y), 0.0);
-    // vec4 td = textureLod(smp, uv - vec2(0 , w.y), 0.0);
+    vec4 tr = textureLod(smp, uv + vec2(w.x , 0), 0.0);
+    vec4 tl = textureLod(smp, uv - vec2(w.x , 0), 0.0);
+    vec4 tu = textureLod(smp, uv + vec2(0 , w.y), 0.0);
+    vec4 td = textureLod(smp, uv - vec2(0 , w.y), 0.0);
     
-    // vec3 dx = (tr.xyz - tl.xyz)*0.5;
-    // vec3 dy = (tu.xyz - td.xyz)*0.5;
-    // vec2 densDif = vec2(dx.z ,dy.z);
+    vec3 dx = (tr.xyz - tl.xyz)*0.5;
+    vec3 dy = (tu.xyz - td.xyz)*0.5;
+    vec2 densDif = vec2(dx.z ,dy.z);
     
-    // data.z -= dt*dot(vec3(densDif, dx.x + dy.y) ,data.xyz); //density
-    // vec2 laplacian = tu.xy + td.xy + tr.xy + tl.xy - 4.0*data.xy;
-    // vec2 viscForce = vec2(v)*laplacian;
-    // data.xyw = textureLod(smp, uv - dt*data.xy*w, 0.).xyw; //advection
+    data.z -= dt*dot(vec3(densDif, dx.x + dy.y) ,data.xyz); //density
+    vec2 laplacian = tu.xy + td.xy + tr.xy + tl.xy - 4.0*data.xy;
+    vec2 viscForce = vec2(v)*laplacian;
+    data.xyw = textureLod(smp, uv - dt*data.xy*w, 0.).xyw; //advection
     
 
     //vec4 data     = vec4(0.5,0.5,0.7,1.0);
     //data    += vec4(0.5,0.5,0.7,1.0);
     vec2 newForce = vec2(0.);
-    newForce     +=  0.01*driver.zw/(mag2(uv-driver.xy)+0.01);
+    newForce     +=  0.000001*driver.zw/(mag2(uv-driver.xy)+0.0001);
     //vec4 driver2 =vec4(0.5,0.5,1.0,0.0);
     //newForce     += 0.01*driver2.zw/(mag2(uv-driver2.xy)+0.01);
     //newForce     = uv;
@@ -93,7 +93,7 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     //     newForce.xy += .001/(mag2(uv - mouse.xy*w)+0.001)*vv;
     // }
     
-    /*
+    
     data.xy += dt*(viscForce.xy - K/dt*densDif + newForce); //update velocity
     data.xy = max(vec2(0), abs(data.xy)-1e-4)*sign(data.xy); //linear velocity decay
     #ifdef USE_VORTICITY_CONFINEMENT
@@ -104,7 +104,7 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     #endif
     data.y *= smoothstep(.5,.48,abs(uv.y-0.5)); //Boundaries
     data = clamp(data, vec4(vec2(-10), 0.5 , -10.), vec4(vec2(10), 3.0 , 10.));
-    */
+    
 
     data.xy += newForce;
     

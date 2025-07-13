@@ -21,14 +21,20 @@
         //["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ]
 
         //// === This is mostly black-screen, but rarely it renders something ?!?!? 
+        //["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+        //["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ]
+
+
+
         ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
-        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ]
+        ["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["driver"] ],
+        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["driver"] ],
+
+        ["fluid/view.glslf", "view0", {"iChannel0":"fieldC"}, [] ]
 
 
 
-        // ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
-        // ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ],
-        // ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+
         // ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ]
         
 
