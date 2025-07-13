@@ -75,6 +75,7 @@ class GLSL_Simulation:
         # Store quad VBO and content for per-pass VAO creation
         self._quad_vbo = vbo
         self._quad_content = vao_content
+        self.iFrame = 0
 
     def setup_texture(self, size: Tuple[int, int], channels=4, dtype="f4", repeat=(False, False), filter=(moderngl.NEAREST, moderngl.NEAREST), anisotropy=1.0):
         tex = self.ctx.texture(size, components=channels, dtype=dtype)
@@ -126,8 +127,8 @@ class GLSL_Simulation:
                     if key in inputs_map:
                         input_names.append(inputs_map[key])
             # Ensure iResolution is available as dynamic uniform (convenience)
-            if 'iResolution' not in dyn_uniforms:
-                dyn_uniforms = dyn_uniforms + ['iResolution']
+            if 'iResolution' not in dyn_uniforms: dyn_uniforms = dyn_uniforms + ['iResolution']
+            if 'iFrame'      not in dyn_uniforms: dyn_uniforms = dyn_uniforms + ['iFrame']
             passes.append((prog_name, out_name, input_names, dyn_uniforms))
 
         baked_pipeline = self.bake_graph(passes)
@@ -192,7 +193,9 @@ class GLSL_Simulation:
             def setter(dv, loc=loc, name=uni, count=count):
                 val = dv[name]
                 if not isinstance(val, (tuple, list)):
-                    val = (val,) * count
+                    # for single-component uniforms, pass scalar; otherwise wrap into tuple
+                    if count > 1:
+                        val = (val,) * count
                 elif len(val) != count:
                     raise ValueError(f"Uniform '{name}' expects {count} components, got {len(val)}")
                 loc.value = val
@@ -207,8 +210,9 @@ class GLSL_Simulation:
                 program[f"u_texture_{i}"].value = i
 
         # Set default resolution uniform if present
-        if "iResolution" in program:
-            program["iResolution"].value = (self.sim_size[0], self.sim_size[1], 1.0)
+        #if "iResolution" in program:
+        program["iResolution"].value = (self.sim_size[0], self.sim_size[1], 1.0)
+        program["iFrame"]     .value = self.iFrame
 
         # Create a VAO for this render pass
         vao = self.ctx.vertex_array(program, self._quad_content)
@@ -262,6 +266,7 @@ class GLSL_Simulation:
         """Execute all passes in *baked_graph* with shared *dynamic_values*."""
         for execute in baked_graph:
             execute(dynamic_values)
+        self.iFrame += 1
 
     # ------------------------------------------------------------------
     # Convenience

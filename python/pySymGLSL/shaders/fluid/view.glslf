@@ -4,6 +4,7 @@
 //see "Common" tab for fluid simulation code
 #version 330
 uniform vec3  iResolution;
+uniform int   iFrame;
 // input textures
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
@@ -79,6 +80,8 @@ void main(){
     //col =    vec4( vr,vr,vr, 1.0 );
     vec4 col =    vec4( -F.w*5.,(1.-F.z)*50.0,F.w*5., 1.0 );
     //col =    F; 
+
+    if(iFrame<1){ col = vec4(0.5,0,0,0); }
 
     gl_FragColor = col;
 }

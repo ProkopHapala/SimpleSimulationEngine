@@ -56,6 +56,8 @@ class GLRenderWidget(QGLWidget):
         QGLWidget.__init__(self, fmt, parent)
 
         self.sim_size = sim_size
+        # Name of the texture currently shown in the widget (controlled by MainWindow)
+        self.display_tex_name: str | None = None
         self.sim: GLSL_Simulation | None = None
         self.baked_graph = []
         self.dynamic_values: Dict[str, float] = {}
@@ -80,17 +82,23 @@ void main(){ fragColor = texture(uTex, v_texcoord);}"""
         self.display_prog['uTex'].value = 0
         self.ctx.clear(0.0, 0.0, 0.0, 1.0)
 
+    # ------------------------------------------------------------------
+    # Render -----------------------------------------------------------------
     def paintGL(self):
         if self.baked_graph:
             # ensure default resolution uniform
+            # ensure default uniforms
             if 'iResolution' not in self.dynamic_values:
                 w, h = self.sim_size
                 self.dynamic_values['iResolution'] = (float(w), float(h), 1.0)
+            # always provide frame counter
+            self.dynamic_values['iFrame'] = self.sim.iFrame
             self.sim.run_graph(self.baked_graph, self.dynamic_values)
-            # blit latest output (first texture) to screen for now
-            display_name = self.parent().cb_display.currentText() if hasattr(self.parent(), 'cb_display') else ''
-            tex = self.sim.textures.get(display_name) if display_name else None
-            if tex is None:
+            # Choose texture to display. If *display_tex_name* was not set explicitly
+            # (e.g. before GUI is fully initialized) fall back to the first texture.
+            name = self.display_tex_name or ''
+            tex = self.sim.textures.get(name) if name else None
+            if tex is None and self.sim.textures:
                 tex = next(iter(self.sim.textures.values()))
             tex.use(location=0)
             self.ctx.screen.use()
@@ -100,6 +108,13 @@ void main(){ fragColor = texture(uTex, v_texcoord);}"""
             self.ctx.clear(0.1, 0.1, 0.1)
 
     # ------------------------------------------------------------------
+    # Play/Pause control ------------------------------------------------
+    # ------------------------------------------------------------------
+    # Helpers ------------------------------------------------------------
+    def set_display(self, name: str | None):
+        """Set the name of the texture that should be displayed on screen."""
+        self.display_tex_name = name
+
     # Play/Pause control ------------------------------------------------
     def set_play(self, play: bool):
         if play:
@@ -205,7 +220,7 @@ class MainWindow(BaseGUI):
 
         display_box = QtWidgets.QHBoxLayout()
         display_box.addWidget(QtWidgets.QLabel("Display texture:"))
-        self.cb_display        = self.comboBox(layout=display_box)
+        self.cb_display        = self.comboBox(layout=display_box, callback=self.on_display_changed)
         self.chk_play          = self.checkBox("Play", False, lambda s: self.gl_view.set_play(bool(s)), layout=display_box)
         side_layout.addLayout(display_box)
         
@@ -339,7 +354,7 @@ class MainWindow(BaseGUI):
  
     # --- JSON pipeline loader ------------------------------------------
     def on_load_json_pipeline(self):
-        print("on_load_json_pipeline")
+        print("on_load_json_pipeline()")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load JSON Pipeline', '', 'JSON (*.json)')
         if not fname: return
         self.load_pipeline(fname)
@@ -348,16 +363,23 @@ class MainWindow(BaseGUI):
         if self.gl_view.sim:
             self.cb_display.clear()
             self.cb_display.addItems(self.gl_view.sim.textures.keys())
+    
+    def on_display_changed(self):
+        name = self.cb_display.currentText()
+        print("on_display_changed() ->", name)
+        # Inform GL widget which texture to show and request repaint
+        self.gl_view.set_display(name)
+        self.gl_view.updateGL()
 
     def on_load_pipeline(self):
-        print("on_load_pipeline")
+        print("on_load_pipeline()")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load Pipeline', '', 'Text (*.txt)')
         if fname:
             with open(fname) as f:
                 self.txt_pipeline.setPlainText(f.read())
 
     def on_save_pipeline(self):
-        print("on_save_pipeline")
+        print("on_save_pipeline()")
         fname, _ = QFileDialog.getSaveFileName(self, 'Save Pipeline', '', 'JSON (*.json)')
         if fname:
             try:
@@ -374,21 +396,21 @@ class MainWindow(BaseGUI):
                 print("json.loads() failed: ", json_text)
 
     def on_load_uniforms(self):
-        print("on_load_uniforms")
+        print("on_load_uniforms()")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load Uniforms', '', 'Text (*.txt)')
         if fname:
             with open(fname) as f:
                 self.txt_uniforms.setPlainText(f.read())
 
     def on_save_uniforms(self):
-        print("on_save_uniforms")
+        print("on_save_uniforms()")
         fname, _ = QFileDialog.getSaveFileName(self, 'Save Uniforms', '', 'Text (*.txt)')
         if fname:
             with open(fname, 'w') as f:
                 f.write(self.txt_uniforms.toPlainText())
 
     def on_auto_toggle(self, state):
-        print("on_auto_toggle", state)
+        print("on_auto_toggle()", state)
         if state and self.param_widgets:
             self.update_sim_uniforms()
 

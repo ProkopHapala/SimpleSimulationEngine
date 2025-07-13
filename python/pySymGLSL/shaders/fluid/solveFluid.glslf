@@ -1,5 +1,6 @@
 #version 330
 uniform vec3  iResolution;
+uniform int   iFrame;
 uniform sampler2D iChannel0;
 uniform vec4 driver;
 
@@ -118,7 +119,7 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
     
 //     vec4 data = solveFluid(iChannel0, uv, w );
 
-//     //if (iFrame < 20){ data = vec4(0.5,0,0,0);}
+//     //if (iFrame < 20){ }
 //     //if (fragCoord.y < 1.) data = iMouse;
 //     fragColor = data;
 // }
@@ -134,5 +135,8 @@ void main(){
     vec2 fragCoord = gl_FragCoord.xy;
     vec2 uv = gl_FragCoord.xy/iResolution.xy;
     vec2 w = 1.0             /iResolution.xy;
-    gl_FragColor = solveFluid(iChannel0, uv, w );
+    vec4 data;
+    if(iFrame<20){ data = vec4(0.0,0,1.0,0); }
+    else        { data = solveFluid(iChannel0, uv, w ); }
+    gl_FragColor = data;
 }
