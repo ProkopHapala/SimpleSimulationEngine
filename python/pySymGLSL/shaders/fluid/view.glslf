@@ -78,7 +78,9 @@ void main(){
     //col =    vec4( F.xwy, 1.0 );
     float vr = dot(F.xy, F.xy);
     //col =    vec4( vr,vr,vr, 1.0 );
-    vec4 col =    vec4( -F.w*5.,(1.-F.z)*50.0,F.w*5., 1.0 );
+    float dens_scale = 1.;
+    float vort_scale = 1.;
+    vec4 col =    vec4( -F.w*vort_scale,(1.-F.z)*dens_scale,F.w*vort_scale, 1.0 );
     //col =    F; 
 
     if(iFrame<1){ col = vec4(0.5,0,0,0); }
