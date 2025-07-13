@@ -1,12 +1,39 @@
 {
     "parameters": {
-        "driver" : ["vec4",[0.0,0.0,0.2,1.0],0.1]
+        "driver" : ["vec4",[0.5,0.5,0.2,1.0],0.1]
     },
     "Pipeline": [
+        //["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+        //["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["driver"] ],
+        //["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["driver"] ]
+
+        //["fluid/solveFluid_mini.glslf", "fieldA", {}, ["driver"] ]
+        //["fluid/solveFluid.glslf", "fieldA", {}, [] ]
+        //["fluid/solveFluid.glslf", "fieldA", {}, ["driver"] ]
+
+        //// === This is always rendering fine (no feedback)
+        //["fluid/solveFluid_mini.glslf", "fieldA", {}, ["driver"] ]
+
+        //// === This is always rendering fine (no feedback)
+        //["fluid/solveFluid.glslf", "fieldA", {}, ["driver"] ]
+
+        //// === This is rendering like half-off the time, half is black screen ?!?!?!
+        //["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ]
+
+        //// === This is mostly black-screen, but rarely it renders something ?!?!? 
         ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
-        ["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, ["driver"] ],
-        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, ["driver"] ]
-        //["fluid/view.glslf"    , "colorA", {"iChannel0":"fieldC", "iChannel1":"colorB"}, ["iResolution"] ],
-        //["common/copy.glslf"   , "colorB", {"iChannel0":"colorA"}, ["iResolution"]]
+        ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ]
+
+
+
+        // ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+        // ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ],
+        // ["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, ["driver"] ],
+        // ["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldA"}, ["driver"] ]
+        
+
+        //["fluid/solveFluid.glslf", "fieldA", {"iChannel0":"fieldC"}, [] ],
+        //["fluid/solveFluid.glslf", "fieldB", {"iChannel0":"fieldA"}, [] ],
+        //["fluid/solveFluid.glslf", "fieldC", {"iChannel0":"fieldB"}, [] ]
     ]
 }

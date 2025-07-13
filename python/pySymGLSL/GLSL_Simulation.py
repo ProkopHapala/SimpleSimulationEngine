@@ -61,6 +61,10 @@ class GLSL_Simulation:
         self.textures: Dict[str, moderngl.Texture] = {}
         self.framebuffers: Dict[str, moderngl.Framebuffer] = {}
 
+        self._current_pipeline = None
+        self._current_base_dir = None
+        self._current_graph_definition = None
+
         # One VAO that renders a fullscreen quad ------------------------------
         vbo = self.ctx.buffer(_QUAD_VERTICES.tobytes())
         vao_content = [(vbo, "2f", "in_position")]
@@ -71,7 +75,17 @@ class GLSL_Simulation:
         self._quad_vbo = vbo
         self._quad_content = vao_content
 
+    def setup_texture(self, size: Tuple[int, int], channels=4, dtype="f4", repeat=(False, False), filter=(moderngl.NEAREST, moderngl.NEAREST), anisotropy=1.0):
+        tex = self.ctx.texture(size, components=channels, dtype=dtype)
+        tex.filter = filter
+        tex.repeat_x = repeat[0]
+        tex.repeat_y = repeat[1]
+        tex.anisotropy = anisotropy
+        return tex
+
     def build_pipeline(self, pipeline: list, base_dir):
+        self._current_pipeline = pipeline
+        self._current_base_dir = base_dir
         print("build_pipeline(): ", pipeline," base_dir: ", base_dir)
         # Auto-load any shader programs mentioned in Pipeline but not declared
         for prog_name, _, _, _ in pipeline:
@@ -88,25 +102,29 @@ class GLSL_Simulation:
         # Allocate textures + FBOs
         for t in tex_names:
             if t not in self.textures:
-                tex = self.ctx.texture(self.sim_size, components=4, dtype=self.dtype)
-                tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
+                size_x, size_y = self.sim_size
+                tex = self.setup_texture((size_x, size_y), dtype=self.dtype)
                 fbo = self.ctx.framebuffer(color_attachments=[tex])
                 self.textures[t] = tex
                 self.framebuffers[t] = fbo
+                
+        # Initialize all textures to avoid undefined behavior in feedback loops
+        self.initialize_textures()
 
-        # 3. Build passes list
+        # 3. Build pass descriptors ------------------------------------------------
         passes = []
         for prog_name, out_name, inputs_map, dyn_uniforms in pipeline:
-            # order inputs by channel index if key matches iChannelN else arbitrary deterministic
+            # Collect texture names in channel order: iChannel0, iChannel1, ...
+            input_names = []
             if isinstance(inputs_map, dict):
-                sorted_items = sorted(inputs_map.items(), key=lambda kv: kv[0])
-                input_names = [v for _, v in sorted_items]
-            else:
-                input_names = []
-            # always include screen resolution uniform if shader expects it
-        if 'iResolution' not in dyn_uniforms:
-            dyn_uniforms = dyn_uniforms + ['iResolution']
-        passes.append((prog_name, out_name, input_names, dyn_uniforms))
+                for ch in range(8):
+                    key = f"iChannel{ch}"
+                    if key in inputs_map:
+                        input_names.append(inputs_map[key])
+            # Ensure iResolution is available as dynamic uniform (convenience)
+            if 'iResolution' not in dyn_uniforms:
+                dyn_uniforms = dyn_uniforms + ['iResolution']
+            passes.append((prog_name, out_name, input_names, dyn_uniforms))
 
         baked_pipeline = self.bake_graph(passes)
         return baked_pipeline, tex_names
@@ -165,8 +183,6 @@ class GLSL_Simulation:
         dynamic_uniforms = dynamic_uniforms or []
 
         program = self.programs[program_name]
-        output_fbo = self.framebuffers[output_name]
-        input_textures = [self.textures[n] for n in input_names]
 
         # Resolve uniform locations once to avoid dictionary lookups per frame
         uniform_setters: List[Callable[[dict], None]] = []
@@ -191,11 +207,13 @@ class GLSL_Simulation:
                 loc.value = val
             uniform_setters.append(setter)
 
-        # Also fix sampler uniforms for texture bindings 0..N (static)
-        for i, tex in enumerate(input_textures):
-            sampler_name = f"u_texture_{i}"
-            if sampler_name in program:
-                program[sampler_name].value = i
+        # Bind sampler uniforms for texture units 0..N. Prefer iChannelN naming (Shadertoy style);
+        # fall back to u_texture_N for legacy shaders.
+        for i in range(len(input_names)):
+            if f"iChannel{i}" in program:
+                program[f"iChannel{i}"].value = i
+            elif f"u_texture_{i}" in program:
+                program[f"u_texture_{i}"].value = i
 
         # Set default resolution uniform if present
         if "iResolution" in program:
@@ -205,6 +223,11 @@ class GLSL_Simulation:
         vao = self.ctx.vertex_array(program, self._quad_content)
 
         def _execute(dynamic_values: dict) -> None:
+            # Dynamically retrieve output_fbo and input_textures
+            output_fbo = self.framebuffers[output_name]
+            # input_textures must be retrieved dynamically inside _execute
+            input_textures_dynamic = [self.textures[n] for n in input_names]
+
             # Use program for rendering
             # Program is bound via VAO
 
@@ -213,7 +236,7 @@ class GLSL_Simulation:
                 setter(dynamic_values)
 
             # Bind input textures to units 0..N
-            for i, tex in enumerate(input_textures):
+            for i, tex in enumerate(input_textures_dynamic):
                 tex.use(location=i)
 
             # Render to output
@@ -225,8 +248,23 @@ class GLSL_Simulation:
     # ------------------------------------------------------------------
     def bake_graph(self, graph_definition: Iterable[Tuple[str, str, List[str], List[str]]]):
         """Bake a sequence of passes into a list of callables."""
+        self._current_graph_definition = graph_definition
         return [self.bake_pass(*g) for g in graph_definition]
 
+    def initialize_textures(self, clear_color=(0.1, 0.0, 0.0, 0.0)):
+        """Initialize all textures with a default value to avoid undefined behavior in feedback loops."""
+        # Save the current framebuffer binding
+        default_framebuffer = self.ctx.fbo
+        
+        # Clear each texture with the specified color
+        for name, fbo in self.framebuffers.items():
+            fbo.use()
+            self.ctx.clear(clear_color[0], clear_color[1], clear_color[2], clear_color[3])
+            print(f"Initialized texture '{name}' with color {clear_color}")
+        
+        # Restore the original framebuffer
+        default_framebuffer.use()
+        
     def run_graph(self, baked_graph: Sequence[Callable[[dict], None]], dynamic_values: dict):
         """Execute all passes in *baked_graph* with shared *dynamic_values*."""
         for execute in baked_graph:
@@ -248,3 +286,20 @@ class GLSL_Simulation:
             fbo.release()
         self.quad_vao.release()
         self._vao_prog_placeholder.release()
+
+    # def resize(self, w: int, h: int):
+    #     self.sim_size = (w, h)
+    #     # Release old textures and framebuffers
+    #     for tex in self.textures.values():
+    #         tex.release()
+    #     for fbo in self.framebuffers.values():
+    #         fbo.release()
+    #     self.textures.clear()
+    #     self.framebuffers.clear()
+    #     # Rebuild pipeline with new size if a pipeline was previously loaded
+    #     if self._current_pipeline and self._current_base_dir:
+    #         self.build_pipeline(self._current_pipeline, self._current_base_dir)
+    #     # Re-bake the graph with the new textures and framebuffers
+    #     if self._current_graph_definition:
+    #         return self.bake_graph(self._current_graph_definition)
+    #     return []

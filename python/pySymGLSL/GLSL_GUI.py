@@ -52,6 +52,16 @@ def extract_json_block(src, start_pos, open_sym, close_sym):
             return open_idx, i
     return None, None
 
+def strip_json_comments(json_str):
+    """Remove // and /* */ style comments from JSON string"""
+    pattern = r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"'
+    return re.sub(
+        pattern,
+        lambda m: m.group(0) if m.group(0).startswith(('"', "'")) else '',
+        json_str,
+        flags=re.MULTILINE|re.DOTALL
+    )
+
 # -----------------------------------------------------------------------------
 # OpenGL rendering widget
 # -----------------------------------------------------------------------------
@@ -67,10 +77,10 @@ class GLRenderWidget(QGLWidget):
         self.sim: GLSL_Simulation | None = None
         self.baked_graph = []
         self.dynamic_values: Dict[str, float] = {}
-        # Disabled continuous redraw; UI will call updateGL on demand
-        # self.timer = QtCore.QTimer()
-        # self.timer.timeout.connect(self.updateGL)
-        # self.timer.start(16)
+        # Timer for continuous redraw (disabled by default)
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.updateGL)
+
 
     # ------------------------------------------------------------------
     def initializeGL(self):
@@ -102,13 +112,24 @@ void main(){ fragColor = texture(uTex, v_texcoord);}"""
                 tex = next(iter(self.sim.textures.values()))
             tex.use(location=0)
             self.ctx.screen.use()
+            self.ctx.viewport = (0, 0, self.width(), self.height())   # <- add this
             self.display_vao.render(moderngl.TRIANGLE_STRIP)
         else:
             self.ctx.clear(0.1, 0.1, 0.1)
 
+    # ------------------------------------------------------------------
+    # Play/Pause control ------------------------------------------------
+    def set_play(self, play: bool):
+        if play:
+            self.timer.start(16)   # ~60 FPS
+        else:
+            self.timer.stop()
+
     def resizeGL(self, w: int, h: int):
         if self.sim:
             self.ctx.viewport = (0, 0, w, h)
+            # Update the baked graph with the new one generated during resize
+            #self.baked_graph = self.sim.resize(w, h)
 
     # ------------------------------------------------------------------
     # External API for GUI
@@ -214,6 +235,9 @@ class MainWindow(QtWidgets.QWidget):
         side_layout.addWidget(QtWidgets.QLabel("Parameters:"))
         side_layout.addWidget(QtWidgets.QLabel("Display texture:"))
         side_layout.addWidget(self.cb_display)
+        # Play checkbox
+        self.chk_play = QtWidgets.QCheckBox("Play")
+        side_layout.addWidget(self.chk_play)
         side_layout.addWidget(QtWidgets.QLabel("Parameters:"))
         side_layout.addWidget(self.params_panel, 2)
         side_layout.addWidget(self.chk_auto)
@@ -230,6 +254,7 @@ class MainWindow(QtWidgets.QWidget):
         self.btn_load_uniforms.clicked.connect(self.on_load_uniforms)
         self.btn_save_uniforms.clicked.connect(self.on_save_uniforms)
         self.chk_auto.stateChanged.connect(self.on_auto_toggle)
+        self.chk_play.stateChanged.connect(lambda s: self.gl_view.set_play(bool(s)))
 
         # internal
         # Schedule default pipeline load after GL context is ready
@@ -328,21 +353,21 @@ class MainWindow(QtWidgets.QWidget):
         # ------------------------------------------------------------------
     # Pipeline JSON helper
     # ------------------------------------------------------------------
-    def load_pipeline_json(self, json_path: str | Path):
-        """Load pipeline description from *json_path*.
+    # def load_pipeline_json(self, json_path: str | Path):
+    #     """Load pipeline description from *json_path*.
 
-        Returns a tuple (baked_graph, parameters:list[str], texture_names:list[str])
-        """
-        import re
-        raw = Path(json_path).read_text()
-        # strip // comments
-        raw = re.sub(r'//.*$', '', raw, flags=re.MULTILINE)
-        # remove trailing commas before } or ]
-        raw = re.sub(r',\s*(?=[}\]])', '', raw)
-        data = json.loads(raw)
-        base_dir = Path(json_path).parent.parent / "shaders"
-        baked_pipeline, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)        
-        return baked_pipeline, data["parameters"], tex_names
+    #     Returns a tuple (baked_graph, parameters:list[str], texture_names:list[str])
+    #     """
+    #     import re
+    #     raw = Path(json_path).read_text()
+    #     # strip // comments
+    #     raw = re.sub(r'//.*$', '', raw, flags=re.MULTILINE)
+    #     # remove trailing commas before } or ]
+    #     raw = re.sub(r',\s*(?=[}\]])', '', raw)
+    #     data = json.loads(raw)
+    #     base_dir = Path(json_path).parent.parent / "shaders"
+    #     baked_pipeline, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)        
+    #     return baked_pipeline, data["parameters"], tex_names
 
 
     def load_pipeline(self, fname):
@@ -351,9 +376,15 @@ class MainWindow(QtWidgets.QWidget):
         raw = Path(fname).read_text()
         # Parse to get data structure for simulation
         #try:
+        raw = strip_json_comments(raw)
         print("raw: ", raw)
         data = json.loads(raw)
-        baked, params_dict, tex_names = self.load_pipeline_json(fname)
+        params_dict = data["parameters"]
+        #baked, params_dict, tex_names = self.load_pipeline_json(fname)
+        base_dir = Path(fname).parent.parent / "shaders"
+        baked, tex_names= self.gl_view.sim.build_pipeline(data["Pipeline"], base_dir)
+
+
         self.gl_view.baked_graph = baked
         
         # Update display combo
@@ -392,8 +423,7 @@ class MainWindow(QtWidgets.QWidget):
     def on_load_json_pipeline(self):
         print("on_load_json_pipeline")
         fname, _ = QFileDialog.getOpenFileName(self, 'Load JSON Pipeline', '', 'JSON (*.json)')
-        if not fname:
-            return
+        if not fname: return
         self.load_pipeline(fname)
 
     def create_spin_box(self, value=0.0, step=0.1, max_width=80, vmin=-1e9, vmax=1e9, decimals=4):
