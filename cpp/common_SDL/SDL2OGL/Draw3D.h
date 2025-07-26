@@ -83,7 +83,7 @@ int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, con
 //int  drawSphereOctLines ( int n, float R, const Vec3f& pos );
 int  drawSphereOctLines ( int n, float R, const Vec3f& pos, const Mat3f& rot=Mat3fIdentity, bool bRGB=false );
 int  drawSphere_oct     ( int n, float R, const Vec3f& pos, bool wire=false );
-int  drawCapsula        ( Vec3f p0, Vec3f p1,  float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped );
+int  drawCapsula        ( Vec3f p0, Vec3f p1,  float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped , int GLPrimitive=GL_TRIANGLE_STRIP );
 
 void drawKite           ( const Vec3f& pos, const Mat3f& rot, float sz );
 void drawPanel          ( const Vec3f& pos, const Mat3f& rot, const Vec2f& sz );
@@ -141,7 +141,7 @@ inline int  drawCircleAxis     ( int n, const Vec3d& pos, const Vec3d& v0, const
 //inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos ){ return drawSphereOctLines ( n, R, (Vec3f)pos ); };
 inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos, const Mat3d& rot=Mat3dIdentity, bool bRGB=false ){ return drawSphereOctLines ( n, R, (Vec3f)pos, (Mat3f)rot, bRGB ); };
 inline int  drawSphere_oct     ( int n, double R, const Vec3d& pos, bool bWire=false ){ return drawSphere_oct( n, R, (Vec3f)pos, bWire ); };
-inline int  drawCapsula        ( Vec3d p0, Vec3d p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped ){ return drawCapsula( (Vec3f)p0, (Vec3f)p1,r1,r2,theta1,theta2,dTheta,nPhi,capped); };
+inline int  drawCapsula        ( Vec3d p0, Vec3d p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped, int GLPrimitive=GL_TRIANGLE_STRIP ){ return drawCapsula( (Vec3f)p0, (Vec3f)p1,r1,r2,theta1,theta2,dTheta,nPhi,capped, GLPrimitive ); };
 
 inline void drawKite     ( const Vec3d& pos, const Mat3d& rot, double sz       ){ drawKite ( (Vec3f)pos, (Mat3f)rot, sz ); };
 inline void drawPanel    ( const Vec3d& pos, const Mat3d& rot, const Vec2d& sz ){ drawPanel( (Vec3f)pos, (Mat3f)rot, (Vec2f)sz ); };

@@ -2466,6 +2466,43 @@ int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double
     return i0;
 }
 
+int Builder2::panel( int n, int* ivs1, int* ivs2, double width, Quat4i stickTypes ){
+    bool shared = (ivs1[0]==ivs2[0]);
+    printf( "Builder2::panel() n=%i shared=%i\n", n, shared );
+    for(int i=0;i<n;i++){ printf( "%i:  ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] ); }
+    std::vector<int> prevRow; prevRow.resize(n+1);
+    std::vector<int> row;     row    .resize(n+1);
+    for(int i=0;i<n;i++){
+        printf( "-- i=%i ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] );
+        int rowSize = i + 1 + (!shared); // number of vertices in this row
+        // existing boundary vertices
+        row[0        ] = ivs1[i];
+        row[rowSize-1] = ivs2[i];
+        // interpolate interior vertices on straight segment between the two edge vertices
+        Vec3d pL = verts[row[0        ]].pos;
+        Vec3d pR = verts[row[rowSize-1]].pos;
+        for(int j=1;j<rowSize-1;j++){
+            double t = ((double)j)/(rowSize-1);
+            Vec3d p = pL*(1.0-t) + pR*t;
+            row[j] = vert( p );
+        }
+        // horizontal (row-wise) edges
+        for(int j=0;j<rowSize-1;j++){ edge( row[j], row[j+1], stickTypes.x ); }
+        // vertical / diagonal edges connecting with previous row
+        if(i>0){
+            int onrow = prevRow.size();
+            for(int j=1;j<rowSize-1;j++){
+                //printf("A edge( %i, %i )\n", row[j], prevRow[j  ] ); 
+                edge( row[j], prevRow[j  ], stickTypes.z ); 
+                //printf("A edge( %i, %i )\n", row[j], prevRow[j-1] ); 
+                edge( row[j], prevRow[j-1], stickTypes.z ); 
+            }
+        }
+        prevRow.swap(row);
+    }
+    return verts.size();
+}
+
 void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, double* node_sizes, int nplane, const int* planes, const int* planeVs ){
     //Vec2i chs[nnod];
     bool bSpecialNodes = (planes!=nullptr);

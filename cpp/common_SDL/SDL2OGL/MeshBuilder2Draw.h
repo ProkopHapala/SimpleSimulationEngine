@@ -303,19 +303,19 @@ class Renderer{
     }
 
     void drawSelection( int ipick=-1 ){
-        if( mesh->selection_mode == (int)Mesh::Builder2::SelectionMode::face ){
+        if( mesh->curSelection->kind == (int)Mesh::Builder2::SelectionMode::face ){
         if(ipick>=0){
                 glLineWidth(5.0);
                 glColor3f(0.0,0.7,0.0);
                 drawPolygonBorder( *mesh, ipick );
             }
-        }else if( mesh->selection_mode==(int)Mesh::Builder2::SelectionMode::edge ){
+        }else if( mesh->curSelection->kind==(int)Mesh::Builder2::SelectionMode::edge ){
             glColor3f(0.0,0.7,0.0);
             glLineWidth(5.0);
             drawSelectedEdges( *mesh );
             drawSelectedEdgeLabels( *mesh, 0.02 );
             glLineWidth(1.0);
-        }else if( mesh->selection_mode==(int)Mesh::Builder2::SelectionMode::vert ){
+        }else if( mesh->curSelection->kind==(int)Mesh::Builder2::SelectionMode::vert ){
             glColor3f(0.0,1.0,0.0);
             glPointSize(8.0);
             drawSelectedVerts( *mesh );

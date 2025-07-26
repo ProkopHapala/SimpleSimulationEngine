@@ -155,19 +155,15 @@ class Selection{public:
 // General selection algorithm 
 // see https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%221OJl0tLGMMu_qhDAnOw4xvWJNMmgrFHmY%22%5D,%22action%22:%22open%22,%22userId%22:%22100958146796876347936%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing    
 template<typename Predicate>
-int selectByPredicate(
-    std::ranges::input_range auto&& range, // Takes any C++20 range
-    Predicate predicate // Accepts any callable object directly
-) {
+int selectByPredicate( std::ranges::input_range auto&& range,  Predicate predicate ) {
     // Optional: A concept check to ensure the predicate is valid for our range.
     // This gives a much clearer error message if you pass the wrong kind of function.
     static_assert(std::is_invocable_r_v<bool, Predicate, const std::ranges::range_value_t<decltype(range)>&>);
-
     int index = 0;
     for (const auto& element : range) {
-        // The compiler will inline this call, making it zero-cost.
-        if (predicate(element)) {
-            this->add(index);
+        if (predicate(element)) { 
+            printf("Selected %d\n", index); 
+            this->add(index); 
         }
         index++;
     }
@@ -182,6 +178,7 @@ class SelectionBanks{public:
     std::vector<Selection> selections;
     SelectionBanks(int n){ selections.resize(n); pickSelection(0); }
     Selection* pickSelection(int i){ curSelection=&selections[i]; icurSelection=i; return curSelection; }
+    Selection* nextSelection(){ icurSelection++; if(icurSelection>=selections.size()) icurSelection=0; return pickSelection(icurSelection); }
 };
 
 #endif

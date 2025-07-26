@@ -47,6 +47,8 @@ Mesh::Renderer trussView(truss);
 const int GIRDER_TYPE = 1;
 const int ROPE_TYPE   = 2;
 
+
+SDF_Cylinder* sdf_cylinder; 
 Vec3d pivot_point{ 5.0, 0.0, 3.0 };
 
 using namespace Mesh;
@@ -274,6 +276,15 @@ void ConstructionBlockApp::draw(){
     }
     if(bViewPivotPoint) { Draw3D::drawPointCross( pivot_point, 0.5 ); }
     if(bViewAxis) { glLineWidth(5.0); Draw3D::drawAxis(10.0); glLineWidth(1.0); }
+
+
+
+    if(sdf_cylinder) {
+        //Draw3D::drawCapsula( Vec3d p0, Vec3d p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped );
+        //Draw3D::drawCapsula( sdf_cylinder->p0, sdf_cylinder->p0 + sdf_cylinder->hdir*sdf_cylinder->l, sdf_cylinder->r, sdf_cylinder->r, 0.0, 1.0, 0.1, 8, true );
+        Draw3D::drawCapsula( sdf_cylinder->p0, sdf_cylinder->p0 + sdf_cylinder->hdir*sdf_cylinder->l, sdf_cylinder->r, sdf_cylinder->r, 0.0, 1.0, 0.1, 8, false, GL_LINE_STRIP );
+    }
+        
 };
 
 void ConstructionBlockApp::drawHUD(){
@@ -618,34 +629,71 @@ int main(int argc, char *argv[]){
     funcs["-cube_nodes"] = {0, [&](const char**){
         printf("funcs[-oct_nodes]: Manual Construction Blocks Test:\n");
         const int nnodes = 5;
-        Vec3d node_positions[nnodes] = {
+        Vec3d node_ps[nnodes] = {
             {0.0,   0.0,   0.0}, 
             {0.0,   0.0, -15.0}, 
             {0.0,   0.0,  20.0}, 
             {0.0, -10.0,   0.0}, 
             {0.0,  10.0,   0.0}
         };
-        double node_sizes[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
+        double node_szs[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
         const int nedges = 4;
         const int nseg   = 5;
         Vec2i edges[nedges] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
 
         // const int nnodes = 2;
-        // Vec3d node_positions[nnodes] = {
+        // Vec3d node_ps[nnodes] = {
         //     {0.0,   0.0,   0.0}, 
         //     {0.0,   0.0,   3.0}
         // };
-        // double node_sizes[nnodes] = {1.0, 0.5};
+        // double node_szs[nnodes] = {1.0, 0.5};
         // const int nedges = 1;
         // const int nseg=1;
         // Vec2i edges[nedges] = {{0, 1}};
 
         Vec2i chs[nnodes];
-        truss.facingNodes( Solids::Cube, nnodes, node_positions, chs, node_sizes );
+        truss.facingNodes( Solids::Cube, nnodes, node_ps, chs, node_szs );
         truss.printFaces();
-        truss.bridgeFacingPolygons( nedges, edges, node_positions, nseg, chs );
+        truss.bridgeFacingPolygons( nedges, edges, node_ps, nseg, chs );
         //truss.bridgeFacingPolygons( nedges, edges, node_positions, nseg, chs, {-1,-1,-1,-1}, {0,0,0,0} );
-        printf("  truss.printSizes():  "); truss.printSizes();
+        //printf("  truss.printSizes():  "); truss.printSizes();
+
+
+        // { // select edges by capsula
+        // int ie1 = 0;
+        // int ie2 = 3;
+        // Vec3d d1 = node_ps[edges[ie1].y] - node_ps[edges[ie1].x]; d1.normalize();
+        // Vec3d d2 = node_ps[edges[ie2].y] - node_ps[edges[ie2].x]; d2.normalize();
+        // Vec3d up; up.set_cross(d1,d2); up.normalize();
+
+        // sdf_cylinder = new SDF_Cylinder( 
+        //     node_ps[edges[ie1].x]+d2*(node_szs[edges[ie1].x])+up*(node_szs[edges[ie1].x]), 
+        //     node_ps[edges[ie1].y]+d2*(node_szs[edges[ie1].y])+up*(node_szs[edges[ie1].y]), 
+        // 0.5, false );
+        // //truss.selectVertsBySDF( *sdf_cylinder );
+        // truss.selectEdgesBySDF( *sdf_cylinder );
+
+        // // truss.nextSelection();
+        // // sdf_cylinder->from_ends( 
+        // //     node_ps[edges[ie2].x]+d1*(node_szs[edges[ie2].x])+up*(node_szs[edges[ie2].x]), 
+        // //     node_ps[edges[ie2].y]+d1*(node_szs[edges[ie2].y])+up*(node_szs[edges[ie2].y]) 
+        // // );
+        // // truss.selectVertsBySDF( *sdf_cylinder );
+
+        // truss.printSelection();
+        // } // select edges by capsula
+
+
+        const int nvs=3;
+        int ivs1[nvs] = {43,47,51};
+        int ivs2[nvs] = {90,94,98};
+        truss.panel( nvs, ivs1, ivs2, 0.5, {0,0,0,0} );
+
+        //truss.bridgeVertStrips( nvs, ivs1, ivs2 );
+
+
+
+
         truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
     }};
 

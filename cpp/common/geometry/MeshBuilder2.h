@@ -182,6 +182,7 @@ class Builder2 : public SelectionBanks { public:
 
     
     void selectEdgesBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+        curSelection->kind = (int)SelectionMode::edge;
         curSelection->selectByPredicate(
             std::views::all(edges), 
             [&](const Quat4i& edge) -> bool {
@@ -193,6 +194,7 @@ class Builder2 : public SelectionBanks { public:
     }
 
     void selectVertsBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+        curSelection->kind = (int)SelectionMode::vert;
         curSelection->selectByPredicate(std::views::all(verts), [&](const Vert& vert) -> bool {return (sdf(vert.pos) < threshold); });
     }
 
@@ -469,7 +471,8 @@ class Builder2 : public SelectionBanks { public:
 
     int rope ( Vec3d p0,  Vec3d p1, int nseg, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int ropes( int nv, Vec3d* vs, int ne, int nseg, const Vec2i* ends, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
-    int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes );
+    int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width=1.0, Quat4i stickTypes=(Quat4i){-1,-1,-1,-1} );
+    int panel( int n, int* ivs1, int* ivs2, double width=1.0, Quat4i stickTypes=(Quat4i){-1,-1,-1,-1} );
 
 
 

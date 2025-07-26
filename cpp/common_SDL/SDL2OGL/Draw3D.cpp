@@ -674,7 +674,7 @@ int drawSphereStrip( Vec3f p, Vec3f ax,  int nPhi. int nThet, float R, float sin
 */
 
 
-int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped ){
+int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped, int GLPrimitive ){
     int nvert=0;
     Vec3f ax   = p1-p0;  float L = ax.normalize();
     Vec3f up,left;       ax.getSomeOrtho(up,left);
@@ -685,7 +685,7 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
     float dr = (r2-r1);
     float cv = sqrt(L*L+dr*dr);
     cth.set( L/cv, -dr/cv );
-    glBegin(GL_TRIANGLE_STRIP);
+    glBegin(GLPrimitive);
     for(int iph=0; iph<(nPhi+1); iph++){
         Vec3f pa = p0 + left*(cph.x*r1) + up*(cph.y*r1);
         Vec3f pb = p1 + left*(cph.x*r2) + up*(cph.y*r2);
@@ -713,7 +713,7 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
     // Left
     for(int ith=0; ith<(nTheta+1); ith++){
         Vec2f cth_ = Vec2f::mul_cmplx(cth,dth);
-        glBegin(GL_TRIANGLE_STRIP);
+        glBegin(GLPrimitive);
         //glBegin(GL_LINES);
         for(int iph=0; iph<(nPhi+1); iph++){
             Vec3f pa = p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth.x  + ax*(h+cth.y*r1);
@@ -747,7 +747,7 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
     // Right
     for(int ith=0; ith<(nTheta+1); ith++){
         Vec2f cth_ = Vec2f::mul_cmplx(cth,dth);
-        glBegin(GL_TRIANGLE_STRIP);
+        glBegin(GLPrimitive);
         for(int iph=0; iph<(nPhi+1); iph++){
             Vec3f pa = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth.x  + ax*(h+cth.y*r2);
             Vec3f pb = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth_.x + ax*(h+cth_.y*r2);
