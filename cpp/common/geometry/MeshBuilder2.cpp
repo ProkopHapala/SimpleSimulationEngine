@@ -13,7 +13,7 @@
 namespace Mesh {
 
 void Builder2::clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
-void Builder2::printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
+void Builder2::printSizes()const{printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
 
 // int Builder2::getOtherEdgeVert(int ie, int iv){
 //     Quat4i& e = edges[ie];
@@ -550,11 +550,12 @@ int Builder2::polygonToTris( int i ){
     return n;
 }
 
-Vec3d Builder2::polygonNormal( int ich ){
+Vec3d Builder2::polygonNormal( int ich )const{
+    // polygon chunks structure: {iv0,ie0,n,type} where type is ChunkType::face
     Quat4i ch = chunks[ich];
     int n   = ch.z;
     int i0  = ch.x;
-    int* ivs = &strips[i0];
+    const int* ivs = &strips[i0];
     //printf("Builder2::polygonNormal(ich=%d): type: %d n=%d i0=%d\n", ich, ch.w, n, i0);
     Vec3d nrm = Vec3dZero;
     Vec3d a = verts[ivs[0]].pos;
@@ -573,26 +574,36 @@ Vec3d Builder2::polygonNormal( int ich ){
     return nrm;
 }
 
-//Vec3d getChunkNormal( Quat4i ch ){
-    Vec3d Builder2::getChunkNormal( int ich ){
-        Quat4i ch = chunks[ich];
-        if( ch.w==(int)ChunkType::face ){
-            const Vec3d& a = verts[strips[ch.x  ]].pos;
-            const Vec3d& b = verts[strips[ch.x+1]].pos;
-            const Vec3d& c = verts[strips[ch.x+2]].pos;
-            Vec3d nr = cross(b-a, c-a); 
-            nr.normalize(); 
-            return nr;
-        }
-        return Vec3dZero;
-    }
+// //Vec3d getChunkNormal( Quat4i ch ){
+// Vec3d Builder2::getChunkNormal( int ich )const{
+//     Quat4i ch = chunks[ich];
+//     if( ch.w==(int)ChunkType::face ){
+//         const Vec3d& a = verts[strips[ch.x  ]].pos;
+//         const Vec3d& b = verts[strips[ch.x+1]].pos;
+//         const Vec3d& c = verts[strips[ch.x+2]].pos;
+//         Vec3d nr = cross(b-a, c-a); 
+//         nr.normalize(); 
+//         return nr;
+//     }
+//     return Vec3dZero;
+// }
     
-
+Vec3d Builder2::getChunkCOG( int ich )const{
+    Quat4i ch = chunks[ich];
+    Vec3d cog = Vec3dZero;
+    for(int i=0;i<ch.z;i++){
+        int iv = strips[ch.x+i];
+        cog.add( verts[iv].pos );
+    }
+    cog.mul( 1./ch.z );
+    return cog;
+}
 
 int Builder2::extrudeFace( int ich, double L, Quat4i stickTypes, Quat4i maks ){
     int ivs[4];
     int n    = loadChunk( ich, ivs );
-    Vec3d nr = getChunkNormal( ich ); 
+    //Vec3d nr = getChunkNormal( ich ); 
+    Vec3d nr = polygonNormal( ich ); 
     int ich2 = extrudeVertLoop( n, ivs, nr*5.0, true, true, true, false );
     bridge_quads( *(Quat4i*)getChunkStrip( ich ), *(Quat4i*)getChunkStrip( ich2 ), n, stickTypes, maks );
     return ich2;
@@ -612,23 +623,36 @@ int Builder2::loadChunk( int ich, int* iedges, int* iverts ){
 
 
 
-int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin, bool bTwoSide ){
+int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin, bool bTwoSide, double distWeight, Vec3d ray0 )const{
     printf("Builder2::findMostFacingNormal() nch=%i cosMin=%g bTwoSide=%i\n", nch, cosMin, bTwoSide );
     int ibest=-1;
     double cmax = -1.0;
+    bool bDist = fabs(distWeight)>1e-100;
     for(int i=0; i<nch; i++){
         int ich = chs[i];
         //printf("findMostFacingNormal[%3i]: ich %3i \n", i, ich );
         Vec3d nr = polygonNormal(ich); // This will now print its own debug info
         double c = hray.dot(nr);
-        printf("  [DEBUG] findMostFacingNormal: hray=(%g,%g,%g), normal=(%g,%g,%g), dot_product (c)=%g\n", hray.x,hray.y,hray.z, nr.x,nr.y,nr.z, c);
-        printf("  [DEBUG] findMostFacingNormal: cosMin=%g, bTwoSide=%d, current_cmax=%g\n", cosMin, bTwoSide, cmax);
+        //printf("  [DEBUG] findMostFacingNormal: hray=(%g,%g,%g), normal=(%g,%g,%g), dot_product (c)=%g\n", hray.x,hray.y,hray.z, nr.x,nr.y,nr.z, c);
+        //printf("  [DEBUG] findMostFacingNormal: cosMin=%g, bTwoSide=%d, current_cmax=%g\n", cosMin, bTwoSide, cmax);
         if(bTwoSide) c=fabs(c);
-        printf("  [DEBUG] findMostFacingNormal: After bTwoSide adjustment, c=%g\n", c);
-        if( c>cosMin && c>cmax){ ibest=chs[i]; cmax=c; }
+        //printf("  [DEBUG] findMostFacingNormal: After bTwoSide adjustment, c=%g\n", c);
+        if( c>cosMin ){
+            if(bDist){
+                Vec3d p  = getChunkCOG(ich);
+                double r = (p-ray0).norm();
+                //printf("[DEBUG] ich %i c %g d*r %g c-d*r %g  ray0(%g,%g,%g) p(%g,%g,%g)\n", ich, c, distWeight*r, c-distWeight*r, ray0.x,ray0.y,ray0.z, p.x,p.y,p.z );
+                c -= distWeight*r;
+            }
+            if(c>cmax){ 
+                //printf("[DEBUG] ich %i new opt c(%g) > cmax(%g) \n", ich, c, cmax );
+                ibest=chs[i]; cmax=c; 
+            }
+        }
     }
     if(bExitError){
-        if(ibest<0){ printf("ERROR in Builder2::findMostFacingNormal(): ibest %3i \n", ibest ); 
+        if(ibest<0){ 
+            printf("ERROR in Builder2::findMostFacingNormal(): ibest %3i \n", ibest ); 
             for(int i=0; i<nch; i++){
                 int ich = chs[i];
                 Quat4i ch = chunks[ich];
@@ -638,16 +662,15 @@ int Builder2::findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin,
             exit(0); 
         }
     }
-
     return ibest;
 }
 
-int Builder2::findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin, bool bTwoSide ){
+int Builder2::findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin, bool bTwoSide, double distWeight, Vec3d ray0 )const{
     int nch = chrange.y - chrange.x;
     //printf("Builder2::findMostFacingNormal() chrange(%i,%i) nch=%i \n", chrange.x, chrange.y, nch );
     int chs[nch];
     for(int i=0; i<nch; i++){ chs[i] = chrange.x+i; }
-    return findMostFacingNormal(hray, nch, chs, cosMin, bTwoSide );
+    return findMostFacingNormal(hray, nch, chs, cosMin, bTwoSide, distWeight, ray0 );
 }
 
 Vec2i Builder2::addVerts( int n, const Vec3d* ps ){
@@ -1588,27 +1611,27 @@ int Builder2::plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs, V
     return i0;
 };
 
-int Builder2::export_pos( Vec3d* ps, int i0, int i1 ){   if(i1<0){ i1=verts.size()-i1; };
+int Builder2::export_pos( Vec3d* ps, int i0, int i1 )const{   if(i1<0){ i1=verts.size()-i1; };
     for(int i=i0; i<=i1; i++){ ps[i]=verts[i].pos; }
     return i1-i0+1;
 }
 
-int Builder2::export_pos( float4* ps, int i0, int i1 ){     if(i1<0){ i1=verts.size()-i1; };
+int Builder2::export_pos( float4* ps, int i0, int i1 )const{     if(i1<0){ i1=verts.size()-i1; };
     for(int i=i0; i<=i1; i++){ ps[i]=*(float4*)&verts[i].lo;}
     return i1-i0+1;
 }
 
-int Builder2::export_edges( Vec2i* eds, int i0, int i1 ){   if(i1<0){ i1=edges.size()-i1; };
+int Builder2::export_edges( Vec2i* eds, int i0, int i1 )const{   if(i1<0){ i1=edges.size()-i1; };
     for(int i=i0; i<=i1; i++){ eds[i]=edges[i].lo; }
     return i1-i0+1;
 }
 
-int Builder2::export_tris( Quat4i* tri, int i0, int i1 ){  if(i1<0){ i1=edges.size()-i1; };
+int Builder2::export_tris( Quat4i* tri, int i0, int i1 )const{  if(i1<0){ i1=edges.size()-i1; };
     for(int i=i0; i<=i1; i++){ tri[i]=tris[i]; }
     return i1-i0+1;
 }
 
-void Builder2::write_obj( const char* fname, uint8_t mask ){
+void Builder2::write_obj( const char* fname, uint8_t mask )const{
     printf( "Mesh::Builder2::write_obj(%s)\n", fname );
     FILE * pFile;
     pFile = fopen(fname,"w");
@@ -1649,7 +1672,7 @@ void Builder2::write_obj( const char* fname, uint8_t mask ){
         for(const auto& ch : chunks){
             if(ch.w == (int)ChunkType::face){
                 fprintf(pFile, "f");
-                int* ivs = strips.data() + ch.x;
+                const int* ivs = strips.data() + ch.x;
                 for(int i=0; i<ch.z; i++){
                     int iv = ivs[i] + 1;
                     if(bUVs && bNormals){ fprintf(pFile, " %i/%i/%i", iv, iv, iv); } 
@@ -1774,7 +1797,7 @@ void Builder2::read_obj(const char* fname, uint8_t mask) {
     printf("Mesh::Builder2::read_obj(%s) DONE\n", fname);
 }
 
-void Builder2::printSelection( bool bDetail ){
+void Builder2::printSelection( bool bDetail )const{
     std::vector<int>& selection = curSelection->vec;
     printf( "Mesh::Builder2::printSelection() n=%i mode=%i : ", selection.size(), selection_mode );
     if(bDetail)printf("\n");
@@ -1788,7 +1811,7 @@ void Builder2::printSelection( bool bDetail ){
     printf( " ]\n" );
 }
 
-void Builder2::printSelectedVerts(){
+void Builder2::printSelectedVerts()const{
     std::vector<int>& selection = curSelection->vec;
     printf( "Mesh::Builder2::printSelectedVerts() n=%i\n", selection.size() );
     for(int ii=0; ii<selection.size(); ii++){
@@ -1797,25 +1820,50 @@ void Builder2::printSelectedVerts(){
     }
 }
 
-void Builder2::printVert(int iv){ Vert&   v = verts[iv]; printf( "vert %i pos: %16.10f %16.10f %16.10f\n", iv, v.pos.x, v.pos.y, v.pos.z ); } 
-void Builder2::printEdge(int ie){ Quat4i& e = edges[ie]; printf( "edge %i ivs: %3i %3i ts: %i %i \n", ie, e.x, e.y, e.z, e.w ); }
+void Builder2::printVert(int iv)const{ const Vert&   v = verts[iv]; printf( "vert %i pos: %16.10f %16.10f %16.10f\n", iv, v.pos.x, v.pos.y, v.pos.z ); } 
+void Builder2::printEdge(int ie)const{ const Quat4i& e = edges[ie]; printf( "edge %i ivs: %3i %3i ts: %i %i \n", ie, e.x, e.y, e.z, e.w ); }
 
-void Builder2::printVerts(){
+void Builder2::printVerts()const{
     printf( "Mesh::Builder2::printVerts() n=%i\n", verts.size() );
     for(int i=0; i<verts.size(); i++){ printVert(i); }
 }
 
-void Builder2::printEdges(){
+void Builder2::printEdges()const{
     printf( "Mesh::Builder2::printEdges() n=%i\n", edges.size() );
     for(int i=0; i<edges.size(); i++){ printEdge(i); }
 }
 
-void Builder2::printChunkRange( int ich, int ich2 ){
+void Builder2::printChunkRange( int ich, int ich2 )const{
     printf( "Mesh::Builder2::printChunkRange() ich %i ich2 %i\n", ich, ich2 );
     if(ich2<0){ ich2=ich+1; }
     for(int i=ich; i<ich2; i++){
         Quat4i ch = chunks[i];
         printf( "chunk[%3i] -> is: %3i %3i t: %i t2: %i \n", i, ch.x, ch.y, ch.z, ch.w  );
+    }
+}
+
+void Builder2::printChunkIndices( int ich )const{
+    Quat4i ch = chunks[ich];
+    printf("{%3i,%3i,n=%3i,t%1i}[", ch.x, ch.y, ch.z, ch.w );
+    const int* ivs = &strips[ch.x];
+    for(int i=0; i<ch.z; i++){ printf(" %3i,", ivs[i] ); }
+    printf("]\n");
+}
+
+void Builder2::printFaces( bool bNormal, bool bCOG )const{
+    const int face_typ = (int)ChunkType::face;   
+    printf("Mesh::Builder2::printFaces() nchunk: %i\n", chunks.size());
+    for( int ich=0; ich<chunks.size(); ich++ ){
+        if (chunks[ich].w!=face_typ){ 
+            printf("%i chunk type(%i) != face(%i)\n", ich, chunks[ich].w, face_typ);
+            continue; 
+        }
+        //Quat4i ch = chunks[ich];printf("%i : %i\n", ich, ch.x, ch.y, ch.z, ch.w );
+        //Vec3d nr         = getChunkNormal(ich);
+        printf("%3i ", ich);
+        if(bNormal){ Vec3d nr   = polygonNormal(ich); printf( "normal(%8.2f,%8.2f,%8.2f) ", nr.x, nr.y, nr.z );    }
+        if(bCOG)   { Vec3d pcog = getChunkCOG(ich);   printf( "cog(%8.2f,%8.2f,%8.2f) ", pcog.x, pcog.y, pcog.z ); }
+        printChunkIndices(ich);
     }
 }
 
@@ -1883,15 +1931,7 @@ int Builder2::duplicateBlock( int iblock ){
     return block();
 }
 
-
-
-
-
-
-
-
 void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
-
     // compute centers of gravity
     Vec3d cog1 = getCOG( n, ivs1);
     Vec3d cog2 = getCOG( n, ivs2);
@@ -1903,12 +1943,9 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
     u.normalize();
     Vec3d v; v.set_cross(ax, u);
     v.normalize();
-
-    //printf( "alling_polygons() cog1 %f %f %f cog2 %f %f %f \n", cog1.x, cog1.y, cog1.z, cog2.x, cog2.y, cog2.z );
-    //printf( "alling_polygons() ax %f %f %f u %f %f %f v %f %f %f \n", ax.x, ax.y, ax.z, u.x, u.y, u.z, v.x, v.y, v.z );
-
+    printf( "alling_polygons() cog1(%f,%f,%f) cog2(%f,%f,%f) \n", cog1.x, cog1.y, cog1.z, cog2.x, cog2.y, cog2.z );
+    printf( "alling_polygons() ax(%f,%f,%f) u(%f,%f,%f) v(%f,%f,%f) \n", ax.x, ax.y, ax.z, u.x, u.y, u.z, v.x, v.y, v.z );
     //Mat3d fromDirUp( const VEC& dir, const VEC& up );
-    
     // Project points to uv plane
     Vec2d uv1[n], uv2[n];
     for(int i=0; i<n; i++){
@@ -1920,9 +1957,9 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
         // normalize to direction only
         uv1[i].normalize();
         uv2[i].normalize();
+        //printf( "%i ivs1 %i ivs2 %i uv1(%f,%f) uv2(%f,%f) \n", i, ivs1[i], ivs2[i], uv1[i].x,uv1[i].y, uv2[i].x,uv2[i].y );
     }
-    
-    // 6) match points by nearest uv projection
+    // --- match points by nearest uv projection
     int map[n];
     for(int i=0; i<n; i++){
         double dmin = -1.0;
@@ -1931,22 +1968,17 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
         for(int j=0; j<n; j++){
             double d = uvi.dot(uv2[j]);
             //printf( "d=%f\n", d );
-            if(d > dmin){
-                dmin = d;
-                imin = ivs2[j];
-            }
+            if(d > dmin){ dmin = d; imin = ivs2[j]; }
         }
         map[i] = imin;
     }
-    for(int i=0; i<n; i++){
-        ivs2[i] = map[i];
-    }
+    for(int i=0; i<n; i++){ ivs2[i] = map[i]; }
 }
 
 int Builder2::bridge_quads( Quat4i q1, Quat4i q2, int nseg, Quat4i stickTypes, Quat4i mask, bool bAlling ){
     //printf( "Mesh::Builder2::bridge_quads() nseg %i BEFORE q1: %i %i %i %i q2 = %i %i %i %i \n", nseg, q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
     if( bAlling ) alling_polygons(4, q1.array, q2.array, 0);
-    //printf( "Mesh::Builder2::bridge_quads() AFTER q1: %i %i %i %i q2 = %i %i %i %i \n", q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w );
+    //printf( "Mesh::Builder2::bridge_quads() AFTER  alling_polygons  q1{%i,%i,%i,%i} q2{%i,%i,%i,%i} \n", q1.x,q1.y,q1.z,q1.w, q2.x,q2.y,q2.z,q2.w );
     Vec3d A1 = verts[q1.x].pos; Vec3d A2 = verts[q2.x].pos;
     Vec3d B1 = verts[q1.y].pos; Vec3d B2 = verts[q2.y].pos;
     Vec3d C1 = verts[q1.z].pos; Vec3d C2 = verts[q2.z].pos;
@@ -2434,12 +2466,14 @@ int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double
     return i0;
 }
 
-void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, int nplane, const int* planes, const int* planeVs ){
+void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, double* node_sizes, int nplane, const int* planes, const int* planeVs ){
     //Vec2i chs[nnod];
     bool bSpecialNodes = (planes!=nullptr);
     //bSpecialNodes=false;
     for(int i=0; i<nnod; i++){
-        Quat4i i0s = addCMesh( cmesh, !bSpecialNodes, points[i] ); // bFaces=false, we only want the wireframe initially
+        double size=default_node_size;
+        if(node_sizes){ size=node_sizes[i]; }
+        Quat4i i0s = addCMesh( cmesh, !bSpecialNodes, points[i], Vec3d{size,size,size} ); // bFaces=false, we only want the wireframe initially
         //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
         if(bSpecialNodes){ out_chs[i] = addFaces( nplane, planes, planeVs, true, i0s.x ); }
         else             { out_chs[i] = Vec2i{ i0s.w, (int)chunks.size()};              }
@@ -2449,13 +2483,12 @@ void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, V
     }
 }
 
-
 void Builder2::bridgeFacingPolygons( Vec3d p1, Vec3d p2, const Vec2i chr1, const Vec2i chr2, int nseg, Quat4i stickTypes, Quat4i maks ){
     //printf("findMostFacingNormal() chr1(%i,%i) chr2(%i,%i)   p1(%g,%g,%g) p2(%g,%g,%g)\n", chr1.x,chr1.y, chr2.x,chr2.y, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z);
     Vec3d hray = p2-p1;
     hray.normalize();
-    int ich1 = findMostFacingNormal(hray, chr1, 0.0, true );
-    int ich2 = findMostFacingNormal(hray, chr2, 0.0, true );
+    int ich1 = findMostFacingNormal(hray, chr1, 0.0, true, 1e-6, p2 );
+    int ich2 = findMostFacingNormal(hray, chr2, 0.0, true, 1e-6, p1 );
     // if((ich1<0)||(ich2<0)){  
     //     printf("ERROR in Builder2::bridgeFacingPolygons(): ich1,2 %3i %3i \n", ich1, ich2 ); 
     //         for(int i=0; i<nch; i++){
@@ -2469,7 +2502,7 @@ void Builder2::bridgeFacingPolygons( Vec3d p1, Vec3d p2, const Vec2i chr1, const
     int* iq1 = getChunkStrip( ich1 );
     int* iq2 = getChunkStrip( ich2 );
     //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-    bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
+    bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks, true );
 }
 
 void Builder2::bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes, Quat4i maks ){
@@ -2478,20 +2511,6 @@ void Builder2::bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* 
         Vec2i e = edges[i];
         //printf("Builder2::findMostFacingNormal() e(%i,%i)");
         bridgeFacingPolygons( points[e.x], points[e.y], chs[e.x], chs[e.y], nseg, stickTypes, maks );
-        // Vec2i e = edges[i];
-        // //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
-        // Vec3d hray = points[e.x] - points[e.y];
-        // hray.normalize();
-        // int ich1 = findMostFacingNormal(hray, chs[e.x], 0.0, true );
-        // int ich2 = findMostFacingNormal(hray, chs[e.y], 0.0, true );
-        // if((ich1<0)||(ich2<0)){ 
-        //     printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
-        // }
-        // //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-        // int* iq1 = getChunkStrip( ich1 );
-        // int* iq2 = getChunkStrip( ich2 );
-        // //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-        // bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
     }
 }
 

@@ -113,6 +113,8 @@ class Builder2 : public SelectionBanks { public:
     std::vector<Quat4i> tris;    // {a,b,c|type}={f|e}   => we can store type of the face in the 4th component
     std::vector<Quat4i> chunks;  // {iv0,ie0,n,type} can represent polygons, lines_strips, triangles_strips 
     std::vector<int>    strips;  // indexes of primitives in the chunks
+    // polygon chunks structure: {iv0,ie0,n,type} where type is ChunkType::face
+    
 
     
 
@@ -131,6 +133,8 @@ class Builder2 : public SelectionBanks { public:
     int selection_mode = 3;  // 0-none, 1-vert, 2-edge, 3-face
     enum class ChunkType{ face=0, edgestrip=1, trianglestrip=2 };
     enum class SelectionMode{ vert=1, edge=2, face=3 };
+
+    double default_node_size = 1.0;
 
     // bool bSelectionSet = true;
     // std::vector<int>        selection; // vector is orderd - usefull for e.g. edge-loops    indices of selected vertices (eventually edges, faces ? )
@@ -328,7 +332,7 @@ class Builder2 : public SelectionBanks { public:
 
     Vec3d getCOG(int n, const int* ivs) const;
     void alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv=0 );
-    int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling=false );
+    int bridge_quads( Quat4i q1, Quat4i q2, int n, Quat4i stickTypes, Quat4i mask, bool bAlling=true );
 
     // ======= Mesh Editing & Transformations (from legacy MeshBuilder)
     void move_verts( const std::vector<int>& indices, const Vec3d& shift );
@@ -342,10 +346,12 @@ class Builder2 : public SelectionBanks { public:
     int   polygonChunk( int n, int* iedges, const int* ivs, bool bPolygonToTris );
     int   polygon( int n, int* iedges );
     int   polygonToTris( int i );
-    Vec3d polygonNormal( int ich );
-    Vec3d getChunkNormal( int ich );
-    int   findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin=0.0, bool bTwoSide=false );
-    int   findMostFacingNormal(Vec3d hray, Vec2i chrange, double cosMin=0.0, bool bTwoSide=false );
+    Vec3d polygonNormal ( int ich ) const;
+    //Vec3d getChunkNormal( int ich ) const;
+    Vec3d getChunkCOG   ( int ich ) const;
+
+    int   findMostFacingNormal(Vec3d hray, int nch, int* chs, double cosMin=0.0, bool bTwoSide=false, double distWeight=0.0, Vec3d ray0=Vec3dZero )const;
+    int   findMostFacingNormal(Vec3d hray, Vec2i chrange,     double cosMin=0.0, bool bTwoSide=false, double distWeight=0.0, Vec3d ray0=Vec3dZero )const;
 
     void clear();
 
@@ -426,28 +432,30 @@ class Builder2 : public SelectionBanks { public:
 
     // ToDo: This is too complicated, put we should remove it or move it elsewhere
     int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
-    int export_pos ( Vec3d* ps, int i0=0, int i1=-1 );
-    int export_pos( float4* ps, int i0=0, int i1=-1 );
-    int export_edges( Vec2i* eds, int i0=0, int i1=-1 );
-    int export_tris( Quat4i* tri, int i0=0, int i1=-1 );
+    int export_pos ( Vec3d* ps, int i0=0, int i1=-1 )const;
+    int export_pos( float4* ps, int i0=0, int i1=-1 )const;
+    int export_edges( Vec2i* eds, int i0=0, int i1=-1 )const;
+    int export_tris( Quat4i* tri, int i0=0, int i1=-1 )const;
 
     // ======= Debug Drawing (from legacy MeshBuilder)
     void addPointCross( const Vec3d& p, double d );
     void addArrow( const Vec3d& p1, const Vec3d& p2, double d );
 
-    void write_obj( const char* fname, uint8_t mask = 0xFF );
+    void write_obj( const char* fname, uint8_t mask = 0xFF )const;
     void read_obj( const char* fname, uint8_t mask = 0xFF );
     
-    void printSelection( bool bDetail=false );
-    void printSelectedVerts();
+    void printSelection( bool bDetail=false )const;
+    void printSelectedVerts()const;
 
-    void printVert(int iv);
-    void printEdge(int ie);
+    void printVert(int iv)const;
+    void printEdge(int ie)const;
 
-    void printSizes();
-    void printVerts();
-    void printEdges();
-    void printChunkRange( int ich, int ich2=-1 );
+    void printSizes()const;
+    void printVerts()const;
+    void printEdges()const;
+    void printChunkIndices( int ich )const;
+    void printChunkRange( int ich, int ich2=-1 )const;
+    void printFaces( bool bNormal=true, bool bCOG=true )const;
     int checkAllPointsConnected(bool bExit=true, bool bPrint=true) const;
 
     int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false );
@@ -465,7 +473,7 @@ class Builder2 : public SelectionBanks { public:
 
 
 
-    void facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, const int nplane=0, const int* planes=0, const int* planeVs=0 );
+    void facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, double* node_sizes=0, const int nplane=0, const int* planes=0, const int* planeVs=0 );
 
     void bridgeFacingPolygons( Vec3d p0, Vec3d p1, const Vec2i ch1, const Vec2i ch2, int nseg=4, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );
     void bridgeFacingPolygons( int nrod, const Vec2i* edges, const Vec3d* points, int nseg, const Vec2i* chs,  Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks={1,1,1,1} );

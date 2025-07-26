@@ -42,7 +42,9 @@ export LD_PRELOAD
 #./$name.x -parabola
 #./$name.x -blocks
 #./$name.x -extrude_octahedron
-./$name.x -oct_nodes | tee OUT-constructionBlockApp
+#./$name.x -oct_nodes | tee OUT-constructionBlockApp
+./$name.x -cube_nodes | tee OUT-constructionBlockApp
 #./$name.x -bevel | tee OUT
+#./$name.x -panel | tee OUT
 
 

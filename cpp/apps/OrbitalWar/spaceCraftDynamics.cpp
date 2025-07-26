@@ -47,6 +47,7 @@
 #include "TrussDynamics_d.h"
 #include "TrussDynamics_f.h"
 #include "SpaceCraftDynamicsApp.h"
+#include <Solids.h>
 
 using namespace Mesh;
 using namespace SpaceCrafting;
@@ -213,6 +214,37 @@ int main(int argc, char *argv[]){
         }
         W.sim.user_update = SpaceCraftControl;
     }};
+
+
+    funcs["-cube_nodes"] = {0, [&](const char**){
+        printf("funcs[-cube_nodes]: Manual Construction Blocks Test:\n");
+        //testConstructionBlocks(bb, truss);
+        const int nnodes = 5;
+        Vec3d nodes[nnodes] = {
+            {0.0,    0.0,    0.0}, // 0
+            {0.0,    0.0,  200.0}, // 1
+            {0.0,    0.0, -150.0}, // 2
+            {0.0, -100.0,    0.0}, // 3
+            {0.0,  100.0,    0.0}  // 4
+        };
+        double node_sizes[nnodes] = {10.0, 5., 5.0, 5.0, 5.0 };
+        const int nGirders = 4;
+        Vec2i girdes[nGirders] = {{0,1}, {0,2}, {0,3}, {0,4}};
+        int girer_nsegs[nGirders] = {8, 6, 4, 4};
+        const int nRopes = 4;
+        Vec2i ropes[nRopes] = { {1,3}, {1,4}, {2,3}, {2,4} };
+        // ----- here we should create Nodes, girders and ropes in theSpaceCraft ( see SpaceCrafting::SpaceCraft in SpaceCraft.h )
+        make_Skeleton( theSpaceCraft, nnodes, nodes, node_sizes, nGirders, girdes, girer_nsegs, nRopes, ropes );
+        theSpaceCraft->nodeMeshes.push_back(Solids::Cube);
+        W.mesh.clear();
+        BuildCraft_blocks( W.mesh, *theSpaceCraft, 30.0 );
+        W.mesh.printSizes();
+        W.initSimulators();
+        W.sim.user_update = SpaceCraftControl;
+    }};
+
+
+
 
     funcs["-s"]={1,[&](const char** ss){ 
         W.reloadShip( ss[0] );

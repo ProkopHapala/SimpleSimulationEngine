@@ -184,11 +184,13 @@ void ConstructionBlockApp::initGUI(){
     viewControls->initCheckBoxList(5, 5, 150);
 
 
-    //trussView.bViewPointLabels  = true;
+    trussView.bViewPointLabels  = true;
     //trussView.bViewEdgeLabels   = true;
-    trussView.bViewVertNormals  = true;
-    //trussView.bViewFaceLabels   = true;
+    //trussView.bViewVertNormals  = true;
+    trussView.bViewFaceLabels   = true;
+    trussView.bViewFaceNormals  = true;
     //trussView.bViewTriLabels    = true;
+    bViewAxis = false;
     
     viewControls->addBox("Block Builder", &bViewBlockBuilder);
     viewControls->addBox("Pivot Point",   &bViewPivotPoint);
@@ -271,7 +273,7 @@ void ConstructionBlockApp::draw(){
         }
     }
     if(bViewPivotPoint) { Draw3D::drawPointCross( pivot_point, 0.5 ); }
-    if(bViewAxis) { glLineWidth(5.0); Draw3D::drawAxis(10.0); }
+    if(bViewAxis) { glLineWidth(5.0); Draw3D::drawAxis(10.0); glLineWidth(1.0); }
 };
 
 void ConstructionBlockApp::drawHUD(){
@@ -600,10 +602,10 @@ int main(int argc, char *argv[]){
         Vec2i chs[nnodes];
         bool bUseSpecialPlanes=true;
         if(bUseSpecialPlanes){
-            truss.facingNodes( Solids::Octahedron, nnodes, node_positions, chs, Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs );
+            truss.facingNodes( Solids::Octahedron, nnodes, node_positions, chs, node_sizes, Solids::Octahedron_nplanes, Solids::Octahedron_planes, Solids::Octahedron_planeVs );
         }else{
             CMesh oct=(CMesh){Solids::Octahedron_nverts,Solids::Octahedron_nedges,Solids::Octahedron_ntris,Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
-            truss.facingNodes( oct, nnodes, node_positions, chs );
+            truss.facingNodes( oct, nnodes, node_positions, chs, node_sizes );
         }
         //for(int i=0;i<nnodes;i++){ chs[i].y++; } // make range end exclusive
         truss.bridgeFacingPolygons( nedges, edges, node_positions, 4, chs );
@@ -611,6 +613,40 @@ int main(int argc, char *argv[]){
         truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
         //printf("Extruding chunk %i by 2.0 units...\n", chs.a);
         //truss.extrudeFace(chs.a, 2.0);
+    }};
+
+    funcs["-cube_nodes"] = {0, [&](const char**){
+        printf("funcs[-oct_nodes]: Manual Construction Blocks Test:\n");
+        const int nnodes = 5;
+        Vec3d node_positions[nnodes] = {
+            {0.0,   0.0,   0.0}, 
+            {0.0,   0.0, -15.0}, 
+            {0.0,   0.0,  20.0}, 
+            {0.0, -10.0,   0.0}, 
+            {0.0,  10.0,   0.0}
+        };
+        double node_sizes[nnodes] = {1.0, 0.5, 0.5, 0.25, 0.25};
+        const int nedges = 4;
+        const int nseg   = 5;
+        Vec2i edges[nedges] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}};
+
+        // const int nnodes = 2;
+        // Vec3d node_positions[nnodes] = {
+        //     {0.0,   0.0,   0.0}, 
+        //     {0.0,   0.0,   3.0}
+        // };
+        // double node_sizes[nnodes] = {1.0, 0.5};
+        // const int nedges = 1;
+        // const int nseg=1;
+        // Vec2i edges[nedges] = {{0, 1}};
+
+        Vec2i chs[nnodes];
+        truss.facingNodes( Solids::Cube, nnodes, node_positions, chs, node_sizes );
+        truss.printFaces();
+        truss.bridgeFacingPolygons( nedges, edges, node_positions, nseg, chs );
+        //truss.bridgeFacingPolygons( nedges, edges, node_positions, nseg, chs, {-1,-1,-1,-1}, {0,0,0,0} );
+        printf("  truss.printSizes():  "); truss.printSizes();
+        truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
     }};
 
     //if( argc<=1 ){  funcs["-parabola"].func(0); }

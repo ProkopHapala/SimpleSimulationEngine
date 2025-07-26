@@ -61,7 +61,9 @@ namespace Solids{
     static Vec2i   Cube_edges [Cube_nedges  ] = { 0,1, 0,2, 0,4,  1,3,1,5, 2,3, 2,6,    7,5, 7,6, 7,3,  5,4, 6,4    };
     static Vec3i   Cube_tris  [Cube_ntris   ] = { 0,1,3, 0,3,2,  0,4,5, 0,5,1,  0,2,6, 0,6,4,  7,5,4,  7,4,6,  7,3,1,   7,1,5,  7,6,2,  7,2,3  };
     static int     Cube_ngons [Cube_nfaces  ] = { 4,        4,          4,         4,         4,         4        };
-    static int     Cube_faces [Cube_nfaces*4] = { 0,1,3,2,  0,4,5,1,    0,2,6,4,   7,5,4,6,   7,3,1,5,   7,6,2,3  };
+    //static int     Cube_faces [Cube_nfaces*4] = { 0,1,3,2,  0,4,5,1,    0,2,6,4,   7,5,4,6,   7,3,1,5,   7,6,2,3  };
+
+    static int     Cube_faces [Cube_nfaces*4] = { 0,2,3,1,   0,1,5,4,      0,4,6,2,   7,6,4,5,   7,5,1,3,   7,3,2,6  };
 
         // drawFace( block, 0, block.pos+rot.a* L.a, Mat3d{ rot.b    ,rot.c    ,rot.a    }, {L.y,L.z} );
         // drawFace( block, 1, block.pos+rot.a*-L.a, Mat3d{ rot.b*-1.,rot.c*-1.,rot.a*-1.}, {L.y,L.z} );

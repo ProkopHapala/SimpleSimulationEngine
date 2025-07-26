@@ -139,25 +139,39 @@ void drawFaces( const Mesh::Builder2& mesh, bool bFlat=true, bool bNormals=false
     }
 }
 
-void drawFaceNormals( const Mesh::Builder2& mesh){
+// void drawFaceNormals( const Mesh::Builder2& mesh){
+//     const int face_typ = (int)Mesh::Builder2::ChunkType::face;
+//     glBegin(GL_LINES);
+//     for( Quat4i ch: mesh.chunks ){
+//         //printf( "drawFaces() chunk(%i,%i,%i,%i)\n", ch.x, ch.y, ch.z, ch.w );
+//         Vec3d nr;
+//         Vec3d pcog=Vec3dZero;
+//         if(ch.w!=face_typ ) continue;
+//         const Vec3d& a = mesh.verts[mesh.strips[ch.x  ]].pos;
+//         const Vec3d& b = mesh.verts[mesh.strips[ch.x+1]].pos;
+//         const Vec3d& c = mesh.verts[mesh.strips[ch.x+2]].pos;
+//         nr = cross(b-a, c-a); nr.normalize(); 
+//         for(int i=0;i<ch.z;i++){
+//             int iv = mesh.strips[ch.x+i];
+//             pcog.add( mesh.verts[iv].pos );
+//         }
+//         //glColor3f(0.f,1.f,0.f);
+//         pcog.mul( 1./ch.z );
+//         //Draw3D::drawLine( pcog, pcog+nr );
+//         Draw3D::vertex( pcog );
+//         Draw3D::vertex( pcog+nr );
+//     }
+//     glEnd();
+// }
+
+void drawFaceNormals( const Mesh::Builder2& mesh, float scale=1.){
     const int face_typ = (int)Mesh::Builder2::ChunkType::face;
     glBegin(GL_LINES);
-    for( Quat4i ch: mesh.chunks ){
-        //printf( "drawFaces() chunk(%i,%i,%i,%i)\n", ch.x, ch.y, ch.z, ch.w );
-        Vec3d nr;
-        Vec3d pcog=Vec3dZero;
-        if(ch.w!=face_typ ) continue;
-        const Vec3d& a = mesh.verts[mesh.strips[ch.x  ]].pos;
-        const Vec3d& b = mesh.verts[mesh.strips[ch.x+1]].pos;
-        const Vec3d& c = mesh.verts[mesh.strips[ch.x+2]].pos;
-        nr = cross(b-a, c-a); nr.normalize(); 
-        for(int i=0;i<ch.z;i++){
-            int iv = mesh.strips[ch.x+i];
-            pcog.add( mesh.verts[iv].pos );
-        }
-        //glColor3f(0.f,1.f,0.f);
-        pcog.mul( 1./ch.z );
-        //Draw3D::drawLine( pcog, pcog+nr );
+    for( int ich=0; ich<mesh.chunks.size(); ich++ ){
+        if(mesh.chunks[ich].w!=face_typ ) continue;
+        //Vec3d nr   = mesh.getChunkNormal(ich);
+        Vec3d nr   = mesh.polygonNormal(ich)*scale;
+        Vec3d pcog = mesh.getChunkCOG(ich);
         Draw3D::vertex( pcog );
         Draw3D::vertex( pcog+nr );
     }
