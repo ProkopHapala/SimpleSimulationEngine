@@ -323,7 +323,7 @@ int UV_sheet( Builder2& builder, Vec2i n, Vec2f uv0, Vec2f duv, int dirMask, Qua
     return iv0;
 }
 
-void QuadSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, int dirMask, Quat4i stickTypes, int imin=0, int imax=100 ) {
+void QuadSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, int dirMask, Quat4i stickTypes=Quat4i{0,0,0,0}, int imin=0, int imax=100 ) {
     auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y-1) };
     UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,false,false);
@@ -526,14 +526,14 @@ int UV_slab( Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f up, int
     return iv0;
 }
 
-void QuadSlab(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, Vec3f up, int dirMask, Quat4i stickTypes ) {
+void QuadSlab(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, Vec3f up, int dirMask, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
     Vec3f nor; nor.set_cross(p10-p00,p01-p00); nor.normalize();
     auto uvfunc1 = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     auto uvfunc2 = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11) + nor*up.z; };
     UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
 }
 
-void SlabTube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, Vec3f up, int dirMask, Quat4i stickTypes ) {
+void SlabTube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, Vec3f up, int dirMask, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
     //auto uvfunc = [&](Vec2f uv){ Vec2f uv_= {uv.x+uv.y*0.5, uv.y*0.86602540378}; return ConeUVfunc(uv_,Rs.a,Rs.b,L); };
     //auto uvfunc = [&](Vec2f uv){ Vec2f uv_= {uv.x*0.86602540378, uv.y+uv.x*0.5}; return ConeUVfunc(uv_,Rs.a,Rs.b,L); };
     float dudv = 0.5*(n.x-1.)/(n.y-1.);
@@ -542,12 +542,12 @@ void SlabTube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, fl
     UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
 }
 
-void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, float width, Quat4i stickTypes ) {
+void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, float width, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
     auto uvfunc = [&](Vec2f uv){ return QuadUVfunc(uv,p00,p01,p10,p11); };
     UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
 }
 
-void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, float width, Quat4i stickTypes ) {
+void Tube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, float width, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
     auto uvfunc = [&](Vec2f uv){ return ConeUVfunc(uv,Rs.a,Rs.b,L); };
     UV_panel(builder,n,UVmin,UVmax,width,stickTypes,uvfunc);
 }

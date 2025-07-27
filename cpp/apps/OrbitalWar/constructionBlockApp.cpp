@@ -31,6 +31,34 @@
 #include "MeshBuilder2Draw.h"
 #include "argparse.h"
 
+int read_binary_int( const char* s, const char* label=0 ){
+    int n=0;
+    for(int i=0;i<32;i++){
+        if(s[i]=='\0') break;
+        if(s[i]=='1') n |= 1<<i;
+    }
+    if(label) printf("read_binary_int() %s: %i\n", label, n);
+    return n;
+}
+
+Vec2i scanf_Vec2i( const char* s, const char* label=0 ){
+    Vec2i v; sscanf(s, "%i,%i", &v.x, &v.y); 
+    if(label) printf("scanf_Vec2i() %s: %i %i\n", label, v.x, v.y);
+    return v;
+}
+
+Vec2f scanf_Vec2f( const char* s, const char* label=0 ){
+    Vec2f v; sscanf(s, "%f,%f", &v.x, &v.y); 
+    if(label) printf("scanf_Vec2f() %s: %f %f\n", label, v.x, v.y);
+    return v;
+}
+
+Vec3f scanf_Vec3f( const char* s, const char* label=0 ){
+    Vec3f v; sscanf(s, "%f,%f,%f", &v.x, &v.y, &v.z); 
+    if(label) printf("scanf_Vec3f() %s: %f %f %f\n", label, v.x, v.y, v.z);
+    return v;
+}
+
 
 //#include "testUtils.h"
 
@@ -480,7 +508,6 @@ int main(int argc, char *argv[]){
         //SlabTube(truss, {4,9}, {0.0,0.0}, {1.0,1.0}, {10.0,10.0}, 24.0, {0.0,0.5,2.0}, 0b101010111, Quat4i{0,0,0,0} );
 
         //QuadSheet(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {80.0,0.0,0.0}, {0.0,100.0,0.0}, {120.0,120.0,0.0}, 0b1111,  Quat4i{0,0,0,0} );
-
         //QuadSheet(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 0b1011, Quat4i{0,0,0,0}, 3,10 );
         //QuadSheet(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 0b1011, Quat4i{0,0,0,0}, 3,15 );
 
@@ -493,6 +520,76 @@ int main(int argc, char *argv[]){
         TorusSheet(truss, {4,6}, {-0.125,0.0}, {0.875,1.0}, {5.0,20.0}, 0b0011, 0.0 );
         //TorusSheet(truss, {4,6}, {0.0,0.0}, {1.0,1.0}, {5.0,20.0}, 0b0011, 0.0 );
 
+    }};
+
+    funcs["-QuadSlab"] = {7, [&](const char** ss){ 
+        printf("funcs[-QuadSlab]: Panel Extrude Test: \n"); 
+        // QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, {0.333333,0.333333,7.0}, 0b101010111, Quat4i{0,0,0,0} );
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec3f p00   = scanf_Vec3f(ss[1], "p00");   
+        Vec3f p01   = scanf_Vec3f(ss[2], "p01");   
+        Vec3f p10   = scanf_Vec3f(ss[3], "p10");   
+        Vec3f p11   = scanf_Vec3f(ss[4], "p11");   
+        Vec3f up    = scanf_Vec3f(ss[5], "up");
+        int dirMask = read_binary_int(ss[6], "dirMask"); 
+        //double offset; sscanf(ss[5], "%lf", &offset);
+        truss.clear();
+        QuadSlab(truss, nuv, {0.0,0.0}, {1.0,1.0}, p00, p01, p10, p11, up, dirMask );
+        //QuadSlab(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, {0.333333,0.333333,7.0}, 0b101010111, Quat4i{0,0,0,0} );
+    }};
+
+
+    funcs["-SlabTube"] = {6, [&](const char** ss){ 
+        printf("funcs[-SlabTube]: Panel Extrude Test: \n"); 
+        //SlabTube(truss, {2,16}, {0.0,0.0}, {0.2,1.5*M_PI}, {10.0,10.0}, 10.0, {0.333333,0.333333,2.0}, 0b101010111, Quat4i{0,0,0,0} );
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec2f UVmin = scanf_Vec2f(ss[1], "UVmin"); 
+        Vec2f UVmax = scanf_Vec2f(ss[2], "UVmax"); 
+        Vec3f RLs   = scanf_Vec3f(ss[3], "RLs");   
+        Vec3f up    = scanf_Vec3f(ss[4], "up");
+        int dirMask = read_binary_int(ss[5], "dirMask"); 
+        //double offset; sscanf(ss[5], "%lf", &offset);
+        truss.clear();
+        //SlabTube(truss, nuv, UVmin, UVmax, RLs.xy(), RLs.z, up, dirMask );
+        SlabTube(truss, {2,16}, {0.0,0.0}, {0.2,1.5*M_PI}, {10.0,10.0}, 10.0, {0.333333,0.333333,2.0}, 0b101010111, Quat4i{0,0,0,0} );
+    }};
+
+    funcs["-QuadSheet"] = {7, [&](const char** ss){ 
+        printf("funcs[-QuadSheet]: Panel Extrude Test: \n"); 
+        //QuadSheet(truss, {10,10}, {0.0,0.0}, {1.0,1.0}, {0.0,0.0,0.0}, {86.602540378,50.0,0.0}, {0.0,100.0,0.0}, {86.602540378,150.0,0.0}, 0b1011, Quat4i{0,0,0,0}, 3,15 );
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec3f p00   = scanf_Vec3f(ss[1], "p00");   
+        Vec3f p01   = scanf_Vec3f(ss[2], "p01");   
+        Vec3f p10   = scanf_Vec3f(ss[3], "p10");   
+        Vec3f p11   = scanf_Vec3f(ss[4], "p11");    
+        int dirMask = read_binary_int(ss[5], "dirMask"); 
+        Vec2i iminmax = scanf_Vec2i(ss[6], "iminmax");
+        //double offset; sscanf(ss[5], "%lf", &offset);
+        truss.clear();
+        QuadSheet(truss, nuv, Vec2f{0.0,0.0}, Vec2f{1.0,1.0}, p00, p01, p10, p11, dirMask, Quat4i{0,0,0,0}, iminmax.x, iminmax.y);
+    }};
+
+    funcs["-TubeSheet"] = {5, [&](const char** ss){ 
+        printf("funcs[-TubeSheet]: Panel Extrude Test: \n"); 
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec2f UVmin = scanf_Vec2f(ss[1], "UVmin"); 
+        Vec2f UVmax = scanf_Vec2f(ss[2], "UVmax"); 
+        Vec3f RLs   = scanf_Vec3f(ss[3], "RLs");   
+        int dirMask = read_binary_int(ss[4]); 
+        //double offset; sscanf(ss[5], "%lf", &offset);
+        truss.clear();
+        TubeSheet(truss, nuv, UVmin, UVmax, RLs.xy(), RLs.z, dirMask, 0.0);
+    }};
+
+    funcs["-TorusSheet"] = {5, [&](const char** ss){ 
+        printf("funcs[-TorusSheet]: Panel Extrude Test: \n"); 
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec2f UVmin = scanf_Vec2f(ss[1], "UVmin"); 
+        Vec2f UVmax = scanf_Vec2f(ss[2], "UVmax"); 
+        Vec2f Rs    = scanf_Vec2f(ss[3], "Rs");   
+        int dirMask = read_binary_int(ss[4]); 
+        truss.clear();
+        TorusSheet(truss, nuv, UVmin, UVmax, Rs, dirMask, 0.0);
     }};
 
     funcs["-bevel"] = {0, [&](const char**){ 
