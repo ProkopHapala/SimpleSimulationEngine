@@ -116,6 +116,8 @@ class Selection{public:
     inline int  size()const{ return vec.size(); }
     inline int* data(){ return vec.data(); }
 
+    inline void sort(){ std::sort(vec.begin(), vec.end()); }
+
     inline void clear(){ map.clear(); vec.clear(); }
     //inline void unionWith(Selection& other        ){ for(int i : other.vec){ add(i); } }
     // inline void unionWith(std::co<int>& other ){ for(int i : other){ add(i); } }
@@ -125,6 +127,8 @@ class Selection{public:
     template <typename Container> 
     inline void insert( const Container& other ){ for(int i : other){ add(i); } }
     inline void insert( int n, const int* is   ){ for(int i=0; i<n; i++){ add(is[i]); } }
+    
+    void print(){ printf("Selection["); for(int i : vec){ printf("%i ", i); } printf("]\n"); }
 
     inline void invert( int nmax, int n=-1, const int* is=0 ){
         bool* mask = new bool[nmax];
@@ -162,7 +166,7 @@ int selectByPredicate( std::ranges::input_range auto&& range,  Predicate predica
     int index = 0;
     for (const auto& element : range) {
         if (predicate(element)) { 
-            printf("Selected %d\n", index); 
+            //printf("Selected %d\n", index); 
             this->add(index); 
         }
         index++;

@@ -181,7 +181,8 @@ class Builder2 : public SelectionBanks { public:
     //auto verts_range() { return std::views::all(verts); }
 
     
-    void selectEdgesBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+    void selectEdgesBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0, bool bClear=true) {
+        if (bClear) { curSelection->clear(); }
         curSelection->kind = (int)SelectionMode::edge;
         curSelection->selectByPredicate(
             std::views::all(edges), 
@@ -193,12 +194,55 @@ class Builder2 : public SelectionBanks { public:
         );
     }
 
-    void selectVertsBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0) {
+    void selectVertsBySDF(const std::function<double(const Vec3d&)>& sdf, double threshold = 0.0, bool bClear=true) {
+        if (bClear) { curSelection->clear(); }
         curSelection->kind = (int)SelectionMode::vert;
         curSelection->selectByPredicate(std::views::all(verts), [&](const Vert& vert) -> bool {return (sdf(vert.pos) < threshold); });
     }
 
-    
+    // void sortVertsBy( std::vector<int>& ivs, const std::function<double(const Vec3d&)>& rankingFunction) {
+    //     printf("==== sortVertsBy() ivs.size() %i\n", ivs.size());
+    //     // Create vector of (cost, original index) pairs
+    //     std::vector<std::pair<double, int>> cost_idx;
+    //     cost_idx.reserve(ivs.size());
+    //     printf("--- sortVertsBy() before sorting \n");
+    //     for(int i=0; i<ivs.size(); i++){ 
+    //         double c = rankingFunction(verts[ivs[i]].pos);
+    //         cost_idx.emplace_back(c, ivs[i]);
+    //         printf("  cost[%i] %i %g\n", i, ivs[i], c);
+    //     }
+    //     printf("--- sortVertsBy() start sorting \n");
+    //     std::sort(cost_idx.begin(), cost_idx.end());
+    //     printf("--- sortVertsBy() after sorting \n");
+    //     for(int i=0; i<ivs.size(); i++){ 
+    //         ivs[i] = cost_idx[i].second;
+    //         printf("  ivs[%i] %i -> %g\n", i, ivs[i], cost_idx[i].first);
+    //     }
+    // }
+
+    void sortVertsBy( std::vector<int>& ivs, const std::function<double(const Vec3d&)>& rankingFunction) {
+        //printf("==== sortVertsBy() ivs.size() %i\n", ivs.size());
+        // Create vector of (cost, original index) pairs
+        int n = ivs.size();
+        std::vector<int> permut(n);
+        std::vector<double> costs(n);
+        //printf("--- sortVertsBy() before sorting \n");
+        for(int i=0; i<n; i++){ 
+            permut[i] = i;
+            costs[i]  = rankingFunction(verts[ivs[i]].pos);
+            //printf("  cost[%i] %i -> %g\n", i, ivs[i], costs[i]);
+        }
+        //printf("--- sortVertsBy() start sorting \n");
+        std::sort(permut.begin(), permut.end(), [&](int i, int j){ return costs[i] < costs[j]; });
+        //printf("--- sortVertsBy() after sorting \n");
+        std::vector<int> ivs_new(n);
+        for(int i=0; i<n; i++){ 
+            int j = permut[i];
+            ivs_new[i] = ivs[j];
+            //printf("  ivs[%i]->%i  %i -> %g\n", i, j, ivs_new[i], costs[j]);
+        }
+        ivs = ivs_new;
+    }
 
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
@@ -214,7 +258,7 @@ class Builder2 : public SelectionBanks { public:
         //             exit(0);
         //         }
         //     }
-        // }
+        // )
         // Assert that no vertex is found nearby. If one is found (iv>=0), the assertion fails and the action is executed.
         // The action is now safe because it only runs when 'iv' is a valid index.
         _assert( int iv=findVert(pos,RvertCollapse), iv<0, { Vec3d p=verts[iv].pos; printf( "Mesh::Builder2::vert() ERROR [%i] vertex already exists: new_vert_ind=%i is too close to old_vert_ind=%i, rij(%g)<RvertCollapse(%g) p_new(%g,%g,%g) p_old(%g,%g,%g) \n", (int)verts.size(), (int)verts.size(), iv, sqrt((p-pos).norm2()), RvertCollapse, pos.x,pos.y,pos.z, p.x,p.y,p.z ); } );
@@ -239,7 +283,11 @@ class Builder2 : public SelectionBanks { public:
         edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; 
     }
 
-    inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
+    inline int tri ( int a, int b, int c,    int t=-1  ){ 
+        _assert( {}                                   , (a!=b)&&(b!=c)&&(c!=a) , printf( "Mesh::Builder2::tri() ERROR [%3i] iverts(%3i,%3i,%3i) are the same\n",  tris.size(), a,b,c ) );
+        _assert( int it=findTriByVerts_brute({a,b,c}) , it<0 ,                   printf( "Mesh::Builder2::tri() ERROR [%3i] iverts(%3i,%3i,%3i) already exists it=%i \n", (int)tris.size(), a,b,c, it )  );
+        tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; 
+    }
 
 
     inline void add_verts(int n, Vec3d* ps, Vec3d* nors=0, Vec2d* uvs=0){
@@ -275,8 +323,8 @@ class Builder2 : public SelectionBanks { public:
         return edge(ia,ib,t); 
     }
 
-    inline int getOtherEdgeVert(int ie, int iv){
-        Quat4i& e = edges[ie];
+    inline int getOtherEdgeVert(int ie, int iv)const{
+        const Quat4i& e = edges[ie];
         return e.x==iv ? e.y : e.x;
     }
     
@@ -358,12 +406,13 @@ class Builder2 : public SelectionBanks { public:
     void clear();
 
 
-    bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts );
-    bool sortEdgeLoop( int n, int* iedges, int* iverts=0 );
+    bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts )const;
+    bool sortEdgeLoop( int n, int* iedges, int* iverts=0 )const;
     
-    int findEdgeByVerts_brute( Vec2i verts );
-    int findEdgeByVerts_map( const Vec2i verts );
-    int findEdgeByVerts( const Vec2i verts );
+    int findTriByVerts_brute( Vec3i verts )const;
+    int findEdgeByVerts_brute( Vec2i verts )const;
+    int findEdgeByVerts_map( const Vec2i verts )const;
+    int findEdgeByVerts( const Vec2i verts )const;
     int findOrAddEdges( const Vec2i verts, int t=-1, int t2=-1 );
     void buildVerts2Edge();
     void build_edgesOfVerts(bool bClear=true);
@@ -472,8 +521,7 @@ class Builder2 : public SelectionBanks { public:
     int rope ( Vec3d p0,  Vec3d p1, int nseg, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int ropes( int nv, Vec3d* vs, int ne, int nseg, const Vec2i* ends, int ropeType, int anchorType, double Rcolapse=0.1, double r=-1.0 );
     int panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width=1.0, Quat4i stickTypes=(Quat4i){-1,-1,-1,-1} );
-    int panel( int n, int* ivs1, int* ivs2, double width=1.0, Quat4i stickTypes=(Quat4i){-1,-1,-1,-1} );
-
+    int bridgeTriPatch( int n, int* ivs1, int* ivs2, double width=1.0, Quat4i stickTypes=(Quat4i){-1,-1,-1,-1}, bool bTris=false );
 
 
     void facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, Vec2i* out_chs, double* node_sizes=0, const int nplane=0, const int* planes=0, const int* planeVs=0 );

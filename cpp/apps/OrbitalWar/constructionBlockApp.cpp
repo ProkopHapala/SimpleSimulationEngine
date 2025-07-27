@@ -51,6 +51,10 @@ const int ROPE_TYPE   = 2;
 SDF_Cylinder* sdf_cylinder; 
 Vec3d pivot_point{ 5.0, 0.0, 3.0 };
 
+Selection* sel1; 
+Selection* sel2;
+
+
 using namespace Mesh;
 
 void trussFromSkelet(const Mesh::Builder2& skelet, double* node_sizes, BlockBuilder& bb, Mesh::Builder2& truss) {
@@ -68,31 +72,40 @@ void trussFromSkelet(const Mesh::Builder2& skelet, double* node_sizes, BlockBuil
     }
 }
 
-// void facingNodes( Mesh::Builder2& truss, int nnod, Vec3d* node_positions, int nrod, Vec2i* edges, int nseg, int nplane, int* planes, int* planeVs, Quat4i stickTypes=Quat4i{-1,-1,-1,-1}, Quat4i maks=Quat4i{1,1,1,1} ){
-//     Vec2i chs[nnod];
-//     for(int i=0; i<nnod; i++){
-//         Quat4i i0s= truss.addCMesh( Solids::Octahedron, false, node_positions[i] ); // bFaces=false, we only want the wireframe initially
-//         //printf("  addCMesh() i0s(%i,%i,%i)\n", i0s.a, i0s.b, i0s.c);
-//         chs[i]   = truss.addFaces( nplane, planes, planeVs, true, i0s.x );
-//         //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
-//     }
-//     for(int i=0; i<nrod; i++){
-//         Vec2i e = edges[i];
-//         //printf(" ===== findMostFacingNormal() e(%i,%i) chs.a(%i,%i) chs.b(%i,%i)\n", e.x, e.y, chs[e.x].a, chs[e.x].b, chs[e.y].a, chs[e.y].b);
-//         Vec3d hray = node_positions[e.x] - node_positions[e.y];
-//         hray.normalize();
-//         int ich1 = truss.findMostFacingNormal(hray, chs[e.x], 0.0, true );
-//         int ich2 = truss.findMostFacingNormal(hray, chs[e.y], 0.0, true );
-//         if((ich1<0)||(ich2<0)){ 
-//             printf("ERROR in oct_nodes: ich1,2 %3i %3i \n", ich1, ich2 ); exit(0); 
-//         }
-//         //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-//         int* iq1 = truss.getChunkStrip( ich1 );
-//         int* iq2 = truss.getChunkStrip( ich2 );
-//         //printf(" ich1,2 %3i %3i  @iq1,2 %p %p \n", ich1, ich2, iq1, iq2 );
-//         truss.bridge_quads( *(Quat4i*)iq1, *(Quat4i*)iq2, nseg, stickTypes, maks );
-//     }
-// }
+void bridgeLineSelections( Vec3d a0, Vec3d a1, Vec3d b0, Vec3d b1, double r, bool bTris=false){ 
+    // sdf_cylinder = new SDF_Cylinder(  a0, a1, r, false );
+    // Selection* s1 = truss.curSelection; truss.selectVertsBySDF( *sdf_cylinder                     ); truss.nextSelection(); s1->print();
+    // Selection* s2 = truss.curSelection; truss.selectVertsBySDF( SDF_Cylinder(  b0, b1, r, false ) ); s2->print(); 
+    // sel1=s1; sel2=s2;    
+    Selection* s1 = truss.curSelection; truss.selectVertsBySDF( SDF_Cylinder(  a0, a1, r, false ) ); truss.nextSelection( ); 
+    Selection* s2 = truss.curSelection; truss.selectVertsBySDF( SDF_Cylinder(  b0, b1, r, false ) );
+    sel1=s1; sel2=s2;
+    int n1 = s1->vec.size();
+    int n2 = s2->vec.size();
+    int n = (n1<n2)?n1:n2;
+    SDF_point2 costf{ (a0+b0)*0.5 };
+    //printf("==== bridgeLineSelections() n1 %i n2 %i n %i\n", n1, n2, n);
+    truss.sortVertsBy( s1->vec, costf );    // s1->print();
+    truss.sortVertsBy( s2->vec, costf );    // s2->print();
+    truss.bridgeTriPatch( n, s1->vec.data(), s2->vec.data(), r, Quat4i{-1,-1,-1,-1}, bTris );
+    
+} // select edges by capsula
+
+void brideFormSkeleton( Vec2i e1, Vec2i e2, Vec3d* ps, double* szs, double r, double h, const Vec3d* up_=0, bool bTris=false){ 
+    Vec3d p0 = ps[e1.x]; Vec3d p1 = ps[e1.y];
+    Vec3d p2 = ps[e2.x]; Vec3d p3 = ps[e2.y];
+    Vec3d d1 = p1 - p0; d1.normalize();
+    Vec3d d2 = p3 - p2; d2.normalize();
+    Vec3d up; if(up_==0){ up.set_cross(d1,d2); up.normalize(); }else{ up = *up_; }
+    Vec2d sz1{ szs[e1.x], szs[e1.y] };
+    Vec2d sz2{ szs[e2.x], szs[e2.y] };
+    // printf("brideFormSkeleton() e1(%i,%i) e2(%i,%i)\n", e1.x, e1.y, e2.x, e2.y);
+    // printf("brideFormSkeleton() p0(%g,%g,%g) p1(%g,%g,%g) p2(%g,%g,%g) p3(%g,%g,%g)\n", p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
+    // printf("brideFormSkeleton() d1(%g,%g,%g) d2(%g,%g,%g) up(%g,%g,%g) r %g h %g\n", d1.x, d1.y, d1.z, d2.x, d2.y, d2.z, up.x, up.y, up.z);
+    bridgeLineSelections( 
+        p0+d2*(sz1.x)+up*(sz1.x*h),  p1+d2*(sz1.y)+up*(sz1.y*h), 
+        p2+d1*(sz2.x)+up*(sz2.x*h),  p3+d1*(sz2.y)+up*(sz2.y*h), r, bTris );
+} // select edges by capsula
 
 
 // ====================== Class Definitions
@@ -271,7 +284,10 @@ void ConstructionBlockApp::draw(){
         if(bDragging && iDraggingButton==SDL_BUTTON_LEFT ){ drawMuseSelectionBox(); }
         glDisable(GL_DEPTH_TEST);
         if(bViewSelection) {
-            trussView.drawSelection(ipick);
+            //trussView.drawSelection(ipick);
+            //printf("ConstructionBlockApp::draw() bViewSelection @sel1=%p @sel2=%p\n", sel1, sel2);
+            if(sel1){ glColor3f(1.0,1.0,0.0); trussView.drawSelection(ipick, sel1); }
+            if(sel2){ glColor3f(0.0,1.0,1.0); trussView.drawSelection(ipick, sel2); }
         }
     }
     if(bViewPivotPoint) { Draw3D::drawPointCross( pivot_point, 0.5 ); }
@@ -658,36 +674,19 @@ int main(int argc, char *argv[]){
         //truss.bridgeFacingPolygons( nedges, edges, node_positions, nseg, chs, {-1,-1,-1,-1}, {0,0,0,0} );
         //printf("  truss.printSizes():  "); truss.printSizes();
 
+        //brideFormSkeleton( {0,1}, {0,3}, node_ps, node_szs, 0.5, 1.0 );
+        
+        Vec3d up = {1,0,0};
+        bool bTris=true;
+        brideFormSkeleton( edges[0], edges[2], node_ps, node_szs, 0.5, 1.0, &up, bTris );
+        brideFormSkeleton( edges[0], edges[3], node_ps, node_szs, 0.5, 1.0, &up, bTris );
+        brideFormSkeleton( edges[1], edges[2], node_ps, node_szs, 0.5, 1.0, &up, bTris );
+        brideFormSkeleton( edges[1], edges[3], node_ps, node_szs, 0.5, 1.0, &up, bTris );
 
-        // { // select edges by capsula
-        // int ie1 = 0;
-        // int ie2 = 3;
-        // Vec3d d1 = node_ps[edges[ie1].y] - node_ps[edges[ie1].x]; d1.normalize();
-        // Vec3d d2 = node_ps[edges[ie2].y] - node_ps[edges[ie2].x]; d2.normalize();
-        // Vec3d up; up.set_cross(d1,d2); up.normalize();
-
-        // sdf_cylinder = new SDF_Cylinder( 
-        //     node_ps[edges[ie1].x]+d2*(node_szs[edges[ie1].x])+up*(node_szs[edges[ie1].x]), 
-        //     node_ps[edges[ie1].y]+d2*(node_szs[edges[ie1].y])+up*(node_szs[edges[ie1].y]), 
-        // 0.5, false );
-        // //truss.selectVertsBySDF( *sdf_cylinder );
-        // truss.selectEdgesBySDF( *sdf_cylinder );
-
-        // // truss.nextSelection();
-        // // sdf_cylinder->from_ends( 
-        // //     node_ps[edges[ie2].x]+d1*(node_szs[edges[ie2].x])+up*(node_szs[edges[ie2].x]), 
-        // //     node_ps[edges[ie2].y]+d1*(node_szs[edges[ie2].y])+up*(node_szs[edges[ie2].y]) 
-        // // );
-        // // truss.selectVertsBySDF( *sdf_cylinder );
-
-        // truss.printSelection();
-        // } // select edges by capsula
-
-
-        const int nvs=3;
-        int ivs1[nvs] = {43,47,51};
-        int ivs2[nvs] = {90,94,98};
-        truss.panel( nvs, ivs1, ivs2, 0.5, {0,0,0,0} );
+        // const int nvs=3;
+        // int ivs1[nvs] = {43,47,51};
+        // int ivs2[nvs] = {90,94,98};
+        // truss.triPatch( nvs, ivs1, ivs2, 0.5, {0,0,0,0} );
 
         //truss.bridgeVertStrips( nvs, ivs1, ivs2 );
 

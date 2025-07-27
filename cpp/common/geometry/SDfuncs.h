@@ -4,6 +4,13 @@
 
 #include "Vec3.h"
 
+
+struct SDF_point2 {
+    Vec3d center;
+    SDF_point2( Vec3d center_){ center = center_; }
+    double operator()(const Vec3d& p) const { return (p - center).norm2(); }
+};
+
 struct SDF_Sphere {
     Vec3d center;
     double radius;
@@ -43,10 +50,13 @@ struct SDF_Cylinder {
             Vec3d proj = p0 + hdir * h;
             dist = (p - proj).norm() - r;
         }
-        printf("SDF_Cylinder: p(%8.4f,%8.4f,%8.4f) h: %8.4f dist: %8.4f \n", p.x,p.y,p.z, h, dist );
+        //printf("SDF_Cylinder: p(%8.4f,%8.4f,%8.4f) h: %8.4f dist: %8.4f \n", p.x,p.y,p.z, h, dist );
         return dist;
     }
 };
+
+
+
 
 
 #endif

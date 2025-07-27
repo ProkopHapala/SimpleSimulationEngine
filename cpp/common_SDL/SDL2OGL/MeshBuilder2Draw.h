@@ -69,18 +69,19 @@ void drawTriLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
     }
 }
 
-void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02 ){
-    for(int ie: mesh.curSelection->vec){
-        Vec2i e =  mesh.edges[ie].lo;
+void drawSelectedEdgeLabels( const Mesh::Builder2& mesh, float sz=0.02, int* ivs=0, int n=0 ){
+    if(ivs==0){ n = mesh.curSelection->vec.size(); ivs = mesh.curSelection->vec.data(); }
+    for(int i=0;i<n;i++){
+        Vec2i e =  mesh.edges[ivs[i]].lo;
         Vec3d p = (mesh.verts[e.x].pos + mesh.verts[e.y].pos)*0.5;
-        Draw3D::drawInt( p, ie, fontTex, sz );
+        Draw3D::drawInt( p, ivs[i], fontTex, sz );
     }
 }
 
-void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02, bool bOrder=false ){
-    std::vector<int>& selection = mesh.curSelection->vec;
-    if( bOrder ){ for(int i=0; i<selection.size(); i++){ Draw3D::drawInt( mesh.verts[selection[i] ].pos, i,  fontTex, sz ); } }
-    else        { for(int iv: selection               ){ Draw3D::drawInt( mesh.verts[iv           ].pos, iv, fontTex, sz ); } }
+void drawSelectedVertLabels( const Mesh::Builder2& mesh, float sz=0.02, bool bOrder=false, int* ivs=0, int n=0 ){
+    if(ivs==0){ n = mesh.curSelection->vec.size(); ivs = mesh.curSelection->vec.data(); }
+    if( bOrder ){ for(int i=0; i<n; i++){ Draw3D::drawInt( mesh.verts[ivs[i] ].pos, i,  fontTex, sz ); } }
+    else        { for(int i=0; i<n; i++){ Draw3D::drawInt( mesh.verts[ivs[i] ].pos, ivs[i], fontTex, sz ); } }
 }
 
 void drawPolygonBorder( const Mesh::Builder2& mesh, int ich ){
@@ -194,10 +195,11 @@ void drawVertLoop( const Mesh::Builder2& mesh, int n, int* ivs, int drawAs=GL_LI
     if(drawAs!=0){ glEnd(); }
 }
 
-void drawSelectedEdges( const Mesh::Builder2& mesh ){
+void drawSelectedEdges( const Mesh::Builder2& mesh, int* ivs=0, int n=0 ){
+    if(ivs==0){ n = mesh.curSelection->vec.size(); ivs = mesh.curSelection->vec.data(); }
     glBegin(GL_LINES);
-    for(int ie: mesh.curSelection->vec){
-        Vec2i e = mesh.edges[ie].lo;
+    for(int i=0;i<n;i++){
+        Vec2i e = mesh.edges[ivs[i]].lo;
         //Draw3D::drawLine( mesh.verts[e.x].pos, mesh.verts[e.y].pos );
         Draw3D::vertex( mesh.verts[e.x].pos );
         Draw3D::vertex( mesh.verts[e.y].pos );
@@ -205,11 +207,12 @@ void drawSelectedEdges( const Mesh::Builder2& mesh ){
     glEnd();
 }
 
-void drawSelectedVerts( const Mesh::Builder2& mesh ){
+void drawSelectedVerts( const Mesh::Builder2& mesh, int* ivs=0, int n=0 ){
+    if(ivs==0){ n = mesh.curSelection->vec.size(); ivs = mesh.curSelection->vec.data(); }
     glBegin(GL_POINTS);
-    for(int iv: mesh.curSelection->vec){
+    for(int i=0;i<n;i++){
         //printf( "drawSelectedVerts() iv=%i \n", iv );
-        Draw3D::vertex( mesh.verts[iv].pos );
+        Draw3D::vertex( mesh.verts[ivs[i]].pos );
     }
     glEnd();
 }
@@ -302,25 +305,29 @@ class Renderer{
         }
     }
 
-    void drawSelection( int ipick=-1 ){
-        if( mesh->curSelection->kind == (int)Mesh::Builder2::SelectionMode::face ){
+    void drawSelection( int ipick=-1, Selection* sel=0, bool bLabels=false ){
+        if(sel==0){ sel = mesh->curSelection; }
+        if( sel->kind == (int)Mesh::Builder2::SelectionMode::face ){
         if(ipick>=0){
                 glLineWidth(5.0);
-                glColor3f(0.0,0.7,0.0);
                 drawPolygonBorder( *mesh, ipick );
             }
-        }else if( mesh->curSelection->kind==(int)Mesh::Builder2::SelectionMode::edge ){
-            glColor3f(0.0,0.7,0.0);
+        }else if( sel->kind==(int)Mesh::Builder2::SelectionMode::edge ){
             glLineWidth(5.0);
-            drawSelectedEdges( *mesh );
-            drawSelectedEdgeLabels( *mesh, 0.02 );
+            drawSelectedEdges     ( *mesh,       sel->vec.data(), sel->vec.size() );
+            if(bLabels){
+                drawSelectedEdgeLabels( *mesh, 0.02, sel->vec.data(), sel->vec.size() );
+            }
             glLineWidth(1.0);
-        }else if( mesh->curSelection->kind==(int)Mesh::Builder2::SelectionMode::vert ){
-            glColor3f(0.0,1.0,0.0);
+        }else if( sel->kind==(int)Mesh::Builder2::SelectionMode::vert ){
+            //glColor3f(0.0,1.0,0.0);
+            //printf("drawSelection() sel->kind=%i sel->vec.size()=%i\n", sel->kind, sel->vec.size()); sel->print();
             glPointSize(8.0);
-            drawSelectedVerts( *mesh );
-            glColor3f(0.0,0.5,0.0);
-            drawSelectedVertLabels( *mesh, 0.02, true );
+            drawSelectedVerts     ( *mesh,             sel->vec.data(), sel->vec.size() );
+            if(bLabels){
+                //glColor3f(0.0,0.5,0.0);
+                drawSelectedVertLabels( *mesh, 0.02, true, sel->vec.data(), sel->vec.size() );
+            }
             glPointSize(1.0);
         }
     }

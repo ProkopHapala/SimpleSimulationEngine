@@ -22,6 +22,8 @@ class Vec3T{
 		T array[3];
 	};
 
+    inline bool operator==(const VEC& v)const{ return (x==v.x)&&(y==v.y)&&(z==v.z); }
+
 	// Constructors would prevent us from making Unions etc. so don't do it
 	// https://stackoverflow.com/questions/4178175/what-are-aggregates-and-pods-and-how-why-are-they-special
 	// but here it seems to work  https://www.youtube.com/watch?v=14Cyfz_tE20&index=10&list=PLlrATfBNZ98fqE45g3jZA_hLGUrD4bo6_
@@ -388,6 +390,12 @@ class Vec3T{
     //inline VEC max(VEC a){ return {fmax(x,a.x),fmax(y,a.y),fmax(z,a.z)}; };
     //inline VEC set_min(VEC a,VEC b){ return {fmin(x,a.x),fmin(y,a.y),fmin(z,a.z)}; };
     //inline VEC set_max(VEC a,VEC b){ return {fmax(x,a.x),fmax(y,a.y),fmax(z,a.z)}; };
+
+    inline void order(){ 
+        if(x>y){ _swap(x,y); } 
+        if(y>z){ _swap(y,z); } 
+        if(x>y){ _swap(x,y); }
+    }
 
     inline T dist2( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm2(); }
     inline T dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }

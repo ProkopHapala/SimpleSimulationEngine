@@ -20,7 +20,7 @@ void Builder2::printSizes()const{printf( "MeshBuilder::printSizes() blocks=%i ve
 //     return e.x==iv ? e.y : e.x;
 // }
 
-bool Builder2::sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts ){
+bool Builder2::sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts )const{
     // sort edges by shared points so that they for edge loop
     LoopDict point2edge;
     for(int i=0; i<n; i++){
@@ -59,18 +59,18 @@ bool Builder2::sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts ){
     return true;
 }
 
-bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts ){
+bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts )const{
     // sort edges by shared points so that they for edge loop
     LoopDict point2edge;
     for(int i=0; i<n; i++){
         int ie = iedges[i];
-        Quat4i& e = edges[ie];
+        const Quat4i& e = edges[ie];
         point2edge[e.x].add(ie);
         point2edge[e.y].add(ie);
     }
     //for( auto& p : point2edge ){ printf( "sortEdgeLoop() point2edge[%i]: (%i,%i) \n", p.first, p.second.data[0], p.second.data[1] ); }
     int oe    = iedges[0];
-    Quat4i& e0 = edges[oe];
+    const Quat4i& e0 = edges[oe];
     int iv    = e0.y;
     if( iverts ){ iverts[0] = iv; }
     for(int i=1; i<n; i++){
@@ -91,7 +91,7 @@ bool Builder2::sortEdgeLoop( int n, int* iedges, int* iverts ){
     return true;
 }
 
-int Builder2::findEdgeByVerts_brute( Vec2i verts ){
+int Builder2::findEdgeByVerts_brute( Vec2i verts )const{
     // todo: we can speed this up by using unordered_map<uint64_t,int> point2edge;
     verts.order();
     for( int i=0; i<edges.size(); i++ ){
@@ -102,13 +102,23 @@ int Builder2::findEdgeByVerts_brute( Vec2i verts ){
     return -1;
 }
 
-int Builder2::findEdgeByVerts_map( const Vec2i verts ){
+int Builder2::findTriByVerts_brute( Vec3i verts )const{
+    verts.order();
+    for( int i=0; i<tris.size(); i++ ){
+        Vec3i t = tris[i].f;
+        t.order();
+        if( t==verts ){ return i; }
+    }
+    return -1;
+}
+
+int Builder2::findEdgeByVerts_map( const Vec2i verts )const{
     uint64_t key = symetric_id( verts );
     auto it = vert2edge.find(key);
     if( it==vert2edge.end() ){ return -1; }
     return it->second;
 }
-int Builder2::findEdgeByVerts( const Vec2i verts ){
+int Builder2::findEdgeByVerts( const Vec2i verts )const{
     int ie= (use_vert2edge) ? findEdgeByVerts_map(verts) : findEdgeByVerts_brute(verts);
     if( bExitError) if( ie==-1 ){ printf( "ERROR: findEdgeByVerts() edge(%i,%i) not found => exit() \n", verts.x, verts.y ); exit(0); }
     return ie;
@@ -1943,8 +1953,8 @@ void Builder2::alling_polygons( int n, const int* ivs1, int* ivs2, int ipiv ){
     u.normalize();
     Vec3d v; v.set_cross(ax, u);
     v.normalize();
-    printf( "alling_polygons() cog1(%f,%f,%f) cog2(%f,%f,%f) \n", cog1.x, cog1.y, cog1.z, cog2.x, cog2.y, cog2.z );
-    printf( "alling_polygons() ax(%f,%f,%f) u(%f,%f,%f) v(%f,%f,%f) \n", ax.x, ax.y, ax.z, u.x, u.y, u.z, v.x, v.y, v.z );
+    //printf( "alling_polygons() cog1(%f,%f,%f) cog2(%f,%f,%f) \n", cog1.x, cog1.y, cog1.z, cog2.x, cog2.y, cog2.z );
+    //printf( "alling_polygons() ax(%f,%f,%f) u(%f,%f,%f) v(%f,%f,%f) \n", ax.x, ax.y, ax.z, u.x, u.y, u.z, v.x, v.y, v.z );
     //Mat3d fromDirUp( const VEC& dir, const VEC& up );
     // Project points to uv plane
     Vec2d uv1[n], uv2[n];
@@ -2466,14 +2476,14 @@ int Builder2::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double
     return i0;
 }
 
-int Builder2::panel( int n, int* ivs1, int* ivs2, double width, Quat4i stickTypes ){
+int Builder2::bridgeTriPatch( int n, int* ivs1, int* ivs2, double width, Quat4i stickTypes, bool bTris ){
     bool shared = (ivs1[0]==ivs2[0]);
-    printf( "Builder2::panel() n=%i shared=%i\n", n, shared );
-    for(int i=0;i<n;i++){ printf( "%i:  ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] ); }
+    //printf( "Builder2::triPatch() n=%i shared=%i bTris=%i\n", n, shared, bTris );
+    //for(int i=0;i<n;i++){ printf( "%i:  ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] ); }
     std::vector<int> prevRow; prevRow.resize(n+1);
     std::vector<int> row;     row    .resize(n+1);
     for(int i=0;i<n;i++){
-        printf( "-- i=%i ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] );
+        //printf( "-- i=%i ivs1 %i ivs2 %i\n", i, ivs1[i], ivs2[i] );
         int rowSize = i + 1 + (!shared); // number of vertices in this row
         // existing boundary vertices
         row[0        ] = ivs1[i];
@@ -2491,11 +2501,14 @@ int Builder2::panel( int n, int* ivs1, int* ivs2, double width, Quat4i stickType
         // vertical / diagonal edges connecting with previous row
         if(i>0){
             int onrow = prevRow.size();
-            for(int j=1;j<rowSize-1;j++){
-                //printf("A edge( %i, %i )\n", row[j], prevRow[j  ] ); 
-                edge( row[j], prevRow[j  ], stickTypes.z ); 
-                //printf("A edge( %i, %i )\n", row[j], prevRow[j-1] ); 
-                edge( row[j], prevRow[j-1], stickTypes.z ); 
+            for(int j=0;j<rowSize-1;j++){
+                if(j>0){
+                    edge( row[j], prevRow[j  ], stickTypes.z ); 
+                    edge( row[j], prevRow[j-1], stickTypes.z );
+                    if(bTris){ tri( row[j], prevRow[j], prevRow[j-1] ); }
+                }
+                //if(bTris){  tri( prevRow[j-1], row[j-1], row[j] );  }
+                if(bTris){  tri( prevRow[j], row[j], row[j+1] );  }
             }
         }
         prevRow.swap(row);
@@ -2515,7 +2528,7 @@ void Builder2::facingNodes( const CMesh& cmesh, int nnod, const Vec3d* points, V
         if(bSpecialNodes){ out_chs[i] = addFaces( nplane, planes, planeVs, true, i0s.x ); }
         else             { out_chs[i] = Vec2i{ i0s.w, (int)chunks.size()};              }
         //out_chs[i].y++; // make range end exclusive
-        printf( "facingNodes() %i chs(%i,%i)\n", i, out_chs[i].a, out_chs[i].b );
+        //printf( "facingNodes() %i chs(%i,%i)\n", i, out_chs[i].a, out_chs[i].b );
         //printf("  addFaces() chs(%i,%i) range\n", chs[i].a, chs[i].b);
     }
 }
