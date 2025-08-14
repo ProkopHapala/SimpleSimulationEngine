@@ -1,0 +1,31 @@
+{
+    "simulation_name": "NBody Simulation",
+    "description":     "NBody simulation using OpenCL for computation and OpenGL for rendering.",
+    "parameters": {
+        "particle_count": {
+            "value": 2048,
+            "step": 1,
+            "type": "int"
+        },
+        "dt": {
+            "value": 0.001,
+            "step": 0.0001,
+            "type": "float"
+        }
+    },
+    "opencl_kernels": [
+        {
+            "name":         "nbody_sim",
+            "filepath":     "cl/nbody.cl",
+            "local_size":  [32],
+            "global_size": ["particle_count"]
+        }
+    ],
+    "opengl_shaders": [
+        {
+            "name": "nbody_render",
+            "vertex_filepath":   "shaders/points.glslv",
+            "fragment_filepath": "shaders/monocolor.glslf"
+        }
+    ]
+}
