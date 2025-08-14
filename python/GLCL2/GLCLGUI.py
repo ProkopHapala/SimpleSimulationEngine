@@ -27,6 +27,12 @@ class GLCLWidget(QOpenGLWidget):
         self.gl_objects = {}
         self.render_pipeline_info = []
         self.buffer_data = {}
+        # FS pipeline state
+        self.fs_textures_cfg = {}
+        self.fs_fbos_cfg = {}
+        self.fs_pipeline = []
+        # Frame counter for FS shaders expecting iFrame
+        self.frame_counter = 0
 
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -44,6 +50,17 @@ class GLCLWidget(QOpenGLWidget):
             self.bake_render_objects()
             self.update()
 
+    def set_fs_config(self, textures_cfg, fbos_cfg, fs_pipeline):
+        """Optional FS pipeline config.
+        textures_cfg: {name:(w,h)}; fbos_cfg: {fbo_name: color_tex_name}; fs_pipeline: [(shader_name, out_fbo, [in_textures])]
+        """
+        self.fs_textures_cfg = dict(textures_cfg or {})
+        self.fs_fbos_cfg = dict(fbos_cfg or {})
+        self.fs_pipeline = list(fs_pipeline or [])
+        if self.isValid():
+            self._create_fs_resources()
+            self.update()
+
     def initializeGL(self):
         print("GLCLWidget::initializeGL() - OpenGL Context is now valid.")
         glClearColor(0.1, 0.1, 0.15, 1.0)
@@ -53,6 +70,32 @@ class GLCLWidget(QOpenGLWidget):
         # Now it's safe to compile shaders and create GL resources
         self.ogl_system.compile_all_shaders()
         self.bake_render_objects()
+        self._create_fs_resources()
+
+    def rebuild_gl_resources(self):
+        """Rebuild GL pipeline after OGLSystem.clear() on script reload.
+        Requires a valid context; does nothing if context not yet initialized.
+        """
+        if not self.isValid():
+            return
+        self.makeCurrent()
+        # NOTE: crash on error (no try/except); ensure context is released
+        try:
+            self.ogl_system.compile_all_shaders()
+            self.bake_render_objects()
+            self._create_fs_resources()
+        finally:
+            self.doneCurrent()
+        self.update()
+
+    def _create_fs_resources(self):
+        if not self.ogl_system: return
+        # Create textures
+        for tname, (w, h) in self.fs_textures_cfg.items():
+            self.ogl_system.create_texture_2d(tname, (int(w), int(h)))
+        # Create FBOs
+        for fname, color_tex in self.fs_fbos_cfg.items():
+            self.ogl_system.create_fbo(fname, color_tex)
 
     def bake_render_objects(self):
         """Create and configure GLobject for each buffer in the render pipeline."""
@@ -85,7 +128,16 @@ class GLCLWidget(QOpenGLWidget):
             gl_obj.upload_vbo(new_data)
 
     def paintGL(self):
+        # DEBUG: vivid clear to verify that we see any GL content at all
+        if self.frame_counter < 60:
+            glClearColor(1.0, 0.0, 1.0, 1.0)
+        else:
+            glClearColor(0.1, 0.1, 0.15, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        # DEBUG: advance frame counter per paint; we rely on browser timer driving updates
+        self.frame_counter += 1
+        # Execute optional FS pipeline (offscreen)
+        self._execute_fs_pipeline()
         
         # Iterate through the user-defined render pipeline
         for pass_info in self.render_pipeline_info:
@@ -108,6 +160,97 @@ class GLCLWidget(QOpenGLWidget):
             gl_obj.draw_arrays()
 
         glUseProgram(0)
+
+    def _execute_fs_pipeline(self):
+        if not self.fs_pipeline: return
+        if self.ogl_system is None: return
+        # Cache and restore viewport
+        vp = glGetIntegerv(GL_VIEWPORT)
+        # DEBUG: temporarily disable depth & scissor test for FS passes
+        depth_was_enabled = glIsEnabled(GL_DEPTH_TEST)
+        scissor_was_enabled = glIsEnabled(GL_SCISSOR_TEST)
+        if depth_was_enabled: glDisable(GL_DEPTH_TEST)
+        if scissor_was_enabled: glDisable(GL_SCISSOR_TEST)
+        for (shader_name, out_fbo, bind_textures) in self.fs_pipeline:
+            if self.frame_counter < 5:
+                try:
+                    print(f"[FS DEBUG] frame={self.frame_counter} pass='{shader_name}' out='{out_fbo}' inputs={bind_textures}")
+                except Exception:
+                    pass
+            program = self.ogl_system.get_shader_program(shader_name)
+            if not program:
+                raise KeyError(f"FS shader '{shader_name}' not compiled or registered")
+            # Set common sampler uniforms to match bound units
+            glUseProgram(program)
+            max_units = 8
+            for i in range(min(len(bind_textures or []), max_units)):
+                for uname in (f"iChannel{i}", f"tex{i}", f"s{i}"):
+                    loc = glGetUniformLocation(program, uname)
+                    if loc != -1: glUniform1i(loc, i)
+            # Set iFrame
+            loc_frame = glGetUniformLocation(program, "iFrame")
+            if loc_frame != -1:
+                glUniform1i(loc_frame, int(self.frame_counter))
+            # Determine resolution for this pass (target FBO if present, else widget size)
+            pass_w = self.width()
+            pass_h = self.height()
+            if out_fbo and out_fbo not in ("default", "", None):
+                if out_fbo not in self.fs_fbos_cfg:
+                    raise KeyError(f"FS FBO '{out_fbo}' not configured")
+                tex_name = self.fs_fbos_cfg.get(out_fbo)
+                if tex_name and tex_name in self.fs_textures_cfg:
+                    w, h = self.fs_textures_cfg[tex_name]
+                    pass_w, pass_h = int(w), int(h)
+            loc_res = glGetUniformLocation(program, "iResolution")
+            if loc_res != -1:
+                glUniform3f(loc_res, float(pass_w), float(pass_h), 1.0)
+            # Optional custom uniform: driver (vec4)
+            try:
+                cfg = self.browser.current_config if self.browser else None
+                if cfg is not None and "driver" in cfg.get("parameters", {}):
+                    drv_val, drv_type, _ = cfg["parameters"]["driver"]
+                    if drv_type == "vec4" and isinstance(drv_val, (list, tuple)) and len(drv_val) == 4:
+                        loc_drv = glGetUniformLocation(program, "driver")
+                        if loc_drv != -1:
+                            glUniform4f(loc_drv, float(drv_val[0]), float(drv_val[1]), float(drv_val[2]), float(drv_val[3]))
+            except Exception:
+                # DEBUG: fail loud in browser if desired; here we keep rendering even if driver missing
+                pass
+            glUseProgram(0)
+            # Set viewport to target texture size if known
+            tex_name = self.fs_fbos_cfg.get(out_fbo) if out_fbo else None
+            if out_fbo and out_fbo not in ("default", "", None):
+                if out_fbo not in self.fs_fbos_cfg:
+                    raise KeyError(f"FS FBO '{out_fbo}' not configured")
+                if tex_name and tex_name in self.fs_textures_cfg:
+                    w, h = self.fs_textures_cfg[tex_name]
+                    glViewport(0, 0, int(w), int(h))
+            if out_fbo in ("default", "", None):
+                # Render directly to default framebuffer
+                glViewport(0, 0, int(self.width()), int(self.height()))
+                if self.frame_counter < 5:
+                    try:
+                        fb = glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING)
+                        vp2 = glGetIntegerv(GL_VIEWPORT)
+                        print(f"[FS DEBUG] default pass fbo={int(fb)} viewport={tuple(int(x) for x in vp2)} widgetWH=({int(self.width())},{int(self.height())})")
+                    except Exception:
+                        pass
+                # DEBUG: clear to bright color for first frames to ensure we see something even if shader fails
+                if self.frame_counter < 3:
+                    glClearColor(1.0, 0.0, 1.0, 1.0)
+                    glClear(GL_COLOR_BUFFER_BIT)
+                for i, tname in enumerate(bind_textures or []):
+                    self.ogl_system.bind_texture_unit(tname, i)
+                glUseProgram(program)
+                self.ogl_system.draw_fullscreen_quad()
+                glUseProgram(0)
+            else:
+                self.ogl_system.render_fs_to_fbo(program, out_fbo, bind_textures or [])
+        # Restore viewport and depth/scissor tests
+        if vp is not None and len(vp) == 4:
+            glViewport(int(vp[0]), int(vp[1]), int(vp[2]), int(vp[3]))
+        if depth_was_enabled: glEnable(GL_DEPTH_TEST)
+        if scissor_was_enabled: glEnable(GL_SCISSOR_TEST)
 
     def resizeGL(self, w, h):
         glViewport(0, 0, w, h)

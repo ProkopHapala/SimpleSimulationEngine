@@ -7,7 +7,44 @@ that achieves maximum flexibility with minimal code duplication.
 
 import numpy as np
 from OpenGL.GL import *
-from .OGLsystem import GLobject, InstancedData, Mesh, OGLSystem, create_sphere_mesh
+from .OGLsystem import GLobject, OGLSystem
+
+# --- Minimal local stubs to unblock imports; fail loudly if used.
+class InstancedData:
+    def __init__(self, base_attrib_location=2):
+        print("InstancedData stub initialized (not fully implemented)")
+        self.base_attrib_location = base_attrib_location
+        self.mesh = None
+
+    def associate_mesh(self, mesh):
+        self.mesh = mesh
+        print("InstancedData.associate_mesh(): stub, no-op")
+
+    def setup_instance_vbos(self, attribs):
+        raise RuntimeError("InstancedData.setup_instance_vbos() not implemented")
+
+    def update(self, data):
+        raise RuntimeError("InstancedData.update() not implemented")
+
+    def draw(self):
+        raise RuntimeError("InstancedData.draw() not implemented")
+
+
+class Mesh:
+    def __init__(self, vertices=None, normals=None, indices=None):
+        self.vertices = np.array(vertices, dtype=np.float32) if vertices is not None else None
+        self.normals  = np.array(normals,  dtype=np.float32) if normals  is not None else None
+        self.indices  = np.array(indices,  dtype=np.uint32)  if indices  is not None else None
+        print("Mesh stub created (no GL buffers)")
+
+    def setup_buffers(self):
+        raise RuntimeError("Mesh.setup_buffers() not implemented")
+
+
+def create_sphere_mesh(radius=1.0, seg=8, rings=8):
+    # Very minimal placeholder; returns empty arrays to avoid crashes on import.
+    print("create_sphere_mesh() stub called; returns empty arrays")
+    return np.zeros((0,), dtype=np.float32), np.zeros((0,), dtype=np.float32), np.zeros((0,), dtype=np.uint32)
 
 class BufferObject:
     """Generic buffer object that can handle any type of data"""

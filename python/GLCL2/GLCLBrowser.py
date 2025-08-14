@@ -224,7 +224,33 @@ class GLCLBrowser(BaseGUI):
         
         self._precompute_buffer_sync_list(config)
         
+        # Optional: FS pipeline + textures/FBOs
+        # textures_2d: { name: (w_expr, h_expr) }
+        # fbos: { fbo_name: color_texture_name }
+        # fs_pipeline: [ (shader_name, out_fbo_name, [bind_texture_names]) ]
+        textures_cfg_raw = config.get("textures_2d", {})
+        fbos_cfg = config.get("fbos", {})
+        fs_pipeline = config.get("fs_pipeline", [])
+
+        # Resolve texture sizes (allow ints or parameter names)
+        parameters = config.get("parameters", {})
+        textures_cfg = {}
+        for tname, size in textures_cfg_raw.items():
+            try:
+                w_expr, h_expr = size
+                w = self._resolve_expression(w_expr, parameters)
+                h = self._resolve_expression(h_expr, parameters)
+                textures_cfg[tname] = (int(w), int(h))
+            except Exception as e:
+                print(f"ERROR: Failed to resolve size for texture '{tname}': {e}")
+                raise
+
+        # Store FS config in the widget
         self.glcl_widget.set_render_config(self.buffer_data, self.render_pipeline_info)
+        self.glcl_widget.set_fs_config(textures_cfg, fbos_cfg, fs_pipeline)
+
+        # After OGLSystem.clear() the programs are gone; force recompile & bake if context is valid
+        self.glcl_widget.rebuild_gl_resources()
         
     def bake_kernels(self, config):
         print("Baking OpenCL kernels...")
@@ -396,17 +422,17 @@ if __name__ == '__main__':
     # Usage examples (development vs production):
     #
     # Production/interactive (continuous animation, ~60 FPS):
-    #   python -m pyBall.GLCL2.GLCLBrowser --script pyBall/GLCL2/scripts/nbody.py --frame-delay 16
+    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --frame-delay 16
     #
     # Development: CL debugging (prints first element of each buffer for N frames and stops):
-    #   python -m pyBall.GLCL2.GLCLBrowser --script pyBall/GLCL2/scripts/nbody.py --debug-cl --debug-frames 10 --frame-delay 100
+    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --debug-cl --debug-frames 10 --frame-delay 100
     #
     # Development: GL-only (skip CL kernel execution; useful to test rendering/shaders):
-    #   python -m pyBall.GLCL2.GLCLBrowser --script pyBall/GLCL2/scripts/nbody.py --debug-gl --start-paused
+    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --debug-gl --start-paused
     #   # then press "Start/Pause" in the UI
     #
     # Production with explicit frame cap (e.g., batch run for 1000 frames):
-    #   python -m pyBall.GLCL2.GLCLBrowser --script pyBall/GLCL2/scripts/nbody.py --max-frames 1000 --frame-delay 0
+    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --max-frames 1000 --frame-delay 0
     # -------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description='GLCL Browser')
     parser.add_argument('--script', type=str, help='Path to simulation script')
