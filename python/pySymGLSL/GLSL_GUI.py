@@ -39,9 +39,7 @@ import json
 import re
 
 from .GLSL_Simulation import GLSL_Simulation, _DEFAULT_VS
-from .BaseGUI import BaseGUI, extract_json_block, strip_json_comments
-
-
+from ..BaseGUI import BaseGUI, extract_json_block, strip_json_comments
 
 
 # -----------------------------------------------------------------------------
@@ -418,6 +416,10 @@ class MainWindow(BaseGUI):
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
+    # Run Like this:
+    #   python -u -m python.pySymGLSL.GLCLBrowser
+    
     app = QtWidgets.QApplication(sys.argv)
     mw = MainWindow()
     mw.show()
