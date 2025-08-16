@@ -12,24 +12,24 @@ All formulas below use dimensionless constants unless noted. The constant `Vorte
 
 ## Function Index (All functions)
 
-- __pointSource(R)__: Coulomb-like point source; returns `R/|R|^3` (up to constants), i.e., the gradient of `1/r`.
-- __sourceDipol(R, coefs)__: Generalized monopole+dipole field using `coefs.e` (monopole) and `coefs.f` (dipole p); scales like `1/r^3` with correct angular dependence.
+- `pointSource(R)`: Coulomb-like point source; returns $R/|R|^3$ (up to constants), i.e., the gradient of `1/r`.
+- `sourceDipol(R, coefs)`: Generalized monopole+dipole field using `coefs.e` (monopole) and `coefs.f` (dipole p); scales like `1/r^3` with correct angular dependence.
 
-- __dBiotSawart(R, dI)__: Differential contribution of a filament/current element; `VortexQuantum · (dI × R)/|R|^3`.
-- __ILineFinite(R, hL, l)__: Induced field of a finite straight segment of length `l` along unit `hL`; uses closed-form `(cosθ2 − cosθ1)/|hL × R|^2` factor.
-- __ILineSemiInf(R, hL)__: Semi-infinite straight filament extending along `+hL`; closed form proportional to `(1 − cosθ1)/|hL × R|^2`.
-- __ILineSemiInfDecay(R, hL, w2)__: Semi-infinite filament with Lorentzian core smoothing; denominator `|hL × R|^2 + (hL·R)^2 w2` regularizes the singular core.
-- __horseshoe(B, R, p0, p1, hDir, strength)__: Canonical VLM horseshoe vortex (bound segment `p0→p1` with trailing legs ±`hDir`); adds induced field to `B` with circulation `strength`.
-- __horseshoeDecay(B, R, p0, p1, hDir, strength, w2)__: Horseshoe vortex with smoothed trailing legs controlled by `w2` to stabilize near-field induction; adds into `B`.
-- __ISemiInfSheet(R, a, b, l)__: Field of a semi-infinite sheet strip formed by integrating a semi-infinite line along `b` over length `l`; direction `n = normalize(a × b)` with logarithmic magnitude.
+- `dBiotSawart(R, dI)`: Differential contribution of a filament/current element; `VortexQuantum · (dI × R)/|R|^3`.
+- `ILineFinite(R, hL, l)`: Induced field of a finite straight segment of length `l` along unit `hL`; uses closed-form `(cosθ2 − cosθ1)/|hL × R|^2` factor.
+- `ILineSemiInf(R, hL)`: Semi-infinite straight filament extending along `+hL`; closed form proportional to `(1 − cosθ1)/|hL × R|^2`.
+- `ILineSemiInfDecay(R, hL, w2)`: Semi-infinite filament with Lorentzian core smoothing; denominator `|hL × R|^2 + (hL·R)^2 w2` regularizes the singular core.
+- `horseshoe(B, R, p0, p1, hDir, strength)`: Canonical VLM horseshoe vortex (bound segment `p0→p1` with trailing legs ±`hDir`); adds induced field to `B` with circulation `strength`.
+- `horseshoeDecay(B, R, p0, p1, hDir, strength, w2)`: Horseshoe vortex with smoothed trailing legs controlled by `w2` to stabilize near-field induction; adds into `B`.
+- `ISemiInfSheet(R, a, b, l)`: Field of a semi-infinite sheet strip formed by integrating a semi-infinite line along `b` over length `l`; direction `n = normalize(a × b)` with logarithmic magnitude.
 
-- __sourceXY(x, y, Fx, Fy)__: Endpoint primitive for constant line density `ρ=1`; writes `(Fx, Fy)` at a single endpoint used to build finite-segment differences.
-- __sourceLineF_pow0/1/2/3(x, y, Fx, Fy)__: Endpoint primitives for `ρ(x) = 1, x, x^2, x^3`; fill `(Fx, Fy)` at one endpoint for assembling finite segments.
-- __sourceLineF_linear(x, y, Fx, Fy, C0, C1)__: Linear combination `C0 + C1 x` built from `pow0` and `pow1` primitives; writes `(Fx, Fy)` at one endpoint.
-- __sourceLineF_poly3(x, y, Fx, Fy, C0, C1, C2, C3)__: Polynomial density up to cubic by combining `pow0..pow3`; writes `(Fx, Fy)` at one endpoint.
-- __sourceLine_const(R, fw, L, funcXY)__: 3D assembler for a straight finite segment along `fw` of length `L`; evaluates endpoint primitives `funcXY` at `x` and `x+L` and returns their difference projected along `fw` and the transverse direction.
+- `sourceXY(x, y, Fx, Fy)`: Endpoint primitive for constant line density `ρ=1`; writes `(Fx, Fy)` at a single endpoint used to build finite-segment differences.
+- `sourceLineF_pow0/1/2/3(x, y, Fx, Fy)`: Endpoint primitives for `ρ(x) = 1, x, x^2, x^3`; fill `(Fx, Fy)` at one endpoint for assembling finite segments.
+- `sourceLineF_linear(x, y, Fx, Fy, C0, C1)`: Linear combination `C0 + C1 x` built from `pow0` and `pow1` primitives; writes `(Fx, Fy)` at one endpoint.
+- `sourceLineF_poly3(x, y, Fx, Fy, C0, C1, C2, C3)`: Polynomial density up to cubic by combining `pow0..pow3`; writes `(Fx, Fy)` at one endpoint.
+- `sourceLine_const(R, fw, L, funcXY)`: 3D assembler for a straight finite segment along `fw` of length `L`; evaluates endpoint primitives `funcXY` at `x` and `x+L` and returns their difference projected along `fw` and the transverse direction.
 
-- __CurrentLoop(dp, R)__: Placeholder for off-axis circular current loop field (requires elliptic integrals); currently returns zero and awaits a tailored implementation.
+- `CurrentLoop(dp, R)`: Placeholder for off-axis circular current loop field (requires elliptic integrals); currently returns zero and awaits a tailored implementation.
 
 
 ## 1) Point and Dipole Sources

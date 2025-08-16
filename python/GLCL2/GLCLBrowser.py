@@ -12,7 +12,7 @@ from PyQt5.QtCore import QTimer, Qt
 import OpenGL.GL as GL
 import argparse
 
-from ..pySymGLSL.BaseGUI import BaseGUI
+from ..BaseGUI import BaseGUI
 from .GLCLGUI import GLCLWidget
 from .OCLsystem import OCLSystem
 from .OGLsystem import OGLSystem
@@ -72,6 +72,7 @@ class GLCLBrowser(BaseGUI):
         self.buffer_data = {}
         self.render_pipeline_info = []
         self.buffers_to_sync = []
+        self.initial_textures = {}
         
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
@@ -192,6 +193,12 @@ class GLCLBrowser(BaseGUI):
         
         init_data = init_func() if init_func else {}
         self.buffer_data = {}
+        # Optional: FS textures initial data provided by script's init()
+        # Convention: init() may return a dict entry "__textures_2d__": { texName: np.ndarray(H,W,[1|3|4]) }
+        try:
+            self.initial_textures = dict(init_data.get("__textures_2d__", {}))
+        except Exception:
+            self.initial_textures = {}
 
         for name, (size_expr, stride, dtype) in buffers_config.items():
             size = self._resolve_expression(size_expr, parameters)
@@ -251,6 +258,12 @@ class GLCLBrowser(BaseGUI):
 
         # After OGLSystem.clear() the programs are gone; force recompile & bake if context is valid
         self.glcl_widget.rebuild_gl_resources()
+        # Upload any initial FS texture data provided by init()
+        try:
+            if getattr(self, "initial_textures", None):
+                self.glcl_widget.upload_fs_texture_data(self.initial_textures)
+        except Exception as e:
+            print(f"setup_opengl_system: WARNING could not upload initial FS textures: {e}")
         
     def bake_kernels(self, config):
         print("Baking OpenCL kernels...")
@@ -422,17 +435,19 @@ if __name__ == '__main__':
     # Usage examples (development vs production):
     #
     # Production/interactive (continuous animation, ~60 FPS):
-    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --frame-delay 16
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --frame-delay 16
     #
     # Development: CL debugging (prints first element of each buffer for N frames and stops):
-    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --debug-cl --debug-frames 10 --frame-delay 100
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --debug-cl --debug-frames 10 --frame-delay 100
     #
     # Development: GL-only (skip CL kernel execution; useful to test rendering/shaders):
-    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --debug-gl --start-paused
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --debug-gl --start-paused
     #   # then press "Start/Pause" in the UI
     #
     # Production with explicit frame cap (e.g., batch run for 1000 frames):
-    #   python -m python.GLCL2.GLCLBrowser --script python.GLCL2/scripts/nbody.py --max-frames 1000 --frame-delay 0
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --max-frames 1000 --frame-delay 0
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf.py 
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf2.py 
     # -------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description='GLCL Browser')
     parser.add_argument('--script', type=str, help='Path to simulation script')

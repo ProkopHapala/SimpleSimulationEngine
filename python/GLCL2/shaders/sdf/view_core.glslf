@@ -23,10 +23,25 @@ void main(){
 
     // --- STAGE 3 (DEFAULT): SDF, no zoom, fixed AA ------------------------
     // This should clearly show a crisp circle regardless of driver.z
-    float d = texture(iChannel0, uv).r;           // signed distance [texels]
-    float w = 0.75;                                // fixed AA width [texels]
-    float a = smoothstep(-w, +w, -d);              // 1 inside (d<0), 0 outside
-    color = vec4(mix(vec3(0.0), vec3(1.0), a), 1.0);
+    //float d = texture(iChannel0, uv).r;           // signed distance [texels]
+    //float w = 0.75;                                // fixed AA width [texels]
+    //float a = smoothstep(-w, +w, -d);              // 1 inside (d<0), 0 outside
+    //color = vec4(mix(vec3(0.0), vec3(1.0), a), 1.0);
+    //color = vec4(mix(vec3(0.0), vec3(1.0), 1.-d), 1.0);
+
+
+    //color = vec4( texture(iChannel0, uv).rgb, 1.0);
+    vec3 rgb = texture(iChannel0, uv).rgb;
+    color = vec4( rgb*rgb, 1.0);
+    //color = vec4( sqrt(rgb), 1.0);
+    //color = vec4( sqrt(sqrt(rgb)), 1.0);
+    //color = vec4( floor((rgb*rgb*rgb)+0.5), 1.0);
+
+
+
+    
+    
+    
     return;
 
     // --- STAGE 4: Zoom/pan SDF with robust AA -----------------------------

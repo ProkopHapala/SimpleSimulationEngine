@@ -61,16 +61,51 @@ class GLCLWidget(QOpenGLWidget):
             self._create_fs_resources()
             self.update()
 
+    def upload_fs_texture_data(self, textures_dict):
+        """Upload pixel data arrays into FS textures. textures_dict: {name: np.ndarray(H,W,[1|3|4])}
+        Safe to call anytime; will no-op if context not yet valid.
+        """
+        if not textures_dict: return
+        if not self.isValid():
+            # Defer: resources not yet created; caller should call again after rebuild
+            return
+        self.makeCurrent()
+        try:
+            for name, arr in textures_dict.items():
+                if name not in self.fs_textures_cfg:
+                    print(f"upload_fs_texture_data: WARNING texture '{name}' not configured; skipping")
+                    continue
+                try:
+                    self.ogl_system.upload_texture_2d_data(name, arr)
+                except Exception as e:
+                    print(f"upload_fs_texture_data: ERROR uploading '{name}': {e}")
+        finally:
+            self.doneCurrent()
+
     def initializeGL(self):
-        print("GLCLWidget::initializeGL() - OpenGL Context is now valid.")
-        glClearColor(0.1, 0.1, 0.15, 1.0)
-        glEnable(GL_DEPTH_TEST)
-        glEnable(GL_PROGRAM_POINT_SIZE)
-        
-        # Now it's safe to compile shaders and create GL resources
-        self.ogl_system.compile_all_shaders()
-        self.bake_render_objects()
-        self._create_fs_resources()
+        try:
+            print("GLCLWidget::initializeGL() - OpenGL Context is now valid.")
+            glClearColor(0.1, 0.1, 0.15, 1.0)
+            glEnable(GL_DEPTH_TEST)
+            glEnable(GL_PROGRAM_POINT_SIZE)
+            
+            # Now it's safe to compile shaders and create GL resources
+            self.ogl_system.compile_all_shaders()
+            self.bake_render_objects()
+            self._create_fs_resources()
+            # Upload any initial FS texture data provided by the browser (from script init())
+            try:
+                if self.browser is not None and getattr(self.browser, "initial_textures", None):
+                    self.upload_fs_texture_data(self.browser.initial_textures)
+            except Exception as e:
+                print(f"initializeGL: WARNING could not upload initial FS textures: {e}")
+        except Exception as e:
+            if self.browser is not None:
+                self.browser.on_exception(e)
+            else:
+                import traceback, os
+                traceback.print_exc()
+                os._exit(1)
 
     def rebuild_gl_resources(self):
         """Rebuild GL pipeline after OGLSystem.clear() on script reload.
@@ -128,38 +163,46 @@ class GLCLWidget(QOpenGLWidget):
             gl_obj.upload_vbo(new_data)
 
     def paintGL(self):
-        # DEBUG: vivid clear to verify that we see any GL content at all
-        if self.frame_counter < 60:
-            glClearColor(1.0, 0.0, 1.0, 1.0)
-        else:
-            glClearColor(0.1, 0.1, 0.15, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        # DEBUG: advance frame counter per paint; we rely on browser timer driving updates
-        self.frame_counter += 1
-        # Execute optional FS pipeline (offscreen)
-        self._execute_fs_pipeline()
-        
-        # Iterate through the user-defined render pipeline
-        for pass_info in self.render_pipeline_info:
-            shader_name, _, vertex_buffer_name, _ = pass_info
+        try:
+            # DEBUG: vivid clear to verify that we see any GL content at all
+            if self.frame_counter < 60:
+                glClearColor(1.0, 0.0, 1.0, 1.0)
+            else:
+                glClearColor(0.1, 0.1, 0.15, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            # DEBUG: advance frame counter per paint; we rely on browser timer driving updates
+            self.frame_counter += 1
+            # Execute optional FS pipeline (offscreen)
+            self._execute_fs_pipeline()
             
-            shader_program = self.ogl_system.get_shader_program(shader_name)
-            gl_obj = self.gl_objects.get(vertex_buffer_name)
+            # Iterate through the user-defined render pipeline
+            for pass_info in self.render_pipeline_info:
+                shader_name, _, vertex_buffer_name, _ = pass_info
+                
+                shader_program = self.ogl_system.get_shader_program(shader_name)
+                gl_obj = self.gl_objects.get(vertex_buffer_name)
 
-            if not shader_program or not gl_obj:
-                continue
+                if not shader_program or not gl_obj:
+                    continue
 
-            glUseProgram(shader_program)
-            
-            # Set generic uniforms
-            self.update_matrices(shader_program)
-            color_loc = glGetUniformLocation(shader_program, "color")
-            if color_loc != -1: glUniform4f(color_loc, 0.8, 0.8, 1.0, 0.5)
+                glUseProgram(shader_program)
+                
+                # Set generic uniforms
+                self.update_matrices(shader_program)
+                color_loc = glGetUniformLocation(shader_program, "color")
+                if color_loc != -1: glUniform4f(color_loc, 0.8, 0.8, 1.0, 0.5)
 
-            # Draw the object
-            gl_obj.draw_arrays()
+                # Draw the object
+                gl_obj.draw_arrays()
 
-        glUseProgram(0)
+            glUseProgram(0)
+        except Exception as e:
+            if self.browser is not None:
+                self.browser.on_exception(e)
+            else:
+                import traceback, os
+                traceback.print_exc()
+                os._exit(1)
 
     def _execute_fs_pipeline(self):
         if not self.fs_pipeline: return

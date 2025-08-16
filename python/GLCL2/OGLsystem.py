@@ -108,7 +108,12 @@ class OGLSystem:
                 self.shader_programs[name] = program
                 print(f"  Successfully compiled and linked shader '{name}' (Program ID: {program})")
             except (IOError, RuntimeError) as e:
-                print(f"ERROR: Failed to load or compile shader '{name}':\n{e}")
+                raise RuntimeError(
+                    f"Failed to load or compile shader '{name}'\n"
+                    f"  Vertex:   {os.path.join(self.script_dir, vert_path)}\n"
+                    f"  Fragment: {os.path.join(self.script_dir, frag_path)}\n"
+                    f"  Error: {e}"
+                ) from e
 
     def get_shader_program(self, name):
         return self.shader_programs.get(name)
@@ -150,6 +155,39 @@ class OGLSystem:
         glActiveTexture(GL_TEXTURE0 + unit)
         glBindTexture(GL_TEXTURE_2D, tex)
         if check_gl_error(f"bind_texture_unit('{name}',{unit})"): raise RuntimeError("OpenGL error in bind_texture_unit")
+
+    def upload_texture_2d_data(self, name, data, *, fmt=GL_RGBA, typ=GL_FLOAT):
+        """Upload pixel data to an existing texture created via create_texture_2d.
+        Expects data.shape == (H, W, C) with C in {1,3,4}. Converts to RGBA float by default.
+        """
+        if name not in self.textures:
+            raise KeyError(f"Texture '{name}' not found for upload")
+        tex_info = self.textures[name]
+        tex_id = tex_info["id"]
+        W, H = tex_info["size"]
+        arr = np.asarray(data)
+        if arr.ndim == 2:
+            arr = np.stack([arr, arr, arr, np.ones_like(arr)], axis=-1)  # (H,W)->RGBA
+        if arr.ndim != 3 or arr.shape[2] not in (1, 3, 4):
+            raise ValueError(f"Unsupported texture array shape {arr.shape}; expected (H,W,[1|3|4])")
+        # Normalize to RGBA
+        if arr.shape[2] == 1:
+            arr = np.concatenate([arr, arr, arr, np.ones_like(arr)], axis=-1)
+        elif arr.shape[2] == 3:
+            alpha = np.ones(arr.shape[:2] + (1,), dtype=arr.dtype)
+            arr = np.concatenate([arr, alpha], axis=-1)
+        # Ensure (H,W,4) float32 and contiguous
+        if arr.shape[0] == W and arr.shape[1] == H:
+            # Looks like user provided (W,H,4); transpose to (H,W,4)
+            arr = np.transpose(arr, (1, 0, 2))
+        if arr.shape[1] != W or arr.shape[0] != H:
+            raise ValueError(f"Texture '{name}' upload size mismatch: data {(arr.shape[1], arr.shape[0])} vs texture {(W,H)}")
+        arr = np.ascontiguousarray(arr, dtype=np.float32)
+        glBindTexture(GL_TEXTURE_2D, tex_id)
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, W, H, fmt, typ, arr)
+        glBindTexture(GL_TEXTURE_2D, 0)
+        if check_gl_error(f"upload_texture_2d_data('{name}')"): raise RuntimeError("OpenGL error in upload_texture_2d_data")
+        print(f"upload_texture_2d_data('{name}') id={tex_id} size=({W},{H}) dtype=float32")
 
     def create_fbo(self, name, color_tex_name):
         if name in self.fbos:
