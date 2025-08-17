@@ -64,7 +64,7 @@ config = {
         "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color"]),  # color is set by viewer
         "line_color":     ("../shaders/line_color.glslv",     "../shaders/color_passthrough.glslf", []),
         # Instanced rectangle for formations: uses formation_params split into two vec4 attributes [pose, misc]
-        "pose2d_rect":    ("../shaders/pose2d_rect.glslv",    "../shaders/monocolor.glslf", ["color"]),
+        #"pose2d_rect":    ("../shaders/pose2d_rect.glslv",    "../shaders/monocolor.glslf", ["color"]),
         # NOTE: soldier-oriented quads (instanced_quad) kept for later; disabled in render_pipeline for clarity
         "instanced_quad": ("../shaders/instanced_quad.glslv", "../shaders/monocolor.glslf", ["color"]),
     },
