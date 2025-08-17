@@ -23,8 +23,8 @@ config = {
 
     # OpenGL shaders: FS quad VS + fluid solver/view FS programs (core profile)
     "opengl_shaders": {
-        "solveFluid": ("../shaders/fs_quad.glslv", "../shaders/fluid/solveFluid_core.glslf", ["iChannel0", "iResolution", "iFrame", "driver"]),
-        "viewFluid":  ("../shaders/fs_quad.glslv", "../shaders/fluid/view_core.glslf",      ["iChannel0", "iResolution", "iFrame"]),
+        "solveFluid": ("../shaders/fs_quad.glslv", "../shaders/fluid_solve.glslf", ["iChannel0", "iResolution", "iFrame", "driver"]),
+        "viewFluid":  ("../shaders/fs_quad.glslv", "../shaders/fluid_view.glslf",      ["iChannel0", "iResolution", "iFrame"]),
     },
 
     # Textures and FBOs

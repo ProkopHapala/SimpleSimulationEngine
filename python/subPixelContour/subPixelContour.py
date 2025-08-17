@@ -716,8 +716,8 @@ if __name__ == "__main__":
     # optimizer controls
     parser.add_argument('--opt', type=str, default='gd', choices=['gd','dyn'], help='optimizer: gd=gradient descent (default), dyn=damped dynamics with inertia')
     # generic relaxator params
-    parser.add_argument('--dt', type=float, default=None, help='time step for relaxation (aka learning rate). If not set, falls back to --lr')
-    parser.add_argument('--damping', type=float, default=None, help='damping in [0,1]; velocity multiplier is (1-damping). If not set, derived from legacy --mu as damping=1-mu')
+    parser.add_argument('--dt', type=float, default=0.1, help='time step for relaxation (aka learning rate). If not set, falls back to --lr')
+    parser.add_argument('--damping', type=float, default=0.1, help='damping in [0,1]; velocity multiplier is (1-damping). If not set, derived from legacy --mu as damping=1-mu')
     # legacy params (kept for compatibility)
     parser.add_argument('--lr', type=float, default=0.1, help='[deprecated] learning rate; use --dt instead')
     parser.add_argument('--wlr', type=float, default=None, help='learning rate for weights w (rational). Default: 0.5*lr')

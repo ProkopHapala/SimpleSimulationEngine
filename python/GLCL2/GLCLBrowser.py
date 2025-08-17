@@ -448,6 +448,7 @@ if __name__ == '__main__':
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --max-frames 1000 --frame-delay 0
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf.py 
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf2.py 
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/fluid.py 
     # -------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description='GLCL Browser')
     parser.add_argument('--script', type=str, help='Path to simulation script')
