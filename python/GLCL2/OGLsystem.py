@@ -52,6 +52,7 @@ class GLobject:
         self.vao, self.vbo, self.ebo = vao, vbo, ebo
         self.nelements = nelements
         self.mode = mode
+        self._vbo_size = 0
 
     def alloc_vao_vbo_ebo(self, components):
         self.vao = glGenVertexArrays(1)
@@ -78,10 +79,19 @@ class GLobject:
 
     def upload_vbo(self, vertices):
         if self.vbo is None: return
+        # Ensure contiguous float32 data
+        arr = np.ascontiguousarray(vertices, dtype=np.float32)
+        size = arr.nbytes
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        # Use glBufferSubData for updates if the size is the same, glBufferData for initial/resize
-        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_DYNAMIC_DRAW)
+        # Use glBufferSubData when size unchanged; glBufferData for initial/resize
+        if self._vbo_size != size:
+            glBufferData(GL_ARRAY_BUFFER, size, arr, GL_DYNAMIC_DRAW)
+            self._vbo_size = size
+        else:
+            glBufferSubData(GL_ARRAY_BUFFER, 0, size, arr)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
+        # Update element count (assumes same vertex format)
+        self.nelements = arr.shape[0] if arr.ndim > 1 else arr.size
 
 class OGLSystem:
     def __init__(self):

@@ -4,10 +4,12 @@ import importlib.util
 import numpy as np
 import pyopencl as cl
 import copy
+import time
 
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QWidget, QFileDialog, QVBoxLayout, QGroupBox
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QSurfaceFormat
 
 import OpenGL.GL as GL
 import argparse
@@ -42,7 +44,7 @@ class BakedKernelCall:
 class GLCLBrowser(BaseGUI):
     """Main browser class for loading and executing scientific simulation scripts."""
     
-    def __init__(self, python_script_path=None, bDebugCL=False, bDebugGL=False, nDebugFrames=0, fps=60, start_paused=False, frame_limit=0, frame_delay_ms=None):
+    def __init__(self, python_script_path=None, bDebugCL=False, bDebugGL=False, nDebugFrames=0, fps=60, start_paused=False, frame_limit=0, frame_delay_ms=None, speed_test=False):
         super().__init__()
         self.setWindowTitle("GLCL Browser - Scientific Simulation Framework")
         self.setGeometry(100, 100, 1600, 900)
@@ -57,6 +59,10 @@ class GLCLBrowser(BaseGUI):
         self.fps = float(fps)
         self.start_paused = bool(start_paused)
         self.frame_limit = int(frame_limit)  # 0 -> unlimited
+        # Speed-test mode (runs for fixed number of frames, measures time) # DEBUG
+        self.speed_test = bool(speed_test)
+        self._speed_t0 = None
+        self._speed_done = False
         # If frame_delay_ms is provided, it takes precedence over fps
         if frame_delay_ms is not None:
             self.frame_interval_ms = max(0, int(frame_delay_ms))
@@ -72,6 +78,7 @@ class GLCLBrowser(BaseGUI):
         self.buffer_data = {}
         self.render_pipeline_info = []
         self.buffers_to_sync = []
+        self.host_sync_buffers = {}  # preallocated host arrays for CL->GL sync # DEBUG
         self.initial_textures = {}
         
         self.main_widget = QWidget()
@@ -202,6 +209,12 @@ class GLCLBrowser(BaseGUI):
             print(f"  - {kc.kernel_name}: global={kc.global_size}, local={kc.local_size}")
         print("-----------------------------")
 
+        # Preallocate host sync buffers after we know buffer_shapes and buffers_to_sync # DEBUG
+        try:
+            self._alloc_host_sync_buffers()
+        except Exception as e:
+            print(f"apply_simulation_config: WARNING could not preallocate host sync buffers: {e}")
+
         if not self.simulation_running and not self.start_paused:
             self.start_simulation()
 
@@ -288,6 +301,19 @@ class GLCLBrowser(BaseGUI):
                 self.glcl_widget.upload_fs_texture_data(self.initial_textures)
         except Exception as e:
             print(f"setup_opengl_system: WARNING could not upload initial FS textures: {e}")
+
+    def _alloc_host_sync_buffers(self):
+        """Preallocate reusable host arrays for CL->GL sync to avoid per-frame np.empty(). # DEBUG
+        Called after buffer_shapes and buffers_to_sync are established.
+        """
+        self.host_sync_buffers = {}
+        for name in self.buffers_to_sync:
+            shape = self.buffer_shapes.get(name)
+            if shape is None:
+                print(f"_alloc_host_sync_buffers: WARNING shape for '{name}' not found")
+                continue
+            self.host_sync_buffers[name] = np.empty(shape, dtype=np.float32)
+            print(f"  Preallocated host buffer '{name}' with shape {shape}")
 
     def update_display_combo(self):
         # Prefer names from the widget FS config (available even before GL context creates actual textures)
@@ -425,6 +451,9 @@ class GLCLBrowser(BaseGUI):
         interval = self.frame_interval_ms
         self.sim_timer.start(interval)
         print(f"Simulation started (interval={interval} ms, fps~={(1000.0/interval) if interval>0 else 'max'}).")
+        # Speed test timing start # DEBUG
+        if self.speed_test:
+            self._speed_t0 = time.perf_counter()
 
     def pause_simulation(self):
         self.simulation_running = False
@@ -455,7 +484,13 @@ class GLCLBrowser(BaseGUI):
                 for buf_name in self.buffers_to_sync:
                     gl_obj = self.glcl_widget.gl_objects.get(buf_name)
                     if gl_obj:
-                        host_data = np.empty(self.buffer_shapes[buf_name], dtype=np.float32)
+                        host_data = self.host_sync_buffers.get(buf_name)
+                        if host_data is None:
+                            # Lazy allocate if missing (should be preallocated) # DEBUG
+                            shape = self.buffer_shapes.get(buf_name)
+                            host_data = np.empty(shape, dtype=np.float32)
+                            self.host_sync_buffers[buf_name] = host_data
+                            print(f"update_simulation: lazy-alloc host buffer '{buf_name}' with shape {shape}")
                         self.ocl_system.fromGPU(buf_name, host_data)
                         self.glcl_widget.update_buffer_data(buf_name, host_data)
             
@@ -471,7 +506,16 @@ class GLCLBrowser(BaseGUI):
             # 1) Explicit frame limit (applies always if >0)
             if self.frame_limit > 0 and self.debug_frame_counter >= self.frame_limit:
                 self.pause_simulation()
-                print(f"Max frame limit ({self.frame_limit}) reached. Simulation stopped.")
+                # Speed test: report and exit # DEBUG
+                if self.speed_test and not self._speed_done and self._speed_t0 is not None:
+                    dt = time.perf_counter() - self._speed_t0
+                    n = self.debug_frame_counter
+                    fps = (n/dt) if dt > 0 else float('inf')
+                    print(f"SPEED_TEST: {n} frames in {dt:.4f} s ({fps:.2f} FPS)")
+                    self._speed_done = True
+                    os._exit(0)
+                else:
+                    print(f"Max frame limit ({self.frame_limit}) reached. Simulation stopped.")
                 return
             # 2) Debug frame limit (only when in debug modes)
             if (self.bDebugCL or self.bDebugGL) and self.nDebugFrames > 0 and self.debug_frame_counter >= self.nDebugFrames:
@@ -534,6 +578,8 @@ if __name__ == '__main__':
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf.py 
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/sdf2.py 
     #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/fluid.py 
+    # Speed test:
+    #   python -m python.GLCL2.GLCLBrowser --script python/GLCL2/scripts/nbody.py --speed-test --no-vsync
     # -------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description='GLCL Browser')
     parser.add_argument('--script', type=str, help='Path to simulation script')
@@ -544,9 +590,19 @@ if __name__ == '__main__':
     parser.add_argument('--frame-delay', type=float, default=None, help='Frame delay in milliseconds (0 for max speed). Takes precedence over --fps')
     parser.add_argument('--start-paused', action='store_true', help='Do not auto-start the simulation after loading the script')
     parser.add_argument('--max-frames', type=int, default=0, help='Explicit frame cap; 0 means unlimited')
+    parser.add_argument('--speed_test', action='store_true', help='Run 50-frame speed test and print timing')
+    parser.add_argument('--no-vsync', action='store_true', help='Disable vsync (swap interval 0) to uncap FPS')
     args = parser.parse_args()
+
+    if args.speed_test: args.no_vsync = True
     
     app = QApplication(sys.argv)
+    # Optionally disable vsync for uncapped FPS; must be set before creating QOpenGLWidget
+    if args.no_vsync:
+        fmt = QSurfaceFormat()
+        fmt.setSwapInterval(0)
+        QSurfaceFormat.setDefaultFormat(fmt)
+        print("VSync disabled (swap interval = 0)")
     
     default_script = os.path.join(os.path.dirname(__file__), "scripts", "nbody.py")
     script_path = args.script or default_script
@@ -554,6 +610,13 @@ if __name__ == '__main__':
     if not os.path.exists(script_path):
         print(f"Error: Script not found at {script_path}")
         sys.exit(1)
+
+    # If speed test requested, default to 50 frames and 0 ms frame delay unless explicitly set # DEBUG
+    if args.speed_test:
+        if args.max_frames == 0:
+            args.max_frames = 50
+        if args.frame_delay is None:
+            args.frame_delay = 0
 
     print(f"Starting GLCL Browser with script: {script_path}")
     browser = GLCLBrowser(
@@ -564,7 +627,8 @@ if __name__ == '__main__':
         fps=args.fps,
         start_paused=args.start_paused,
         frame_limit=args.max_frames,
-        frame_delay_ms=args.frame_delay
+        frame_delay_ms=args.frame_delay,
+        speed_test=args.speed_test
     )
     browser.show()
     sys.exit(app.exec_())
