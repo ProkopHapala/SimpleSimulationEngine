@@ -252,19 +252,18 @@ class GLCLWidget(QOpenGLWidget):
         gl_obj = self.gl_objects.get(buffer_name)
         if gl_obj:
             gl_obj.upload_vbo(new_data)
-            return
-        # Otherwise, see if this buffer is an instance buffer for any object
+        # Also, if this buffer is used as an instance buffer elsewhere, update that too
         inst_owner = self.instance_owners.get(buffer_name)
         if inst_owner:
             inst_owner.upload_instance_vbo(new_data)
 
     def paintGL(self):
         try:
-            # DEBUG: vivid clear to verify that we see any GL content at all
-            if self.frame_counter < 60:
-                glClearColor(1.0, 0.0, 1.0, 1.0)
-            else:
-                glClearColor(0.1, 0.1, 0.15, 1.0)
+            # Clear to default background color (DEBUG magenta startup clear disabled)
+            # if self.frame_counter < 60:
+            #     glClearColor(1.0, 0.0, 1.0, 1.0)
+            # else:
+            glClearColor(0.1, 0.1, 0.15, 1.0)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             # DEBUG: advance frame counter per paint; we rely on browser timer driving updates
             self.frame_counter += 1
@@ -414,10 +413,10 @@ class GLCLWidget(QOpenGLWidget):
                 #         print(f"[FS DEBUG] default pass fbo={int(fb)} viewport={tuple(int(x) for x in vp2)} widgetWH=({int(self.width())},{int(self.height())})")
                 #     except Exception:
                 #         pass
-                # DEBUG: clear to bright color for first frames to ensure we see something even if shader fails
-                if self.frame_counter < 3:
-                    glClearColor(1.0, 0.0, 1.0, 1.0)
-                    glClear(GL_COLOR_BUFFER_BIT)
+                # DEBUG startup magenta clear disabled
+                # if self.frame_counter < 3:
+                #     glClearColor(1.0, 0.0, 1.0, 1.0)
+                #     glClear(GL_COLOR_BUFFER_BIT)
                 for i, tname in enumerate(bind_textures or []):
                     self.ogl_system.bind_texture_unit(tname, i)
                 glUseProgram(program)

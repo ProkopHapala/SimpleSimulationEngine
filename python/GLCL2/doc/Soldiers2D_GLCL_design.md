@@ -314,6 +314,14 @@ These are starting points; adjust interactively.
   - Initial kernel launch failed with `INVALID_WORK_GROUP_SIZE` when `local_size=(32,)` and `global=(20,)`.
   - __Fix__: set `local_size=None` in `config["kernels"]["soldiers_step"]` in `python/GLCL2/scripts/soldiers.py`, letting driver choose. Kernel now executes each frame.
   - Formation rendering added: instanced rectangles draw one per formation from `formation_params`; soldier oriented quads pass disabled.
+  - __Update (2025-08-18) – Instanced quads enabled and fixed__:
+    - Problem: soldier instanced quads didn’t move although soldier points did. Two issues:
+      1) VAO collision: both formations and soldiers used `quad_verts`, causing VAO reuse and wrong instance buffer bound.
+      2) Buffer sync: `GLCLGUI.update_buffer_data()` updated only the vertex VBO owner, not an instance VBO owner when a buffer was shared (e.g., `state_pos_dir`).
+    - Fixes:
+      - Added separate mesh VBO `quad_verts_soldier` and used it in soldier quad pass to get a dedicated VAO.
+      - Modified `python/GLCL2/GLCLGUI.py::update_buffer_data()` to update both the vertex VBO (`gl_objects[buf]`) and the instance VBO owner (`instance_owners[buf]`).
+    - Result: soldier instanced quads now follow `state_pos_dir` positions/orientations (match GL points). Formation rectangles remain correct.
 
 - __Data/Sync__
   - CL→GL sync: `state_pos_dir` is flagged for rendering and synchronized each frame by GLCL.
@@ -343,6 +351,12 @@ These are starting points; adjust interactively.
 - [ ] Plan rendering upgrade to oriented glyphs (T-shape)
 - [ ] Performance follow-up: implement uniform grid neighbor search for O(N)
 - [ ] Document future extensions: leaders, morale/stamina buffers, terrain influence
+
+__Instancing debug/fix (2025-08-18)__
+
+- [x] Separate soldier and formation VAOs by introducing `quad_verts_soldier`
+- [x] Enable soldier instanced quads using `state_pos_dir` as instance buffer
+- [x] Fix shared buffer sync in `GLCLGUI.update_buffer_data()` so shared buffers update both vertex and instance VBOs
 
 ---
 

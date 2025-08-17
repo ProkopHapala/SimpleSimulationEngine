@@ -46,6 +46,8 @@ config = {
         "formation_lines": ("formation_point_count", 6, "f4"),
         # local quad geometry (4 vertices, 2 components) for instanced rendering
         "quad_verts": (4, 2, "f4"),
+        # dedicated copy for soldier-instanced quads to avoid VAO instance VBO conflicts
+        "quad_verts_soldier": (4, 2, "f4"),
     },
 
     # OpenCL
@@ -64,7 +66,7 @@ config = {
         "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color"]),  # color is set by viewer
         "line_color":     ("../shaders/line_color.glslv",     "../shaders/color_passthrough.glslf", []),
         # Instanced rectangle for formations: uses formation_params split into two vec4 attributes [pose, misc]
-        #"pose2d_rect":    ("../shaders/pose2d_rect.glslv",    "../shaders/monocolor.glslf", ["color"]),
+        "pose2d_rect":    ("../shaders/pose2d_rect.glslv",    "../shaders/monocolor.glslf", ["color"]),
         # NOTE: soldier-oriented quads (instanced_quad) kept for later; disabled in render_pipeline for clarity
         "instanced_quad": ("../shaders/instanced_quad.glslv", "../shaders/monocolor.glslf", ["color"]),
     },
@@ -77,7 +79,7 @@ config = {
         # Formation rectangles: one instance per formation, geometry from quad_verts
         ("pose2d_rect",  "formation_count",       "quad_verts",       None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"formation_params", "instance_attribs":[4,4], "instance_divisor":1}),
         # Soldier-oriented quads (instanced) using state_pos_dir as (px,py,ux,uy); draw before points so points overlay as fallback
-        ("instanced_quad", "particle_count",       "quad_verts",       None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"state_pos_dir", "instance_attribs":[4], "instance_divisor":1}),
+        ("instanced_quad", "particle_count",       "quad_verts_soldier", None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"state_pos_dir", "instance_attribs":[4], "instance_divisor":1}),
         ("soldier_render", "formation_point_count", "formation_points", None),
         ("soldier_render", "particle_count", "state_pos_dir", None),
     ],
@@ -165,4 +167,5 @@ def init():
         "formation_points": fpoints,
         "formation_lines":  flines,
         "quad_verts":       quad,
+        "quad_verts_soldier": quad,
     }
