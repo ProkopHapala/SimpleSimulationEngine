@@ -46,6 +46,8 @@ class GLCLWidget(QOpenGLWidget):
         # Viewer overlay state
         self.display_tex_name = None  # name of texture to show on default framebuffer
         self._viewer_program = 0      # lazily compiled simple blit shader
+        # Cache for uniform locations per program ID to avoid per-frame glGetUniformLocation
+        self._uniform_cache = {}      # { program_id: { 'projection':loc, 'view':loc } }
 
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -61,6 +63,12 @@ class GLCLWidget(QOpenGLWidget):
         # Defer resource creation until initializeGL is called
         if self.isValid():
             self.bake_render_objects()
+            # Apply geometry uniforms for new/changed programs
+            try:
+                self.makeCurrent()
+                self.apply_viewproj_for_geometry()
+            finally:
+                self.doneCurrent()
             self.update()
 
     def set_fs_config(self, textures_cfg, fbos_cfg, fs_pipeline):
@@ -72,6 +80,12 @@ class GLCLWidget(QOpenGLWidget):
         self.fs_pipeline = list(fs_pipeline or [])
         if self.isValid():
             self._create_fs_resources()
+            # Apply FS static uniforms for new/changed passes
+            try:
+                self.makeCurrent()
+                self.apply_fs_static_uniforms()
+            finally:
+                self.doneCurrent()
             self.update()
 
     def upload_fs_texture_data(self, textures_dict):
@@ -106,6 +120,8 @@ class GLCLWidget(QOpenGLWidget):
             self.ogl_system.compile_all_shaders()
             self.bake_render_objects()
             self._create_fs_resources()
+            # Apply static uniforms once (projection/view, samplers, resolutions)
+            self.apply_static_uniforms_all()
             # Upload any initial FS texture data provided by the browser (from script init())
             try:
                 if self.browser is not None and getattr(self.browser, "initial_textures", None):
@@ -132,8 +148,12 @@ class GLCLWidget(QOpenGLWidget):
             self.ogl_system.compile_all_shaders()
             self.bake_render_objects()
             self._create_fs_resources()
+            # Re-apply static uniforms after relink/recreation
+            self.apply_static_uniforms_all()
         finally:
             self.doneCurrent()
+        # Clear uniform cache because program IDs/locations may have changed after rebuild
+        self._uniform_cache.clear()
         self.update()
 
     def _create_fs_resources(self):
@@ -199,12 +219,6 @@ class GLCLWidget(QOpenGLWidget):
                     continue
 
                 glUseProgram(shader_program)
-                
-                # Set generic uniforms
-                self.update_matrices(shader_program)
-                color_loc = glGetUniformLocation(shader_program, "color")
-                if color_loc != -1: glUniform4f(color_loc, 0.8, 0.8, 1.0, 0.5)
-
                 # Draw the object
                 gl_obj.draw_arrays()
 
@@ -244,6 +258,11 @@ class GLCLWidget(QOpenGLWidget):
         }
         """
         self._viewer_program = compile_shader_program(vs_src, fs_src)
+        # Initialize viewer sampler uniform once
+        glUseProgram(self._viewer_program)
+        loc = self._get_uniform_location(self._viewer_program, "uTex")
+        if loc != -1: glUniform1i(loc, 0)
+        glUseProgram(0)
 
     def _draw_display_texture(self):
         if self.ogl_system is None:
@@ -261,8 +280,6 @@ class GLCLWidget(QOpenGLWidget):
         # Bind texture to unit 0 and draw
         self.ogl_system.bind_texture_unit(self.display_tex_name, 0)
         glUseProgram(self._viewer_program)
-        loc = glGetUniformLocation(self._viewer_program, "uTex")
-        if loc != -1: glUniform1i(loc, 0)
         self.ogl_system.draw_fullscreen_quad()
         glUseProgram(0)
         # Restore state
@@ -287,18 +304,7 @@ class GLCLWidget(QOpenGLWidget):
             program = self.ogl_system.get_shader_program(shader_name)
             if not program:
                 raise KeyError(f"FS shader '{shader_name}' not compiled or registered")
-            # Set common sampler uniforms to match bound units
-            glUseProgram(program)
-            max_units = 8
-            for i in range(min(len(bind_textures or []), max_units)):
-                for uname in (f"iChannel{i}", f"tex{i}", f"s{i}"):
-                    loc = glGetUniformLocation(program, uname)
-                    if loc != -1: glUniform1i(loc, i)
-            # Set iFrame
-            loc_frame = glGetUniformLocation(program, "iFrame")
-            if loc_frame != -1:
-                glUniform1i(loc_frame, int(self.frame_counter))
-            # Determine resolution for this pass (target FBO if present, else widget size)
+            # Pre-compute pass resolution for viewport, but do not set uniforms here (done on events)
             pass_w = self.width()
             pass_h = self.height()
             if out_fbo and out_fbo not in ("default", "", None):
@@ -308,21 +314,11 @@ class GLCLWidget(QOpenGLWidget):
                 if tex_name and tex_name in self.fs_textures_cfg:
                     w, h = self.fs_textures_cfg[tex_name]
                     pass_w, pass_h = int(w), int(h)
-            loc_res = glGetUniformLocation(program, "iResolution")
-            if loc_res != -1:
-                glUniform3f(loc_res, float(pass_w), float(pass_h), 1.0)
-            # Optional custom uniform: driver (vec4)
-            try:
-                cfg = self.browser.current_config if self.browser else None
-                if cfg is not None and "driver" in cfg.get("parameters", {}):
-                    drv_val, drv_type, _ = cfg["parameters"]["driver"]
-                    if drv_type == "vec4" and isinstance(drv_val, (list, tuple)) and len(drv_val) == 4:
-                        loc_drv = glGetUniformLocation(program, "driver")
-                        if loc_drv != -1:
-                            glUniform4f(loc_drv, float(drv_val[0]), float(drv_val[1]), float(drv_val[2]), float(drv_val[3]))
-            except Exception:
-                # DEBUG: fail loud in browser if desired; here we keep rendering even if driver missing
-                pass
+            # Set only dynamic per-frame uniform
+            glUseProgram(program)
+            loc_frame = self._get_uniform_location(program, "iFrame")
+            if loc_frame != -1:
+                glUniform1i(loc_frame, int(self.frame_counter))
             glUseProgram(0)
             # Set viewport to target texture size if known
             tex_name = self.fs_fbos_cfg.get(out_fbo) if out_fbo else None
@@ -365,21 +361,120 @@ class GLCLWidget(QOpenGLWidget):
         if h > 0:
             aspect = w / h
             self.projection_matrix.perspective(45.0, aspect, 0.1, 1000.0)
+        # Re-apply static uniforms affected by size change
+        try:
+            self.makeCurrent()
+            self.apply_viewproj_for_geometry()
+            self.apply_fs_static_uniforms()
+        finally:
+            self.doneCurrent()
 
-    def update_matrices(self, shader_program):
-        self.view_matrix.setToIdentity()
-        self.view_matrix.translate(-self.camera_pos)
-        self.view_matrix = self.cam_rot * self.view_matrix
+    def apply_static_uniforms_all(self):
+        """Set all non-per-frame uniforms once (projection/view, color, FS samplers, iResolution, driver)."""
+        self.apply_viewproj_for_geometry()
+        self.apply_fs_static_uniforms()
 
-        proj_loc = glGetUniformLocation(shader_program, "projection")
-        view_loc = glGetUniformLocation(shader_program, "view")
-        
-        if proj_loc != -1: glUniformMatrix4fv(proj_loc, 1, GL_FALSE, self.projection_matrix.data())
-        if view_loc != -1: glUniformMatrix4fv(view_loc, 1, GL_FALSE, self.view_matrix.data())
+    def apply_viewproj_for_geometry(self):
+        if not self.ogl_system: return
+        # Build view matrix from current camera
+        vm = QMatrix4x4()
+        vm.setToIdentity()
+        vm.translate(-self.camera_pos)
+        vm = self.cam_rot * vm
+        # Find unique geometry shader programs used by render pipeline
+        shader_names = [p[0] for p in self.render_pipeline_info if len(p) > 0]
+        seen = set()
+        for sname in shader_names:
+            prog = self.ogl_system.get_shader_program(sname)
+            if not prog or prog in seen: continue
+            seen.add(prog)
+            glUseProgram(prog)
+            # projection/view
+            loc = self._get_uniform_location(prog, "projection")
+            if loc != -1: glUniformMatrix4fv(loc, 1, GL_FALSE, self.projection_matrix.data())
+            loc = self._get_uniform_location(prog, "view")
+            if loc != -1: glUniformMatrix4fv(loc, 1, GL_FALSE, vm.data())
+            # static color (if used)
+            loc = self._get_uniform_location(prog, "color")
+            if loc != -1: glUniform4f(loc, 0.8, 0.8, 1.0, 0.5)
+            glUseProgram(0)
+
+    def apply_fs_static_uniforms(self):
+        if not self.ogl_system: return
+        # Determine for each FS program: max sampler units used and a representative resolution
+        prog_info = {}  # prog -> {"max_units":N, "res":(w,h)}
+        for (shader_name, out_fbo, bind_textures) in self.fs_pipeline:
+            prog = self.ogl_system.get_shader_program(shader_name)
+            if not prog: continue
+            info = prog_info.get(prog)
+            if info is None:
+                info = {"max_units": 0, "res": None}
+                prog_info[prog] = info
+            mu = max(info["max_units"], len(bind_textures or []))
+            info["max_units"] = mu
+            # pick resolution for this program; warn on mismatch
+            pw, ph = int(self.width()), int(self.height())
+            if out_fbo and out_fbo not in ("default", "", None):
+                tname = self.fs_fbos_cfg.get(out_fbo)
+                if tname and tname in self.fs_textures_cfg:
+                    w, h = self.fs_textures_cfg[tname]
+                    pw, ph = int(w), int(h)
+            if info["res"] is None:
+                info["res"] = (pw, ph)
+            elif info["res"] != (pw, ph):
+                try:
+                    print(f"apply_fs_static_uniforms: WARNING program {prog} used with multiple resolutions {info['res']} vs {(pw,ph)}; using last.")
+                except Exception:
+                    pass
+                info["res"] = (pw, ph)
+        # Apply uniforms per program
+        for prog, info in prog_info.items():
+            glUseProgram(prog)
+            # Sampler bindings: iChannel{i}/tex{i}/s{i} -> unit i
+            for i in range(info["max_units"]):
+                for uname in (f"iChannel{i}", f"tex{i}", f"s{i}"):
+                    loc = self._get_uniform_location(prog, uname)
+                    if loc != -1: glUniform1i(loc, i)
+            # Resolution
+            w, h = info["res"] if info["res"] is not None else (int(self.width()), int(self.height()))
+            loc = self._get_uniform_location(prog, "iResolution")
+            if loc != -1: glUniform3f(loc, float(w), float(h), 1.0)
+            # Optional driver vec4 from current config
+            try:
+                cfg = self.browser.current_config if self.browser else None
+                if cfg is not None and "driver" in cfg.get("parameters", {}):
+                    drv_val, drv_type, _ = cfg["parameters"]["driver"]
+                    if drv_type == "vec4" and isinstance(drv_val, (list, tuple)) and len(drv_val) == 4:
+                        loc = self._get_uniform_location(prog, "driver")
+                        if loc != -1:
+                            glUniform4f(loc, float(drv_val[0]), float(drv_val[1]), float(drv_val[2]), float(drv_val[3]))
+            except Exception:
+                pass
+            glUseProgram(0)
+
+    def _get_uniform_location(self, program, name):
+        """Return cached uniform location for (program,name), querying and caching on a miss."""
+        d = self._uniform_cache.get(program)
+        if d is None:
+            d = {}
+            self._uniform_cache[program] = d
+        loc = d.get(name)
+        if loc is None:
+            loc = glGetUniformLocation(program, name)
+            d[name] = loc
+        return loc
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y() / 120
         self.camera_pos.setZ(self.camera_pos.z() - delta)
+        # Apply view/projection immediately (event-driven)
+        try:
+            if self.isValid():
+                self.makeCurrent()
+                self.apply_viewproj_for_geometry()
+        finally:
+            if self.isValid():
+                self.doneCurrent()
         self.update()
 
     def mousePressEvent(self, event):
@@ -400,6 +495,14 @@ class GLCLWidget(QOpenGLWidget):
             
             self.cam_rot = rot_y * rot_x * self.cam_rot
             self.last_mouse_pos = event.pos()
+            # Apply view/projection immediately (event-driven)
+            try:
+                if self.isValid():
+                    self.makeCurrent()
+                    self.apply_viewproj_for_geometry()
+            finally:
+                if self.isValid():
+                    self.doneCurrent()
             self.update()
 
     def mouseReleaseEvent(self, event):

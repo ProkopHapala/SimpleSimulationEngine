@@ -417,6 +417,19 @@ class GLCLBrowser(BaseGUI):
             return
         self.bake_kernels(self.current_config)
         print("Parameters updated from GUI. Kernels re-baked.")
+        # Event-driven: update FS static uniforms (e.g., driver, sampler bindings, resolution) after param change # DEBUG
+        try:
+            if self.glcl_widget and self.glcl_widget.isValid():
+                self.glcl_widget.makeCurrent()
+                self.glcl_widget.apply_fs_static_uniforms()
+        finally:
+            try:
+                if self.glcl_widget and self.glcl_widget.isValid():
+                    self.glcl_widget.doneCurrent()
+            except Exception:
+                pass
+        if self.glcl_widget:
+            self.glcl_widget.update()
 
     def update_sim_uniforms(self):
         # For BaseGUI compatibility; propagate widget values into current_config
@@ -526,6 +539,19 @@ class GLCLBrowser(BaseGUI):
             self.current_config["parameters"][param_name] = (new_value, type_str, step)
             self.bake_kernels(self.current_config)
             print(f"Parameter '{param_name}' updated to {new_value}. Kernels re-baked.")
+            # Event-driven: update FS static uniforms (e.g., driver) when parameters are set programmatically # DEBUG
+            try:
+                if self.glcl_widget and self.glcl_widget.isValid():
+                    self.glcl_widget.makeCurrent()
+                    self.glcl_widget.apply_fs_static_uniforms()
+            finally:
+                try:
+                    if self.glcl_widget and self.glcl_widget.isValid():
+                        self.glcl_widget.doneCurrent()
+                except Exception:
+                    pass
+            if self.glcl_widget:
+                self.glcl_widget.update()
 
     def _precompute_buffer_sync_list(self, config):
         print("Pre-computing buffer synchronization list...")
