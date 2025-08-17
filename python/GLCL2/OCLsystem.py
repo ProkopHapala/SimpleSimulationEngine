@@ -132,6 +132,13 @@ class OCLSystem:
         """
         kernel_obj(self.queue, global_size, local_size, *args).wait()
 
+    def enqueue_kernel(self, kernel_obj, global_size, local_size, *args):
+        """Enqueue a kernel without waiting; caller is responsible to sync (e.g., queue.finish()). # DEBUG
+        This allows batching multiple kernel enqueues and waiting once per frame for performance.
+        """
+        # NOTE: Do not call .wait() here to allow higher-level batching
+        kernel_obj(self.queue, global_size, local_size, *args)
+
     def set_kernel_param(self, name, value):
         """
         Set a scalar parameter for kernels.
@@ -172,6 +179,16 @@ class BakedKernelCall:
             self.ocl_system.execute_kernel(self.kernel_obj, self.global_size, self.local_size, *self.args_tuple)
         except Exception as e:
             print(f"Error executing kernel {self.kernel_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def enqueue(self):
+        """Enqueue without waiting (for batched per-frame finish). # DEBUG"""
+        try:
+            self.ocl_system.enqueue_kernel(self.kernel_obj, self.global_size, self.local_size, *self.args_tuple)
+        except Exception as e:
+            print(f"Error enqueueing kernel {self.kernel_name}: {e}")
             import traceback
             traceback.print_exc()
             raise

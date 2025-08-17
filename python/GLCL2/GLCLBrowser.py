@@ -42,6 +42,9 @@ class GLCLBrowser(BaseGUI):
         self.speed_test = bool(speed_test)
         self._speed_t0 = None
         self._speed_done = False
+        # Accumulators for performance breakdown (kernel exec+wait, buffer sync) # DEBUG
+        self._acc_kernel = 0.0
+        self._acc_sync = 0.0
         # If frame_delay_ms is provided, it takes precedence over fps
         if frame_delay_ms is not None:
             self.frame_interval_ms = max(0, int(frame_delay_ms))
@@ -472,49 +475,63 @@ class GLCLBrowser(BaseGUI):
             if not self.bDebugGL:
                 for kernel_call in self.baked_kernel_calls:
                     kernel_call.execute()
-                
-                for buf_name in self.buffers_to_sync:
-                    gl_obj = self.glcl_widget.gl_objects.get(buf_name)
-                    if gl_obj:
-                        host_data = self.host_sync_buffers.get(buf_name)
-                        if host_data is None:
-                            # Lazy allocate if missing (should be preallocated) # DEBUG
-                            shape = self.buffer_shapes.get(buf_name)
-                            host_data = np.empty(shape, dtype=np.float32)
-                            self.host_sync_buffers[buf_name] = host_data
-                            print(f"update_simulation: lazy-alloc host buffer '{buf_name}' with shape {shape}")
-                        self.ocl_system.fromGPU(buf_name, host_data)
-                        self.glcl_widget.update_buffer_data(buf_name, host_data)
+                if self.buffers_to_sync:
+                    self._sync_buffers_if_needed()
             
             self.glcl_widget.update()
             
             if self.bDebugCL and self.debug_frame_counter <= self.nDebugFrames:
-                for buf_name in self.buffer_shapes:
-                    host = np.empty(self.buffer_shapes[buf_name], dtype=np.float32)
-                    self.ocl_system.fromGPU(buf_name, host)
-                    print(f"[Frame {self.debug_frame_counter}] '{buf_name}': {host[0]}")
+                self._debug_probe_once()
 
-            # Stop conditions
-            # 1) Explicit frame limit (applies always if >0)
-            if self.frame_limit > 0 and self.debug_frame_counter >= self.frame_limit:
-                self.pause_simulation()
-                # Speed test: report and exit # DEBUG
-                if self.speed_test and not self._speed_done and self._speed_t0 is not None:
-                    dt = time.perf_counter() - self._speed_t0
-                    n = self.debug_frame_counter
-                    fps = (n/dt) if dt > 0 else float('inf')
-                    print(f"SPEED_TEST: {n} frames in {dt:.4f} s ({fps:.2f} FPS)")
-                    self._speed_done = True
-                    os._exit(0)
-                else:
-                    print(f"Max frame limit ({self.frame_limit}) reached. Simulation stopped.")
+            # Stop conditions (rare path)
+            if self._check_stop_conditions():
                 return
-            # 2) Debug frame limit (only when in debug modes)
-            if (self.bDebugCL or self.bDebugGL) and self.nDebugFrames > 0 and self.debug_frame_counter >= self.nDebugFrames:
-                self.pause_simulation()
-                print(f"Debug frame limit ({self.nDebugFrames}) reached. Simulation stopped.")
         except Exception as e:
             self.on_exception(e)
+
+    def _debug_probe_once(self):
+        for buf_name in self.buffer_shapes:
+            host = np.empty(self.buffer_shapes[buf_name], dtype=np.float32)
+            self.ocl_system.fromGPU(buf_name, host)
+            print(f"[Frame {self.debug_frame_counter}] '{buf_name}': {host[0]}")
+
+    def _sync_buffers_if_needed(self):
+        for buf_name in self.buffers_to_sync:
+            gl_obj = self.glcl_widget.gl_objects.get(buf_name)
+            if gl_obj:
+                host_data = self.host_sync_buffers[buf_name]  # preallocated; assume present
+                self.ocl_system.fromGPU(buf_name, host_data)
+                self.glcl_widget.update_buffer_data(buf_name, host_data)
+
+    def _check_stop_conditions(self):
+        # 1) Explicit frame limit (applies always if >0)
+        if self.frame_limit > 0 and self.debug_frame_counter >= self.frame_limit:
+            self.pause_simulation()
+            # Speed test: report and exit # DEBUG
+            if self.speed_test and not self._speed_done and self._speed_t0 is not None:
+                dt = time.perf_counter() - self._speed_t0
+                n = self.debug_frame_counter
+                fps = (n/dt) if dt > 0 else float('inf')
+                print(f"SPEED_TEST: {n} frames in {dt:.4f} s ({fps:.2f} FPS)")
+                self._speed_done = True
+                os._exit(0)
+            else:
+                print(f"Max frame limit ({self.frame_limit}) reached. Simulation stopped.")
+            return True
+        # 2) Debug frame limit (only when in debug modes)
+        if (self.bDebugCL or self.bDebugGL) and self.nDebugFrames > 0 and self.debug_frame_counter >= self.nDebugFrames:
+            self.pause_simulation()
+            print(f"Debug frame limit ({self.nDebugFrames}) reached. Simulation stopped.")
+            return True
+        return False
+
+    def _sync_buffers_active(self):
+        for buf_name in self.buffers_to_sync:
+            gl_obj = self.glcl_widget.gl_objects.get(buf_name)
+            if gl_obj:
+                host_data = self.host_sync_buffers[buf_name]  # preallocated
+                self.ocl_system.fromGPU(buf_name, host_data)
+                self.glcl_widget.update_buffer_data(buf_name, host_data)
 
     def on_exception(self, e):
         print(f"FATAL SIMULATION ERROR: {e}")
