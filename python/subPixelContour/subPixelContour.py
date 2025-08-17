@@ -165,6 +165,80 @@ def solve_with_gradient_descent(A, b, learning_rate=0.1, n_iterations=200, verbo
             
     return coeffs
 
+def predict_rational(A, c, w=None, clamp=False, eps=1e-12):
+    """Predict F for a rational (normalized) linear combination.
+
+    Definition (fixed weights w):
+      Let A[p,i] = B_i(x_p) be basis samples. Define A_w = A diag(w), with w_i>=0 (default w_i=1).
+      Numerator:   N_p = sum_i c_i (A_w)[p,i] = (A @ (w*c))_p
+      Denominator: D_p = sum_i       (A_w)[p,i] = (A @ w)_p
+      Prediction:  F_p = N_p / D_p
+
+    Notes:
+    - Locality: with compact support bases A is sparse per-row; D_p = A[p,:] @ w reduces to the local 4 neighbors for 2x2 support automatically.
+    - Efficiency: compute N = A @ (w*c) and D = A @ w without forming A_w explicitly.
+    - Clamp: optional clamping to [-1,1] is for diagnostics; do not use clamp here if you need the analytical derivative of F.
+    """
+    n = A.shape[0]
+    if w is None: w = np.ones(A.shape[1])
+    wc = w * c
+    N = A @ wc
+    D = A @ w
+    F = N / np.maximum(D, eps)
+    if clamp:
+        F = np.clip(F, -1.0, 1.0)
+    return F, N, D
+
+def grad_rational_coeffs(A, c, b, w=None, clamp=True, eps=1e-12):
+    """Gradient of squared error for rational model w.r.t. coefficients c.
+
+    Model:
+      F_p = N_p / D_p,  where  N_p = sum_i c_i w_i B_i(x_p) = (A @ (w*c))_p,  D_p = sum_i w_i B_i(x_p) = (A @ w)_p.
+      Use cost J = 1/2 sum_p (phi(F_p) - b_p)^2, with phi the clamp to [-1,1] (optional).
+
+    Derivation (w fixed, optimizing only c):
+      ∂F_p/∂c_k = (w_k B_k(x_p)) / D_p = A[p,k] w_k / D_p.
+      Let e_p = phi(F_p) - b_p and dphi_p = d phi(F_p) / dF_p = 1 if F_p in (-1,1), else 0.
+      Then ∂J/∂c_k = sum_p e_p dphi_p ∂F_p/∂c_k = sum_p e_p dphi_p (A[p,k] w_k / D_p).
+      Vector form: define t_p = (e_p dphi_p) / D_p; then g_k = w_k (A[:,k]^T t).
+      Hence g = (A^T t) ∘ w, where ∘ is Hadamard product.
+
+    Implementation:
+      F, N, D = predict_rational(A,c,w,clamp=False). If clamp is True, use phi=clip and dphi=1 on (-1,1), 0 outside; else phi(F)=F and dphi=1.
+      t = (e * dphi) / max(D,eps); g = (A.T @ t) * w; return g.
+    """
+    if w is None: w = np.ones(A.shape[1])
+    F, N, D = predict_rational(A, c, w=w, clamp=False, eps=eps)
+    if clamp:
+        F_c = np.clip(F, -1.0, 1.0)
+        e = F_c - b
+        dphi = ((F > -1.0) & (F < 1.0)).astype(float)
+    else:
+        e = F - b
+        dphi = 1.0
+    t = (e * dphi) / np.maximum(D, eps)
+    g = (A.T @ t) * w
+    return g
+
+def solve_with_gradient_descent_rational(A, b, w=None, learning_rate=0.1, n_iterations=200, verbose=True, eps=1e-12):
+    """Gradient descent solver for rational model F = (A@(w*c)) / (A@w).
+
+    Notes:
+    - Keeps existing clamped-error strategy for robustness near the target contour.
+    - This is provided for experimentation and is NOT wired into main execution by default.
+    - If you set w=None it reduces to uniform normalization with D_p = sum_i B_i(x_p).
+    """
+    if w is None: w = np.ones(A.shape[1])
+    c = np.zeros(A.shape[1])
+    for i in range(n_iterations):
+        g = grad_rational_coeffs(A, c, b, w=w, clamp=True, eps=eps)
+        c -= learning_rate * g
+        if verbose and (i % 10 == 0):
+            F, _, _ = predict_rational(A, c, w=w, clamp=False, eps=eps)
+            e = np.clip(F, -1.0, 1.0) - b
+            print(f"[Rational] Iteration {i}, Cost: {np.sum(e*e):.6f}")
+    return c
+
 def generate_basis_points(nx=4, ny=4):
     """Generate positions of bilinear basis points on an integer grid nx×ny; returns (n,2)."""
     gx, gy = np.meshgrid(np.arange(nx), np.arange(ny))
@@ -271,7 +345,7 @@ def plot_results(ref_Z, model_Z, extent, basis_points, sample_points=None, sampl
 
     fig.colorbar(im2, ax=axes.ravel().tolist(), orientation='vertical', fraction=0.02, pad=0.04)
     plt.suptitle("Shape Fitting using Bilinear Interpolation")
-    plt.show()
+    #plt.show()
 
 def plot_single_basis_2d(basis_points, idx, extent, kind='bilinear', res=150):
     """Plot a single basis function as 2D map by taking column idx of A on a grid."""
@@ -284,7 +358,8 @@ def plot_single_basis_2d(basis_points, idx, extent, kind='bilinear', res=150):
     plt.colorbar(label='Basis value')
     plt.scatter(basis_points[:,0], basis_points[:,1], c='w', s=10)
     plt.title(f"Single basis 2D map (kind={kind}, idx={idx})")
-    plt.tight_layout(); plt.show()
+    plt.tight_layout(); 
+    #plt.show()
 
 def plot_single_basis_1d(basis_points, idx, kind='bilinear', p0=None, p1=None, n=500):
     """Plot a single basis along a 1D line segment p(s)=p0+(p1-p0)*s, s in [0,1]."""
@@ -303,7 +378,8 @@ def plot_single_basis_1d(basis_points, idx, kind='bilinear', p0=None, p1=None, n
     plt.xlabel('t along line'); plt.ylabel('basis value')
     plt.title(f"Single basis 1D slice (kind={kind}, idx={idx})")
     plt.grid(True, alpha=0.3)
-    plt.tight_layout(); plt.show()
+    plt.tight_layout(); 
+    #plt.show()
 
 if __name__ == "__main__":
 
@@ -316,7 +392,9 @@ if __name__ == "__main__":
     parser.add_argument('--nx', type=int, default=None, help='number of node points in x (overrides --size)')
     parser.add_argument('--ny', type=int, default=None, help='number of node points in y (overrides --size)')
     parser.add_argument('--res', type=int, default=100, help='sampling grid resolution per axis')
-    parser.add_argument('--basis', type=str, default='rbf2x2', choices=['bilinear','bspline','rbf2x2','rbf2x2_sq','wendland'], help='basis kind to use')
+    parser.add_argument('--basis', type=str, default='bilinear', choices=['bilinear','bspline','rbf2x2','rbf2x2_sq','wendland'], help='basis kind to use')
+    parser.add_argument('--rational', action='store_true', help='use rational (normalized) model: F=(A@(w*c))/(A@w)')
+    parser.add_argument('--test_const', action='store_true', help='diagnostic: verify rational constancy between two equal neighbors')
     args = parser.parse_args()
 
     nx = args.nx if args.nx is not None else (args.size if args.size is not None else 10)
@@ -345,7 +423,10 @@ if __name__ == "__main__":
     b = evaluate_reference(sample_points, circles=circles, polygon=polygon)
     # basis_kind set by argparse
     A = build_A(sample_points, basis_points, kind=basis_kind)
-    coeffs = fit_coeffs(A, b)
+    if args.rational:
+        coeffs = solve_with_gradient_descent_rational(A, b, w=None, learning_rate=0.1, n_iterations=200, verbose=True)
+    else:
+        coeffs = fit_coeffs(A, b)
 
     # 5) Report coefficients in grid form
     print("Optimal Expansion Coefficients:")
@@ -360,7 +441,10 @@ if __name__ == "__main__":
 
     ref_values_plot   = evaluate_reference(plot_points, circles=circles, polygon=polygon).reshape(plot_res, plot_res)
     A_plot            = build_A(plot_points, basis_points, kind=basis_kind)
-    model_values_plot = (A_plot @ coeffs).reshape(plot_res, plot_res)
+    if args.rational:
+        model_values_plot = predict_rational(A_plot, coeffs, w=None, clamp=False)[0].reshape(plot_res, plot_res)
+    else:
+        model_values_plot = (A_plot @ coeffs).reshape(plot_res, plot_res)
 
     plot_results(ref_values_plot, model_values_plot, extent, basis_points, sample_points=sample_points, sample_values=b)
 
@@ -371,7 +455,27 @@ if __name__ == "__main__":
     print(f"\n# DEBUG single basis: kind={basis_kind}, node=({ix},{iy}), idx={idx}")
     plot_single_basis_2d(basis_points, idx, extent, kind=basis_kind, res=200)
     # 1D slice across the center horizontally
-    xs = np.unique(basis_points[:,0]); ys = np.unique(basis_points[:,1])
+    xs = np.unique(basis_points[:,0]); 
+    ys = np.unique(basis_points[:,1])
     p0 = np.array([xs.min()-0.5, iy])
     p1 = np.array([xs.max()+0.5, iy])
     plot_single_basis_1d(basis_points, idx, kind=basis_kind, p0=p0, p1=p1, n=800)
+
+    plt.show()
+
+    # Optional diagnostic: constancy along a line for two equal neighbors with rational model
+    if args.test_const:
+        if basis_kind not in ('rbf2x2','rbf2x2_sq','wendland'):
+            print("[test_const] Skipped: enable with --basis rbf2x2 (or rbf2x2_sq, wendland)")
+        else:
+            # pick horizontal neighbors at row iy
+            i0 = max(0, nx//2 - 1); i1 = i0 + 1; j = ny//2
+            c = np.zeros(nx*ny)
+            c[j*nx + i0] = 0.7
+            c[j*nx + i1] = 0.7
+            # sample points along y=j exactly
+            xs_line = np.linspace(i0, i1, 200)
+            pts_line = np.stack([xs_line, np.full_like(xs_line, j, dtype=float)], axis=1)
+            A_line = build_A(pts_line, basis_points, kind=basis_kind)
+            F_line, _, _ = predict_rational(A_line, c, w=None, clamp=False)
+            print(f"[test_const] two equal neighbors (c=0.7) on x∈[{i0},{i1}] y={j}: min={F_line.min():.6f}, max={F_line.max():.6f}, std={F_line.std():.6e}")
