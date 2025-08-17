@@ -4,12 +4,22 @@ import os
 
 from PyQt5.QtWidgets import QOpenGLWidget
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QMatrix4x4, QVector3D
+from PyQt5.QtGui import QMatrix4x4, QVector3D, QSurfaceFormat
 from OpenGL.GL import *
 
 from .OGLsystem import GLobject, compile_shader_program
 
 class GLCLWidget(QOpenGLWidget):
+    @staticmethod
+    def apply_default_surface_format(swap_interval=None):
+        """Set the default QSurfaceFormat before any GL context is created.
+        Call this early (CLI entry) to control vsync via swap interval.
+        """
+        fmt = QSurfaceFormat()
+        if swap_interval is not None:
+            fmt.setSwapInterval(int(swap_interval))
+        QSurfaceFormat.setDefaultFormat(fmt)
+
     def __init__(self, parent=None, enable_opengl_debug=False):
         super().__init__(parent)
         self.browser = parent

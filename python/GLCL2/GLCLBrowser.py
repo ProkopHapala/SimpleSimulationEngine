@@ -9,37 +9,16 @@ import time
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QWidget, QFileDialog, QVBoxLayout, QGroupBox
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QSurfaceFormat
 
 import OpenGL.GL as GL
 import argparse
 
 from ..BaseGUI import BaseGUI
 from .GLCLGUI import GLCLWidget
-from .OCLsystem import OCLSystem
+from .OCLsystem import OCLSystem, BakedKernelCall
 from .OGLsystem import OGLSystem
 
-class BakedKernelCall:
-    """A fully pre-baked kernel execution object."""
-    def __init__(self, ocl_system, kernel_obj, global_size, local_size, args_tuple):
-        self.ocl_system = ocl_system
-        self.kernel_obj = kernel_obj
-        self.kernel_name = kernel_obj.function_name
-        self.global_size = global_size
-        self.local_size = local_size
-        self.args_tuple = args_tuple
-    
-    def execute(self):
-        """Execute the kernel with pre-baked arguments."""
-        try:
-            self.ocl_system.execute_kernel(
-                self.kernel_obj, self.global_size, self.local_size, *self.args_tuple
-            )
-        except Exception as e:
-            print(f"Error executing kernel {self.kernel_name}: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+ 
 
 class GLCLBrowser(BaseGUI):
     """Main browser class for loading and executing scientific simulation scripts."""
@@ -596,13 +575,12 @@ if __name__ == '__main__':
 
     if args.speed_test: args.no_vsync = True
     
-    app = QApplication(sys.argv)
-    # Optionally disable vsync for uncapped FPS; must be set before creating QOpenGLWidget
+    # Optionally disable vsync for uncapped FPS; must be set before creating any GL context
     if args.no_vsync:
-        fmt = QSurfaceFormat()
-        fmt.setSwapInterval(0)
-        QSurfaceFormat.setDefaultFormat(fmt)
+        GLCLWidget.apply_default_surface_format(0)
         print("VSync disabled (swap interval = 0)")
+
+    app = QApplication(sys.argv)
     
     default_script = os.path.join(os.path.dirname(__file__), "scripts", "nbody.py")
     script_path = args.script or default_script
@@ -613,10 +591,9 @@ if __name__ == '__main__':
 
     # If speed test requested, default to 50 frames and 0 ms frame delay unless explicitly set # DEBUG
     if args.speed_test:
+        args.frame_delay = 0
         if args.max_frames == 0:
-            args.max_frames = 50
-        if args.frame_delay is None:
-            args.frame_delay = 0
+            args.max_frames = 1000
 
     print(f"Starting GLCL Browser with script: {script_path}")
     browser = GLCLBrowser(

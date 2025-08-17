@@ -153,3 +153,25 @@ class OCLSystem:
         self.kernel_params.clear()
         self.kernels.clear()
         self.programs.clear()
+
+class BakedKernelCall:
+    """A fully pre-baked kernel execution object (moved from GLCLBrowser)."""
+    def __init__(self, ocl_system, kernel_obj, global_size, local_size, args_tuple):
+        self.ocl_system = ocl_system
+        self.kernel_obj = kernel_obj
+        try:
+            self.kernel_name = kernel_obj.function_name
+        except Exception:
+            self.kernel_name = str(kernel_obj)
+        self.global_size = global_size
+        self.local_size = local_size
+        self.args_tuple = args_tuple
+
+    def execute(self):
+        try:
+            self.ocl_system.execute_kernel(self.kernel_obj, self.global_size, self.local_size, *self.args_tuple)
+        except Exception as e:
+            print(f"Error executing kernel {self.kernel_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
