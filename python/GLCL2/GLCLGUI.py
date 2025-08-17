@@ -37,6 +37,7 @@ class GLCLWidget(QOpenGLWidget):
         self.gl_objects = {}
         self.render_pipeline_info = []
         self.buffer_data = {}
+        self.instance_owners = {}   # map instance buffer name -> GLobject
         # FS pipeline state
         self.fs_textures_cfg = {}
         self.fs_fbos_cfg = {}
@@ -169,12 +170,14 @@ class GLCLWidget(QOpenGLWidget):
         """Create and configure GLobject for each buffer in the render pipeline."""
         print("Baking render objects...")
         self.gl_objects.clear()
+        self.instance_owners.clear()
 
         # Create a unique set of vertex buffers that need a GLobject
         vertex_buffers_to_bake = {pass_info[2] for pass_info in self.render_pipeline_info if len(pass_info) > 2}
 
         # Map per-buffer geometry options collected from render pipeline optional dict (5th element)
-        # options: { 'mode': 'POINTS'|'LINES'|'LINE_STRIP'|'TRIANGLES', 'attribs': [n0,n1,...] }
+        # options: { 'mode': 'POINTS'|'LINES'|'LINE_STRIP'|'TRIANGLES', 'attribs': [n0,n1,...],
+        #            'instance_buffer': str, 'instance_attribs': [m0,m1,...], 'instance_divisor': 1 }
         geom_opts = {}
         for pass_info in self.render_pipeline_info:
             if len(pass_info) >= 5 and isinstance(pass_info[4], dict):
@@ -218,15 +221,42 @@ class GLCLWidget(QOpenGLWidget):
             gl_obj = GLobject(nelements=nelements, mode=mode_gl)
             gl_obj.alloc_vao_vbo_ebo(attribs if attribs is not None else [components])
             gl_obj.upload_vbo(data)
+
+            # Optional: attach instance buffer according to options
+            inst_buf = opts.get('instance_buffer') if isinstance(opts, dict) else None
+            if inst_buf:
+                inst_data = self.buffer_data.get(inst_buf)
+                if inst_data is None:
+                    print(f"bake_render_objects: WARNING instance buffer '{inst_buf}' not found for '{buffer_name}'")
+                else:
+                    inst_attribs = opts.get('instance_attribs')
+                    if not isinstance(inst_attribs, (list, tuple)):
+                        # Fallback: single attribute covering full stride
+                        stride = inst_data.shape[1] if inst_data.ndim > 1 else 1
+                        inst_attribs = [int(stride)]
+                    try:
+                        gl_obj.alloc_instance_vbo([int(a) for a in inst_attribs], int(opts.get('instance_divisor', 1)))
+                        gl_obj.upload_instance_vbo(inst_data)
+                        self.instance_owners[inst_buf] = gl_obj
+                    except Exception as e:
+                        print(f"bake_render_objects: ERROR setting up instancing for '{buffer_name}' with '{inst_buf}': {e}")
             
             self.gl_objects[buffer_name] = gl_obj
             print(f"  Baked GLobject for buffer '{buffer_name}' with {nelements} elements.")
 
     def update_buffer_data(self, buffer_name, new_data):
         """Update VBO data for a specific GLobject."""
+        if new_data is None:
+            return
+        # Route to vertex VBO if matches a baked object
         gl_obj = self.gl_objects.get(buffer_name)
-        if gl_obj and new_data is not None:
+        if gl_obj:
             gl_obj.upload_vbo(new_data)
+            return
+        # Otherwise, see if this buffer is an instance buffer for any object
+        inst_owner = self.instance_owners.get(buffer_name)
+        if inst_owner:
+            inst_owner.upload_instance_vbo(new_data)
 
     def paintGL(self):
         try:
@@ -261,8 +291,12 @@ class GLCLWidget(QOpenGLWidget):
                     continue
 
                 glUseProgram(shader_program)
-                # Draw the object (arrays only; indices not yet supported)
-                gl_obj.draw_arrays()
+                # Determine if this pass is configured for instancing
+                opts = pass_info[4] if (len(pass_info) >= 5 and isinstance(pass_info[4], dict)) else {}
+                if isinstance(opts, dict) and opts.get('instance_buffer'):
+                    gl_obj.draw_arrays_instanced()
+                else:
+                    gl_obj.draw_arrays()
 
             # Optional: draw selected texture to default framebuffer as an overlay
             if self.display_tex_name:

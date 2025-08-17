@@ -53,6 +53,13 @@ class GLobject:
         self.nelements = nelements
         self.mode = mode
         self._vbo_size = 0
+        # Instancing state (optional)
+        self.instance_vbo = None
+        self._instance_vbo_size = 0
+        self.instance_count = 0
+        # Attribute bookkeeping
+        self.n_vertex_attribs = 0   # number of per-vertex attributes
+        self.n_instance_attribs = 0 # number of per-instance attributes
 
     def alloc_vao_vbo_ebo(self, components):
         self.vao = glGenVertexArrays(1)
@@ -66,6 +73,8 @@ class GLobject:
             glEnableVertexAttribArray(i)
             glVertexAttribPointer(i, n_comp, GL_FLOAT, GL_FALSE, total_stride, ctypes.c_void_p(offset))
             offset += n_comp * ctypes.sizeof(GLfloat)
+        # remember how many per-vertex attributes we defined so instance attribs can follow
+        self.n_vertex_attribs = len(components)
             
         glBindVertexArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -92,6 +101,58 @@ class GLobject:
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         # Update element count (assumes same vertex format)
         self.nelements = arr.shape[0] if arr.ndim > 1 else arr.size
+
+    # ---------------------------
+    # Instancing helpers (optional)
+    # ---------------------------
+    def alloc_instance_vbo(self, components, divisor=1):
+        """Allocate and attach a per-instance VBO with given attribute component sizes.
+        'components' is a list like [n0, n1, ...] defining attribute sizes in floats.
+        Each attribute will be assigned consecutive locations starting after per-vertex attributes.
+        'divisor' defaults to 1 (advance per instance).
+        """
+        if self.vao is None:
+            raise RuntimeError("alloc_instance_vbo called before alloc_vao_vbo_ebo")
+        self.instance_vbo = glGenBuffers(1)
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.instance_vbo)
+        total_stride = sum(components) * ctypes.sizeof(GLfloat)
+        offset = 0
+        for j, n_comp in enumerate(components):
+            loc = self.n_vertex_attribs + j
+            glEnableVertexAttribArray(loc)
+            glVertexAttribPointer(loc, n_comp, GL_FLOAT, GL_FALSE, total_stride, ctypes.c_void_p(offset))
+            glVertexAttribDivisor(loc, int(divisor))
+            offset += n_comp * ctypes.sizeof(GLfloat)
+        self.n_instance_attribs = len(components)
+        glBindVertexArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    def upload_instance_vbo(self, instance_data):
+        if self.instance_vbo is None:
+            return
+        arr = np.ascontiguousarray(instance_data, dtype=np.float32)
+        size = arr.nbytes
+        glBindBuffer(GL_ARRAY_BUFFER, self.instance_vbo)
+        if self._instance_vbo_size != size:
+            glBufferData(GL_ARRAY_BUFFER, size, arr, GL_DYNAMIC_DRAW)
+            self._instance_vbo_size = size
+        else:
+            glBufferSubData(GL_ARRAY_BUFFER, 0, size, arr)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        # store count of instances (rows)
+        self.instance_count = arr.shape[0] if arr.ndim > 1 else 0
+
+    def draw_arrays_instanced(self, instance_count=-1):
+        if self.vao is None: return
+        ninst = self.instance_count if instance_count == -1 else int(instance_count)
+        if ninst <= 0:
+            # fallback: draw non-instanced if instance count invalid
+            self.draw_arrays()
+            return
+        glBindVertexArray(self.vao)
+        glDrawArraysInstanced(self.mode, 0, self.nelements, ninst)
+        glBindVertexArray(0)
 
 class OGLSystem:
     def __init__(self):

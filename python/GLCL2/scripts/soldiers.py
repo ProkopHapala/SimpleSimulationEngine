@@ -44,6 +44,8 @@ config = {
         "formation_points": ("formation_point_count", 4, "f4"),
         # interleaved line vertices for formations: pos.xy + color.rgba
         "formation_lines": ("formation_point_count", 6, "f4"),
+        # local quad geometry (4 vertices, 2 components) for instanced rendering
+        "quad_verts": (4, 2, "f4"),
     },
 
     # OpenCL
@@ -61,6 +63,7 @@ config = {
     "opengl_shaders": {
         "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color"]),  # color is set by viewer
         "line_color":     ("../shaders/line_color.glslv",     "../shaders/color_passthrough.glslf", []),
+        "instanced_quad": ("../shaders/instanced_quad.glslv", "../shaders/monocolor.glslf", ["color"]),
     },
 
     # Rendering pipeline: (shader, element_count, vertex_buffer, index_buffer)
@@ -68,6 +71,8 @@ config = {
         ("line_color",    "formation_point_count", "formation_lines", None, {"mode":"LINES", "attribs":[2,4]}),
         ("soldier_render", "formation_point_count", "formation_points", None),
         ("soldier_render", "particle_count", "state_pos_dir", None),
+        # one oriented quad per soldier using instancing (per-instance pos_dir)
+        ("instanced_quad", "particle_count", "quad_verts", None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"state_pos_dir", "instance_attribs":[4], "instance_divisor":1}),
     ],
 }
 
@@ -85,6 +90,7 @@ def init():
     fpars     = np.zeros((nf, 8), dtype=np.float32)
     fpoints   = np.zeros((nf*2, 4), dtype=np.float32)
     flines    = np.zeros((nf*2, 6), dtype=np.float32)
+    quad      = np.array([[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],[1.0,1.0]], dtype=np.float32)
 
     # Team 0: y = -0.4, facing +x
     if n0 > 0:
@@ -151,4 +157,5 @@ def init():
         "formation_params": fpars,
         "formation_points": fpoints,
         "formation_lines":  flines,
+        "quad_verts":       quad,
     }

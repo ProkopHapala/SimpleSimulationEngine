@@ -585,7 +585,18 @@ class GLCLBrowser(BaseGUI):
 
     def _precompute_buffer_sync_list(self, config):
         print("Pre-computing buffer synchronization list...")
+        # Start with primary vertex buffers used in render pipeline
         render_buffers = {pass_info[2] for pass_info in self.render_pipeline_info if len(pass_info) > 2}
+        # Also include any auxiliary buffers referenced via options (5th element), e.g., instance_buffer or color_buffer
+        for pass_info in self.render_pipeline_info:
+            if len(pass_info) >= 5 and isinstance(pass_info[4], dict):
+                opts = pass_info[4]
+                inst_buf = opts.get('instance_buffer')
+                if isinstance(inst_buf, str):
+                    render_buffers.add(inst_buf)
+                color_buf = opts.get('color_buffer')
+                if isinstance(color_buf, str):
+                    render_buffers.add(color_buf)
         
         kernel_buffers = set()
         for kernel_info in config.get("kernels", {}).values():
