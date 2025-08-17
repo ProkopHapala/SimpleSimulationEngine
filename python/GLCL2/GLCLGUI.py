@@ -400,16 +400,19 @@ class GLCLWidget(QOpenGLWidget):
             glUseProgram(0)
 
     def apply_fs_static_uniforms(self):
+        print("apply_fs_static_uniforms()")
         if not self.ogl_system: return
-        # Determine for each FS program: max sampler units used and a representative resolution
-        prog_info = {}  # prog -> {"max_units":N, "res":(w,h)}
+        # Determine for each FS program: max sampler units used, representative resolution, and declared uniforms
+        # prog_info: prog -> {"max_units":N, "res":(w,h), "uniforms": set(names)}
+        prog_info = {}
         for (shader_name, out_fbo, bind_textures) in self.fs_pipeline:
             prog = self.ogl_system.get_shader_program(shader_name)
             if not prog: continue
             info = prog_info.get(prog)
             if info is None:
-                info = {"max_units": 0, "res": None}
+                info = {"max_units": 0, "res": None, "uniforms": set()}
                 prog_info[prog] = info
+            # sampler units
             mu = max(info["max_units"], len(bind_textures or []))
             info["max_units"] = mu
             # pick resolution for this program; warn on mismatch
@@ -427,7 +430,15 @@ class GLCLWidget(QOpenGLWidget):
                 except Exception:
                     pass
                 info["res"] = (pw, ph)
+            # aggregate declared uniforms from shader config
+            try:
+                cfg_entry = self.ogl_system.shader_configs.get(shader_name)
+                if cfg_entry and len(cfg_entry) >= 3 and isinstance(cfg_entry[2], (list, tuple)):
+                    info["uniforms"].update(cfg_entry[2])
+            except Exception:
+                pass
         # Apply uniforms per program
+        params = (self.browser.current_config.get("parameters", {}) if (self.browser and self.browser.current_config) else {})
         for prog, info in prog_info.items():
             glUseProgram(prog)
             # Sampler bindings: iChannel{i}/tex{i}/s{i} -> unit i
@@ -435,21 +446,41 @@ class GLCLWidget(QOpenGLWidget):
                 for uname in (f"iChannel{i}", f"tex{i}", f"s{i}"):
                     loc = self._get_uniform_location(prog, uname)
                     if loc != -1: glUniform1i(loc, i)
-            # Resolution
+            # Resolution (static here; iFrame remains dynamic in _execute_fs_pipeline)
             w, h = info["res"] if info["res"] is not None else (int(self.width()), int(self.height()))
             loc = self._get_uniform_location(prog, "iResolution")
             if loc != -1: glUniform3f(loc, float(w), float(h), 1.0)
-            # Optional driver vec4 from current config
-            try:
-                cfg = self.browser.current_config if self.browser else None
-                if cfg is not None and "driver" in cfg.get("parameters", {}):
-                    drv_val, drv_type, _ = cfg["parameters"]["driver"]
-                    if drv_type == "vec4" and isinstance(drv_val, (list, tuple)) and len(drv_val) == 4:
-                        loc = self._get_uniform_location(prog, "driver")
-                        if loc != -1:
-                            glUniform4f(loc, float(drv_val[0]), float(drv_val[1]), float(drv_val[2]), float(drv_val[3]))
-            except Exception:
-                pass
+            # Other declared uniforms resolved from parameters by name
+            for uname in sorted(info["uniforms"]):
+                if uname in ("iFrame", "iResolution"):  # handled elsewhere
+                    continue
+                # skip explicit sampler aliases if present in declared list; already set above
+                if uname.startswith("iChannel") or uname.startswith("tex") or uname.startswith("s") and uname[1:].isdigit():
+                    continue
+                loc = self._get_uniform_location(prog, uname)
+                if loc == -1:
+                    continue
+                if uname not in params:
+                    # Uniform declared for shader but no value provided in parameters; skip silently
+                    continue
+                val, typ, _step = params.get(uname, (None, None, None))
+                try:
+                    if typ == "int":
+                        glUniform1i(loc, int(val))
+                    elif typ == "float":
+                        glUniform1f(loc, float(val))
+                    elif typ == "vec2" and isinstance(val, (list, tuple)) and len(val) >= 2:
+                        glUniform2f(loc, float(val[0]), float(val[1]))
+                    elif typ == "vec3" and isinstance(val, (list, tuple)) and len(val) >= 3:
+                        glUniform3f(loc, float(val[0]), float(val[1]), float(val[2]))
+                    elif typ == "vec4" and isinstance(val, (list, tuple)) and len(val) >= 4:
+                        glUniform4f(loc, float(val[0]), float(val[1]), float(val[2]), float(val[3]))
+                    else:
+                        # Unsupported or mismatched type; ignore
+                        pass
+                except Exception:
+                    # Be tolerant to bad user values; fail quietly for uniforms
+                    pass
             glUseProgram(0)
 
     def _get_uniform_location(self, program, name):

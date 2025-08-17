@@ -194,6 +194,19 @@ Scope reviewed:
 - Use a simple macro toggle to avoid logging in release runs.
 
 
+## Implemented: Dynamic fullscreen uniform handling
+
+- Default uniforms are handled explicitly:
+  - `iResolution` is set once per program in `GLCLWidget.apply_fs_static_uniforms()` based on the current FS target size.
+  - `iFrame` is updated per frame in `GLCLWidget._execute_fs_pipeline()`.
+- All other FS uniforms are applied dynamically from the user script configuration:
+  - Declared uniforms are read from `config["opengl_shaders"][shader_name][2]` and matched against `config["parameters"]` by name and type.
+  - Supported scalar/vector types: `int`, `float`, `vec2`, `vec3`, `vec4`.
+  - Sampler aliases (`iChannelN`, `texN`, `sN`) are bound from the pass inputs; they are not expected in parameters.
+  - Hardcoded special-cases (e.g., `driver`) were removed; behavior now fully agnostic to uniform names.
+- Uniform locations are cached per program to avoid repeated `glGetUniformLocation` calls.
+- Uniforms are (re)applied on GL init and whenever GUI parameters change, minimizing per-frame work.
+
 ## Summary
 
 Focus first on memory allocation and GL/CL query overhead in hot loops (preallocate arrays, cache uniforms/IDs, avoid redundant state changes). These are safe, contained changes with immediate payoff. Interop is the long-term win for eliminating CPU copies; do it once the simpler steps are stable.

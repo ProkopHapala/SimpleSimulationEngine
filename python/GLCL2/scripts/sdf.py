@@ -20,8 +20,8 @@ config = {
 
     # Shaders: fullscreen quad VS + SDF gen/view FS programs (core profile)
     "opengl_shaders": {
-        "genSDF":  ("../shaders/fs_quad.glslv", "../shaders/sdf_gen.glslf",  ["iResolution", "iFrame", "driver"]),
-        "viewSDF": ("../shaders/fs_quad.glslv", "../shaders/sdf_view.glslf", ["iChannel0", "iResolution", "iFrame", "driver"]),
+        "genSDF":  ("../shaders/fs_quad.glslv", "../shaders/sdf_gen.glslf",  ["iResolution", "iFrame"]),
+        "viewSDF": ("../shaders/fs_quad.glslv", "../shaders/sdf_view.glslf", ["iChannel0", "iResolution", "iFrame"]),
     },
 
     # One small RGBA32F texture to store the SDF

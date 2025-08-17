@@ -178,3 +178,19 @@ The main loop, triggered by a `QTimer`, is now extremely simple and efficient.
 *   Use the `--debug-gl` flag to skip all OpenCL kernel execution. This allows you to verify that your initial data (from `init()`) and your GLSL shaders are set up correctly to render the initial state.
 *   The console output is verbose during the "Baking" phase. Read it carefully to see if all your files are being found and if all resources (buffers, kernels, shaders) are being created as you expect.
 *   If the application crashes on startup, it is often due to an error in the user script. The most common causes are a misnamed buffer/parameter, incorrect argument lists for kernels, or a syntax error in a shader or kernel file. The console log will typically contain a traceback pointing to the issue.
+
+### 5.4 Fullscreen shader uniforms (FS pipeline)
+
+- __Defaults__
+  - `iResolution` is set once per program from the active FS target size in `GLCLWidget.apply_fs_static_uniforms()`.
+  - `iFrame` is updated per frame inside `GLCLWidget._execute_fs_pipeline()`.
+
+- __Dynamic uniforms from config__
+  - For each FS program listed in `config["opengl_shaders"]`, declared uniform names are taken from the third tuple element (uniform list).
+  - For every declared name (excluding defaults and sampler aliases), the current value is looked up in `config["parameters"]` by name and applied based on type (`int`, `float`, `vec2`, `vec3`, `vec4`).
+
+- __Samplers__
+  - Inputs of each FS pass bind to texture units in order and are exposed under `iChannelN` (and aliases `texN`, `sN`). These are not expected in `parameters`.
+
+- __Performance__
+  - Uniform locations are cached per program; uniforms are applied on GL init and on parameter changes to avoid per-frame overhead.
