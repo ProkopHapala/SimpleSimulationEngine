@@ -81,6 +81,8 @@ class GLCLBrowser(BaseGUI):
         self.glcl_widget.set_systems(self.ogl_system, self.ocl_system, self)
 
         self._build_ui()
+        # Guard to suppress param-updates during UI (re)build
+        self._suppress_param_update = False
         
         if python_script_path is not None:
             self.load_and_apply_script(python_script_path)
@@ -102,7 +104,7 @@ class GLCLBrowser(BaseGUI):
         control_layout.addWidget(file_group)
         
         params_group = QGroupBox("Simulation Parameters")
-        self.params_layout = QVBoxLayout()
+        self.params_layout = QtWidgets.QFormLayout()
         params_group.setLayout(self.params_layout)
         control_layout.addWidget(params_group)
         
@@ -162,8 +164,14 @@ class GLCLBrowser(BaseGUI):
 
         self.ocl_system.clear()
         self.ogl_system.clear()
-        for i in reversed(range(self.params_layout.count())):
-            self.params_layout.itemAt(i).widget().setParent(None)
+        self._suppress_param_update = True
+        # Clear parameter UI (support both QFormLayout and generic layouts)
+        if hasattr(self.params_layout, "rowCount"):
+            while self.params_layout.rowCount() > 0:
+                self.params_layout.removeRow(0)
+        else:
+            for i in reversed(range(self.params_layout.count())):
+                self.params_layout.itemAt(i).widget().setParent(None)
         self.param_widgets.clear()
 
         self.create_parameter_controls(self.current_config)
@@ -173,6 +181,7 @@ class GLCLBrowser(BaseGUI):
         self.init_simulation_data(self.current_config, init_func)
         
         self.bake_kernels(self.current_config)
+        self._suppress_param_update = False
         
         self.setup_opengl_system(self.current_config, script_dir)
 
@@ -307,32 +316,56 @@ class GLCLBrowser(BaseGUI):
         return int(expr)
 
     def create_parameter_controls(self, config):
-        print("Creating parameter controls...")
+        print("Creating parameter controls (via BaseGUI.populate_params_from_dict)...")
         parameters = config.get("parameters", {})
+        params_dict = {}
         for name, (value, type_str, step) in parameters.items():
-            container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.setContentsMargins(0, 0, 0, 0)
-            label = QtWidgets.QLabel(name)
-            
-            if type_str == "int":
-                widget = QtWidgets.QSpinBox()
-                widget.setRange(-1_000_000, 1_000_000)
-                widget.setSingleStep(int(step))
-                widget.setValue(int(value))
-                widget.valueChanged.connect(lambda v, p=name: self.update_parameter(p, v))
-            elif type_str == "float":
-                widget = QtWidgets.QDoubleSpinBox()
-                widget.setRange(-1_000_000.0, 1_000_000.0)
-                widget.setDecimals(6)
-                widget.setSingleStep(float(step))
-                widget.setValue(float(value))
-                widget.valueChanged.connect(lambda v, p=name: self.update_parameter(p, v))
+            # Hide parameters from GUI if step is None (non-interactive)
+            if step is None:
+                print(f"create_parameter_controls: Hiding parameter '{name}' (step=None)")
+                continue
+            # Only support scalar int/float in GUI for now; vectors handled directly in shaders
+            if type_str not in ("int", "float"):
+                print(f"create_parameter_controls: Unsupported parameter type '{type_str}' for '{name}', skipping control")
+                continue
+            defaults = [float(value)]
+            params_dict[name] = (type_str, defaults, float(step))
+        # Delegate widget creation to BaseGUI utility
+        self.populate_params_from_dict(params_dict)
 
-            layout.addWidget(label)
-            layout.addWidget(widget)
-            self.params_layout.addWidget(container)
-            self.param_widgets[name] = widget
+    def on_param_changed(self):
+        print("on_param_changed()")
+        if getattr(self, "_suppress_param_update", False):
+            return
+        if self.current_config is None:
+            return
+        params = self.current_config.get("parameters", {})
+        old_pc = params.get("particle_count", (None, None, None))[0] if "particle_count" in params else None
+        # Update values from widgets
+        for name, widget in self.param_widgets.items():
+            if name not in params:
+                continue
+            cur_val, typ, step = params[name]
+            # We currently use only scalar widgets here (vectors are skipped above)
+            new_val = widget.value()
+            if typ == "int":
+                new_val = int(new_val)
+            elif typ == "float":
+                new_val = float(new_val)
+            params[name] = (new_val, typ, step)
+        new_pc = params.get("particle_count", (None, None, None))[0] if "particle_count" in params else None
+        if old_pc is not None and new_pc != old_pc:
+            print(f"Particle count changed to {new_pc}. Resetting simulation.")
+            self.reset_simulation()
+            return
+        self.bake_kernels(self.current_config)
+        print("Parameters updated from GUI. Kernels re-baked.")
+
+    def update_sim_uniforms(self):
+        # For BaseGUI compatibility; propagate widget values into current_config
+        if getattr(self, "_suppress_param_update", False):
+            return
+        self.on_param_changed()
 
     def start_simulation(self):
         self.simulation_running = True

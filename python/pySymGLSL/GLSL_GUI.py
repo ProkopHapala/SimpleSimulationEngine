@@ -264,7 +264,7 @@ class MainWindow(BaseGUI):
                 w.deleteLater()
         self.param_widgets.clear()
         params_dict = self.parse_uniform_lines()
-        self.populate_params_from_json(params_dict)
+        self.populate_params_from_dict(params_dict)
         self.update_sim_uniforms()
 
     def on_param_changed(self):

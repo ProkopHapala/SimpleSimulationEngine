@@ -5,7 +5,7 @@ config = {
     "description":      "NBody simulation using OpenCL for computation and OpenGL for rendering.",
     "parameters": { # may be for both OpenCL and OpenGL
         #                  value, type, step
-        "particle_count": (2048,  "int" , 1      ),
+        "particle_count": (2048,  "int" ,  1      ),
         "dt":             (0.001, "float", 0.0001 )
     },
     "buffers":{ # may be for both OpenCL and OpenGL

@@ -9,8 +9,9 @@ config = {
     # Parameters
     # TW,TH: texture size
     "parameters": {
-        "TW":      (10,    "int",   1),
-        "TH":      (10,    "int",   1),
+        #                  value, type, step
+        "TW":      (10,    "int",   None),
+        "TH":      (10,    "int",   None),
         # driver kept for future zoom/pan; not used by current view shader path
         "driver":  ([0.5, 0.5, 16.0, 0.0], "vec4", 0.1),
     },

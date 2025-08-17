@@ -117,20 +117,23 @@ class BaseGUI(QtWidgets.QMainWindow):
     #     # Should be implemented by child class
     #     raise NotImplementedError("populate_params_from_json must be implemented by child class")
 
-    def populate_params_from_json(self, params_dict):
+    def populate_params_from_dict(self, params_dict):
         """Create spin boxes from *params_dict* and show lines in txt_uniforms."""
         # Clear existing widgets and layout rows
-        print("---------------\npopulate_params_from_json()")
+        print("---------------\npopulate_params_from_dict()")
         while self.params_layout.rowCount() > 0: self.params_layout.removeRow(0)
         self.param_widgets.clear()
         for name, (typ,defaults,step) in params_dict.items():
             print("name: ", name, "typ: ", typ, "defaults: ", defaults, "step: ", step)
+            # Ensure defaults is a list-like for consistent handling
+            if not isinstance(defaults, (list, tuple)):
+                defaults = [defaults]
             if len(defaults) == 1:
                 print("single value: ", name, defaults, step)
-                self.param_widgets[name] = self.spinBox(defaults, step, layout=self.params_layout, label=name)
+                self.param_widgets[name] = self.spinBox(defaults[0], step, layout=self.params_layout, label=name)
             else:
                 print("multiple values: ", name, defaults, step)
                 self.param_widgets[name] = self.spin_row(defaults, step, layout=self.params_layout, label=name)
         #exit()
         self.update_sim_uniforms()
-        print("populate_params_from_json() DONE")
+        print("populate_params_from_dict() DONE")

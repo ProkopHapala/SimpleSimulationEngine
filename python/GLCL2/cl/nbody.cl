@@ -1,6 +1,6 @@
 __kernel void nbody_sim(__global float4* positions, __global float4* velocities, const float dt, const int particle_count) {
     int i = get_global_id(0);
-    if(i==0)printf("GPU nbody_sim() dt %8.2e  particle_count %i \n", dt, particle_count);
+    //if(i==0)printf("GPU nbody_sim() dt %8.2e  particle_count %i \n", dt, particle_count);
     if (i >= particle_count) return;
     float3 my_pos = positions[i].xyz;
     float3 my_vel = velocities[i].xyz;

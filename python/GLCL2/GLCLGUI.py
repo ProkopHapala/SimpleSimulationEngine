@@ -215,11 +215,11 @@ class GLCLWidget(QOpenGLWidget):
         if depth_was_enabled: glDisable(GL_DEPTH_TEST)
         if scissor_was_enabled: glDisable(GL_SCISSOR_TEST)
         for (shader_name, out_fbo, bind_textures) in self.fs_pipeline:
-            if self.frame_counter < 5:
-                try:
-                    print(f"[FS DEBUG] frame={self.frame_counter} pass='{shader_name}' out='{out_fbo}' inputs={bind_textures}")
-                except Exception:
-                    pass
+            # if self.frame_counter < 5:
+            #     try:
+            #         print(f"[FS DEBUG] frame={self.frame_counter} pass='{shader_name}' out='{out_fbo}' inputs={bind_textures}")
+            #     except Exception:
+            #         pass
             program = self.ogl_system.get_shader_program(shader_name)
             if not program:
                 raise KeyError(f"FS shader '{shader_name}' not compiled or registered")
@@ -271,13 +271,13 @@ class GLCLWidget(QOpenGLWidget):
             if out_fbo in ("default", "", None):
                 # Render directly to default framebuffer
                 glViewport(0, 0, int(self.width()), int(self.height()))
-                if self.frame_counter < 5:
-                    try:
-                        fb = glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING)
-                        vp2 = glGetIntegerv(GL_VIEWPORT)
-                        print(f"[FS DEBUG] default pass fbo={int(fb)} viewport={tuple(int(x) for x in vp2)} widgetWH=({int(self.width())},{int(self.height())})")
-                    except Exception:
-                        pass
+                # if self.frame_counter < 5:
+                #     try:
+                #         fb = glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING)
+                #         vp2 = glGetIntegerv(GL_VIEWPORT)
+                #         print(f"[FS DEBUG] default pass fbo={int(fb)} viewport={tuple(int(x) for x in vp2)} widgetWH=({int(self.width())},{int(self.height())})")
+                #     except Exception:
+                #         pass
                 # DEBUG: clear to bright color for first frames to ensure we see something even if shader fails
                 if self.frame_counter < 3:
                     glClearColor(1.0, 0.0, 1.0, 1.0)
