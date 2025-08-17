@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 '''
 In many situations we wanto to describe objects with sharp boundary using rather low-resolution texture (e.g. lakes or castle walls on the maps, colision objects on grid, text font or glyphts, area with one component in multi-component fluid simulation or continuum mechanics). This provides representation which is both efficient to evaluate (as position of relevant node points can be quickly found by indexing the grid) and memory efficient (thanks to low resolution).
@@ -73,6 +74,75 @@ def evaluate_bspline_bases(points, basis_points):
     dx = points[:, 0][:, None] - basis_points[None, :, 0]
     dy = points[:, 1][:, None] - basis_points[None, :, 1]
     return cubic_bspline_1d(dx) * cubic_bspline_1d(dy)
+
+def evaluate_rbf2x2_bases(points, basis_points, h=None, kernel='r2_linear'):
+    """Evaluate compact 2x2-cell radial bases on a grid using vectorized numpy.
+
+    Kernels (support r<1):
+      - 'r2_linear'   : B = max(0, 1 - r^2)
+      - 'r2_quadratic': B = max(0, 1 - r^2)^2
+      - 'wendland_c2' : B = (1 - r)^4_+ * (4 r + 1)  [C2 Wendland, 2D]
+
+    r^2 = ((x-x_i)/h)^2 + ((y-y_j)/h)^2, with h the grid spacing (deduced if None).
+    Only four corners of the containing cell contribute.
+    """
+    xs = np.unique(basis_points[:, 0]); ys = np.unique(basis_points[:, 1])
+    nx, ny = xs.size, ys.size
+    if h is None:
+        hx = np.min(np.diff(xs)) if nx > 1 else 1.0
+        hy = np.min(np.diff(ys)) if ny > 1 else 1.0
+        h = min(hx, hy)
+
+    n = points.shape[0]
+    A = np.zeros((n, basis_points.shape[0]))
+
+    # integer cell corner indices for each point (floors)
+    i0 = np.floor(points[:, 0]).astype(int)
+    j0 = np.floor(points[:, 1]).astype(int)
+
+    # 4 offsets for the cell corners, vectorized shape (4, n)
+    ox = np.array([0,1,0,1])[:, None]
+    oy = np.array([0,0,1,1])[:, None]
+    ii = i0[None, :] + ox
+    jj = j0[None, :] + oy
+
+    # valid mask inside grid
+    m = (ii >= 0) & (ii < nx) & (jj >= 0) & (jj < ny)
+    if not np.any(m):
+        return A
+
+    # columns (basis indices) and rows (point indices) for scattered assignment
+    cols = (jj * nx + ii)
+    rows = np.broadcast_to(np.arange(n), ii.shape)
+
+    # basis node coordinates for those (ii,jj); clip to stay index-safe, we'll mask later
+    ii_s = np.clip(ii, 0, nx-1)
+    jj_s = np.clip(jj, 0, ny-1)
+    bx = xs[ii_s]
+    by = ys[jj_s]
+
+    # distances (4,n)
+    dx = points[None, :, 0] - bx
+    dy = points[None, :, 1] - by
+    r2 = (dx / h)**2 + (dy / h)**2
+
+    # evaluate kernel
+    if kernel == 'r2_linear':
+        vals = np.maximum(0.0, 1.0 - r2)
+    elif kernel == 'r2_quadratic':
+        vals = np.maximum(0.0, 1.0 - r2)
+        vals = vals * vals
+    elif kernel in ('wendland', 'wendland_c2'):
+        r = np.sqrt(r2)
+        t = np.maximum(0.0, 1.0 - r)
+        vals = (t**4) * (4.0*r + 1.0)
+    else:
+        raise ValueError(f"Unknown rbf2x2 kernel: {kernel}")
+
+    # scatter-add into A using mask
+    A[rows[m], cols[m]] = vals[m]
+
+    return A
 
 def solve_with_gradient_descent(A, b, learning_rate=0.1, n_iterations=200, verbose=True):
     """
@@ -159,11 +229,17 @@ def evaluate_reference(points, ref_fn=reference_shape, circles=None, polygon=Non
     return ref_fn(points[:, 0], points[:, 1], **kwargs)
 
 def build_A(points, basis_points, kind='bilinear'):
-    """Build matrix A with chosen basis at points: kind in {'bilinear','bspline'}"""
+    """Build matrix A with chosen basis at points: kind in {'bilinear','bspline','rbf2x2','rbf2x2_sq','wendland'}"""
     if kind == 'bilinear':
         return evaluate_bilinear_bases(points, basis_points)
-    if kind in ('bspline', 'cubic', 'cubic_bspline', 'b_spline'):
+    elif kind in ('bspline', 'cubic', 'cubic_bspline', 'b_spline'):
         return evaluate_bspline_bases(points, basis_points)
+    if kind in ('radial', 'rbf', 'rbf2x2', 'nn_rbf'):
+        return evaluate_rbf2x2_bases(points, basis_points, kernel='r2_linear')
+    if kind in ('rbf2x2_sq', 'rbf_sq', 'radial_sq'):
+        return evaluate_rbf2x2_bases(points, basis_points, kernel='r2_quadratic')
+    if kind in ('wendland', 'wendland_c2', 'rbf_wendland'):
+        return evaluate_rbf2x2_bases(points, basis_points, kernel='wendland_c2')
     raise ValueError(f"Unknown basis kind: {kind}")
 
 def fit_coeffs(A, b, learning_rate=0.1, n_iterations=200):
@@ -197,14 +273,57 @@ def plot_results(ref_Z, model_Z, extent, basis_points, sample_points=None, sampl
     plt.suptitle("Shape Fitting using Bilinear Interpolation")
     plt.show()
 
+def plot_single_basis_2d(basis_points, idx, extent, kind='bilinear', res=150):
+    """Plot a single basis function as 2D map by taking column idx of A on a grid."""
+    xmin, xmax, ymin, ymax = extent
+    _, _, pts = generate_grid_points(xmin, xmax, ymin, ymax, res=res)
+    A = build_A(pts, basis_points, kind=kind)
+    Z = A[:, idx].reshape(res, res)
+    plt.figure(figsize=(5,4))
+    plt.imshow(Z, extent=extent, origin='lower', cmap='viridis')
+    plt.colorbar(label='Basis value')
+    plt.scatter(basis_points[:,0], basis_points[:,1], c='w', s=10)
+    plt.title(f"Single basis 2D map (kind={kind}, idx={idx})")
+    plt.tight_layout(); plt.show()
+
+def plot_single_basis_1d(basis_points, idx, kind='bilinear', p0=None, p1=None, n=500):
+    """Plot a single basis along a 1D line segment p(s)=p0+(p1-p0)*s, s in [0,1]."""
+    if p0 is None or p1 is None:
+        # default: horizontal mid-line across the grid span
+        xs = np.unique(basis_points[:,0]); ys = np.unique(basis_points[:,1])
+        x0, x1 = xs.min()-0.5, xs.max()+0.5
+        y = 0.5*(ys.min()+ys.max())
+        p0 = np.array([x0, y]); p1 = np.array([x1, y])
+    t = np.linspace(0.0, 1.0, n)
+    pts = (1.0-t)[:,None]*p0[None,:] + t[:,None]*p1[None,:]
+    A = build_A(pts, basis_points, kind=kind)
+    yv = A[:, idx]
+    plt.figure(figsize=(6,3))
+    plt.plot(t, yv, '-k')
+    plt.xlabel('t along line'); plt.ylabel('basis value')
+    plt.title(f"Single basis 1D slice (kind={kind}, idx={idx})")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout(); plt.show()
+
 if __name__ == "__main__":
 
     # run like this:
     # python -u -m subPixelContour.subPixelContour
 
-    # Parameters
-    nx = ny    = 10
-    sample_res = 100
+    # Parameters via argparse
+    parser = argparse.ArgumentParser(description="Sub-pixel contour fitting demo")
+    parser.add_argument('--size', type=int, default=None, help='number of node points per axis (sets nx=ny=size)')
+    parser.add_argument('--nx', type=int, default=None, help='number of node points in x (overrides --size)')
+    parser.add_argument('--ny', type=int, default=None, help='number of node points in y (overrides --size)')
+    parser.add_argument('--res', type=int, default=100, help='sampling grid resolution per axis')
+    parser.add_argument('--basis', type=str, default='rbf2x2', choices=['bilinear','bspline','rbf2x2','rbf2x2_sq','wendland'], help='basis kind to use')
+    args = parser.parse_args()
+
+    nx = args.nx if args.nx is not None else (args.size if args.size is not None else 10)
+    ny = args.ny if args.ny is not None else (args.size if args.size is not None else 10)
+    sample_res = args.res
+    basis_kind = args.basis
+
     xmin, xmax, ymin, ymax = -0.5, nx-0.5, -0.5, ny-0.5
     # xmin, xmax, ymin, ymax = -0.5, 3.5, -0.5, 3.5
 
@@ -224,7 +343,7 @@ if __name__ == "__main__":
     ], dtype=float)  # CCW
 
     b = evaluate_reference(sample_points, circles=circles, polygon=polygon)
-    basis_kind = 'bspline'  # 'bilinear' or 'bspline'
+    # basis_kind set by argparse
     A = build_A(sample_points, basis_points, kind=basis_kind)
     coeffs = fit_coeffs(A, b)
 
@@ -244,3 +363,15 @@ if __name__ == "__main__":
     model_values_plot = (A_plot @ coeffs).reshape(plot_res, plot_res)
 
     plot_results(ref_values_plot, model_values_plot, extent, basis_points, sample_points=sample_points, sample_values=b)
+
+    # DEBUG: visualize a single basis function in 2D and 1D
+    # pick center node by (ix,iy)
+    ix = nx//2; iy = ny//2
+    idx = iy*nx + ix
+    print(f"\n# DEBUG single basis: kind={basis_kind}, node=({ix},{iy}), idx={idx}")
+    plot_single_basis_2d(basis_points, idx, extent, kind=basis_kind, res=200)
+    # 1D slice across the center horizontally
+    xs = np.unique(basis_points[:,0]); ys = np.unique(basis_points[:,1])
+    p0 = np.array([xs.min()-0.5, iy])
+    p1 = np.array([xs.max()+0.5, iy])
+    plot_single_basis_1d(basis_points, idx, kind=basis_kind, p0=p0, p1=p1, n=800)
