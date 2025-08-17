@@ -131,10 +131,44 @@ MVP: GL_POINTS with custom VS.
 
 - Fragment shader: reuse `python/GLCL2/shaders/monocolor.glslf` initially.
 
+### Formation rendering (instanced rectangles)
+
+- Goal: render each formation as an oriented rectangle sized by formation widths.
+- Data source: `formation_params` (`float8` per formation): `(o.x,o.y,d.x,d.y,w_par,w_perp,k_par,k_perp)`.
+- Shader: `python/GLCL2/shaders/pose2d_rect.glslv`
+  - Attributes
+    - `location=0` per-vertex: `vec2 vpos` corners of a unit quad in model space (use `quad_verts` with 4 verts for TRIANGLE_STRIP)
+    - `location=1` per-instance: `vec4 inst_pose = (px,py,ux,uy)` sourced from `formation_params[0:4]`
+    - `location=2` per-instance: `vec4 inst_misc = (w_par,w_perp,k_par,k_perp)` sourced from `formation_params[4:8]` (only `.xy` used)
+  - Transform: `world = p + u*(vpos.x*w_par) + v*(vpos.y*w_perp)`, where `v=perp(u)`
+- GL config:
+  - Vertex buffer: `quad_verts` with layout `[2]`
+  - Instancing: `instance_buffer="formation_params"`, `instance_attribs=[4,4]`, `instance_divisor=1`
+  - Draw mode: `TRIANGLE_STRIP`, instances = `formation_count`
+
+Notes:
+- This keeps a clear separation from soldier rendering, which stays as points for now.
+- Buffer layout matches OpenCL: no repacking; GLSL reads two `vec4`s from one `float8` buffer.
+
 Phase 1.5: Oriented point sprites (no engine change)
 - FS uses `gl_PointCoord` and per-vertex `u` (passed from VS) to draw a thin oriented line or a T-shape glyph in screen space.
 
 Team colors (later): separate passes per team or extend attribute handling.
+
+### Instanced rendering (general primer)
+
+- __Concept__: The vertex shader runs `vertexCount * instanceCount` times. Per-vertex attributes advance with the vertex index, per-instance attributes advance with the instance index.
+- __API__: `glDrawArraysInstanced(mode, first, vertexCount, instanceCount)` (or `glDrawElementsInstanced`) triggers the nested loop over vertices × instances.
+- __Divisors__: `glVertexAttribDivisor(loc, d)` controls how often an attribute advances. `d=0` (default) = per-vertex; `d=1` = per-instance; `d>1` = advance once per `d` instances.
+- __Typical layout__:
+  - location 0: per-vertex mesh data (e.g., `vec2 vpos` corners of a unit quad), divisor 0
+  - location 1..k: per-instance transforms/params (e.g., `vec4 pos_dir`, widths), divisor 1
+- __Setup sketch__:
+  - Bind VAO; bind mesh VBO; `glVertexAttribPointer(0, ...)`; `glVertexAttribDivisor(0, 0)`
+  - Bind instance VBO; `glVertexAttribPointer(1, ...)`; `glVertexAttribDivisor(1, 1)` (and similarly for other instance attrs)
+  - Call `glDrawArraysInstanced(..., vertexCount, instanceCount)`
+- __Shader side__: Use separate inputs for vertex vs instance attributes; `gl_InstanceID` is also available for indexing per-instance resources (SSBO/texture) if needed.
+- __VBOs__: Mesh and instance data can live in separate VBOs (common) or a single interleaved VBO; only the divisor determines stepping behavior.
 
 ---
 
@@ -147,20 +181,36 @@ File: `python/GLCL2/scripts/soldiers.py`
   - `buffers`:
     - `"state_pos_dir": ("particle_count", 4, "f4")`
     - `"state_vel_mr":  ("particle_count", 4, "f4")`
-    - `"state_team_type": ("particle_count", 4, "f4")`
+    - `"state_team_type": ("particle_count", 4, "i4")`
+    - `"formation_params": ("formation_count", 8, "f4")`  // float8 as used by CL
+    - `"quad_verts": (4, 2, "f4")`  // local quad geometry used by instanced rectangle
+    - Optional for visualization: `"formation_lines"`, `"formation_points"`
   - `opencl_source`: `["../cl/soldiers.cl"]`
   - `kernels`: define `soldiers_step` with appropriate buffer/parameter binding
   - `kernel_pipeline`: `["soldiers_step"]`
-  - `opengl_shaders`: `{ "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color", "point_size"]) }`
-  - `render_pipeline`: `[ ("soldier_render", "particle_count", "state_pos_dir", None) ]`
+  - `opengl_shaders`: `{ "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color", "point_size"]), "pose2d_rect": ("../shaders/pose2d_rect.glslv", "../shaders/monocolor.glslf", ["color"]) }`
+  - `render_pipeline`: `[ ("soldier_render", "particle_count", "state_pos_dir", None), ("pose2d_rect", "formation_count", "quad_verts", None, {mode: TRIANGLE_STRIP, attribs:[2], instance_buffer:"formation_params", instance_attribs:[4,4], instance_divisor:1}) ]`
 
-- `init()`:
+### Update (instancing for formations)
+
+- Buffers added:
+  - `"formation_params": ("formation_count", 8, "f4")`  // float8 as used by CL
+  - `"quad_verts": (4, 2, "f4")`  // local quad geometry used by instanced rectangle
+  - Optional for visualization: `"formation_lines"`, `"formation_points"`
+- Shaders added:
+  - `"pose2d_rect": ("../shaders/pose2d_rect.glslv", "../shaders/monocolor.glslf", ["color"])`
+- Render pipeline additions:
+  - `( "line_color",    "formation_point_count", "formation_lines", None, {mode: LINES, attribs:[2,4]} )`  // goal lines
+  - `( "pose2d_rect",  "formation_count",       "quad_verts",       None, {mode: TRIANGLE_STRIP, attribs:[2], instance_buffer:"formation_params", instance_attribs:[4,4], instance_divisor:1} )`
+- Soldier oriented quads (`instanced_quad`) are intentionally disabled in the pipeline for clarity while focusing on formations; soldiers render as points.
+
+ `init()`:
   - Build 10+10 soldiers: two lines with small jitter, opposing `u` (e.g., team 0 at y=-0.4 facing +x; team 1 at y=+0.4 facing -x)
   - Zero velocity, set reasonable radii (0.01–0.02)
 
 ---
 
-## 7. Initialization Details (example)
+{{ ... }}
 
 - Team 0: positions along x in [-0.6, -0.1], y=-0.4 with jitter; `u=(+1,0)`
 - Team 1: positions along x in [0.1, 0.6],  y=+0.4 with jitter; `u=(-1,0)`
@@ -256,16 +306,19 @@ These are starting points; adjust interactively.
   - `python/GLCL2/cl/soldiers.cl` – Phase 1 kernel implementing separation, alignment (lateral anisotropy), cohesion, enemy facing, kinematics, and bounds.
   - `python/GLCL2/scripts/soldiers.py` – `config` with parameters, buffers, kernel pipeline, shaders, render pipeline; `init()` builds 10+10 soldiers in two lines with jitter; sets `m=1`, `r≈0.015`, initial `u=±x`, `v=0`.
   - `python/GLCL2/shaders/soldier_points.glslv` – simple VS reading `pos_dir` and setting `gl_Position`; default `gl_PointSize=5` for visibility.
+  - `python/GLCL2/shaders/pose2d_rect.glslv` – instanced rectangle VS using `formation_params` split into two `vec4` instance attributes.
 
 - __Run status (GLCLBrowser)__
   - Successfully loads config, allocates CL buffers (`state_pos_dir`, `state_vel_mr`, `state_team_type`).
   - Renders via GL_POINTS using `state_pos_dir` as VBO; FS `monocolor.glslf` used.
   - Initial kernel launch failed with `INVALID_WORK_GROUP_SIZE` when `local_size=(32,)` and `global=(20,)`.
   - __Fix__: set `local_size=None` in `config["kernels"]["soldiers_step"]` in `python/GLCL2/scripts/soldiers.py`, letting driver choose. Kernel now executes each frame.
+  - Formation rendering added: instanced rectangles draw one per formation from `formation_params`; soldier oriented quads pass disabled.
 
 - __Data/Sync__
   - CL→GL sync: `state_pos_dir` is flagged for rendering and synchronized each frame by GLCL.
   - GLobject baked with 20 elements; device chosen: NVIDIA GeForce GTX 1650 (via platform selection).
+  - Instance buffer sync: `formation_params` is referenced by `render_pipeline` instancing options and is auto-synchronized CL→GL by `GLCLBrowser`.
 
 - __Parameters exposed__
   - Matches Section 3: `particle_count, dt, r_cut, d_front, d_side, w_sep, w_align, w_coh, w_enemy, max_speed, max_turn, friction, side_bias, front_bias`.

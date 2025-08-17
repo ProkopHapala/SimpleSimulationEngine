@@ -63,16 +63,23 @@ config = {
     "opengl_shaders": {
         "soldier_render": ("../shaders/soldier_points.glslv", "../shaders/monocolor.glslf", ["color"]),  # color is set by viewer
         "line_color":     ("../shaders/line_color.glslv",     "../shaders/color_passthrough.glslf", []),
+        # Instanced rectangle for formations: uses formation_params split into two vec4 attributes [pose, misc]
+        "pose2d_rect":    ("../shaders/pose2d_rect.glslv",    "../shaders/monocolor.glslf", ["color"]),
+        # NOTE: soldier-oriented quads (instanced_quad) kept for later; disabled in render_pipeline for clarity
         "instanced_quad": ("../shaders/instanced_quad.glslv", "../shaders/monocolor.glslf", ["color"]),
     },
 
     # Rendering pipeline: (shader, element_count, vertex_buffer, index_buffer)
+    # NOTE: Soldier-oriented instanced quads are temporarily disabled to avoid confusion while we introduce
+    #       formation instanced rectangles driven by formation_params. Soldiers still render as points.
     "render_pipeline": [
         ("line_color",    "formation_point_count", "formation_lines", None, {"mode":"LINES", "attribs":[2,4]}),
+        # Formation rectangles: one instance per formation, geometry from quad_verts
+        ("pose2d_rect",  "formation_count",       "quad_verts",       None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"formation_params", "instance_attribs":[4,4], "instance_divisor":1}),
+        # Soldier-oriented quads (instanced) using state_pos_dir as (px,py,ux,uy); draw before points so points overlay as fallback
+        ("instanced_quad", "particle_count",       "quad_verts",       None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"state_pos_dir", "instance_attribs":[4], "instance_divisor":1}),
         ("soldier_render", "formation_point_count", "formation_points", None),
         ("soldier_render", "particle_count", "state_pos_dir", None),
-        # one oriented quad per soldier using instancing (per-instance pos_dir)
-        ("instanced_quad", "particle_count", "quad_verts", None, {"mode":"TRIANGLE_STRIP", "attribs":[2], "instance_buffer":"state_pos_dir", "instance_attribs":[4], "instance_divisor":1}),
     ],
 }
 
