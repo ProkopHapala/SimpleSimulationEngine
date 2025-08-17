@@ -324,12 +324,21 @@ class GLCLBrowser(BaseGUI):
             if step is None:
                 print(f"create_parameter_controls: Hiding parameter '{name}' (step=None)")
                 continue
-            # Only support scalar int/float in GUI for now; vectors handled directly in shaders
-            if type_str not in ("int", "float"):
+            # Support scalar int/float and vector types vec2/vec3/vec4
+            if type_str in ("int", "float"):
+                defaults = [float(value)]
+                params_dict[name] = (type_str, defaults, float(step))
+            elif type_str in ("vec2", "vec3", "vec4"):
+                try:
+                    vals = list(value) if isinstance(value, (list, tuple)) else [float(value)]
+                    defaults = [float(v) for v in vals]
+                except Exception:
+                    print(f"create_parameter_controls: Bad defaults for vector '{name}': {value}; skipping")
+                    continue
+                params_dict[name] = (type_str, defaults, float(step))
+            else:
                 print(f"create_parameter_controls: Unsupported parameter type '{type_str}' for '{name}', skipping control")
                 continue
-            defaults = [float(value)]
-            params_dict[name] = (type_str, defaults, float(step))
         # Delegate widget creation to BaseGUI utility
         self.populate_params_from_dict(params_dict)
 
@@ -346,12 +355,14 @@ class GLCLBrowser(BaseGUI):
             if name not in params:
                 continue
             cur_val, typ, step = params[name]
-            # We currently use only scalar widgets here (vectors are skipped above)
-            new_val = widget.value()
-            if typ == "int":
-                new_val = int(new_val)
-            elif typ == "float":
-                new_val = float(new_val)
+            # Handle scalar vs vector widgets
+            if isinstance(widget, (list, tuple)):
+                # Vector parameter from spin_row
+                new_val = [float(w.value()) for w in widget]
+            else:
+                new_val = widget.value()
+                if typ == "int": new_val = int(new_val)
+                elif typ == "float": new_val = float(new_val)
             params[name] = (new_val, typ, step)
         new_pc = params.get("particle_count", (None, None, None))[0] if "particle_count" in params else None
         if old_pc is not None and new_pc != old_pc:

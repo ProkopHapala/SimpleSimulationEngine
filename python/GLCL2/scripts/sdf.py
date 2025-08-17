@@ -7,9 +7,9 @@ config = {
     # Parameters
     # TW,TH: texture size; driver = (cx,cy, zoom, radius)
     "parameters": {
-        "TW":      (8,    "int",   1),
-        "TH":      (8,    "int",   1),
-        "driver":  ([0.5, 0.5, 16.0, 0.35], "vec4", 0.1),
+        "TW":      (8,    "int",   None),
+        "TH":      (8,    "int",   None),
+
     },
 
     # No OpenCL for this demo
