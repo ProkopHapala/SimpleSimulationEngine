@@ -321,7 +321,7 @@ class MainWindow(BaseGUI):
             self.cb_display.setCurrentIndex(0)
 
         # (Re)create parameter widgets from current parameters
-        self.populate_params_from_json(data.get("parameters", {}))
+        self.populate_params_from_dict(data.get("parameters", {}))
         self.gl_view.updateGL()
 
     def load_pipeline(self, fname):
@@ -347,7 +347,7 @@ class MainWindow(BaseGUI):
         except Exception as e:
             print("Error in load_pipeline() extracting raw sections:", e)
             self.txt_pipeline.setPlainText(json.dumps(data.get("Pipeline", []), indent=2))
-        self.populate_params_from_json(params_dict)
+        self.populate_params_from_dict(params_dict)
         self.gl_view.updateGL()
  
     # --- JSON pipeline loader ------------------------------------------

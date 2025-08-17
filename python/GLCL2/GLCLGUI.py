@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QMatrix4x4, QVector3D
 from OpenGL.GL import *
 
-from .OGLsystem import GLobject
+from .OGLsystem import GLobject, compile_shader_program
 
 class GLCLWidget(QOpenGLWidget):
     def __init__(self, parent=None, enable_opengl_debug=False):
@@ -33,6 +33,9 @@ class GLCLWidget(QOpenGLWidget):
         self.fs_pipeline = []
         # Frame counter for FS shaders expecting iFrame
         self.frame_counter = 0
+        # Viewer overlay state
+        self.display_tex_name = None  # name of texture to show on default framebuffer
+        self._viewer_program = 0      # lazily compiled simple blit shader
 
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -195,6 +198,10 @@ class GLCLWidget(QOpenGLWidget):
                 # Draw the object
                 gl_obj.draw_arrays()
 
+            # Optional: draw selected texture to default framebuffer as an overlay
+            if self.display_tex_name:
+                self._draw_display_texture()
+
             glUseProgram(0)
         except Exception as e:
             if self.browser is not None:
@@ -203,6 +210,53 @@ class GLCLWidget(QOpenGLWidget):
                 import traceback, os
                 traceback.print_exc()
                 os._exit(1)
+
+    def _ensure_viewer_program(self):
+        if self._viewer_program:
+            return
+        # Minimal passthrough VS and sampler FS
+        vs_src = """
+        #version 330 core
+        layout(location=0) in vec2 pos;
+        out vec2 uv;
+        void main(){
+            uv = pos*0.5 + 0.5;          // map [-1,1] -> [0,1]
+            gl_Position = vec4(pos,0.0,1.0);
+        }
+        """
+        fs_src = """
+        #version 330 core
+        in vec2 uv;
+        uniform sampler2D uTex;
+        out vec4 FragColor;
+        void main(){
+            FragColor = texture(uTex, uv);
+        }
+        """
+        self._viewer_program = compile_shader_program(vs_src, fs_src)
+
+    def _draw_display_texture(self):
+        if self.ogl_system is None:
+            return
+        if self.display_tex_name not in self.ogl_system.textures:
+            # Silent ignore if texture not known (e.g., before FS resources exist)
+            return
+        # Ensure shader exists
+        self._ensure_viewer_program()
+        # Preserve state
+        depth_was_enabled = glIsEnabled(GL_DEPTH_TEST)
+        if depth_was_enabled: glDisable(GL_DEPTH_TEST)
+        # Set viewport to widget size
+        glViewport(0, 0, int(self.width()), int(self.height()))
+        # Bind texture to unit 0 and draw
+        self.ogl_system.bind_texture_unit(self.display_tex_name, 0)
+        glUseProgram(self._viewer_program)
+        loc = glGetUniformLocation(self._viewer_program, "uTex")
+        if loc != -1: glUniform1i(loc, 0)
+        self.ogl_system.draw_fullscreen_quad()
+        glUseProgram(0)
+        # Restore state
+        if depth_was_enabled: glEnable(GL_DEPTH_TEST)
 
     def _execute_fs_pipeline(self):
         if not self.fs_pipeline: return

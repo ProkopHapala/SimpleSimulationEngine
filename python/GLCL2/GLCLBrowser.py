@@ -79,6 +79,7 @@ class GLCLBrowser(BaseGUI):
         
         self.glcl_widget = GLCLWidget(self, enable_opengl_debug=self.bDebugGL)
         self.glcl_widget.set_systems(self.ogl_system, self.ocl_system, self)
+        self.cb_display = None  # display texture selector
 
         self._build_ui()
         # Guard to suppress param-updates during UI (re)build
@@ -114,6 +115,15 @@ class GLCLBrowser(BaseGUI):
         self.button("Start/Pause", self.toggle_simulation, layout=sim_layout)
         self.button("Reset", self.reset_simulation, layout=sim_layout)
         control_layout.addWidget(sim_group)
+
+        # Display/GL controls
+        display_group = QGroupBox("Display & GL")
+        display_layout = QVBoxLayout()
+        display_group.setLayout(display_layout)
+        # Texture selection combo (populated after config is applied)
+        self.cb_display = self.comboBox(items=["None"], callback=self.on_display_changed, layout=display_layout)
+        self.button("Rebuild GL", self.on_rebuild_gl_clicked, tooltip="Recompile shaders and (re)create FS textures/FBOs", layout=display_layout)
+        control_layout.addWidget(display_group)
         control_layout.addStretch()
 
         main_layout.addWidget(self.glcl_widget, 1)
@@ -267,12 +277,43 @@ class GLCLBrowser(BaseGUI):
 
         # After OGLSystem.clear() the programs are gone; force recompile & bake if context is valid
         self.glcl_widget.rebuild_gl_resources()
+        # Update texture display combo from configured FS textures
+        try:
+            self.update_display_combo()
+        except Exception as e:
+            print(f"setup_opengl_system: WARNING could not update display combo: {e}")
         # Upload any initial FS texture data provided by init()
         try:
             if getattr(self, "initial_textures", None):
                 self.glcl_widget.upload_fs_texture_data(self.initial_textures)
         except Exception as e:
             print(f"setup_opengl_system: WARNING could not upload initial FS textures: {e}")
+
+    def update_display_combo(self):
+        # Prefer names from the widget FS config (available even before GL context creates actual textures)
+        names = list(self.glcl_widget.fs_textures_cfg.keys()) if self.glcl_widget else []
+        items = ["None"] + sorted(names)
+        if self.cb_display is not None:
+            self.cb_display.blockSignals(True)
+            self.cb_display.clear()
+            self.cb_display.addItems(items)
+            self.cb_display.blockSignals(False)
+            # Keep current selection if possible
+            cur = self.glcl_widget.display_tex_name if self.glcl_widget else None
+            target = "None" if not cur else cur
+            idx = self.cb_display.findText(target)
+            if idx >= 0: self.cb_display.setCurrentIndex(idx)
+
+    def on_display_changed(self, idx):
+        if self.cb_display is None: return
+        name = self.cb_display.currentText()
+        self.glcl_widget.display_tex_name = None if name in ("None", "", None) else name
+        self.glcl_widget.update()
+
+    def on_rebuild_gl_clicked(self):
+        # Recompile GL shaders and (re)create FS resources; then refresh display combo
+        self.glcl_widget.rebuild_gl_resources()
+        self.update_display_combo()
         
     def bake_kernels(self, config):
         print("Baking OpenCL kernels...")

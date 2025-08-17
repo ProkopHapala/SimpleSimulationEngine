@@ -55,7 +55,6 @@ class BaseGUI(QtWidgets.QMainWindow):
         self.setWindowTitle(title)
         self.main_widget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.main_widget)
-
     
     def button(self, text, callback=None, tooltip=None, layout=None):
        #print("button() ", text, "with callback", callback, "tooltip", tooltip, "layout", layout)
