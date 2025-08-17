@@ -58,6 +58,22 @@ def evaluate_bilinear_bases(points, basis_points):
         A[:, j] = B_vals
     return A
 
+def cubic_bspline_1d(t):
+    """Cubic B-spline basis B(t) with support |t|<2 (vectorized)."""
+    a = np.abs(t)
+    out = np.zeros_like(a)
+    m1 = a < 1.0
+    out[m1] = (2.0/3.0) - a[m1]**2 + 0.5*a[m1]**3
+    m2 = (a >= 1.0) & (a < 2.0)
+    out[m2] = (1.0/6.0) * (2.0 - a[m2])**3
+    return out
+
+def evaluate_bspline_bases(points, basis_points):
+    """Evaluate 2D cubic B-spline bases (Cartesian product of 1D splines)."""
+    dx = points[:, 0][:, None] - basis_points[None, :, 0]
+    dy = points[:, 1][:, None] - basis_points[None, :, 1]
+    return cubic_bspline_1d(dx) * cubic_bspline_1d(dy)
+
 def solve_with_gradient_descent(A, b, learning_rate=0.1, n_iterations=200, verbose=True):
     """
     Solves for the coefficients using gradient descent with clamping.
@@ -142,9 +158,13 @@ def evaluate_reference(points, ref_fn=reference_shape, circles=None, polygon=Non
         return reference_from_shapes(points, circles=circles, polygon=polygon)
     return ref_fn(points[:, 0], points[:, 1], **kwargs)
 
-def build_A(points, basis_points):
-    """Build matrix A with bilinear basis values at points."""
-    return evaluate_bilinear_bases(points, basis_points)
+def build_A(points, basis_points, kind='bilinear'):
+    """Build matrix A with chosen basis at points: kind in {'bilinear','bspline'}"""
+    if kind == 'bilinear':
+        return evaluate_bilinear_bases(points, basis_points)
+    if kind in ('bspline', 'cubic', 'cubic_bspline', 'b_spline'):
+        return evaluate_bspline_bases(points, basis_points)
+    raise ValueError(f"Unknown basis kind: {kind}")
 
 def fit_coeffs(A, b, learning_rate=0.1, n_iterations=200):
     """Fit coefficients with clamped error using gradient descent."""
@@ -204,7 +224,8 @@ if __name__ == "__main__":
     ], dtype=float)  # CCW
 
     b = evaluate_reference(sample_points, circles=circles, polygon=polygon)
-    A = build_A(sample_points, basis_points)
+    basis_kind = 'bspline'  # 'bilinear' or 'bspline'
+    A = build_A(sample_points, basis_points, kind=basis_kind)
     coeffs = fit_coeffs(A, b)
 
     # 5) Report coefficients in grid form
@@ -219,7 +240,7 @@ if __name__ == "__main__":
     plot_points = sample_points; plot_res = sample_res
 
     ref_values_plot   = evaluate_reference(plot_points, circles=circles, polygon=polygon).reshape(plot_res, plot_res)
-    A_plot            = build_A(plot_points, basis_points)
+    A_plot            = build_A(plot_points, basis_points, kind=basis_kind)
     model_values_plot = (A_plot @ coeffs).reshape(plot_res, plot_res)
 
     plot_results(ref_values_plot, model_values_plot, extent, basis_points, sample_points=sample_points, sample_values=b)
