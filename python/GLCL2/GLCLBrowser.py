@@ -219,11 +219,22 @@ class GLCLBrowser(BaseGUI):
             shape = (size, stride)
             self.buffer_shapes[name] = shape
             
+            # Honor dtype from config (e.g., 'f4'->float32, 'i4'->int32)
+            try:
+                np_dtype = np.dtype(dtype)
+            except Exception:
+                print(f"apply_simulation_config: WARNING unknown dtype '{dtype}' for buffer '{name}', defaulting to float32")
+                np_dtype = np.float32
+
             if name in init_data:
-                data = init_data[name].astype(np.float32)
+                try:
+                    data = init_data[name].astype(np_dtype)
+                except Exception:
+                    print(f"Warning: Buffer '{name}' provided by init() has incompatible dtype; casting to {np_dtype}")
+                    data = init_data[name].astype(np_dtype)
             else:
                 print(f"Warning: Buffer '{name}' not found in init() data. Defaulting to zeros.")
-                data = np.zeros(shape, dtype=np.float32)
+                data = np.zeros(shape, dtype=np_dtype)
 
             self.ocl_system.create_buffer(name, data.nbytes)
             self.ocl_system.toGPU(name, data)
@@ -294,7 +305,8 @@ class GLCLBrowser(BaseGUI):
             if shape is None:
                 print(f"_alloc_host_sync_buffers: WARNING shape for '{name}' not found")
                 continue
-            self.host_sync_buffers[name] = np.empty(shape, dtype=np.float32)
+            dtype = self.buffer_data.get(name, np.empty((), dtype=np.float32)).dtype
+            self.host_sync_buffers[name] = np.empty(shape, dtype=dtype)
             print(f"  Preallocated host buffer '{name}' with shape {shape}")
 
     def update_display_combo(self):
@@ -490,10 +502,11 @@ class GLCLBrowser(BaseGUI):
             self.on_exception(e)
 
     def _debug_probe_once(self):
-        for buf_name in self.buffer_shapes:
-            host = np.empty(self.buffer_shapes[buf_name], dtype=np.float32)
+        for buf_name, shape in self.buffer_shapes.items():
+            dtype = self.buffer_data.get(buf_name, np.empty((), dtype=np.float32)).dtype
+            host = np.empty(shape, dtype=dtype)
             self.ocl_system.fromGPU(buf_name, host)
-            print(f"[Frame {self.debug_frame_counter}] '{buf_name}': {host[0]}")
+            print(f"[Frame {self.debug_frame_counter}] '{buf_name}' dtype={dtype} first={host[0]}")
 
     def _sync_buffers_if_needed(self):
         for buf_name in self.buffers_to_sync:

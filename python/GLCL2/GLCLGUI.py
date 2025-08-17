@@ -173,6 +173,16 @@ class GLCLWidget(QOpenGLWidget):
         # Create a unique set of vertex buffers that need a GLobject
         vertex_buffers_to_bake = {pass_info[2] for pass_info in self.render_pipeline_info if len(pass_info) > 2}
 
+        # Map per-buffer geometry options collected from render pipeline optional dict (5th element)
+        # options: { 'mode': 'POINTS'|'LINES'|'LINE_STRIP'|'TRIANGLES', 'attribs': [n0,n1,...] }
+        geom_opts = {}
+        for pass_info in self.render_pipeline_info:
+            if len(pass_info) >= 5 and isinstance(pass_info[4], dict):
+                buf = pass_info[2]
+                # First occurrence wins to avoid conflicting configs silently; users should keep consistent
+                if buf not in geom_opts:
+                    geom_opts[buf] = pass_info[4]
+
         for buffer_name in vertex_buffers_to_bake:
             data = self.buffer_data.get(buffer_name)
             if data is None:
@@ -181,9 +191,32 @@ class GLCLWidget(QOpenGLWidget):
 
             nelements = len(data)
             components = data.shape[1] if data.ndim > 1 else 1
-            
-            gl_obj = GLobject(nelements=nelements, mode=GL_POINTS)
-            gl_obj.alloc_vao_vbo_ebo([components])
+
+            # Resolve geometry options for this buffer
+            opts = geom_opts.get(buffer_name, {})
+            mode_str = str(opts.get('mode', 'POINTS')).upper() if opts else 'POINTS'
+            # Map string to GL constant (defaults to GL_POINTS)
+            mode_map = {
+                'POINTS': GL_POINTS,
+                'LINES': GL_LINES,
+                'LINE_STRIP': GL_LINE_STRIP,
+                'TRIANGLES': GL_TRIANGLES,
+                'TRIANGLE_STRIP': GL_TRIANGLE_STRIP,
+            }
+            mode_gl = mode_map.get(mode_str, GL_POINTS)
+
+            attribs = opts.get('attribs') if isinstance(opts, dict) else None
+            if attribs is not None:
+                try:
+                    # Basic sanity: sum of attribs should match data stride
+                    if int(sum(int(a) for a in attribs)) != int(components):
+                        print(f"bake_render_objects: WARNING attribs {attribs} sum != components {components} for buffer '{buffer_name}'; falling back to single attrib")
+                        attribs = None
+                except Exception:
+                    attribs = None
+
+            gl_obj = GLobject(nelements=nelements, mode=mode_gl)
+            gl_obj.alloc_vao_vbo_ebo(attribs if attribs is not None else [components])
             gl_obj.upload_vbo(data)
             
             self.gl_objects[buffer_name] = gl_obj
@@ -210,16 +243,25 @@ class GLCLWidget(QOpenGLWidget):
             
             # Iterate through the user-defined render pipeline
             for pass_info in self.render_pipeline_info:
-                shader_name, _, vertex_buffer_name, _ = pass_info
-                
+                # Support optional 5th element (dict of options) in render pipeline entries
+                # Expected layouts:
+                #  (shader_name, elem_count, vertex_buffer, index_buffer)
+                #  (shader_name, elem_count, vertex_buffer, index_buffer, {options})
+                try:
+                    shader_name = pass_info[0]
+                    vertex_buffer_name = pass_info[2] if len(pass_info) > 2 else None
+                except Exception:
+                    # Malformed entry; skip
+                    continue
+
                 shader_program = self.ogl_system.get_shader_program(shader_name)
-                gl_obj = self.gl_objects.get(vertex_buffer_name)
+                gl_obj = self.gl_objects.get(vertex_buffer_name) if vertex_buffer_name else None
 
                 if not shader_program or not gl_obj:
                     continue
 
                 glUseProgram(shader_program)
-                # Draw the object
+                # Draw the object (arrays only; indices not yet supported)
                 gl_obj.draw_arrays()
 
             # Optional: draw selected texture to default framebuffer as an overlay

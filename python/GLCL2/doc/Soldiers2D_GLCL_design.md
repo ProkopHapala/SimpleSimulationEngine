@@ -290,3 +290,64 @@ These are starting points; adjust interactively.
 - [ ] Plan rendering upgrade to oriented glyphs (T-shape)
 - [ ] Performance follow-up: implement uniform grid neighbor search for O(N)
 - [ ] Document future extensions: leaders, morale/stamina buffers, terrain influence
+
+---
+
+## 16. Formation Goals (Desire Potentials)
+
+__Motivation__
+- Soldiers currently spread from initial positions due to separation and lack of strong global objectives.
+- Introduce per-formation “goal lines” acting as a harmonic desire potential. They are not physical forces; they bias desired orientation and acceleration subject to physical limits.
+
+__Data additions__
+- Buffer `formation_params`: float8 per formation
+  - `.xy = o` (origin)
+  - `.zw = d` (normalized direction)
+  - `.s0 = w_par` (longitudinal half-width)
+  - `.s1 = w_perp` (lateral half-width)
+  - `.s2 = k_par` (longitudinal stiffness)
+  - `.s3 = k_perp` (lateral stiffness)
+  - Note: two formations (one per team) for MVP.
+- Mapping soldier→formation:
+  - Use `state_team_type.z` as `formation_id` (float), or derive from `team_id` (x) for 1:1 team→formation.
+
+__Kernel integration (`python/GLCL2/cl/soldiers.cl`)__
+- For soldier i with position `p` and formation (o,d,w_par,w_perp,k_par,k_perp):
+  - Nearest point on line: `q = o + dot(p - o, d) * d`
+  - Error vector: `e = p - q`, decompose: `e_par = dot(e, d) * d`, `e_perp = e - e_par`
+  - Harmonic desire acceleration (clamped by widths):
+    - `a_goal = -k_par * clamp_len(e_par, w_par) - k_perp * clamp_len(e_perp, w_perp)`
+  - Blend into steering and velocity update:
+    - Orientation target term: add `w_goal * normalize(-e_perp + beta * d * sign(-dot(e, d)))` to `u_des` mix to keep soldiers on the line and roughly along it.
+    - Acceleration term: add `desire_gain * a_goal` to `dv` (before friction and clamps), then cap by `max_accel` and `max_speed`.
+  - Keep collision radius `r` much smaller than neighbor/align radius `r_cut` (e.g., `r ≈ r_cut/5`).
+
+__Parameters (GUI)__
+- `desire_gain: float` (scales a_goal into dv)
+- `w_goal: float` (weight into orientation blend)
+- `beta: float` (balance longitudinal vs lateral bias in orientation target)
+- `max_accel: float` (cap on |dv/dt|)
+- Per-formation constants are in `formation_params` (widths, stiffness);
+  optional global multipliers: `k_goal_mul_par`, `k_goal_mul_perp`.
+
+__Rendering goal lines__
+- Add simple GL line pass to visualize two formations:
+  - Build buffer `formation_lines` with 2 vertices per line: `o - L*d`, `o + L*d` (L≈1.2 for full-screen span).
+  - Shader `line2d.glslv` + `monocolor.glslf`; set `gl_Position` from positions; use `glLineWidth` for visibility.
+  - Optionally draw lateral width as translucent band later.
+
+__Initial defaults (MVP)__
+- `w_par=0.20`, `w_perp=0.06`, `k_par=1.0`, `k_perp=2.0`
+- `desire_gain=1.0`, `w_goal=0.8`, `beta=0.5`, `max_accel=3.0`
+- `r_cut=0.25`, `r≈0.05` (set per soldier radius), `friction=0.5`
+
+__Notes__
+- Desire affects orientation and acceleration targets but final motion remains constrained by `max_turn`, `max_speed`, `max_accel`, and collisions/separation.
+- Keep numerical stability: clamp/soften with widths to avoid large instantaneous accelerations when far from the line.
+
+__Implementation plan__
+1) Add buffers and params in `python/GLCL2/scripts/soldiers.py` (`formation_params`, optional `formation_lines` for rendering).
+2) Initialize two formations (one per team) in `init()`; fill buffers and render pipeline for lines.
+3) Extend kernel signature to take `__global float8* formation_params` and per-soldier `formation_id` (or compute from `team_id`).
+4) Implement `a_goal` and steering mix; add `desire_gain`, `w_goal`, `beta`, `max_accel` params.
+5) Tune interaction: ensure `r` (collision) << `r_cut` (alignment); adjust `k_par,k_perp` and gains.
