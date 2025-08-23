@@ -337,8 +337,33 @@ class HexRasterizerNP:
                 if len(excl) > 0:
                     print(f"EXCL: frag={q},{r},{i} -> neighbors not in candidates: {' '.join(excl)}")
 
-            best_idx = int(np.argmin(dists))
-            best_key = candidates[best_idx]
+            # Adjacency-first selection: find neighbor across the shared edge (i,i+1)
+            verts = hex_verts_map[qr]
+            p1, p2 = verts[i], verts[(i + 1) % 6]
+            edge_mid = 0.5 * (p1 + p2)
+            nei = [(q + dq, r + dr) for (dq, dr) in NEIGHBOR_MAP]
+            nei_centers = [axial_to_cartesian(nk[0], nk[1], self.hex_size) for nk in nei]
+            d_mid = np.linalg.norm(np.array(nei_centers) - edge_mid, axis=1)
+            adj_key = nei[int(np.argmin(d_mid))]
+            used_path = 'global'
+            if (adj_key in elements) and elements[adj_key].get('is_base', False):
+                best_key = adj_key
+                used_path = 'adj'
+            else:
+                # restrict search to 1-ring neighbor bases if available
+                nei_bases = [k for k in nei if (k in elements) and elements[k].get('is_base', False)]
+                if len(nei_bases) > 0:
+                    nb_coms = np.array([elements[k]['com'] for k in nei_bases])
+                    nb_dists = np.linalg.norm(nb_coms - piece_com, axis=1)
+                    best_key = nei_bases[int(np.argmin(nb_dists))]
+                    used_path = 'nei'
+                else:
+                    # fall back to global candidates
+                    best_idx = int(np.argmin(dists))
+                    best_key = candidates[best_idx]
+            if self.verbosity > 2:
+                ok = (adj_key == best_key)
+                print(f"ADJ:  frag={q},{r},{i} -> edge->{fmt_qr(adj_key)} {'OK' if ok else '-'}; sel={fmt_qr(best_key)} mode={used_path}")
             neighbor_el = elements[best_key]
             old_area = neighbor_el['area']
             old_com = neighbor_el['com']
