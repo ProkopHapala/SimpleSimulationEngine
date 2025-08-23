@@ -80,14 +80,17 @@ using Groups of points (i.e. (1) chunks of points bouned within a sphere) and gr
 
 
 
+// Kernel: makeRadiosityCouplings
+// Computes diffuse coupling between element centers with triangle occluders
+// (binary blocking via projection test). Used as a simple radiosity prototype.
 __kernel void  makeRadiosityCouplings(
-    const int4 ns, 
-    __global const float4*  points,    // x,y,z,mass
-    __global const float4*  faces,     // hx,hy,hz, area
-    __global       float4*  obstacles, // (x,y,z)*3 - triangles
+    const int4 ns,                    // {npoints, ntris, _, _}
+    __global const float4*  points,   // [npoints]{x,y,z,face_id}
+    __global const float4*  faces,    // [npoints]{hx,hy,hz,area}
+    __global       float4*  obstacles,// [ntris*3]{A,B,C vertices as float4, w=face_id}
     //__global       int*     faces_surf,     // surface index for each face
     //__global       float4*  obstacle_surt,  // surface index for each obstacle
-    __global       float*  M // coupling matrix
+    __global       float*  M              // [npoints*npoints] coupling matrix
 ){
     __local  float4 LOC[32*3]; // local copy of triangle points for obstacles
     //__local  int    LIs[32]; // local copy of indexes of surfaces for obstacles
@@ -147,6 +150,65 @@ __kernel void  makeRadiosityCouplings(
     }
 }
 
+// -----------------------------------------------------------------------------
+// Kernel: occlusion_matrix
+// Brute-force occlusion between element centers using triangle obstacles.
+// One work-item per source point i; tests rays to all j against all triangles.
+// Keeps as a simple reference implementation for debugging and validation.
+// Inputs:
+//  - points: [npoints] float4 (xyz + w=face_id)
+//  - tris:   [ntris*3] float4 sequence of A,B,C (xyz) with w=face_id (from face)
+// Output:
+//  - occ:    [npoints*npoints] float, 1.0 if any triangle blocks i->j, else 0.0
+__kernel void occlusion_matrix(
+    const int npoints,                 // number of element centers
+    const int ntris,                   // number of triangles
+    __global const float4* points,     // [npoints]{x,y,z,face_id}
+    __global const float4* tris,       // [ntris*3]{A,B,C vertices as float4, w=face_id}
+    __global       float*  occ         // [npoints*npoints] 1 if blocked else 0
+){
+    const int i = get_global_id(0);
+    if(i >= npoints) return;
+
+    const float4 p1 = points[i];
+    const int    s1 = (int)(p1.w + 0.5f);
+
+    for(int j=0; j<npoints; ++j){
+        if(j==i){ occ[i*npoints + j] = 0.0f; continue; }
+        const float4 p2 = points[j];
+        const int    s2 = (int)(p2.w + 0.5f);
+
+        float3 d = p2.xyz - p1.xyz;
+        float  r = length(d);
+        if(r <= 1e-12f){ occ[i*npoints + j] = 0.0f; continue; }
+        d *= 1.0f/r;
+        float3 hX = getSomeUp(d);
+        float3 hY = cross(d,hX);
+
+        float  hit = 0.0f;
+        for(int k=0; k<ntris; ++k){
+            const int k3 = k*3;
+            const float4 A4 = tris[k3  ];
+            const float4 B4 = tris[k3+1];
+            const float4 C4 = tris[k3+2];
+            const int ts = (int)(A4.w + 0.5f);
+            if((ts==s1) || (ts==s2)) continue; // skip triangles from either endpoint's face
+            // Shift triangle by p1 so we test along ray from origin
+            float3 A = A4.xyz - p1.xyz;
+            float3 B = B4.xyz - p1.xyz;
+            float3 C = C4.xyz - p1.xyz;
+            // Quick param-range rejection: entirely before start or beyond end
+            float tA = dot(d, A);
+            float tB = dot(d, B);
+            float tC = dot(d, C);
+            if( (tA<=0.0f && tB<=0.0f && tC<=0.0f) ) continue;
+            if( (tA>=r     && tB>=r     && tC>=r    ) ) continue;
+            if( rayInTriangle(A,B,C,hX,hY) ){ hit = 1.0f; break; }
+        }
+        occ[i*npoints + j] = hit;
+    }
+}
+
 float2 coneTriangleDistance( 
     float4 p1, // {x,y,z,R} 1st point of the cone
     float4 p2, // {x,y,z,R} 2nd point of the cone
@@ -177,15 +239,22 @@ float2 coneTriangleDistance(
 
 
 
-// NOTE: Occlusion matrix can be used also to calculate visiibility between larger groups of points with finite radius
-
+// NOTE: Occlusion matrix can be used also to calculate visibility between larger groups of points with finite radius
+#define nOccMax 8
+// Kernel: makeOcclusionMatrix
+// Broad-phase per-pair occluder listing using distance-to-ray bands.
+// For each macro pair (i,j):
+//  - If any obstacle closer than R_full -> full occlusion (bPartial=false)
+//  - If all obstacles farther than R_safe -> no occlusion
+//  - Else collect triangle indices of potential occluders up to nOccMax
 __kernel void  makeOcclusionMatrix(
-    const int4 ns, 
-    __global const float4*  points    ,    // [npoints] {x,y,z,R}    centers of point-groups with radius R
-    __global       float4*  obstacles ,    // [tris   ] {ia,ib,ic,?} triangles representing obstacle-groups
-    __global       float*   distMin   ,    // [npoints^2        ] minimum distance of any obstacle to ray between point-groups i,j
-    __global       int*     occluders ,    // [npoints^2*nOccMax] list of obstacles which may occlude i,j
-    float2 Rrange                          // {R_full,R_safe} minimum and maximum distance for partial occlusion
+    const int4 ns,                    // {npoints, nTris, _, _}
+    __global const float4*  points    ,// [npoints] {x,y,z,face_id}
+    __global       float4*  obstacles ,// [nTris*3] {A,B,C as float4, w=face_id}
+    __global       float*   distMin   ,// [npoints*npoints] min distance of any obstacle to ray (i->j)
+    __global       int*     occluders ,// [npoints*npoints*nOccMax] triangle indices (or -1) per (i,j)
+    __global       int*     noccs     ,// [npoints*npoints] number of collected occluders per (i,j) (clamped)
+    float2 Rrange                      // {R_full,R_safe}
 ){
     __local  float4 LOC[32*3]; // local copy of triangle points for obstacles
     //__local  int    LIs[32]; // local copy of indexes of surfaces for obstacles
@@ -201,6 +270,12 @@ __kernel void  makeOcclusionMatrix(
 
         float3 d = p2.xyz - p1.xyz;
         float  r = length(d);
+        if(r <= 1e-12f){
+            // Degenerate pair (same point); nothing to do
+            noccs  [iG*ns.x+i] = 0;
+            distMin[iG*ns.x+i] = 1e30f;
+            continue;
+        }
         d /= r;
         
         // ---- calculate local coordinate system for the ray
@@ -210,9 +285,11 @@ __kernel void  makeOcclusionMatrix(
         // ---- loop over obstacles - accelerate by loading them to local memory
         //double occlusion = getOcclusion( eli.pos, d, sqrt(r2), eli.isurf, elj.isurf );
         int   nocc     = 0;
-        float dist     = 0.0f;
+        float dist     = 1e30f;
         bool  bPartial = true;
-        int   ijocc    = (iG*ns.x+i)*nocc;
+        int   ijocc    = (iG*ns.x + i) * nOccMax;  // base offset into occluders for pair (iG,i)
+        // Clear occluder list for this pair using all local threads
+        for(int t=iL; t<nOccMax; t+=nL){ occluders[ ijocc + t ] = -1; }
         for (int i0=0; i0<ns.y; i0+= nL ){ 
             int i3 = (i0+iL)*3;
             LOC[iL*3  ] = obstacles[i3  ];
@@ -229,16 +306,171 @@ __kernel void  makeOcclusionMatrix(
                 if( rj<Rrange.x ) bPartial = false; // Full occlusion
                 if( bPartial ){
                     if( rj<Rrange.y ){
-                        occluders[ ijocc + nocc ]=i0+j;
+                        if(nocc < nOccMax){ occluders[ ijocc + nocc ] = i0 + j; }
                         nocc++;
                     }
                 }
-                dist = min(dist,rj);
+                dist = min(dist, rj);
             }
             barrier(CLK_LOCAL_MEM_FENCE);  // block writing new     pos_shared[iL] before inner loop finished 
         }
+        // Store number of collected occluders, clamped to capacity
+        noccs  [iG*ns.x+i] = (nocc > nOccMax) ? nOccMax : nocc;
         distMin[iG*ns.x+i] = dist;
         //M[i*ns.x+iG] = coupling;
         //nvalid++;
+    }
+}
+
+// =============================================================================
+// Narrow-phase occlusion between sub-elements of a macro pair (i,j)
+// Processes one macro pair per work-group. Sub-elements for macro i and j
+// are loaded into local memory (bounded by MAX_SUB_I/J). Occluders are
+// provided as group IDs from the broad-phase; we iterate their triangles
+// in global memory in tiles (not fully cached here to keep memory bounded).
+//
+// Assumptions and tunables:
+//  - MAX_SUB_I, MAX_SUB_J: max sub-elements per macro element loaded to local.
+//  - WG_SIZE: work-group size; we stride over ni*nj pairs by WG_SIZE.
+//  - nOccMax: number of occluders per pair from broad-phase (already defined).
+//
+// NOTE: This is a skeleton focused on structure and memory movement; details like
+// exact fractional occlusion accumulation are left as TODO.
+
+#ifndef MAX_SUB_I
+#define MAX_SUB_I 32
+#endif
+#ifndef MAX_SUB_J
+#define MAX_SUB_J 32
+#endif
+#ifndef TILE_TRIS
+#define TILE_TRIS 64   // triangles per tile loaded to local (tune by local mem size)
+#endif
+
+__kernel void makeNarrowOcclusion(
+    const int4   ns,            // {npoints, nOccMax, MAX_SUB_I, MAX_SUB_J}
+    __global const int2*   pairsIJ,   // [nPairs]{i,j} macro indices; one per work-group
+    __global const float4* subPoints, // [nSubTotal]{x,y,z,face_id} all sub-element centers, grouped by macro
+    __global const int2*   subRanges, // [npoints]{offset,count} subPoints range per macro element
+    __global const float4* tris,      // [nTris*3]{A,B,C as float4, w=face_id} concatenated triangle vertices
+    __global const int2*   triRanges, // [nOccGroups]{offset3,count3} ranges into tris (in vertices, multiple of 3)
+    __global const int*    occluders, // [npoints*npoints*nOccMax]{groupId|-1} occluder list per (i,j)
+    __global const int*    noccs,     // [npoints*npoints]{count} valid occluders per (i,j), clamped ≤ nOccMax
+    __global       float*  occPairs   // [nPairs]{fraction_blocked in 0..1} output per processed pair
+){
+    const int gid  = get_global_id(0);
+    const int lid  = get_local_id (0);
+    const int lsz  = get_local_size(0);
+
+    // Each work-group handles exactly one pair
+    if(lid==0 && get_num_groups(0)>0){ /* placeholder to silence unused warnings */ }
+    const int pairId = get_group_id(0);
+    if(pairId >= ns.x*ns.x) return; // conservative bound if caller doesn't compact pairs
+
+    const int2 ij = pairsIJ[pairId];
+    const int i = ij.x;
+    const int j = ij.y;
+
+    // Resolve sub-element ranges (clamp to MAX_SUB_*)
+    const int2 ri = subRanges[i];
+    const int2 rj = subRanges[j];
+    const int ni = (ri.y > MAX_SUB_I) ? MAX_SUB_I : ri.y;
+    const int nj = (rj.y > MAX_SUB_J) ? MAX_SUB_J : rj.y;
+
+    // Local caches for sub-elements of i and j
+    __local float4 LI[MAX_SUB_I];
+    __local float4 LJ[MAX_SUB_J];
+    for(int t=lid; t<ni; t+=lsz){ LI[t] = subPoints[ri.x + t]; }
+    for(int t=lid; t<nj; t+=lsz){ LJ[t] = subPoints[rj.x + t]; }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Read occluder list for this pair
+    const int occBase = (i*ns.x + j) * ns.y;  // ns.y == nOccMax
+    const int nOcc    = noccs[i*ns.x + j];
+
+    // Accumulate blocked sub-pairs count
+    int blocked = 0;
+    const int nPairs = ni * nj;
+
+    // Local tile for occluder triangles
+    __local float4 TRILOC[3*TILE_TRIS];
+
+    // Each thread iterates over its strided set of sub-pairs
+    for(int kk = lid; kk < nPairs; kk += lsz){
+        const int ik = kk / nj;
+        const int jk = kk - ik*nj;
+        const float4 P1 = LI[ik];
+        const float4 P2 = LJ[jk];
+
+        float3 d = P2.xyz - P1.xyz;
+        float  r = length(d);
+        if(r <= 1e-12f) continue; // same sub-point
+        d *= 1.0f/r;
+        float3 hX = getSomeUp(d);
+        float3 hY = cross(d,hX);
+
+        int hit = 0;
+        // Iterate occluder groups listed by broad-phase
+        for(int o=0; o<nOcc && !hit; ++o){
+            const int gidOcc = occluders[occBase + o];
+            if(gidOcc < 0) continue;
+            const int2 tr = triRanges[gidOcc];  // {offset3, count3}
+
+            // Tile over triangles of this occluder
+            for(int base = tr.x; base < tr.x + tr.y && !hit; base += 3*TILE_TRIS){
+                // cooperative load of up to TILE_TRIS triangles (3 verts each)
+                int nverts = tr.x + tr.y - base;
+                if(nverts > 3*TILE_TRIS) nverts = 3*TILE_TRIS;
+                for(int t = lid; t < nverts; t += lsz){
+                    TRILOC[t] = tris[base + t];
+                }
+                barrier(CLK_LOCAL_MEM_FENCE);
+
+                // scan loaded triangles
+                for(int v = 0; v < nverts; v += 3){
+                    const float4 A4 = TRILOC[v  ];
+                    const float4 B4 = TRILOC[v+1];
+                    const float4 C4 = TRILOC[v+2];
+                    // Optional: skip same-surface hits
+                    const int ts = (int)(A4.w + 0.5f);
+                    const int s1 = (int)(P1.w + 0.5f);
+                    const int s2 = (int)(P2.w + 0.5f);
+                    if((ts==s1) || (ts==s2)) continue;
+                    float3 A = A4.xyz - P1.xyz;
+                    float3 B = B4.xyz - P1.xyz;
+                    float3 C = C4.xyz - P1.xyz;
+                    // Quick t-range rejection
+                    float tA = dot(d, A);
+                    float tB = dot(d, B);
+                    float tC = dot(d, C);
+                    if( (tA<=0.0f && tB<=0.0f && tC<=0.0f) ) continue;
+                    if( (tA>=r     && tB>=r     && tC>=r    ) ) continue;
+                    if( rayInTriangle(A,B,C,hX,hY) ){ hit = 1; break; }
+                }
+                barrier(CLK_LOCAL_MEM_FENCE);
+            }
+        }
+        blocked += hit;
+    }
+
+    // Reduce blocked across work-group (simple atomic add to global tmp or local reduction)
+    // For simplicity, use local reduction to one thread then write fraction
+    __local int Lsum;
+    if(lid==0) Lsum = 0;
+    barrier(CLK_LOCAL_MEM_FENCE);
+#if __OPENCL_VERSION__ >= 120
+    atomic_add(&Lsum, blocked);
+#else
+    // Fallback: naive reduce with one-by-one accumulation
+    // Each thread writes to a local slot and thread 0 sums
+    __local int Lbuf[256]; // assumes WG_SIZE<=256; tune as needed
+    if(lid<256) Lbuf[lid] = blocked; // threads beyond 256 ignored
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0){ int s=0; for(int t=0;t<lsz && t<256;t++) s+=Lbuf[t]; Lsum=s; }
+#endif
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0){
+        const float frac = (nPairs>0) ? ((float)Lsum)/((float)nPairs) : 0.0f;
+        occPairs[pairId] = frac;
     }
 }
