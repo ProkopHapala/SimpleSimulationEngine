@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from c_interface import *
+#from .c_interface import *
