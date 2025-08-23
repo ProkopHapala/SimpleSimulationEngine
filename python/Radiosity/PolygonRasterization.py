@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as MplPolygon
+import argparse
 
 # --- Core Self-Implemented Geometric Primitives ---
 
@@ -108,7 +109,7 @@ class HexRasterizerNP:
         self.hex_size = float(hex_size)
         self.full_hex_area = 1.5 * np.sqrt(3) * self.hex_size**2
 
-    def rasterize(self, merge_threshold_ratio=0.25):
+    def rasterize(self, merge_threshold_ratio=0.25, area_keep_ratio=0.7):
         print("Stage 1: Generating hexagonal grid...")
         hex_centers, hex_verts_map = self._generate_grid()
 
@@ -119,8 +120,8 @@ class HexRasterizerNP:
         # *** FIX 3: Pass hex_centers to the creation function ***
         elements = self._create_initial_elements(full_indices, hex_verts_map, hex_centers)
 
-        print("Stage 4: Processing partial hexagons (divide-and-conquer)...")
-        self._process_partial_hexagons_granular(partial_indices, hex_centers, hex_verts_map, elements, merge_threshold_ratio)
+        print("Stage 4: Processing partial hexagons (divide-and-conquer + keep-if-large)...")
+        self._process_partial_hexagons_granular(partial_indices, hex_centers, hex_verts_map, elements, merge_threshold_ratio, area_keep_ratio)
         
         original_area = polygon_area(self.polygon_verts)
         total_element_area = sum(el['area'] for el in elements.values())
@@ -179,17 +180,39 @@ class HexRasterizerNP:
             } for qr in full_indices
         }
 
-    def _process_partial_hexagons_granular(self, partial_indices, hex_centers, hex_verts_map, elements, merge_threshold_ratio):
+    def _process_partial_hexagons_granular(self, partial_indices, hex_centers, hex_verts_map, elements, merge_threshold_ratio, area_keep_ratio):
         merge_area_threshold = self.full_hex_area * merge_threshold_ratio
         new_element_id_counter = -1
         
         print(f"DEBUG: merge_threshold_area = {merge_area_threshold:.6f} ({merge_threshold_ratio*100:.1f}% of full hex)")
+        print(f"DEBUG: area_keep_ratio     = {area_keep_ratio:.3f} (keep clipped hex if A_clip/A_full >= ratio)")
         
-        # Cache list of base element keys for fast neighbor search
         def base_keys(): return [k for k, v in elements.items() if isinstance(k, tuple) and v.get('is_base', False)]
         
         for qr in partial_indices:
             center, vertices, (q, r) = hex_centers[qr], hex_verts_map[qr], qr
+
+            clipped_hex = sutherland_hodgman_clip(self.polygon_verts, vertices)
+            if clipped_hex.size > 0 and clipped_hex.shape[0] >= 3:
+                a_clip = polygon_area(clipped_hex)
+                ratio = a_clip / self.full_hex_area
+            else:
+                a_clip = 0.0
+                ratio = 0.0
+
+            if ratio >= area_keep_ratio and a_clip > 1e-12:
+                com_clip = polygon_centroid(clipped_hex)
+                elements[qr] = {
+                    'geoms': [clipped_hex],
+                    'area': a_clip,
+                    'com': com_clip,
+                    'com_orig': com_clip.copy(),
+                    'is_base': True,
+                    'merged_pieces': 0,
+                }
+                print(f"KEEP_HEX: qr={qr} A_clip={a_clip:.6f} ratio={ratio:.3f} -> kept as base element with corrected COM {com_clip}")
+                continue
+
             for i in range(6):
                 p1, p2 = vertices[i], vertices[(i + 1) % 6]
                 triangle_verts = np.array([center, p1, p2])
@@ -243,13 +266,14 @@ def plot_rasterization_np(polygon_verts, elements, hex_size):
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.add_patch(MplPolygon(polygon_verts, fill=False, edgecolor='k', linewidth=2.5, zorder=10, label='Original Polygon Boundary'))
     
-    # Stable coloring per element
-    rng = np.random.RandomState(0)
+    # Distinct coloring per element using evenly spaced hues (HSV)
+    N = max(len(elements), 1)
+    cmap = plt.cm.hsv
     added_base_orig = False
     added_base_merged = False
     added_boundary = False
-    for key, element in elements.items():
-        color = plt.cm.viridis(rng.rand())
+    for idx, (key, element) in enumerate(elements.items()):
+        color = cmap(idx / N)
         for geom_verts in element['geoms']:
             ax.add_patch(MplPolygon(geom_verts, facecolor=color, alpha=0.6, edgecolor='k', linewidth=0.5))
         com = element['com']
@@ -275,13 +299,20 @@ def plot_rasterization_np(polygon_verts, elements, hex_size):
 
 # --- Main Execution ---
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Hexagonal rasterization of polygon with area-aware boundary handling')
+    parser.add_argument('--size', type=float, default=1.0, help='Hexagon size (grid step)')
+    parser.add_argument('--areaFactor', type=float, default=0.7, help='Keep clipped hex if A_clip/A_full >= areaFactor; otherwise split triangles')
+    parser.add_argument('--mergeFactor', type=float, default=0.3, help='Triangle piece merge threshold as fraction of full hex area')
+    args = parser.parse_args()
+
     #subject_polygon_verts =  np.array( [(0, 8), (-2, 2), (-8, 2), (-4, -2), (-5, -8), (0, -5), (5, -8), (4, -2), (8, 2), (2, 2)])
     subject_polygon_verts = np.array([(0, 8),(3, 8),  (8, 2),  (2, 2)])
     
-    HEX_SIZE = 1.0
+    HEX_SIZE = args.size
 
     rasterizer = HexRasterizerNP(subject_polygon_verts, HEX_SIZE)
-    final_elements = rasterizer.rasterize(merge_threshold_ratio=0.3)
+    final_elements = rasterizer.rasterize(merge_threshold_ratio=args.mergeFactor, area_keep_ratio=args.areaFactor)
     
     print(f"\nRasterization complete. Generated {len(final_elements)} final elements.")
     plot_rasterization_np(subject_polygon_verts, final_elements, HEX_SIZE)
