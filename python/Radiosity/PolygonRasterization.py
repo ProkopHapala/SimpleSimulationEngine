@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as MplPolygon
-import argparse
+from dataclasses import dataclass
 
 # --- Core Self-Implemented Geometric Primitives ---
 
@@ -106,6 +106,24 @@ def fmt_qr(k):
 
 # --- Main Rasterizer Class ---
 
+@dataclass
+class Element:
+    geoms: list
+    area: float
+    com: np.ndarray
+    is_base: bool
+    id: str
+    com_orig: np.ndarray | None = None
+    merged_piece_info: list | None = None
+
+@dataclass
+class Frag:
+    qr: tuple
+    i: int
+    geom: np.ndarray
+    area: float
+    com: np.ndarray
+
 class HexRasterizerNP:
     def __init__(self, polygon_vertices, hex_size, verbosity=1, update_com=True):
         self.polygon_verts = np.array(polygon_vertices)
@@ -114,24 +132,25 @@ class HexRasterizerNP:
         self.verbosity = verbosity
         self.update_com = bool(update_com)  # True: dynamic COM updates on merge; False: keep base COM static
 
-    def rasterize(self, merge_threshold_ratio=0.25, area_keep_ratio=0.7):
-        print("Stage 1: Generating hexagonal grid...")
+    def rasterize(self, area_keep_ratio=0.7):
+        if self.verbosity >= 1: print("Stage 1: Generating hexagonal grid...")
         hex_centers, hex_verts_map = self._generate_grid()
 
         # Two-phase pipeline
-        print("Stage 2: First pass (collect bases and fragments)...")
+        if self.verbosity >= 1: print("Stage 2: First pass (collect bases and fragments)...")
         elements, fragments = self._first_pass_collect(hex_centers, hex_verts_map, area_keep_ratio)
 
-        print("Stage 3: Second pass (merge fragments into nearest bases)...")
+        if self.verbosity >= 1: print("Stage 3: Second pass (merge fragments into nearest bases)...")
         self._merge_fragments(fragments, hex_centers, hex_verts_map, elements)
         
-        original_area = polygon_area(self.polygon_verts)
-        total_element_area = sum(el['area'] for el in elements.values())
-        print("\nSanity Check:")
-        print(f"Original Polygon Area: {original_area:.4f}")
-        print(f"Total Element Area:    {total_element_area:.4f}")
-        if original_area > 1e-9:
-             print(f"Difference (%):        {100 * abs(original_area - total_element_area) / original_area:.4f}%")
+        if self.verbosity >= 1:
+            original_area = polygon_area(self.polygon_verts)
+            total_element_area = sum(el.area for el in elements.values())
+            print("\nSanity Check:")
+            print(f"Original Polygon Area: {original_area:.4f}")
+            print(f"Total Element Area:    {total_element_area:.4f}")
+            if original_area > 1e-9:
+                 print(f"Difference (%):        {100 * abs(original_area - total_element_area) / original_area:.4f}%")
         
         return elements
 
@@ -172,38 +191,21 @@ class HexRasterizerNP:
     def _create_initial_elements(self, full_indices, hex_verts_map, hex_centers):
         # Initialize base (full) hex elements; keep original COM for plotting/debug
         return {
-            qr: {
-                'geoms': [hex_verts_map[qr]],
-                'area': self.full_hex_area,
-                'com': hex_centers[qr].copy(),
-                'com_orig': hex_centers[qr].copy(),
-                'is_base': True,
-                'merged_pieces': 0,
-                'merged_piece_info': [],  # list of {'id': str, 'com': np.array}
-                'id': f"{qr[0]},{qr[1]}",
-            } for qr in full_indices
+            qr: Element(geoms=[hex_verts_map[qr]], area=self.full_hex_area, com=hex_centers[qr].copy(), is_base=True, id=f"{qr[0]},{qr[1]}", com_orig=hex_centers[qr].copy(), merged_piece_info=None)
+            for qr in full_indices
         }
 
     # --- Two-phase: First pass ---
     def _first_pass_collect(self, hex_centers, hex_verts_map, area_keep_ratio):
-        elements = {}
-        fragments = []
+        elements: dict[tuple, Element] = {}
+        fragments: list[Frag] = []
         for qr, vertices in hex_verts_map.items():
             q, r = qr
             center = hex_centers[qr]
             inside_all = all(is_inside_polygon(v, self.polygon_verts) for v in vertices)
             if inside_all:
                 # Full hex -> base element
-                elements[qr] = {
-                    'geoms': [vertices],
-                    'area': self.full_hex_area,
-                    'com': center.copy(),
-                    'com_orig': center.copy(),
-                    'is_base': True,
-                    'merged_pieces': 0,
-                    'merged_piece_info': [],
-                    'id': f"{q},{r}",
-                }
+                elements[qr] = Element(geoms=[vertices], area=self.full_hex_area, com=center.copy(), is_base=True, id=f"{q},{r}", com_orig=center.copy(), merged_piece_info=None)
                 if self.verbosity >= 2:
                     print(f"BASE_FULL: base={q},{r} A_full={self.full_hex_area:.6f} COM={center}")
                 continue
@@ -220,16 +222,7 @@ class HexRasterizerNP:
             if ratio >= area_keep_ratio and a_clip > 1e-12:
                 # Large partial -> base element with corrected COM
                 com_clip = polygon_centroid(clipped_hex)
-                elements[qr] = {
-                    'geoms': [clipped_hex],
-                    'area': a_clip,
-                    'com': com_clip.copy(),
-                    'com_orig': com_clip.copy(),
-                    'is_base': True,
-                    'merged_pieces': 0,
-                    'merged_piece_info': [],
-                    'id': f"{q},{r}",
-                }
+                elements[qr] = Element(geoms=[clipped_hex], area=a_clip, com=com_clip.copy(), is_base=True, id=f"{q},{r}", com_orig=com_clip.copy(), merged_piece_info=None)
                 if self.verbosity >= 2:
                     print(f"BASE_PART: base={q},{r} A_clip={a_clip:.6f} ratio={ratio:.3f} COM={com_clip}")
                 continue
@@ -238,104 +231,38 @@ class HexRasterizerNP:
             for i in range(6):
                 p1, p2 = vertices[i], vertices[(i + 1) % 6]
                 triangle_verts = np.array([center, p1, p2])
-                tri_area = polygon_area(triangle_verts)
                 clipped_piece = sutherland_hodgman_clip(self.polygon_verts, triangle_verts)
                 if clipped_piece.shape[0] < 3:
-                    if self.verbosity >= 4:
-                        print(f"OUT: frag={q},{r},{i} A_tri={tri_area:.6f} -> clipped 0")
+                    if self.verbosity >= 4: print(f"OUT: frag={q},{r},{i} -> clipped 0")
                     continue
                 piece_area = polygon_area(clipped_piece)
                 if piece_area < 1e-12:
-                    if self.verbosity >= 4:
-                        print(f"SMALL: frag={q},{r},{i} A_tri={tri_area:.6f} -> clipped ~0")
+                    if self.verbosity >= 4: print(f"SMALL: frag={q},{r},{i} -> clipped ~0")
                     continue
                 piece_com = polygon_centroid(clipped_piece)
-                frag = {
-                    'qr': qr,
-                    'i': i,
-                    'geom': clipped_piece,
-                    'area': piece_area,
-                    'com': piece_com,
-                    'tri_area': tri_area,
-                    'id': f"{q},{r},{i}",
-                }
-                fragments.append(frag)
+                fragments.append(Frag(qr=qr, i=i, geom=clipped_piece, area=piece_area, com=piece_com))
         return elements, fragments
 
     # --- Two-phase: Second pass ---
     def _merge_fragments(self, fragments, hex_centers, hex_verts_map, elements):
         for frag in fragments:
-            qr = frag['qr']
+            qr = frag.qr
             q, r = qr
-            i = frag['i']
-            clipped_piece = frag['geom']
-            piece_area = frag['area']
-            piece_com = frag['com']
-            tri_area = frag['tri_area']
+            i = frag.i
+            clipped_piece = frag.geom
+            piece_area = frag.area
+            piece_com = frag.com
 
             # Candidate bases
-            def base_keys(): return [k for k, v in elements.items() if isinstance(k, tuple) and v.get('is_base', False)]
+            def base_keys(): return [k for k, v in elements.items() if isinstance(k, tuple) and v.is_base]
             candidates = base_keys()
             if len(candidates) == 0:
                 # Seed zero-area base to enable merging when absolutely no bases exist yet
-                if (qr not in elements) or (not elements[qr].get('is_base', False)):
-                    elements[qr] = {
-                        'geoms': [],
-                        'area': 0.0,
-                        'com': hex_centers[qr].copy(),
-                        'com_orig': hex_centers[qr].copy(),
-                        'is_base': True,
-                        'merged_pieces': 0,
-                        'merged_piece_info': [],
-                        'id': f"{q},{r}",
-                    }
+                if (qr not in elements) or (not elements[qr].is_base):
+                    elements[qr] = Element(geoms=[], area=0.0, com=hex_centers[qr].copy(), is_base=True, id=f"{q},{r}", com_orig=hex_centers[qr].copy(), merged_piece_info=None)
             candidates = base_keys()
-            base_coms = np.array([elements[k]['com'] for k in candidates])
-            dists = np.linalg.norm(base_coms - piece_com, axis=1)
 
-            if self.verbosity > 3:
-                # Immediate neighbor base presence map
-                nei = [(q + dq, r + dr) for (dq, dr) in NEIGHBOR_MAP]
-                nei_info = []
-                for nk in nei:
-                    isb = (nk in elements) and elements[nk].get('is_base', False)
-                    nei_info.append(f"{fmt_qr(nk)}:{'B' if isb else '-'}")
-                print(f"NEI:  frag={q},{r},{i} -> 1-ring {' '.join(nei_info)}")
-
-                cand_pairs = list(zip(candidates, dists))
-                cand_pairs.sort(key=lambda x: x[1])
-                preview = ", ".join([f"{fmt_qr(k)} d={d:.3f}" for k, d in cand_pairs[:12]])
-                print(f"CAND: frag={q},{r},{i} -> candidates (nearest first): {preview}")
-                # Explain exclusions of immediate neighbors
-                excl = []
-                for nk in nei:
-                    if nk not in candidates:
-                        if nk not in hex_verts_map:
-                            reason = 'no-hex'
-                            excl.append(f"{fmt_qr(nk)}:{reason}")
-                            continue
-                        if (nk in elements):
-                            if not elements[nk].get('is_base', False):
-                                reason = 'present-not-base'
-                            else:
-                                reason = 'present-base'
-                        else:
-                            reason = 'absent'
-                        verts_nk = hex_verts_map[nk]
-                        full_nk = all(is_inside_polygon(v, self.polygon_verts) for v in verts_nk)
-                        if full_nk:
-                            reason2 = 'full'
-                        else:
-                            clipped_nk = sutherland_hodgman_clip(self.polygon_verts, verts_nk)
-                            if clipped_nk.size > 0 and clipped_nk.shape[0] >= 3:
-                                a_clip_nk = polygon_area(clipped_nk)
-                                ratio_nk = a_clip_nk / self.full_hex_area
-                                reason2 = f"partial r={ratio_nk:.3f}"
-                            else:
-                                reason2 = 'outside'
-                        excl.append(f"{fmt_qr(nk)}:{reason},{reason2}")
-                if len(excl) > 0:
-                    print(f"EXCL: frag={q},{r},{i} -> neighbors not in candidates: {' '.join(excl)}")
+            self._dbg_nei_and_candidates(q, r, i, candidates, piece_com, elements)
 
             # Adjacency-first selection: find neighbor across the shared edge (i,i+1)
             verts = hex_verts_map[qr]
@@ -345,177 +272,50 @@ class HexRasterizerNP:
             nei_centers = [axial_to_cartesian(nk[0], nk[1], self.hex_size) for nk in nei]
             d_mid = np.linalg.norm(np.array(nei_centers) - edge_mid, axis=1)
             adj_key = nei[int(np.argmin(d_mid))]
-            used_path = 'global'
-            if (adj_key in elements) and elements[adj_key].get('is_base', False):
+            if (adj_key in elements) and elements[adj_key].is_base:
                 best_key = adj_key
-                used_path = 'adj'
             else:
                 # restrict search to 1-ring neighbor bases if available
-                nei_bases = [k for k in nei if (k in elements) and elements[k].get('is_base', False)]
+                nei_bases = [k for k in nei if (k in elements) and elements[k].is_base]
                 if len(nei_bases) > 0:
-                    nb_coms = np.array([elements[k]['com'] for k in nei_bases])
+                    nb_coms = np.array([elements[k].com for k in nei_bases])
                     nb_dists = np.linalg.norm(nb_coms - piece_com, axis=1)
                     best_key = nei_bases[int(np.argmin(nb_dists))]
-                    used_path = 'nei'
                 else:
                     # fall back to global candidates
-                    best_idx = int(np.argmin(dists))
-                    best_key = candidates[best_idx]
+                    base_coms = np.array([elements[k].com for k in candidates])
+                    dists = np.linalg.norm(base_coms - piece_com, axis=1)
+                    best_key = candidates[int(np.argmin(dists))]
             if self.verbosity > 2:
-                ok = (adj_key == best_key)
-                print(f"ADJ:  frag={q},{r},{i} -> edge->{fmt_qr(adj_key)} {'OK' if ok else '-'}; sel={fmt_qr(best_key)} mode={used_path}")
+                print(f"ADJ:  frag={q},{r},{i} -> edge->{fmt_qr(adj_key)} {'OK' if (adj_key == best_key) else '-'}; sel={fmt_qr(best_key)} mode={'adj' if (best_key == adj_key) else ('nei' if (best_key in nei) else 'global')}")
             neighbor_el = elements[best_key]
-            old_area = neighbor_el['area']
-            old_com = neighbor_el['com']
+            old_area = neighbor_el.area
+            old_com = neighbor_el.com
             new_area = old_area + piece_area
             if self.update_com:
-                new_com = (old_com * old_area + piece_com * piece_area) / new_area
-                neighbor_el['com'] = new_com
-                com_note = f"COM:{old_com}->{new_com}"
-            else:
-                new_com = old_com  # keep static
-                com_note = f"COM static {old_com}"
-            neighbor_el['area'] = new_area
-            neighbor_el['geoms'].append(clipped_piece)
-            neighbor_el['merged_pieces'] = neighbor_el.get('merged_pieces', 0) + 1
-            if 'merged_piece_info' not in neighbor_el:
-                neighbor_el['merged_piece_info'] = []
+                neighbor_el.com = (old_com * old_area + piece_com * piece_area) / new_area
+            neighbor_el.area = new_area
+            neighbor_el.geoms.append(clipped_piece)
             frag_id = f"{q},{r},{i}"
-            neighbor_el['merged_piece_info'].append({'id': frag_id, 'com': piece_com})
-            print(f"MERG: frag={frag_id} A_tri={tri_area:.6f} A_clip={piece_area:.6f} -> base{fmt_qr(best_key)} A:{old_area:.6f}->{new_area:.6f} {com_note}")
+            # Keep lightweight diagnostic trail only if verbosity requests it
+            if self.verbosity > 1:
+                if neighbor_el.merged_piece_info is None: neighbor_el.merged_piece_info = []
+                neighbor_el.merged_piece_info.append({'id': frag_id, 'com': piece_com})
+                print(f"MERG: frag={frag_id} A_clip={piece_area:.6f} -> base{fmt_qr(best_key)} A:{old_area:.6f}->{new_area:.6f} {'COM:'+str(old_com)+'->'+str(neighbor_el.com) if self.update_com else 'COM static '+str(old_com)}")
 
-    def _process_partial_hexagons_granular(self, partial_indices, hex_centers, hex_verts_map, elements, merge_threshold_ratio, area_keep_ratio):
-        merge_area_threshold = self.full_hex_area * merge_threshold_ratio
-        new_element_id_counter = -1
-        
-        print(f"DEBUG: merge_threshold_area = {merge_area_threshold:.6f} ({merge_threshold_ratio*100:.1f}% of full hex) [IGNORED: always merging boundary pieces]")
-        print(f"DEBUG: area_keep_ratio     = {area_keep_ratio:.3f} (keep clipped hex if A_clip/A_full >= ratio)")
-        
-        def base_keys(): return [k for k, v in elements.items() if isinstance(k, tuple) and v.get('is_base', False)]
-        
-        for qr in partial_indices:
-            center, vertices, (q, r) = hex_centers[qr], hex_verts_map[qr], qr
+    def _dbg_nei_and_candidates(self, q, r, i, candidates, piece_com, elements):
+        if self.verbosity <= 3: return
+        base_coms = np.array([elements[k].com for k in candidates]) if len(candidates) else np.zeros((0,2))
+        dists = np.linalg.norm(base_coms - piece_com, axis=1) if len(candidates) else np.array([])
+        nei = [(q + dq, r + dr) for (dq, dr) in NEIGHBOR_MAP]
+        nei_info = [f"{fmt_qr(nk)}:{'B' if ((nk in elements) and elements[nk].is_base) else '-'}" for nk in nei]
+        print(f"NEI:  frag={q},{r},{i} -> 1-ring {' '.join(nei_info)}")
+        if len(candidates):
+            cand_pairs = sorted(list(zip(candidates, dists)), key=lambda x: x[1])
+            preview = ", ".join([f"{fmt_qr(k)} d={d:.3f}" for k, d in cand_pairs[:12]])
+            print(f"CAND: frag={q},{r},{i} -> candidates (nearest first): {preview}")
 
-            clipped_hex = sutherland_hodgman_clip(self.polygon_verts, vertices)
-            if clipped_hex.size > 0 and clipped_hex.shape[0] >= 3:
-                a_clip = polygon_area(clipped_hex)
-                ratio = a_clip / self.full_hex_area
-            else:
-                a_clip = 0.0
-                ratio = 0.0
-
-            if ratio >= area_keep_ratio and a_clip > 1e-12:
-                com_clip = polygon_centroid(clipped_hex)
-                elements[qr] = {
-                    'geoms': [clipped_hex],
-                    'area': a_clip,
-                    'com': com_clip,
-                    'com_orig': com_clip.copy(),
-                    'is_base': True,
-                    'merged_pieces': 0,
-                    'merged_piece_info': [],
-                    'id': f"{q},{r}",
-                }
-                print(f"KEEP_HEX: base={q},{r} A_clip={a_clip:.6f} ratio={ratio:.3f} -> kept as base element with corrected COM {com_clip}")
-                continue
-
-            for i in range(6):
-                p1, p2 = vertices[i], vertices[(i + 1) % 6]
-                triangle_verts = np.array([center, p1, p2])
-                tri_area = polygon_area(triangle_verts)
-                clipped_piece = sutherland_hodgman_clip(self.polygon_verts, triangle_verts)
-
-                if clipped_piece.shape[0] < 3:
-                    # DEBUG: triangle fully outside
-                    print(f"OUT: frag={q},{r},{i} A_tri={tri_area:.6f} -> clipped 0")
-                    continue
-                piece_area = polygon_area(clipped_piece)
-                if piece_area < 1e-12:
-                    print(f"SMALL: frag={q},{r},{i} A_tri={tri_area:.6f} -> clipped ~0")
-                    continue
-                
-                piece_com = polygon_centroid(clipped_piece)
-                
-                # Always merge each boundary piece into the nearest base element (per-piece)
-                candidates = base_keys()
-                if len(candidates) == 0:
-                    # Seed a zero-area base at this hex to enable merging when no base exists at all
-                    if (qr not in elements) or (not elements[qr].get('is_base', False)):
-                        elements[qr] = {
-                            'geoms': [],
-                            'area': 0.0,
-                            'com': hex_centers[qr].copy(),
-                            'com_orig': hex_centers[qr].copy(),
-                            'is_base': True,
-                            'merged_pieces': 0,
-                            'merged_piece_info': [],
-                            'id': f"{q},{r}",
-                        }
-                # Recompute candidates after possible seeding
-                candidates = base_keys()
-                base_coms = np.array([elements[k]['com'] for k in candidates])
-                dists = np.linalg.norm(base_coms - piece_com, axis=1)
-                if self.verbosity > 3:
-                    # Immediate neighbor base presence map
-                    nei = [(q + dq, r + dr) for (dq, dr) in NEIGHBOR_MAP]
-                    nei_info = []
-                    for nk in nei:
-                        isb = (nk in elements) and elements[nk].get('is_base', False)
-                        nei_info.append(f"{fmt_qr(nk)}:{'B' if isb else '-'}")
-                    print(f"NEI:  frag={q},{r},{i} -> 1-ring {' '.join(nei_info)}")
-
-                    cand_pairs = list(zip(candidates, dists))
-                    cand_pairs.sort(key=lambda x: x[1])
-                    preview = ", ".join([f"{fmt_qr(k)} d={d:.3f}" for k, d in cand_pairs[:12]])
-                    print(f"CAND: frag={q},{r},{i} -> candidates (nearest first): {preview}")
-                    # Explain exclusions of immediate neighbors
-                    excl = []
-                    for nk in nei:
-                        if nk not in candidates:
-                            if nk not in hex_verts_map:
-                                reason = 'no-hex'
-                                excl.append(f"{fmt_qr(nk)}:{reason}")
-                                continue
-                            if (nk in elements):
-                                if not elements[nk].get('is_base', False):
-                                    reason = 'present-not-base'
-                                else:
-                                    reason = 'present-base'  # should not happen if not in candidates
-                            else:
-                                reason = 'absent'
-                            verts_nk = hex_verts_map[nk]
-                            full_nk = all(is_inside_polygon(v, self.polygon_verts) for v in verts_nk)
-                            if full_nk:
-                                reason2 = 'full'
-                                ratio_nk = 1.0
-                            else:
-                                clipped_nk = sutherland_hodgman_clip(self.polygon_verts, verts_nk)
-                                if clipped_nk.size > 0 and clipped_nk.shape[0] >= 3:
-                                    a_clip_nk = polygon_area(clipped_nk)
-                                    ratio_nk = a_clip_nk / self.full_hex_area
-                                    reason2 = f"partial r={ratio_nk:.3f}"
-                                else:
-                                    ratio_nk = 0.0
-                                    reason2 = 'outside'
-                            excl.append(f"{fmt_qr(nk)}:{reason},{reason2}")
-                    if len(excl) > 0:
-                        print(f"EXCL: frag={q},{r},{i} -> neighbors not in candidates: {' '.join(excl)}")
-                best_idx = int(np.argmin(dists))
-                best_key = candidates[best_idx]
-                neighbor_el = elements[best_key]
-                old_area = neighbor_el['area']
-                old_com = neighbor_el['com']
-                new_area = old_area + piece_area
-                new_com = (old_com * old_area + piece_com * piece_area) / new_area
-                neighbor_el['area'] = new_area
-                neighbor_el['com'] = new_com
-                neighbor_el['geoms'].append(clipped_piece)
-                neighbor_el['merged_pieces'] = neighbor_el.get('merged_pieces', 0) + 1
-                if 'merged_piece_info' not in neighbor_el:
-                    neighbor_el['merged_piece_info'] = []
-                frag_id = f"{q},{r},{i}"
-                neighbor_el['merged_piece_info'].append({'id': frag_id, 'com': piece_com})
-                print(f"MERG: frag={frag_id} A_tri={tri_area:.6f} A_clip={piece_area:.6f} -> base{fmt_qr(best_key)} A:{old_area:.6f}->{new_area:.6f} COM:{old_com}->{new_com}")
+    
 
 # --- Visualization ---
 def _fnv1a32_mix(nums):
@@ -556,15 +356,15 @@ def plot_rasterization_np(polygon_verts, elements, hex_size, draw_edges=True, pl
     added_base_merged = False
     added_boundary = False
     for idx, (key, element) in enumerate(elements.items()):
-        lbl = element.get('id', str(key))
+        lbl = getattr(element, 'id', str(key))
         color = _id_to_color(lbl, cmap)
         ec = 'k' if draw_edges else 'none'
         lw = 0.5 if draw_edges else 0.0
-        for geom_verts in element['geoms']:
+        for geom_verts in element.geoms:
             ax.add_patch(MplPolygon(geom_verts, facecolor=color, alpha=0.6, edgecolor=ec, linewidth=lw))
-        com = element['com']
-        if element.get('is_base', False):
-            com0 = element.get('com_orig', com)
+        com = element.com
+        if element.is_base:
+            com0 = element.com_orig if (element.com_orig is not None) else com
             # original COM (blue x), updated COM (red o)
             ax.plot(com0[0], com0[1], 'bx', markersize=6, zorder=6, label=('Base COM (orig)' if not added_base_orig else None))
             added_base_orig = True
@@ -572,8 +372,8 @@ def plot_rasterization_np(polygon_verts, elements, hex_size, draw_edges=True, pl
             added_base_merged = True
             if plot_com_shift and (np.linalg.norm(com - com0) > 1e-12):
                 ax.plot([com0[0], com[0]], [com0[1], com[1]], color='r', linestyle='--', linewidth=1.0, alpha=0.9)
-            if plot_merge_lines and element.get('merged_piece_info'):
-                for info in element['merged_piece_info']:
+            if plot_merge_lines and element.merged_piece_info:
+                for info in element.merged_piece_info:
                     pc = info['com']
                     ax.plot([com[0], pc[0]], [com[1], pc[1]], color='gray', linestyle='-', linewidth=0.7, alpha=0.7)
                     # mark merged fragment COMs and optionally label
@@ -582,21 +382,21 @@ def plot_rasterization_np(polygon_verts, elements, hex_size, draw_edges=True, pl
                     if plot_frag_labels and ('id' in info):
                         ax.text(pc[0], pc[1], f"F {info['id']}", color='black', fontsize=7, ha='left', va='bottom')
             if plot_base_labels:
-                lbl = element.get('id', str(key))
+                lbl = getattr(element, 'id', str(key))
                 ax.text(com[0], com[1], f"B {lbl}", color='black', fontsize=8, ha='center', va='center', zorder=100)
         else:
             ax.plot(com[0], com[1], 'go', markersize=4, zorder=6, label=('Boundary element COM' if not added_boundary else None))
             added_boundary = True
-            if plot_frag_labels and 'id' in element:
-                ax.text(com[0], com[1], f"F {element['id']}", color='black', fontsize=8, ha='center', va='center', zorder=100)
+            if plot_frag_labels:
+                ax.text(com[0], com[1], f"F {getattr(element, 'id', str(key))}", color='black', fontsize=8, ha='center', va='center', zorder=100)
             if plot_merge_lines:
                 # Draw line to nearest base element for debugging relation
-                base_keys = [k for k, v in elements.items() if isinstance(k, tuple) and v.get('is_base', False)]
+                base_keys = [k for k, v in elements.items() if isinstance(k, tuple) and v.is_base]
                 if len(base_keys) > 0:
-                    base_coms = np.array([elements[k]['com'] for k in base_keys])
+                    base_coms = np.array([elements[k].com for k in base_keys])
                     dists = np.linalg.norm(base_coms - com, axis=1)
                     best_key = base_keys[int(np.argmin(dists))]
-                    bc = elements[best_key]['com']
+                    bc = elements[best_key].com
                     ax.plot([bc[0], com[0]], [bc[1], com[1]], color='gray', linestyle='--', linewidth=0.7, alpha=0.7)
 
     min_coords, max_coords = np.min(polygon_verts, axis=0) - hex_size, np.max(polygon_verts, axis=0) + hex_size
