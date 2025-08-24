@@ -1,7 +1,7 @@
 # Workflow: Extract Documentation (Language‑agnostic)
 
 ## Purpose
-Generate a concise, didactic, human‑readable document from source files (`.py`, `.h/.cpp`, `.cl`, …). Cover scientific background, summarize API (one‑liners per function), and provide a short tutorial (CLI/GUI/library usage).
+Generate a concise, didactic, human‑readable document from source files (`.py`, `.h/.cpp`, `.cl`, …). Cover scientific background, summarize API (one‑liners per function), and provide a short tutorial (CLI/GUI/library usage). Save the results in Markdown format (.md) with appropriate name.
 
 ## Inheritance
 - Inherits `doc/CodingRules/global_rules.md`

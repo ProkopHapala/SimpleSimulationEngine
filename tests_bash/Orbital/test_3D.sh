@@ -2,6 +2,7 @@
 
 # ====== Paths
 
+args=""
 #name=test_AABBTree              # axis-aligned bounding boxes using AABBTree3D.h and kBoxes.h
 #name=test_BlockBuilder          # using 3D-hashing box-building system as base for panel-housing game
 #name=test_Camera                # 1st-person camera and crosshair as a base for shooting or action air/space combat simulator
@@ -9,7 +10,7 @@
 #name=test_CompressiveParticles  # high velocity impact of compressible fluid on wedge boundary using CompressiveParticles.h
 #name=test_EditorGizmo           # using EditorGizmo.h to manipulate selected points in space 
 #name=test_Elasticity            # legacy linearized elasticity solver using Truss.h and  SoftBody.h (NOTE: prefer TrussDynamics_d.h instead)
-name=test_Electromagnetic       # [m] to run simulation of thin hot plasma with ions moving in magnetic bottle (feeling agregate electric and magnetic fields) using PotentialFlow.h and poisson solver using Fourier.h 
+#name=test_Electromagnetic       # [m] to run simulation of thin hot plasma with ions moving in magnetic bottle (feeling agregate electric and magnetic fields) using PotentialFlow.h and poisson solver using Fourier.h 
 #name=test_GUI                   # using GUI.h ( 2D/3D text, Table, GUITextInput  Plot2D, DropDownList, ScisorBox ) 
 #name=test_Mesh                  # various operations on mesh using Mesh.h, e.g. convex polygon by OMesh::fromPlanes(), findEdges(), colapseEdge()
 #name=test_MousePicking          # mouse picking of 3D object using raytrace.h raySphere(), NOTE: very similar to test_Camera, should merge (?)
@@ -26,7 +27,8 @@ name=test_Electromagnetic       # [m] to run simulation of thin hot plasma with 
 #name=test_Scatterer             # scattering of particles on thin surfaces using Scatterer2.h to calculate flux transport through a network of channels connecting scattering elements
 #name=test_SceneGraph            # showcase SceneGraph.h especially  Scene::Group
 #name=test_SphereGaussSeidel     # showcase SphereGaussSeidel.h to quickly pack boxes close to each other (respecting their bounding boxes)
-#name=test_SphereSampling        # demonstrate generation of heightmap on planet or asteroided using SphereSampling.h Noise.h and DrawSphereMap.h
+name=test_SphereSampling         # demonstrate generation of heightmap on planet or asteroided using SphereSampling.h Noise.h and DrawSphereMap.h
+args="-testRand"
 #name=test_SphereTree            # 3D Diffusion-limited aggregation (DLA) using CubicRuler.h and std::unordered_multimap<int_fast64_t,int>  grid;
 #name=test_Stick                 # dynamics of straight sticks hitting a sphere using MMFF.h
 #name=test_TrussBuilder          # Create Truss by keyboard input [KP_1-7] using TrussBuilder.h and export it to SoftBody.h by and run simulation [SPACE], [k,l] to save/load from file
@@ -63,7 +65,8 @@ export LD_PRELOAD
 
 # ====== RUN
 
-./$name.x
+echo "test_3D.sh args: " $args
+./$name.x $args
 
 
 

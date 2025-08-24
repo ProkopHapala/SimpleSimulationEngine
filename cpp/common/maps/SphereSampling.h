@@ -8,7 +8,14 @@
 
 namespace SphereSampling{
 
-static const double oct_edge_planes[] = {
+// ============== Octahedral Mapping
+
+
+
+
+// ============== Icosahedral Mapping
+
+static const double icosa_edge_planes[] = {
 // Equatorial edges [0..10]
  0.2628655560595669, 0.5257311121191337,-0.8090169943749476,
 -0.6881909602355869, 0.5257311121191336, 0.5000000000000000,
@@ -35,7 +42,7 @@ static const double oct_edge_planes[] = {
 
 };
 
-static const double oct_polar_verts[] = {
+static const double icosa_polar_verts[] = {
  // upper
 -0.8944271909999159,0.4472135954999579,0.0,
  -0.2763932022500211,0.4472135954999579,-0.8506508083520399,
@@ -54,7 +61,7 @@ static const double oct_polar_verts[] = {
 };
 
 
-static const int oct_fac2verts[] = {
+static const int icosa_fac2verts[] = {
 0,1,6,10,
 1,2,7,10,
 2,3,8,10,
@@ -67,7 +74,7 @@ static const int oct_fac2verts[] = {
 9,5,4,11,
 };
 
-static const int oct_fac2neigh[] = {
+static const int icosa_fac2neigh[] = {
 0,1,6,10,
 1,2,7,10,
 2,3,8,10,
@@ -98,11 +105,11 @@ void getIcosaFace( Vec3d p, uint8_t& iface ){
     double phi10 = (atan2( p.z, p.x )+ M_PI) * 1.5915494309;  //  1.5915494309 = 10/(2*pi)
     int iphi     = (int)phi10;
     int ioff,i;
-    Vec3d& d1=((Vec3d*)oct_edge_planes)[iphi];
+    Vec3d& d1=((Vec3d*)icosa_edge_planes)[iphi];
     if( d1.dot(p)>0 ){ ioff=0; i=iphi/2; }else{ ioff=5; i=(iphi+1)/2;  if(i>=5) i=0; };
     int i2 = i+1; if(i2>=5) i2=0;
     iface=i+ioff;
-    Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
+    Vec3d& d2=((Vec3d*)icosa_edge_planes)[iface+10];
     iface<<=1;
     if( d2.dot(p) > 0 ){ // uper half of rect
         iface++;
@@ -122,13 +129,13 @@ void sampleIcosa2quads( Vec3d p, uint8_t& iface, double& a, double& b ){
     const double hbound = 0.4472135954999579;
     //Vec3d *a,*b,*c;
     int ioff,i;
-    Vec3d& d1=((Vec3d*)oct_edge_planes)[iphi];
+    Vec3d& d1=((Vec3d*)icosa_edge_planes)[iphi];
     if( d1.dot(p) > 0 ){ ioff=0; i=iphi/2; }else{ ioff=5; i=(iphi+1)/2;  if(i>=5) i=0; };
     int i2 = i+1; if(i2>=5) i2=0;
     iface=i+ioff;
-    Vec3d& va=((Vec3d*)oct_polar_verts)[iface  ];
-    Vec3d& vb=((Vec3d*)oct_polar_verts)[i2+ioff];
-    Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
+    Vec3d& va=((Vec3d*)icosa_polar_verts)[iface  ];
+    Vec3d& vb=((Vec3d*)icosa_polar_verts)[i2+ioff];
+    Vec3d& d2=((Vec3d*)icosa_edge_planes)[iface+10];
     iface<<=1;
     int ic;
     bool bTop = d2.dot(p) > 0;
@@ -138,7 +145,7 @@ void sampleIcosa2quads( Vec3d p, uint8_t& iface, double& a, double& b ){
     }else{
         if(ioff){ic=11;}else{ ic=i+5+1; if(ic>=10) ic=5; };
     }
-    Vec3d& vc = ((Vec3d*)oct_polar_verts)[ic];
+    Vec3d& vc = ((Vec3d*)icosa_polar_verts)[ic];
     Vec3d cs; cs.fromLinearSolution( va, vb, vc,  p );
     cs.mul(1/(cs.a+cs.b+cs.c));
     if(bTop){
@@ -177,8 +184,8 @@ void diTri2cartes( T fa, T fb, const Vec3T<T>& a, const Vec3T<T>& b, const Vec3T
 void icosa2cartes( Vec2i ns, int iface, float fa, float fb, Vec3d& p ){
     //Vec2i n = {nsamp,nsamp};
     int nab = ns.a*ns.b;
-    Quat4i* f2v  = (Quat4i*)oct_fac2verts;
-    Vec3d*  vs   = (Vec3d*)oct_polar_verts;
+    Quat4i* f2v  = (Quat4i*)icosa_fac2verts;
+    Vec3d*  vs   = (Vec3d*)icosa_polar_verts;
     Quat4i& iv   = f2v[iface];
     diTri2cartes<double>( fa, fb, vs[iv.z], vs[iv.w], vs[iv.x], vs[iv.y], p );
 };

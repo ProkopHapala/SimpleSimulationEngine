@@ -306,18 +306,18 @@ void drawDiTri_edge( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, co
 
 void drawIcosaMap( Vec2i n, float* heights, float hscale ){
     int nab = n.a*n.b;
-    Quat4i* f2v = (Quat4i*)oct_fac2verts;
-    Quat4i* f2n = (Quat4i*)oct_fac2neigh;
-    Vec3d* vs = (Vec3d*)oct_polar_verts;
+    Quat4i* f2v = (Quat4i*)icosa_fac2verts;
+    Quat4i* f2n = (Quat4i*)icosa_fac2neigh;
+    Vec3d* vs = (Vec3d*)icosa_polar_verts;
     bNormalize=true;
     bRelief   =true;
-    for(int i=0; i<5; i++){
-        int i2 = i+1; if(i2>=5) i2=0;
-        Quat4i& iv  = f2v[i];
-        Quat4i& iv2 = f2v[i+5];
-        float* hs   = heights+(nab*i);
-        float* hs2  = heights+(nab*i2);
-        drawDiTri( n, (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y],      hs,       hscale  );
+    for(int i=0; i<5; i++){             // 1st face
+        int i2 = i+1; if(i2>=5) i2=0;   // 2nd face
+        Quat4i& iv  = f2v[i  ];         // vertices of 1st face
+        Quat4i& iv2 = f2v[i+5];         // vertices of 2nd face
+        float* hs   = heights+(nab*i ); // offset of 1st face
+        float* hs2  = heights+(nab*i2); // offset of 2nd face
+        drawDiTri( n, (Vec3f)vs[iv.z],  (Vec3f)vs[iv.w],  (Vec3f)vs[iv.x],  (Vec3f)vs[iv.y],   hs,       hscale  );
         drawDiTri( n, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], (Vec3f)vs[iv2.y],  hs+nab*5, hscale  );
 
         drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y],  (Vec3f)vs[iv.w],  (Vec3f)vs[iv.x],  hs,       hs2,       {n.a,(n.b-1)},  {-1,n.b-1},          0.0           , hscale );
@@ -331,9 +331,9 @@ void drawIcosaMap( Vec2i n, float* heights, float hscale ){
 
 void drawIcosaMapWire( Vec2i n, float* heights, float hscale ){
     int nab = n.a*n.b;
-    Quat4i* f2v = (Quat4i*)oct_fac2verts;
-    Quat4i* f2n = (Quat4i*)oct_fac2neigh;
-    Vec3d* vs = (Vec3d*)oct_polar_verts;
+    Quat4i* f2v = (Quat4i*)icosa_fac2verts;
+    Quat4i* f2n = (Quat4i*)icosa_fac2neigh;
+    Vec3d* vs = (Vec3d*)icosa_polar_verts;
     bNormalize=true;
     bRelief   =true;
     for(int i=0; i<5; i++){
