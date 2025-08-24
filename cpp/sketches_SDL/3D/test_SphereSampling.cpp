@@ -56,8 +56,74 @@ char str[2048];
 //int  fontTex;
 
 // --- CLI mode selection
-enum ModeSphereSampling { MODE_FULL=0, MODE_TINYRAND=1 };
+enum ModeSphereSampling { MODE_FULL=0, MODE_TINYRAND=1, MODE_OCTMAP=2 };
 static ModeSphereSampling g_mode = MODE_FULL; // default keeps existing behavior
+
+// --- Octahedral mapping helper (UV in [-1,1]^2), mirroring python/Radiosity/OctahedralSphereMaping.py
+static inline Vec2d octa_map_uv(const Vec3d& pin){
+    Vec3d p = pin; p.normalize();
+    double ax = fabs(p.x), ay = fabs(p.y), az = fabs(p.z);
+    double denom = ax + ay + az; if(denom<=0){ return (Vec2d){0.0,0.0}; }
+    double u = p.x/denom;
+    double v = p.y/denom;
+    if(p.z < 0){
+        double uu = (1.0 - fabs(v)) * ( (u>=0)? 1.0 : -1.0 );
+        double vv = (1.0 - fabs(u)) * ( (v>=0)? 1.0 : -1.0 );
+        u = uu; v = vv;
+    }
+    return (Vec2d){u,v};
+}
+
+// Inverse of octa_map_uv: map UV in [-1,1]^2 back to a unit direction on the sphere.
+static inline Vec3d octa_decode_dir(const Vec2d& uv){
+    Vec3d p = (Vec3d){ uv.x, uv.y, 1.0 - fabs(uv.x) - fabs(uv.y) };
+    if(p.z < 0.0){
+        double ox = uv.x, oy = uv.y;
+        p.x = (ox >= 0.0) ? (1.0 - fabs(oy)) : -(1.0 - fabs(oy));
+        p.y = (oy >= 0.0) ? (1.0 - fabs(ox)) : -(1.0 - fabs(ox));
+        // p.z remains negative here; normalization makes it unit
+    }
+    p.normalize();
+    return p;
+}
+
+// Pick the UV grid cell and its diagonal orientation based on quadrant rule.
+// Returns cell indices (iu,iv), local coords (u,v) in [0,1], whether diagonal is NE-SW,
+// and whether point is on the "upper" side of the diagonal.
+static inline void octa_pick_cell_tri(const Vec2d& uvp, int ns, int& iu, int& iv, double& u, double& v, bool& diagNESW, bool& upper,
+                                      Vec2d& uv00, Vec2d& uv10, Vec2d& uv01, Vec2d& uv11){
+    const double d = 2.0 / ns;
+    double su = (uvp.x + 1.0) / d;
+    double sv = (uvp.y + 1.0) / d;
+    int i = (int)floor(su);
+    int j = (int)floor(sv);
+    if(i < 0) i = 0; if(i > ns-1) i = ns-1;
+    if(j < 0) j = 0; if(j > ns-1) j = ns-1;
+    // Clamp to last valid cell
+    if(i == ns-1) i = ns-2;
+    if(j == ns-1) j = ns-2;
+    iu = i; iv = j;
+
+    double u0 = -1.0 + i*d;
+    double v0 = -1.0 + j*d;
+    double u1 = u0 + d;
+    double v1 = v0 + d;
+    u = (uvp.x - u0) / d; // in [0,1)
+    v = (uvp.y - v0) / d; // in [0,1)
+
+    uv00 = (Vec2d){u0,v0}; uv10 = (Vec2d){u1,v0}; uv01 = (Vec2d){u0,v1}; uv11 = (Vec2d){u1,v1};
+
+    double uc = 0.5*(u0+u1);
+    double vc = 0.5*(v0+v1);
+    // Quadrant-based diagonal: flip from previous rule
+    // Old: NE/SW when signs equal; Now invert to match reference
+    diagNESW = !((uc*vc) > 0.0);
+    if(diagNESW){
+        upper = (v >= u);           // above the t.y=t.x diagonal
+    }else{
+        upper = (v >= 1.0 - u);     // above the t.y=1-t.x diagonal
+    }
+}
 
 // Evaluate height at an arbitrary unit vector by sampling the icosahedral per-face grid.
 // Grid layout per face is rectangular: n.a x n.b, stored row-major with index ia*n.b + ib.
@@ -196,6 +262,7 @@ class TestAppSphereSampling : public AppSDL2OGL_3D {
 	// ---- function declarations
 
 	virtual void draw   ();
+    virtual void drawHUD();
 
 	TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -270,7 +337,7 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
                 }
             }
         }
-    }else{
+    }else if(g_mode == MODE_TINYRAND){
         nsamp = 3;
         npix  = 10*nsamp*nsamp;
         pix      = new uint32_t[npix];
@@ -308,6 +375,39 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
             glDisable( GL_LIGHTING ); glColor3f(1.0,1.0,1.0); Draw3D::drawLines( Solids::Icosahedron_nedges, (int*)Solids::Icosahedron_edges, Solids::Icosahedron_verts );
             glRotatef( -31.7174744, 0,0,1 );
         glEndList();
+    }else if(g_mode == MODE_OCTMAP){
+        // Octahedral mapping visualization
+        // Use 3 subdivisions per edge -> 7x7 grid points (per user's request)
+        nsamp = 7;
+        npix  = nsamp*nsamp; // UV debug buffer only; not per-face in this mode
+        pix      = new uint32_t[npix];
+        heights  = nullptr;
+        samplePs = nullptr;
+        for(int i=0;i<npix;i++) pix[i]=0x00000000;
+
+        // Base overlay: great-circle grid for octahedron and edges
+        ogl_base=glGenLists(1);
+        glNewList( ogl_base, GL_COMPILE );
+            glDisable ( GL_LIGHTING );
+            glColor3f(1.0f,1.0f,1.0f);
+            Draw3D::drawSphereOctLines( nsamp, 1.0, (Vec3d){0.0,0.0,0.0} );
+            glColor3f(1.0f,1.0f,1.0f);
+            Draw3D::drawLines( Solids::Octahedron_nedges, (int*)Solids::Octahedron_edges, Solids::Octahedron_verts );
+        glEndList();
+
+        // Filled mesh for reference
+        ogl_asteroide=glGenLists(1);
+        glNewList( ogl_asteroide, GL_COMPILE );
+            glDisable( GL_LIGHTING );
+            glShadeModel( GL_SMOOTH );
+            glColor3f(0.8f,0.8f,0.8f);
+            Draw3D::drawSphere_oct( nsamp, 1.0, (Vec3d){0.0,0.0,0.0}, false );
+        glEndList();
+
+        // Points list is empty in this mode
+        ogl_points=glGenLists(1);
+        glNewList( ogl_points, GL_COMPILE );
+        glEndList();
     }
 
 
@@ -328,10 +428,10 @@ void TestAppSphereSampling::draw   (){
 
 	glColor3f( 0.0f,1.0f,1.0f );
 
-	curPos = (Vec3d)(cam.rot.c*-3.0);
+	    curPos = (Vec3d)(cam.rot.c*-3.0);
 	//curPos = (Vec3d){0.2,0.0,1.0};
 
-	Draw3D::drawPointCross( curPos, 0.1 );
+	    Draw3D::drawPointCross( curPos, 0.1 );
 
 
 
@@ -340,32 +440,61 @@ void TestAppSphereSampling::draw   (){
 
 	//printf( "iface %i | (%f,%f,%f) \n", iface, p.x, p.y, p.z );
 
-	Vec3i ivs = Solids::Octahedron_tris[iface];
-	Vec3d c;
-	sampleTri( curPos, ivs, Solids::Octahedron_verts, c );
+	    Vec3i ivs = Solids::Octahedron_tris[iface];
+    Vec3d c;
+    sampleTri( curPos, ivs, Solids::Octahedron_verts, c );
 
     if ( SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT) ) {
-        //SDL_Log("Mouse Button 1 (left) is pressed.");
-        uint32_t * pixF = pix + nsamp*nsamp*iface;
-        //float step = 1.0/nsamp;
+        // SDL_Log("Mouse Button 1 (left) is pressed.");
+        uint32_t * pixF = (g_mode==MODE_OCTMAP) ? pix : (pix + nsamp*nsamp*iface);
         int ia = (int)(c.a*nsamp);
         int ib = (int)(c.b*nsamp);
         int i = ia*nsamp + ib;
-        pixF[i] = 0xffffffff;
+        if(i>=0 && i<npix) pixF[i] = 0xffffffff;
     }
 
-    double fsc = 1.1;
+    double fsc = 1.05;
 
     // debugPlot = true;
     // sampleIcosa2quads( curPos, iface, a, b );
     // sprintf( str, "(%.3f,%.3f)", a,b );   Draw3D::drawText(str,curPos, fontTex, fontScale, 0);
     // debugPlot = false;
-	// Vec3d p_;
-	// p_.set_lincomb( c.a,c.b,c.c,  Solids::Octahedron_verts[ivs.a], Solids::Octahedron_verts[ivs.b], Solids::Octahedron_verts[ivs.c] );
-	// p_.mul(fsc);
-	// Draw3D::drawLine( Solids::Octahedron_verts[ivs.a]*fsc, p_ );
-	// Draw3D::drawLine( Solids::Octahedron_verts[ivs.b]*fsc, p_ );
-	// Draw3D::drawLine( Solids::Octahedron_verts[ivs.c]*fsc, p_ );
+    // Highlight current triangle and interpolation point in 3D
+    // Existing face triangle highlight
+    glColor3f( 1.0f,0.2f,0.2f );
+    Draw3D::drawTriangle( Solids::Octahedron_verts[ivs.a]*fsc, Solids::Octahedron_verts[ivs.b]*fsc, Solids::Octahedron_verts[ivs.c]*fsc );
+    Vec3d p_;
+    p_.set_lincomb( c.a,c.b,c.c,  Solids::Octahedron_verts[ivs.a], Solids::Octahedron_verts[ivs.b], Solids::Octahedron_verts[ivs.c] );
+    p_.mul(fsc);
+    glColor3f( 1.0f,1.0f,0.0f );
+    Draw3D::drawPointCross( p_, 0.08 );
+
+    // Octahedral UV-grid interpolation triangle (correct quad split and selection)
+    {
+        Vec2d uvp = octa_map_uv( curPos );
+        int iu, iv; double tu, tv; bool diagNESW, upper;
+        Vec2d uv00,uv10,uv01,uv11;
+        octa_pick_cell_tri( uvp, nsamp, iu, iv, tu, tv, diagNESW, upper, uv00,uv10,uv01,uv11 );
+
+        Vec2d t0,t1,t2;
+        if(diagNESW){
+            // diagonal from uv00 to uv11
+            if(upper){ t0=uv00; t1=uv01; t2=uv11; }
+            else     { t0=uv00; t1=uv10; t2=uv11; }
+        }else{
+            // diagonal from uv10 to uv01
+            if(upper){ t0=uv10; t1=uv01; t2=uv11; }
+            else     { t0=uv00; t1=uv10; t2=uv01; }
+        }
+
+        Vec3d A = octa_decode_dir( t0 )*fsc;
+        Vec3d B = octa_decode_dir( t1 )*fsc;
+        Vec3d C = octa_decode_dir( t2 )*fsc;
+        glColor3f( 0.2f,0.9f,0.2f );
+        Draw3D::drawTriangle( A,B,C );
+        glColor3f( 0.9f,0.9f,0.2f );
+        Draw3D::drawPointCross( octa_decode_dir(uvp)*fsc, 0.06 );
+    }
 
 
     // ---- view icosahedron polar vertices
@@ -424,6 +553,120 @@ void TestAppSphereSampling::draw   (){
 
 };
 
+void TestAppSphereSampling::drawHUD(){
+    if(g_mode != MODE_OCTMAP) return;
+    glDisable(GL_LIGHTING);
+    // Current view direction mapped to UV
+    Vec3d pdir = (Vec3d)(cam.rot.c*-1.0); pdir.normalize();
+    Vec2d uvp = octa_map_uv( pdir );
+
+    // Pick cell and triangle in UV-grid according to quadrant-based diagonal
+    int iu, iv; double tu, tv; bool diagNESW, upper;
+    Vec2d uv00,uv10,uv01,uv11;
+    octa_pick_cell_tri( uvp, nsamp, iu, iv, tu, tv, diagNESW, upper, uv00,uv10,uv01,uv11 );
+
+    Vec2d uva,uvb,uvc;
+    if(diagNESW){
+        if(upper){ uva=uv00; uvb=uv01; uvc=uv11; }
+        else     { uva=uv00; uvb=uv10; uvc=uv11; }
+    }else{
+        if(upper){ uva=uv10; uvb=uv01; uvc=uv11; }
+        else     { uva=uv00; uvb=uv10; uvc=uv01; }
+    }
+
+    // Panel placement (pixels)
+    float s = 180.0f;            // half-size of UV square in pixels
+    float u0 = 30.0f + s;        // center X
+    float v0 = 30.0f + s;        // center Y
+
+    auto toXY = [&](const Vec2d& uv){ return Vec2d{ u0 + (float)(uv.x)*s, v0 + (float)(uv.y)*s }; };
+    Vec2d A = toXY(uva), B = toXY(uvb), C = toXY(uvc), P = toXY(uvp);
+
+    // Draw UV frame
+    glColor3f(0.2f,0.2f,0.2f);
+    glBegin(GL_LINE_LOOP);
+        glVertex3f(u0-s, v0-s, 0);
+        glVertex3f(u0+s, v0-s, 0);
+        glVertex3f(u0+s, v0+s, 0);
+        glVertex3f(u0-s, v0+s, 0);
+    glEnd();
+
+    // Draw mapped octahedron edges in UV space
+    glColor3f(0.6f,0.6f,0.6f);
+    glBegin(GL_LINES);
+    for(int e=0; e<Solids::Octahedron_nedges; ++e){
+        const Vec2i& ed = Solids::Octahedron_edges[e];
+        Vec2d uva0 = octa_map_uv( Solids::Octahedron_verts[ed.a] );
+        Vec2d uva1 = octa_map_uv( Solids::Octahedron_verts[ed.b] );
+        Vec2d X0 = toXY(uva0);
+        Vec2d X1 = toXY(uva1);
+        glVertex3f((float)X0.x,(float)X0.y,0);
+        glVertex3f((float)X1.x,(float)X1.y,0);
+    }
+    glEnd();
+
+    // Draw octahedron vertices and labels in UV
+    glPointSize(5.0f);
+    glColor3f(0.9f,0.2f,0.2f);
+    glBegin(GL_POINTS);
+    for(int i=0; i<Solids::Octahedron_nverts; ++i){
+        Vec2d uvi = octa_map_uv( Solids::Octahedron_verts[i] );
+        Vec2d Xi  = toXY(uvi);
+        glVertex3f((float)Xi.x,(float)Xi.y,0);
+    }
+    glEnd();
+    for(int i=0; i<Solids::Octahedron_nverts; ++i){
+        Vec2d uvi = octa_map_uv( Solids::Octahedron_verts[i] );
+        Vec2d Xi  = toXY(uvi);
+        sprintf(str, "%d", i);
+        Draw3D::drawText( str, (Vec3d){(double)Xi.x+6.0,(double)Xi.y+6.0,0.0}, fontTex, fontScale, 0 );
+    }
+
+    // Draw grid nodes and (row,col) labels
+    double step = 2.0/(nsamp-1);
+    glPointSize(3.0f);
+    glColor3f(0.2f,0.6f,0.9f);
+    glBegin(GL_POINTS);
+    for(int j=0;j<nsamp;j++){
+        for(int i=0;i<nsamp;i++){
+            Vec2d uvij = (Vec2d){ -1.0 + i*step, -1.0 + j*step };
+            Vec2d Xij  = toXY(uvij);
+            glVertex3f((float)Xij.x,(float)Xij.y,0);
+        }
+    }
+    glEnd();
+    for(int j=0;j<nsamp;j++){
+        for(int i=0;i<nsamp;i++){
+            Vec2d uvij = (Vec2d){ -1.0 + i*step, -1.0 + j*step };
+            Vec2d Xij  = toXY(uvij);
+            sprintf(str, "(%d,%d)", j,i);
+            Draw3D::drawText( str, (Vec3d){(double)Xij.x+3.0,(double)Xij.y+3.0,0.0}, fontTex, fontScale, 0 );
+        }
+    }
+
+    // Draw selected interpolation triangle in UV
+    glColor3f(0.9f,0.3f,0.3f);
+    glBegin(GL_LINE_LOOP);
+        glVertex3f((float)A.x,(float)A.y,0);
+        glVertex3f((float)B.x,(float)B.y,0);
+        glVertex3f((float)C.x,(float)C.y,0);
+    glEnd();
+
+    // Draw point in UV
+    glPointSize(6.0f);
+    glBegin(GL_POINTS);
+        glColor3f(1.0f,1.0f,0.0f);
+        glVertex3f((float)P.x,(float)P.y,0);
+    glEnd();
+
+    // Small grid (optional): show uv axes
+    glColor3f(0.5f,0.5f,0.5f);
+    glBegin(GL_LINES);
+        glVertex3f(u0-s, v0, 0); glVertex3f(u0+s, v0, 0);
+        glVertex3f(u0, v0-s, 0); glVertex3f(u0, v0+s, 0);
+    glEnd();
+}
+
 
 TestAppSphereSampling * testApp;
 
@@ -435,6 +678,7 @@ int main(int argc, char *argv[]){
     LambdaDict funcs;
     funcs["-full"]     = {0, [&](const char**){ g_mode = MODE_FULL;     printf("test_SphereSampling.cpp: arg: -full\n"); }};
     funcs["-testRand"] = {0, [&](const char**){ g_mode = MODE_TINYRAND; printf("test_SphereSampling.cpp: arg: -testRand \n"); }};
+    funcs["-octmap"]   = {0, [&](const char**){ g_mode = MODE_OCTMAP;   printf("test_SphereSampling.cpp: arg: -octmap\n"); }};
     process_args(argc, argv, funcs, false);
 
     SDL_Init(SDL_INIT_VIDEO);

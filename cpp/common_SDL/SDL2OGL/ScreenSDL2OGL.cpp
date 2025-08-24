@@ -163,8 +163,10 @@ void ScreenSDL2OGL::eventHandling( const SDL_Event& event ){
                 case SDL_WINDOWEVENT_CLOSE:
                     //SDL_Log("Window %d closed", event->window.windowID);
                     printf( "window[%i] SDL_WINDOWEVENT_CLOSE \n", id );
-                    //printf( "window[%i] delete this done \n", id );
-                    delete this;
+                    // Avoid deleting `this` in the middle of input handling which can
+                    // cause use-after-free. Request application quit instead; the
+                    // AppSDL2OGL::eventHandling will catch SDL_QUIT and call quit().
+                    SDL_Event ev; ev.type = SDL_QUIT; SDL_PushEvent(&ev);
                     return;
                     break;
             } break;
