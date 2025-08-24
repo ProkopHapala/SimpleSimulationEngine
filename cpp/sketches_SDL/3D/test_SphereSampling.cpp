@@ -92,16 +92,15 @@ static inline Vec3d octa_decode_dir(const Vec2d& uv){
 // and whether point is on the "upper" side of the diagonal.
 static inline void octa_pick_cell_tri(const Vec2d& uvp, int ns, int& iu, int& iv, double& u, double& v, bool& diagNESW, bool& upper,
                                       Vec2d& uv00, Vec2d& uv10, Vec2d& uv01, Vec2d& uv11){
-    const double d = 2.0 / ns;
+    // ns = number of grid points per axis; there are (ns-1) cells
+    const int nquads = ns - 1;
+    const double d = 2.0 / nquads;
     double su = (uvp.x + 1.0) / d;
     double sv = (uvp.y + 1.0) / d;
     int i = (int)floor(su);
     int j = (int)floor(sv);
-    if(i < 0) i = 0; if(i > ns-1) i = ns-1;
-    if(j < 0) j = 0; if(j > ns-1) j = ns-1;
-    // Clamp to last valid cell
-    if(i == ns-1) i = ns-2;
-    if(j == ns-1) j = ns-2;
+    if(i < 0) i = 0; if(i > nquads-1) i = nquads-1;
+    if(j < 0) j = 0; if(j > nquads-1) j = nquads-1;
     iu = i; iv = j;
 
     double u0 = -1.0 + i*d;
@@ -591,19 +590,67 @@ void TestAppSphereSampling::drawHUD(){
         glVertex3f(u0-s, v0+s, 0);
     glEnd();
 
-    // Draw mapped octahedron edges in UV space
-    glColor3f(0.6f,0.6f,0.6f);
+    // Draw mapped octahedron edges in UV space (special-case south pole duplication)
+    // Find south pole vertex index (min z)
+    int south_idx = 0; double zmin = Solids::Octahedron_verts[0].z;
+    for(int i=1;i<Solids::Octahedron_nverts;i++){ if(Solids::Octahedron_verts[i].z < zmin){ zmin = Solids::Octahedron_verts[i].z; south_idx = i; } }
+    glLineWidth(3.0f);
+    glColor3f(0.2f,1.0f,0.2f);
     glBegin(GL_LINES);
     for(int e=0; e<Solids::Octahedron_nedges; ++e){
         const Vec2i& ed = Solids::Octahedron_edges[e];
-        Vec2d uva0 = octa_map_uv( Solids::Octahedron_verts[ed.a] );
-        Vec2d uva1 = octa_map_uv( Solids::Octahedron_verts[ed.b] );
-        Vec2d X0 = toXY(uva0);
-        Vec2d X1 = toXY(uva1);
-        glVertex3f((float)X0.x,(float)X0.y,0);
-        glVertex3f((float)X1.x,(float)X1.y,0);
+        int a = ed.a, b = ed.b;
+        if(a==south_idx || b==south_idx){
+            int o = (a==south_idx)? b : a;
+            Vec2d uv_o = octa_map_uv( Solids::Octahedron_verts[o] );
+            Vec2d Xo = toXY(uv_o);
+            const double eps = 1e-9;
+            bool axisX = fabs(uv_o.y) < eps; // along u axis: connect to two corners (sign(u), ±1)
+            bool axisY = fabs(uv_o.x) < eps; // along v axis: connect to two corners (±1, sign(v))
+            if(axisX){
+                double sx = (uv_o.x>=0.0)? 1.0 : -1.0;
+                Vec2d Xc1 = toXY((Vec2d){ sx,  1.0});
+                Vec2d Xc2 = toXY((Vec2d){ sx, -1.0});
+                glVertex3f((float)Xo.x,(float)Xo.y,0); glVertex3f((float)Xc1.x,(float)Xc1.y,0);
+                glVertex3f((float)Xo.x,(float)Xo.y,0); glVertex3f((float)Xc2.x,(float)Xc2.y,0);
+            }else if(axisY){
+                double sy = (uv_o.y>=0.0)? 1.0 : -1.0;
+                Vec2d Xc1 = toXY((Vec2d){  1.0, sy});
+                Vec2d Xc2 = toXY((Vec2d){ -1.0, sy});
+                glVertex3f((float)Xo.x,(float)Xo.y,0); glVertex3f((float)Xc1.x,(float)Xc1.y,0);
+                glVertex3f((float)Xo.x,(float)Xo.y,0); glVertex3f((float)Xc2.x,(float)Xc2.y,0);
+            }else{
+                Vec2d uv_c = (Vec2d){ (uv_o.x>=0.0)? 1.0 : -1.0, (uv_o.y>=0.0)? 1.0 : -1.0 };
+                Vec2d Xc = toXY(uv_c);
+                glVertex3f((float)Xo.x,(float)Xo.y,0);
+                glVertex3f((float)Xc.x,(float)Xc.y,0);
+            }
+        }else{
+            Vec2d uva0 = octa_map_uv( Solids::Octahedron_verts[a] );
+            Vec2d uva1 = octa_map_uv( Solids::Octahedron_verts[b] );
+            Vec2d X0 = toXY(uva0);
+            Vec2d X1 = toXY(uva1);
+            glVertex3f((float)X0.x,(float)X0.y,0);
+            glVertex3f((float)X1.x,(float)X1.y,0);
+        }
     }
     glEnd();
+    glLineWidth(1.0f);
+
+    // Draw 4 images of the south pole in corners
+    glPointSize(6.0f);
+    glColor3f(0.9f,0.2f,0.2f);
+    glBegin(GL_POINTS);
+        Vec2d c00 = toXY((Vec2d){-1.0,-1.0}); glVertex3f((float)c00.x,(float)c00.y,0);
+        Vec2d c01 = toXY((Vec2d){-1.0, 1.0}); glVertex3f((float)c01.x,(float)c01.y,0);
+        Vec2d c10 = toXY((Vec2d){ 1.0,-1.0}); glVertex3f((float)c10.x,(float)c10.y,0);
+        Vec2d c11 = toXY((Vec2d){ 1.0, 1.0}); glVertex3f((float)c11.x,(float)c11.y,0);
+    glEnd();
+    sprintf(str, "%d", south_idx);
+    Draw3D::drawText( str, (Vec3d){(double)c00.x+6.0,(double)c00.y+6.0,0.0}, fontTex, fontScale, 0 );
+    Draw3D::drawText( str, (Vec3d){(double)c01.x+6.0,(double)c01.y+6.0,0.0}, fontTex, fontScale, 0 );
+    Draw3D::drawText( str, (Vec3d){(double)c10.x+6.0,(double)c10.y+6.0,0.0}, fontTex, fontScale, 0 );
+    Draw3D::drawText( str, (Vec3d){(double)c11.x+6.0,(double)c11.y+6.0,0.0}, fontTex, fontScale, 0 );
 
     // Draw octahedron vertices and labels in UV
     glPointSize(5.0f);
@@ -643,6 +690,56 @@ void TestAppSphereSampling::drawHUD(){
             Draw3D::drawText( str, (Vec3d){(double)Xij.x+3.0,(double)Xij.y+3.0,0.0}, fontTex, fontScale, 0 );
         }
     }
+
+    // Draw grid axial edges (rows and columns)
+    glColor3f(0.2f,0.4f,1.0f);
+    glBegin(GL_LINES);
+    for(int j=0;j<nsamp;j++){
+        for(int i=0;i<nsamp-1;i++){
+            Vec2d uv0 = (Vec2d){ -1.0 + i*step,     -1.0 + j*step };
+            Vec2d uv1 = (Vec2d){ -1.0 + (i+1)*step, -1.0 + j*step };
+            Vec2d X0  = toXY(uv0);
+            Vec2d X1  = toXY(uv1);
+            glVertex3f((float)X0.x,(float)X0.y,0);
+            glVertex3f((float)X1.x,(float)X1.y,0);
+        }
+    }
+    for(int i=0;i<nsamp;i++){
+        for(int j=0;j<nsamp-1;j++){
+            Vec2d uv0 = (Vec2d){ -1.0 + i*step, -1.0 + j*step     };
+            Vec2d uv1 = (Vec2d){ -1.0 + i*step, -1.0 + (j+1)*step };
+            Vec2d X0  = toXY(uv0);
+            Vec2d X1  = toXY(uv1);
+            glVertex3f((float)X0.x,(float)X0.y,0);
+            glVertex3f((float)X1.x,(float)X1.y,0);
+        }
+    }
+    glEnd();
+
+    // Draw grid diagonal edges per cell using the same quadrant-based rule
+    glColor3f(0.2f,0.7f,1.0f);
+    glBegin(GL_LINES);
+    for(int j=0;j<nsamp-1;j++){
+        for(int i=0;i<nsamp-1;i++){
+            Vec2d uv00c = (Vec2d){ -1.0 + i*step,     -1.0 + j*step     };
+            Vec2d uv10c = (Vec2d){ -1.0 + (i+1)*step, -1.0 + j*step     };
+            Vec2d uv01c = (Vec2d){ -1.0 + i*step,     -1.0 + (j+1)*step };
+            Vec2d uv11c = (Vec2d){ -1.0 + (i+1)*step, -1.0 + (j+1)*step };
+            double uc = 0.5*(uv00c.x+uv11c.x);
+            double vc = 0.5*(uv00c.y+uv11c.y);
+            bool diagNESW = !((uc*vc) > 0.0);
+            if(diagNESW){
+                Vec2d X0 = toXY(uv00c); Vec2d X1 = toXY(uv11c);
+                glVertex3f((float)X0.x,(float)X0.y,0);
+                glVertex3f((float)X1.x,(float)X1.y,0);
+            }else{
+                Vec2d X0 = toXY(uv10c); Vec2d X1 = toXY(uv01c);
+                glVertex3f((float)X0.x,(float)X0.y,0);
+                glVertex3f((float)X1.x,(float)X1.y,0);
+            }
+        }
+    }
+    glEnd();
 
     // Draw selected interpolation triangle in UV
     glColor3f(0.9f,0.3f,0.3f);
