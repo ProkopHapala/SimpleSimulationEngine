@@ -1,4 +1,3 @@
-
 #ifndef  TerrainOGL3_h
 #define  TerrainOGL3_h
 
@@ -200,7 +199,9 @@ class TerrainOGL3Prototype{ public:
 // ===========================
 
 class TerrainOGL3 : public TerrainOGL3Prototype { public:
-
+ 
+    using TerrainOGL3Prototype::draw;
+     
     int nVertDrawn=0;
     int nDrawCalls=0;
 

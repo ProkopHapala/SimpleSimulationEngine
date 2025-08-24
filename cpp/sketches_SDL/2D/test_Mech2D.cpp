@@ -6,6 +6,8 @@
 #include <vector>
 #include <math.h>
 
+#include "globals.h"
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw2D.h"

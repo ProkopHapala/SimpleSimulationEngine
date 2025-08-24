@@ -49,6 +49,9 @@ class LandscapeTestApp : public AppSDL2OGL3, public SceneOGL3 { public:
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
 
+    // Bring base-class overload draw(Camera&) into scope to avoid hiding warnings
+    using SceneOGL3::draw;
+
     TerrainOGL3       terrain1;
     TerrainOGL3_patch terrain2;
 
@@ -62,7 +65,8 @@ class LandscapeTestApp : public AppSDL2OGL3, public SceneOGL3 { public:
 	//virtual void update();
     virtual void eventHandling   ( const SDL_Event& event  );
 
-    virtual void draw( Camera& cam );
+    //virtual void draw( Camera& cam );
+    virtual void draw( );
 
 	LandscapeTestApp(int W, int H);
 
@@ -123,7 +127,8 @@ LandscapeTestApp::LandscapeTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 //    AppSDL2OGL3::update();
 //}
 
-void LandscapeTestApp::draw( Camera& cam ){
+void LandscapeTestApp::draw(  ){
+    Camera cam;
 
     //long time_start = getCPUticks();
 

@@ -6,6 +6,8 @@
 #include <vector>
 #include <math.h>
 
+#include "globals.h"
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "geom2D.h"

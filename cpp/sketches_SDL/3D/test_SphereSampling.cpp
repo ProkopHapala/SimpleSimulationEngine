@@ -255,10 +255,11 @@ static inline float evalIcosaGrid(const Vec3d& p_in, Vec2i n, const float* heigh
 // Uses crater height noise from `Noise::getCraterHeight()` and maps height to RGB similar to `heightColor()` in `DrawSphereMap.h`
 static inline Vec3f octColor_fromDir(const Vec3f& p_in){
     Vec3d p = (Vec3d){ (double)p_in.x, (double)p_in.y, (double)p_in.z };
-    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3; // keep parity with MODE_FULL scaling
-    float c = (float)(h*0.05 + 0.5);
-    if(h>0){ float f = (float)(sqrt(h)*0.25); return (Vec3f){ c, c, c+f }; }
-    else    { float f = (float)(sqrt(-h)*0.25); return (Vec3f){ c+f, c, c }; }
+    // Amplify height and contrast for better visibility on low-subdivision octa sphere
+    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*1.2; // stronger amplitude
+    float c = (float)(h*0.18 + 0.5);   // steeper grayscale slope
+    if(h>0){ float f = (float)(sqrt(h)*0.55); return (Vec3f){ c, c, c+f }; }
+    else    { float f = (float)(sqrt(-h)*0.55); return (Vec3f){ c+f, c, c }; }
 }
 
 class TestAppSphereSampling : public AppSDL2OGL_3D {

@@ -6,6 +6,8 @@
 #include <vector>
 #include <math.h>
 
+#include "globals.h"
+
 #include "testUtils.h"
 
 //#include <SDL2/SDL.h>
