@@ -25,6 +25,99 @@ void drawPoint( const Vec3f& vec ){
 	glEnd();
 };
 
+int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c, Vec3f (*colorFunc)(const Vec3f&, void*), void* user ){
+    int nvert=0;
+    float d = 1.0f/n;
+    Vec3f da,db;
+    da.set_sub( a, c ); da.mul( d );
+    db.set_sub( b, c ); db.mul( d );
+    for( int ia=0; ia<n; ia++ ){
+        Vec3f p0,p; p0.set( c );
+        p0.add_mul( da, ia );
+        p.set_mul( p0, 1.0f/p0.norm() );
+        glBegin   (GL_TRIANGLE_STRIP);
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p,user); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+        for( int ib=0; ib<(n-ia); ib++ ){
+            Vec3f p;
+            p.set_add( p0, da );
+            p.normalize();
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p,user); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+            p.set_add( p0, db );
+            p.normalize();
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p,user); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+            p0.add( db );
+        }
+        glEnd();
+    }
+    return nvert;
+};
+
+int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c, Vec3f (*colorFunc)(const Vec3f&) ){
+    int nvert=0;
+    float d = 1.0f/n;
+    Vec3f da,db;
+    da.set_sub( a, c ); da.mul( d );
+    db.set_sub( b, c ); db.mul( d );
+    for( int ia=0; ia<n; ia++ ){
+        Vec3f p0,p; p0.set( c );
+        p0.add_mul( da, ia );
+        p.set_mul( p0, 1.0f/p0.norm() );
+        glBegin   (GL_TRIANGLE_STRIP);
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+        for( int ib=0; ib<(n-ia); ib++ ){
+            Vec3f p;
+            p.set_add( p0, da );
+            p.normalize();
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+            p.set_add( p0, db );
+            p.normalize();
+            glNormal3f( p.x, p.y, p.z );
+            { Vec3f col = colorFunc(p); glColor3f(col.x,col.y,col.z); }
+            glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+            p0.add( db );
+        }
+        glEnd();
+    }
+    return nvert;
+};
+
+int drawSphere_oct( int n, float r, const Vec3f& pos, Vec3f (*colorFunc)(const Vec3f&, void*), void* user, bool wire ){
+    int nvert=0;
+    Vec3f px,mx,py,my,pz,mz;
+    px.set( 1,0,0); py.set(0, 1,0); pz.set(0,0, 1);
+    mx.set(-1,0,0); my.set(0,-1,0); mz.set(0,0,-1);
+    if(wire){
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, py, mx );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, py, mx );
+    }else{
+        nvert += drawSphereTriangle( n, r, pos, mz, mx, my, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, mz, my, px, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, mz, px, py, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, mz, py, mx, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, pz, mx, my, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, pz, my, px, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, pz, px, py, colorFunc, user );
+        nvert += drawSphereTriangle( n, r, pos, pz, py, mx, colorFunc, user );
+    }
+    return nvert;
+};
+
 void drawPointCross_bare( const Vec3f& vec, float sz ){
     glVertex3f( vec.x-sz, vec.y, vec.z ); glVertex3f( vec.x+sz, vec.y, vec.z );
     glVertex3f( vec.x, vec.y-sz, vec.z ); glVertex3f( vec.x, vec.y+sz, vec.z );
@@ -656,22 +749,32 @@ int drawSphere_oct( int n, float r, const Vec3f& pos, bool wire ){
 	return nvert;
 };
 
-/*
-int drawSphereStrip( Vec3f p, Vec3f ax,  int nPhi. int nThet, float R, float sinTheta1, float sinTheta1 ){
-    Vec2f cph, dph, cth,dph;
-    dph.fromAngle( );
-    dph.fromAngle( );
-    cos();
-    for(int ith=0; ith<nTheta; ith++){
-        glBegin(GL_TRIANGLE_STRIP);
-        for(int iph=0; iph<nPhi; iph++){
-            glVertex2d();
-            glVertex2d();
-        }
-        glEnd();
+int drawSphere_oct( int n, float r, const Vec3f& pos, Vec3f (*colorFunc)(const Vec3f&), bool wire ){
+    int nvert=0;
+    Vec3f px,mx,py,my,pz,mz;
+    px.set( 1,0,0); py.set(0, 1,0); pz.set(0,0, 1);
+    mx.set(-1,0,0); my.set(0,-1,0); mz.set(0,0,-1);
+    if(wire){
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, py, mx );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, py, mx );
+    }else{
+        nvert += drawSphereTriangle( n, r, pos, mz, mx, my, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, mz, my, px, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, mz, px, py, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, mz, py, mx, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, pz, mx, my, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, pz, my, px, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, pz, px, py, colorFunc );
+        nvert += drawSphereTriangle( n, r, pos, pz, py, mx, colorFunc );
     }
+    return nvert;
 };
-*/
 
 
 int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped, int GLPrimitive ){
@@ -1192,7 +1295,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         //const double * colors
         //const Vec2d  * normals
 
-        Vec2d pa; pa.set(0.0d);
+        Vec2d pa; pa.set(0.0);
         if( !cscale ){ cscale=&Draw::colors_rainbow[0]; ncolors=Draw::ncolors; }
         int ii=0;
         glNormal3f(0.0f,1.0f,0.0f);
@@ -1200,7 +1303,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
             glBegin( GL_TRIANGLE_STRIP );
             Vec2d p; p.set(pa);
             for (int ib=0; ib<nb; ib++){
-                double h=0.0d;
+                double h=0.0;
                 //printf( " %i %i %i (%3.3f,%3.3f) %f %f \n", ia, ib, ii, p.x, p.y, hs[ii], clrs[ii] );
                 if(clrs) Draw::colorScale( clrs[ii], ncolors, cscale );
                 //if(hs){ simplex_deriv(); glNormal3f(0.0f,1.0f,0.0f); }
@@ -1221,7 +1324,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
     }
 
     void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs ){
-        Vec2d p,pa; pa.set(0.0d);
+        Vec2d p,pa; pa.set(0.0);
         for (int ia=0; ia<(na-1); ia++){
             glBegin( GL_LINE_STRIP );
             p.set(pa);
@@ -1252,7 +1355,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
     }
 
     void drawSimplexGridLinesToned( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs ){
-        Vec2d p,pa; pa.set(0.0d);
+        Vec2d p,pa; pa.set(0.0);
         float h;
         for (int ia=0; ia<(na-1); ia++){
             glBegin( GL_LINE_STRIP );

@@ -35,6 +35,7 @@ using namespace SphereSampling;
 
 
 // ======================  TestApp
+int nsub = -1;
 int nsamp = 32;
 int npix  = 10*nsamp*nsamp;
 
@@ -250,6 +251,16 @@ static inline float evalIcosaGrid(const Vec3d& p_in, Vec2i n, const float* heigh
     }
 }
 
+// Height-based color callback for octahedral sphere rendering
+// Uses crater height noise from `Noise::getCraterHeight()` and maps height to RGB similar to `heightColor()` in `DrawSphereMap.h`
+static inline Vec3f octColor_fromDir(const Vec3f& p_in){
+    Vec3d p = (Vec3d){ (double)p_in.x, (double)p_in.y, (double)p_in.z };
+    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3; // keep parity with MODE_FULL scaling
+    float c = (float)(h*0.05 + 0.5);
+    if(h>0){ float f = (float)(sqrt(h)*0.25); return (Vec3f){ c, c, c+f }; }
+    else    { float f = (float)(sqrt(-h)*0.25); return (Vec3f){ c+f, c, c }; }
+}
+
 class TestAppSphereSampling : public AppSDL2OGL_3D {
 	public:
 
@@ -377,12 +388,20 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
     }else if(g_mode == MODE_OCTMAP){
         // Octahedral mapping visualization
         // Use 3 subdivisions per edge -> 7x7 grid points (per user's request)
-        nsamp = 7;
+        nsub=3;
+        nsamp = 2*nsub+1;
         npix  = nsamp*nsamp; // UV debug buffer only; not per-face in this mode
         pix      = new uint32_t[npix];
         heights  = nullptr;
         samplePs = nullptr;
         for(int i=0;i<npix;i++) pix[i]=0x00000000;
+
+        // Initialize crater positions/sizes for height-based coloring
+        srand(34646);
+        for(int i=0; i<nCrater; i++){
+            craterPos[i].fromRandomSphereSample();
+            craterSz[i] = randf()+0.4;
+        }
 
         // Base overlay: great-circle grid for octahedron and edges
         ogl_base=glGenLists(1);
@@ -400,7 +419,7 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
             glDisable( GL_LIGHTING );
             glShadeModel( GL_SMOOTH );
             glColor3f(0.8f,0.8f,0.8f);
-            Draw3D::drawSphere_oct( nsamp, 1.0, (Vec3d){0.0,0.0,0.0}, false );
+            Draw3D::drawSphere_oct( nsub, 1.0, (Vec3d){0.0,0.0,0.0}, octColor_fromDir, false );
         glEndList();
 
         // Points list is empty in this mode
@@ -423,6 +442,17 @@ void TestAppSphereSampling::draw   (){
 	glCallList( ogl_base );
 	glCallList( ogl_points );
     glCallList( ogl_asteroide );
+
+    // Debug: draw original octahedron slightly larger than the oct-sphere
+    {
+        glDisable(GL_LIGHTING);
+        glColor3f(0.1f,1.0f,0.1f);
+        glPushMatrix();
+        float oct_sc = 1.03f;
+        glScalef(oct_sc, oct_sc, oct_sc);
+        Draw3D::drawLines( Solids::Octahedron_nedges, (int*)Solids::Octahedron_edges, Solids::Octahedron_verts );
+        glPopMatrix();
+    }
 
 
 	glColor3f( 0.0f,1.0f,1.0f );
@@ -493,6 +523,13 @@ void TestAppSphereSampling::draw   (){
         Draw3D::drawTriangle( A,B,C );
         glColor3f( 0.9f,0.9f,0.2f );
         Draw3D::drawPointCross( octa_decode_dir(uvp)*fsc, 0.06 );
+    }
+
+    // Debug: wireframe oct-sphere at the same scale as green triangles
+    {
+        glDisable(GL_LIGHTING);
+        glColor3f(0.0f,0.0f,0.0f);
+        Draw3D::drawSphere_oct( nsub, fsc, (Vec3d){0.0,0.0,0.0}, true );
     }
 
 
