@@ -251,13 +251,60 @@ static inline float evalIcosaGrid(const Vec3d& p_in, Vec2i n, const float* heigh
     }
 }
 
-// Height-based color callback for octahedral sphere rendering
-// Uses crater height noise from `Noise::getCraterHeight()` and maps height to RGB similar to `heightColor()` in `DrawSphereMap.h`
+// Octahedral heightmap sampler and color callback with user data
+// Heightmap is a single ns x ns grid over UV in [-1,1]^2 (row-major: v-major, then u)
+struct OctHeightmap{ int n; const float* h; };
+static OctHeightmap g_octHM = {0,nullptr};
+
+static inline float evalOctGrid(const Vec3d& p_in, int ns, const float* h){
+    Vec2d uvp = octa_map_uv( p_in );
+    int iu, iv; double u, v; bool diagNESW, upper; Vec2d uv00,uv10,uv01,uv11;
+    octa_pick_cell_tri( uvp, ns, iu, iv, u, v, diagNESW, upper, uv00,uv10,uv01,uv11 );
+
+    const int i00 = iv*ns + iu;
+    const int i10 = iv*ns + (iu+1);
+    const int i01 = (iv+1)*ns + iu;
+    const int i11 = (iv+1)*ns + (iu+1);
+
+    float h00 = h[i00];
+    float h10 = h[i10];
+    float h01 = h[i01];
+    float h11 = h[i11];
+
+    if(diagNESW){
+        if(upper){
+            // w00=1-v, w01=v-u, w11=u
+            return (float)((1.0-v)*h00 + (v-u)*h01 + u*h11);
+        }else{
+            // w00=1-u, w10=u-v, w11=v
+            return (float)((1.0-u)*h00 + (u-v)*h10 + v*h11);
+        }
+    }else{
+        if(upper){
+            // diag SW-NE, upper triangle (uv10,uv01,uv11): w10=1-v, w01=1-u, w11=u+v-1
+            return (float)((1.0-v)*h10 + (1.0-u)*h01 + (u+v-1.0)*h11);
+        }else{
+            // lower triangle (uv00,uv10,uv01): w00=1-u-v, w10=u, w01=v
+            return (float)((1.0-u-v)*h00 + u*h10 + v*h01);
+        }
+    }
+}
+
+// Precomputed-height color callback
+static inline Vec3f octHMColor_fromDir(const Vec3f& p_in, void* user){
+    const OctHeightmap* hm = (const OctHeightmap*)user; assert(hm && hm->h && hm->n>=2);
+    Vec3d p = (Vec3d){ (double)p_in.x, (double)p_in.y, (double)p_in.z };
+    float h = evalOctGrid( p, hm->n, hm->h );
+    float c = h*0.18f + 0.5f;
+    if(h>0){ float f = sqrtf(h)*0.55f; return (Vec3f){ c, c, c+f }; }
+    else    { float f = sqrtf(-h)*0.55f; return (Vec3f){ c+f, c, c }; }
+}
+
+// Legacy direct-noise color (kept for debugging)
 static inline Vec3f octColor_fromDir(const Vec3f& p_in){
     Vec3d p = (Vec3d){ (double)p_in.x, (double)p_in.y, (double)p_in.z };
-    // Amplify height and contrast for better visibility on low-subdivision octa sphere
-    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*1.2; // stronger amplitude
-    float c = (float)(h*0.18 + 0.5);   // steeper grayscale slope
+    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*1.2;
+    float c = (float)(h*0.18 + 0.5);
     if(h>0){ float f = (float)(sqrt(h)*0.55); return (Vec3f){ c, c, c+f }; }
     else    { float f = (float)(sqrt(-h)*0.55); return (Vec3f){ c+f, c, c }; }
 }
@@ -391,9 +438,9 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
         // Use 3 subdivisions per edge -> 7x7 grid points (per user's request)
         nsub=3;
         nsamp = 2*nsub+1;
-        npix  = nsamp*nsamp; // UV debug buffer only; not per-face in this mode
+        npix  = nsamp*nsamp; // UV grid size
         pix      = new uint32_t[npix];
-        heights  = nullptr;
+        heights  = new float   [npix];
         samplePs = nullptr;
         for(int i=0;i<npix;i++) pix[i]=0x00000000;
 
@@ -402,6 +449,20 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
         for(int i=0; i<nCrater; i++){
             craterPos[i].fromRandomSphereSample();
             craterSz[i] = randf()+0.4;
+        }
+
+        // Precompute heightmap over the octahedral UV grid
+        {
+            double step = 2.0/(nsamp-1);
+            for(int iv=0; iv<nsamp; ++iv){
+                for(int iu=0; iu<nsamp; ++iu){
+                    Vec2d uv = (Vec2d){ -1.0 + iu*step, -1.0 + iv*step };
+                    Vec3d p  = octa_decode_dir( uv );
+                    double h = Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3; // similar scale as icosa grid
+                    heights[iv*nsamp + iu] = (float)h;
+                }
+            }
+            g_octHM = { nsamp, heights };
         }
 
         // Base overlay: great-circle grid for octahedron and edges
@@ -420,7 +481,7 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
             glDisable( GL_LIGHTING );
             glShadeModel( GL_SMOOTH );
             glColor3f(0.8f,0.8f,0.8f);
-            Draw3D::drawSphere_oct( nsub, 1.0, (Vec3d){0.0,0.0,0.0}, octColor_fromDir, false );
+            Draw3D::drawSphere_oct( nsub, 1.0, (Vec3d){0.0,0.0,0.0}, octHMColor_fromDir, (void*)&g_octHM, false );
         glEndList();
 
         // Points list is empty in this mode
