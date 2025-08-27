@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ProkopHapala/SimpleSimulationEngine)
+
 # Simple Simulation Engine
 a minimalistic engine for: 
 - Physical simulations 
