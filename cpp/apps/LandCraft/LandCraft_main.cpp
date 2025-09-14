@@ -330,11 +330,20 @@ void LandCraftApp::commandDispatch( int icommand ){
             saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
             saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
             break;
-        case Actions::load :
-            loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
-            loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+        case Actions::load :{
+            bool ok = true;
+            if( fileExist("data/ground.bin") ){
+                if( loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground, /*bExitOnErr*/false ) != 0 ) ok = false;
+            }else{ ok = false; }
+            if( fileExist("data/water.bin") ){
+                if( loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water,  /*bExitOnErr*/false ) != 0 ) ok = false;
+            }else{ ok = false; }
+            if(!ok){
+                printf("[LandCraft] Load requested but terrain files missing/corrupt -> generating new terrain.\n");
+                generateTerrain();
+            }
             terrainViewMode = 1;
-            break;
+            }break;
         case Actions::outflow :{
             for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
             int ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
@@ -407,8 +416,12 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_LEFT:
                     if( activeGUIPanel == 0 ){
                         ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                        drawHeight = ground[ihex];
-                        printf( "drawHeight %f \n", drawHeight );
+                        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+                            drawHeight = ground[ihex];
+                            printf( "[LandCraft] pick drawHeight=%f at ihex=%d\n", drawHeight, ihex );
+                        }else{
+                            printf( "[LandCraft] left-click outside map: ihex=%d ntot=%d (ignoring)\n", ihex, hydraulics.ntot );
+                        }
                     }
                     else if( activeGUIPanel == riverList ){
                         riverProfile.clear();
@@ -420,6 +433,10 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:
                     //printf( "left button pressed !!!! " );
                     iBuildStartHex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
+                    if( (iBuildStartHex<0) || (iBuildStartHex>=hydraulics.ntot) ){
+                        printf( "[LandCraft] right-click start outside map: ihex=%d ntot=%d\n", iBuildStartHex, hydraulics.ntot );
+                        iBuildStartHex = -1;
+                    }
                     break;
             }
             break;
@@ -429,15 +446,21 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:
                     if( iBuildStartHex>=0 ){
                         int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                        for(Road* road : roads){ delete road; }
-                        roads.clear();
-                        addRoadStright( ruler.i2ip(iBuildStartHex), ruler.i2ip(ihex) );
+                        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+                            for(Road* road : roads){ delete road; }
+                            roads.clear();
+                            addRoadStright( ruler.i2ip(iBuildStartHex), ruler.i2ip(ihex) );
 
-                        roadProfile.clear();
-                        addRoadPlot(roads[0]);
-                        roadProfile.update();
-                        roadProfile.autoAxes(0.5,0.2);
-                        roadProfile.render();
+                            if(!roads.empty()){
+                                roadProfile.clear();
+                                addRoadPlot(roads[0]);
+                                roadProfile.update();
+                                roadProfile.autoAxes(0.5,0.2);
+                                roadProfile.render();
+                            }
+                        }else{
+                            printf( "[LandCraft] right-click end outside map: ihex=%d ntot=%d (ignoring)\n", ihex, hydraulics.ntot );
+                        }
                     }
                     iBuildStartHex=-1;
                     break;
@@ -466,7 +489,13 @@ void LandCraftApp::mouseHandling( ){
     //mouse_begin_y = HEIGHT - mouse_begin_y;
     if( buttons & SDL_BUTTON(SDL_BUTTON_LEFT) ){
         int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-        hydraulics.ground[ihex] = drawHeight;
+        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+            hydraulics.ground[ihex] = drawHeight;
+        }else{
+            printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, hydraulics.ntot);
+            // Click outside map; ignore safely
+            //printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, hydraulics.ntot);
+        }
     }
 };
 
@@ -565,22 +594,31 @@ void  LandCraftApp::makeMap( int sz, double step, bool newMap ){
     ground = hydraulics.ground;
     water  = hydraulics.water;
     hydraulics.allocate_outflow();
-    //bool newMap = false;
-    //bool newMap = true;
-    if( newMap ){
+    // Prefer loading cached terrain; if files are missing or load fails, generate new
+    bool haveGround = fileExist("data/ground.bin");
+    bool haveWater  = fileExist("data/water.bin");
+    bool wantNew    = newMap || !haveGround || !haveWater;
+    if( wantNew ){
         generateTerrain();
-        //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
+        // Cache generated terrain for next run
         saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
         saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
     }else{
-        loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
-        loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+        int er1 = loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground, /*bExitOnErr*/false );
+        int er2 = loadBin( "data/water.bin",  sizeof(double)*hydraulics.ntot, (char*)water,  /*bExitOnErr*/false );
+        if( (er1!=0) || (er2!=0) ){
+            printf("[LandCraft] Cached terrain load failed -> generating new terrain.\n");
+            generateTerrain();
+            saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+            saveBin( "data/water.bin",  sizeof(double)*hydraulics.ntot,  (char*)water  );
+        }
     }
 }
 
 // ------------------------------------------------------------------
 
 void LandCraftApp::generateTerrain(){
+    printf("[LandCraft] generateTerrain(): synthesizing terrain and water cache...\n");
     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
     srand(16464);
@@ -1009,14 +1047,27 @@ void LandCraftApp::hydroRelaxUpdate(){
 LandCraftApp * thisApp;
 
 int main(int argc, char *argv[]){
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-	int junk;
-	thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
+
+    // SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+    // SDL_DisplayMode dm;
+    // SDL_GetDesktopDisplayMode(0, &dm);
+	// int junk;
+
+    // disable stdout buffering
+    setbuf(stdout, NULL);
+    //Or use the more flexible setvbuf:
+    //setvbuf(stdout, NULL, _IONBF, 0); 
+
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+    int junk;
+    thisApp = new LandCraftApp( junk, dm.w-150, dm.h-100 ); 
+
+	//thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
 	//thisApp = new LandCraftApp( junk , 1000,600 );
-	SDL_SetWindowPosition(thisApp->window, 100, 0 );
+	//SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->zoom  = 3000;
 	thisApp->camX0 = 4000;
 	thisApp->camY0 = 2000;

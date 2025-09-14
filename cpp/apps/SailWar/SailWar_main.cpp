@@ -57,6 +57,7 @@ GameWorld world;
 //std::vector<Projectile*> projectiles( 100 );
 
 #include "GameScreen.h"
+#include <AppSDL2OGL.h>
 
 GameScreen* thisScreen;
 Frigate2D*  thisShip;
@@ -148,12 +149,21 @@ void loop(int n ){
 // FUNCTION ======  main
 int main(int argc, char *argv[]){
 
-	// creating windows
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	int sid;
-	//thisScreen  = new Screen2D( sid, 800,600);
-	thisScreen  = new GameScreen( sid, 800,600 );
+	// // creating windows
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	// int sid;
+	// //thisScreen  = new Screen2D( sid, 800,600);
+	// thisScreen  = new GameScreen( sid, 800,600 );
+
+    setbuf(stdout, NULL);                 // disable stdout buffering
+    //setvbuf(stdout, NULL, _IONBF, 0);  //Or use the more flexible setvbuf:
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+    int junk;
+    //thisApp = new SailWar_single( junk, dm.w-150, dm.h-100 );   
+    thisScreen  = new GameScreen( junk, dm.w-150, dm.h-100 );
 
 	setup();
 

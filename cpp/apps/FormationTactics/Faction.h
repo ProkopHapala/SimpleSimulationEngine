@@ -69,9 +69,8 @@ class Faction{
         }
     }
 
-
     int initFaction( char * fname, Vec2d pos0, Vec2d dir0, const SoldierTypeDict& name2soldierType ){
-        printf("initFaction from %s\n", fname );
+        printf("Faction::initFaction(%s)\n", fname );
         BattleLine* battleLine = new BattleLine();
         battleLine->formations.reserve( 20 );
         //printf( "bl.fms.size %i \n", battleLine->formations.size() );
@@ -82,7 +81,7 @@ class Faction{
         const int nbuff = 1024;
         char str[nbuff];
         pFile = fopen ( fname , "r");
-        if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+        if (pFile == NULL){ printf("ERROR in Faction::initFaction(%s) file not found \n", fname ); exit(0); };
         //fgets ( str, nbuff, pFile);
         //printf(">>%s<<\n", str);
 

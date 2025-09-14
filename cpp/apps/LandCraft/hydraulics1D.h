@@ -9,9 +9,10 @@ void bisectNoise1D(int npow, double* hs, double frndMin, double frndMax ){
         int q2 = 1<<(npow-ipow  );
         int q  = 1<<(npow-ipow-1);
         for(int i=0;i<n;i+=q2){
-            double h0 = hs[i   ];
-            double h1 = hs[i+q2];
-            hs[i+q] = 0.5*(h0+h1) + randf(frndMin,frndMax)*q2;
+            // Use periodic wrap to avoid out-of-bounds at i+q2==n
+            double h0 = hs[i];
+            double h1 = hs[(i+q2) & mask];
+            hs[(i+q) & mask] = 0.5*(h0+h1) + randf(frndMin,frndMax)*q2;
         }
     }
 }

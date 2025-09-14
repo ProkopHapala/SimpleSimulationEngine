@@ -5,11 +5,21 @@
 
 void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
     constexpr float inv255 = 1.0f/255.0f;
-    //if(d<0){d=0;}else if(d>1){d=1;};  // use clamp instead outside this function
-    d*=(ncol-1);
+    // Guard against degenerate palettes
+    if(ncol<=0 || colors==nullptr){ glColor3f(0,0,0); return; }
+    if(ncol==1){
+        uint32_t clr = colors[0];
+        glColor3f( ((clr     )&0xFF)*inv255, ((clr>>8 )&0xFF)*inv255, ((clr>>16)&0xFF)*inv255 );
+        return;
+    }
+    // Clamp input to [0,1]
+    if(d<0.0) d=0.0; else if(d>1.0) d=1.0;
+    d *= (ncol-1);
     int icol = (int)d;
-    d-=icol; double md = 1-d;
-    //printf( "d,md %g %g \n", d, md );
+    d -= icol; double md = 1-d;
+    // Ensure icol, icol+1 are valid indices
+    if(icol<0){ icol=0; d=0.0; md=1.0; }
+    if(icol>=ncol-1){ icol=ncol-2; d=1.0; md=0.0; }
     uint32_t clr1=colors[icol  ];
     uint32_t clr2=colors[icol+1];
     glColor3f(
@@ -20,10 +30,14 @@ void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
 };
 
 uint32_t Draw::icolorScale( double d, int ncol, const uint32_t * colors ){
-    constexpr float inv255 = 1.0f/255.0f;
-    d*=(ncol-1);
+    if(ncol<=0 || colors==nullptr){ return 0xFF000000; }
+    if(ncol==1){ return 0xFF000000 | (colors[0] & 0x00FFFFFF); }
+    if(d<0.0) d=0.0; else if(d>1.0) d=1.0;
+    d *= (ncol-1);
     int icol = (int)d;
-    d-=icol; double md = 1-d;
+    d -= icol; double md = 1-d;
+    if(icol<0){ icol=0; d=0.0; md=1.0; }
+    if(icol>=ncol-1){ icol=ncol-2; d=1.0; md=0.0; }
     uint32_t clr1=colors[icol  ];
     uint32_t clr2=colors[icol+1];
     return 0xFF000000

@@ -67,7 +67,7 @@ double HydraulicGrid2D::gatherRain( double minSinkFlow ){
     sinks.clear();
     for(int i=0; i<ntot; i++){ contour1[i]=i; water[i]=1.0; known[i]=false; }
     quickSort( ground, contour1, 0, ntot);
-    for(int ii=ntot; ii>0; ii--){
+    for(int ii=ntot-1; ii>=0; ii--){
         int i = contour1[ii];
         Vec2i ip0 = i2ip(i);
         int imin = -1;
@@ -109,7 +109,7 @@ int HydraulicGrid2D::traceDroplet( Vec2i ipd, int nmax, int * trace ){
             int i    = ip2i(ip);
             double g=ground[i]; if(g<val){ ipmin=ip; imin=i; val=g; }
         }
-        if(imin){
+        if(imin>=0){
             ipd       = ipmin;
             trace[ii] = imin;
         }else{
@@ -175,7 +175,7 @@ int HydraulicGrid2D::trackRiverRecursive( int sink, double minFlow, River * mout
         rivers.push_back(river);
 
         // save flow
-        river->flow.reserve(river->path.size());
+        river->flow.resize(river->path.size());
         for( int i=0; i<river->path.size(); i++ ){
             river->flow[i] = water[river->path[i]];
         }

@@ -406,15 +406,20 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
 FormationTacticsApp * thisApp;
 
 int main(int argc, char *argv[]){
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+    // SDL_DisplayMode dm;
+    // SDL_GetDesktopDisplayMode(0, &dm);
+    // //printf( "Display size W: %i H:%i \n", dm.w, dm.h );
 
-    SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-    //printf( "Display size W: %i H:%i \n", dm.w, dm.h );
-
-	int junk;
-	thisApp = new FormationTacticsApp( junk , dm.w-150, dm.h-100 );
+    setbuf(stdout, NULL);                 // disable stdout buffering
+    //setvbuf(stdout, NULL, _IONBF, 0);  //Or use the more flexible setvbuf:
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+    int junk;
+    thisApp = new FormationTacticsApp( junk, dm.w-150, dm.h-100 ); 
+    
 	thisApp->zoom = 30;
 	thisApp->loop( 1000000 );
 	return 0;

@@ -158,12 +158,10 @@ void TerrainSimplex::initErrosion( double w ){
 
 int TerrainSimplex::flow_errosion_step_noRain( ){
 // gradient evaluation
-    int ii = 0;
     int npix=0;
-    for(int iy=1;iy<ny-1;iy++){
-        for(int ix=1;ix<ny-1;ix++){
-            //int    ii   = xy2i( ix, iy );
-            ii++;
+    for(int iy=1; iy<ny-1; iy++){
+        int ii = iy*nx + 1;  // start at (ix=1, iy)
+        for(int ix=1; ix<nx-1; ix++, ii++){
             double hij  = ground[ii];
             double dh,dhmin=0,dhmin2=0;
             int jj,iimin;
@@ -186,7 +184,7 @@ int TerrainSimplex::flow_errosion_step_noRain( ){
             }
         }
     }
-    ii =0;
+    int ii =0;
     for(int iy=0;iy<ny;iy++){
         for(int ix=0;ix<nx;ix++){
             double wij = water_[ii];
@@ -203,9 +201,9 @@ void TerrainSimplex::flow_errosion_step( ){
 // gradient evaluation
 //int ii = 0;
 
-    int ii =0;
-    for(int iy=1;iy<ny-1;iy++){
-        for(int ix=1;ix<ny-1;ix++){
+    for(int iy=1; iy<ny-1; iy++){
+        int ii = iy*nx + 1;  // start at (ix=1, iy)
+        for(int ix=1; ix<nx-1; ix++, ii++){
             //int    ii   = xy2i( ix, iy );
             double hij  = ground[ii];
             double dh,dhmin=0,dhmin2=0;
@@ -240,7 +238,6 @@ void TerrainSimplex::flow_errosion_step( ){
                 //h[i][j]            =    f_orig*h_orig[i][j] + mf_orig*hij  - mud + sediment;
                 ground[iimin] += mud*f_sediment;
             }
-            ii++;
         }
     }
     //printf( "npix %i \n", npix);

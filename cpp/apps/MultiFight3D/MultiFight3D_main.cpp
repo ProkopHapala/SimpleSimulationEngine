@@ -211,11 +211,20 @@ void MultiFight3D_single::drawHUD(){
 MultiFight3D_single * thisApp;
 
 int main(int argc, char *argv[]){
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	SDL_SetRelativeMouseMode( SDL_TRUE );
-	int junk;
-	thisApp = new MultiFight3D_single( junk , 800, 600 );
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	// SDL_SetRelativeMouseMode( SDL_TRUE );
+	// int junk;
+	// thisApp = new MultiFight3D_single( junk , 800, 600 );
+
+    setbuf(stdout, NULL);                 // disable stdout buffering
+    //setvbuf(stdout, NULL, _IONBF, 0);  //Or use the more flexible setvbuf:
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+    int junk;
+    thisApp = new MultiFight3D_single( junk, dm.w-150, dm.h-100 ); 
+
 	thisApp->loop( 1000000 );
 	return 0;
 }

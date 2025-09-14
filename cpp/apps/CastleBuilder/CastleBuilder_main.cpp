@@ -200,15 +200,23 @@ void CastleBuilderSingle::eventHandling( const SDL_Event& event ){
 
 // ===================== MAIN
 
-CastleBuilderSingle * testApp;
+CastleBuilderSingle * app;
 
 int main(int argc, char *argv[]){
-
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	int junk;
-	testApp = new CastleBuilderSingle( junk , 800, 600 );
-	testApp->loop( 1000000 );
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	// int junk;
+    // disable stdout buffering
+    setbuf(stdout, NULL);
+    //Or use the more flexible setvbuf:
+    //setvbuf(stdout, NULL, _IONBF, 0); 
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    printf( "argc %i \n", argc );
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+    int junk;
+    //app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100 );
+	app = new CastleBuilderSingle( junk, dm.w-150, dm.h-100 );
+	app->loop( 1000000 );
 	return 0;
 }
 

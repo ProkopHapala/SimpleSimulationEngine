@@ -177,11 +177,12 @@ void FormationWorld::refreshFormations( ){
 }
 
 int FormationWorld::loadSoldierTypes( char * fname ){
+    printf("FormationWorld::loadSoldierTypes(%s)\n", fname );
     FILE * pFile;
     const int nbuff = 4096;
     char str[nbuff];
     pFile = fopen ( fname , "r");
-    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    if (pFile == NULL){ printf("ERROR in FormationWorld::loadSoldierTypes(%s) file not found \n", fname ); exit(0); };
     fgets ( str, nbuff, pFile);
     printf(">>%s<<\n", str);
     while ( fgets ( str , nbuff, pFile) != NULL ){

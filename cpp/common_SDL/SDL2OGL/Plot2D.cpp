@@ -257,7 +257,7 @@ void Plot2D::init( ){
 void Plot2D::clear( bool bDeep ){
     if(bDeep){
         for(DataLine2D* line: lines ){
-            delete [] line;
+            delete line;
         }
     }
     lines.clear();
@@ -265,7 +265,7 @@ void Plot2D::clear( bool bDeep ){
 }
 
 void Plot2D::erase( int i ){
-    delete [] lines[i];
+    delete lines[i];
     lines.erase( lines.begin() + i );
 }
 

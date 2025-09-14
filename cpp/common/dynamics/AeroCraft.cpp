@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 //#include <SDL2/SDL_opengl.h>
+#include "globals.h"
 
 #include "AeroCraft.h" // THE HEADER
 
@@ -45,17 +46,15 @@ double AeroCraft::getTotalPower() const{
 };
 
 int AeroCraft::fromFile( const char * fname ){
+    printf(" AeroCraft::fromFile: >>%s<<\n", fname );
     const int nbuf = 1024;
     char buf  [nbuf];
-    FILE * pFile;
+    FILE * pFile=0;
     pFile = fopen (fname,"r");
-    printf(" AeroCraft::fromFile: >>%s<<\n", fname );
-
+    if(pFile==0){ printf("ERROR AeroCraft::fromFile(%s): cannot open file\n", fname ); exit(0); }
     Vec3d Ispan;
-
     fscanf (pFile, " %lf %lf %lf %lf\n", &mass, &Ispan.x, &Ispan.y, &Ispan.z );
     printf(        " %lf %lf %lf %lf\n",  mass,  Ispan.x,  Ispan.y,  Ispan.z );
-
     fscanf ( pFile, "%i\n", &nPanels);
     panels = new AeroSurface[nPanels];
     for(int i=0; i<nPanels; i++){
@@ -72,7 +71,6 @@ int AeroCraft::fromFile( const char * fname ){
     rightAirelon=&panels[irightAirelon-1];
     elevator    =&panels[ielevator    -1];
     rudder      =&panels[irudder      -1];
-
 
     fscanf ( pFile, "%i\n", &nPropelers);
     propelers = new Propeler[nPropelers];

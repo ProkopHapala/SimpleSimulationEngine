@@ -318,10 +318,10 @@ inline int str2enum( const char * str, int nnames, const char **names ){
     return -1;
 }
 
-inline int saveBin( const char *fname, int n, char * data ){
+inline int saveBin( const char *fname, int n, char * data, bool bExitOnErr =true ){
     FILE *ptr_myfile=0;
     ptr_myfile=fopen( fname,"wb");
-    if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }
+    if (!ptr_myfile){ printf("ERROR in IO_utils::saveBin(%s): cannot open file for writing \n", fname ); if(bExitOnErr)exit(0); return -1; }
     int nchar = 1024;
     for( int i=1; i<=n; i+=nchar ){
         int len = nchar;
@@ -332,10 +332,10 @@ inline int saveBin( const char *fname, int n, char * data ){
     return 0;
 }
 
-inline int loadBin( const char *fname, int n, char * data ){
+inline int loadBin( const char *fname, int n, char * data, bool bExitOnErr =true ){
     FILE *ptr_myfile;
     ptr_myfile=fopen( fname,"rb");
-    if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }
+    if (!ptr_myfile){ printf("ERROR in IO_utils::loadBin(%s): cannot open file for reading \n", fname ); if(bExitOnErr)exit(0); return -1; }
     int nchar = 1024;
     for( int i=1; i<=n; i+=nchar ){
         int len = nchar;
