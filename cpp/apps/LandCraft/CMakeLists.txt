@@ -13,6 +13,17 @@ add_executable( ${NAME}_main
 
 target_link_libraries( ${NAME}_main ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+# ===== Lua integration (uses top-level option WITH_LUA)
+if ( WITH_LUA )
+    # Find Lua 5.2 (consistent with existing CAD app)
+    find_package( Lua52 REQUIRED )
+    add_definitions(-DLANDCRAFT_LUA)
+    include_directories( ${LUA_INCLUDE_DIR} ${COMMON_SDL_SRCS}/Lua )
+    target_link_libraries( ${NAME}_main ${LUA_LIBRARY} )
+    # Link LandCraft C API used by Lua bindings
+    target_sources( ${NAME}_main PRIVATE ../../libs/LandCraft/LandCraftLib.cpp )
+endif()
+
 file(GLOB ${NAME}_HEADERS_ *.h )
 add_custom_target( ${NAME}_headers SOURCES ${${NAME}_HEADERS_} )
 

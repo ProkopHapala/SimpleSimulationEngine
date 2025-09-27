@@ -77,6 +77,13 @@
 
 #include <algorithm>
 
+#ifdef LUA
+#include "LuaHelpers.h"
+#include "LandCraftLua.h"
+static lua_State* gLua = nullptr;
+#endif
+
+#include "argparse.h"
 
 
 // font rendering:
@@ -260,6 +267,16 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
 
     gui.layoutRow(10,10);
 
+#ifdef LUA
+    if(!gLua){
+        gLua = Lua::create();
+        LandCraftLua::register_api(gLua);
+        // Optional demo script auto-run
+        if( fileExist("data/landcraft_demo.lua") ){
+            Lua::dofile(gLua, "data/landcraft_demo.lua");
+        }
+    }
+#endif
 }
 
 // ------------------------------------------------------------------
@@ -1064,6 +1081,17 @@ int main(int argc, char *argv[]){
     SDL_DisplayMode dm = initSDLOGL( 8 );
     int junk;
     thisApp = new LandCraftApp( junk, dm.w-150, dm.h-100 ); 
+
+    // ---- Command-line arguments (e.g., run a Lua script on startup)
+    LambdaDict funcs;
+#ifdef LUA
+    funcs["-lua"] = {1, [&](const char** ss){
+        const char* fname = ss[0];
+        printf("[LandCraft] CLI: -lua %s\n", fname);
+        if(gLua){ Lua::dofile(gLua, fname); }
+    }};
+#endif
+    process_args(argc, argv, funcs, /*bExitOnMiss*/false);
 
 	//thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
 	//thisApp = new LandCraftApp( junk , 1000,600 );
