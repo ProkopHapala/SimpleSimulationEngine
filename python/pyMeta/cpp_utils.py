@@ -13,8 +13,8 @@ def work_dir( v__file__ ):
 PACKAGE_PATH = work_dir( __file__ )
 BUILD_PATH   = os.path.normpath( PACKAGE_PATH + '../../../cpp/Build/libs/CombatModels' )
 
-print " PACKAGE_PATH : ", PACKAGE_PATH
-print " BUILD_PATH   : ", BUILD_PATH
+print(" PACKAGE_PATH : ", PACKAGE_PATH)
+print(" BUILD_PATH   : ", BUILD_PATH)
 
 def compile_lib( name,
         #FFLAGS = "-std=c++11 -Og -g -Wall",
@@ -24,11 +24,11 @@ def compile_lib( name,
         clean  = True,
     ):
     lib_name = name+lib_ext
-    print " COMPILATION OF : "+name
+    print(" COMPILATION OF : "+name)
     if path is not None:
         dir_bak = os.getcwd()
         os.chdir( path );
-    print os.getcwd()
+    print(os.getcwd())
     if clean:
         try:
             os.remove( lib_name  )
@@ -43,7 +43,7 @@ def compile_lib( name,
 def make( what="" ):
     current_directory = os.getcwd()
     os.chdir ( BUILD_PATH          )
-    print "CPP_PATH " + BUILD_PATH
+    print("CPP_PATH " + BUILD_PATH)
     if clean_build:
         os.system("make clean")
     os.system( "make "+what      )
@@ -92,8 +92,8 @@ def parseFuncHeader( s ):
 def translateTypeName( tname ):
     np = tname.count('*')
     if np > 1 :
-        print "Cannot do pointer-to-pointer (**) ", s
-        print "=> exit() "
+        print("Cannot do pointer-to-pointer (**) ", tname)
+        print("=> exit() ")
         exit()
     else:
         if(np==1):
@@ -131,10 +131,10 @@ def writeFuncInterface( parsed ):
 def writeFuncInterfaces( func_headers, debug=False ):
     for s in func_headers:
         parsed = parseFuncHeader( s ); 
-        if debug : print "parsed :\n", parsed
+        if debug : print("parsed :\n", parsed)
         sgen   = writeFuncInterface( parsed )
-        print "\n# ", s
-        print sgen,"\n\n"
+        print("\n# ", s)
+        print(sgen, "\n\n")
 
 
 

@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from metaprograming import *
+from .metaprograming import *

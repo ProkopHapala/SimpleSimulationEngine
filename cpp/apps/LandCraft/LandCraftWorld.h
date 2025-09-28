@@ -47,7 +47,7 @@ public:
 
     // Initialize world (load tech tables etc.). Data folder can be used to load files.
     inline void init(const char* dataFolder){
-        if(dataFolder) dataPath = dataFolder; else dataPath.clear();
+        if(dataFolder){ dataPath = dataFolder; }else{ dataPath.clear(); }
         rivers = nullptr;
         // Note: defer heavy loads to explicit calls from app/script (e.g., econ_load)
     }
@@ -59,10 +59,10 @@ public:
     void loadTechnologies(const char* fname);
 
     // Terrain/Hydraulics
-    void makeMap(int sz, double step, bool newMap);
+    void allocMap(int sz, double step);
     void makeMapCached(int sz, double step, bool newMap);
     void generateTerrain();
-    void mapInit(int nx, int ny){ makeMap(nx, (double)0.0, false); /* step handled by GUI; keep grid only */ }
+    //void mapInit(int nx, int ny){ makeMap(nx, (double)0.0, false); /* step handled by GUI; keep grid only */ }
     void generateTerrain(unsigned int seed, double maxHeight);
     int  save(const char* ground_path, const char* water_path);
     int  load(const char* ground_path, const char* water_path);

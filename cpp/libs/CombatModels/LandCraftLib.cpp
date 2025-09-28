@@ -35,11 +35,24 @@ static void lc_init_buffers_impl(){
 
 static void lc_clear_roads(){ W.roadsClear(); }
 
+
+int* hi=0;
+
+
 // -------------------- API --------------------
 extern "C"{
 
 // ---- World ----
-void lc_world_init(const char* dataFolder){ W.init(dataFolder); }
+void lc_world_init(const char* dataFolder){ 
+    // no buffering stdout and stderr for printf not using iostream pure C not C++ std
+    //not this shit: std::cout.rdbuf();std::cerr.rdbuf();
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+
+    //printf("hi[10] %i", hi[10]);
+
+    W.init(dataFolder); 
+}
 
 // ---- Buffers / Pointers ----
 void lc_init_buffers(){ lc_init_buffers_impl(); }
@@ -49,7 +62,7 @@ int*    lc_getIBuff(const char* name){ auto it=g_ibuffers.find(name); return (it
 
 // ---- Map & Terrain ----
 // Initialize grid and allocate ground/water arrays
-void lc_map_init(int nx, int ny){ W.mapInit(nx,ny); lc_init_buffers_impl(); }
+void lc_map_init(int nx, int ny){ W.allocMap(nx,ny); lc_init_buffers_impl(); }
 // Procedural terrain generation (simple: bisecNoise + scale); seed is optional
 void lc_generate_terrain(unsigned int seed, double maxHeight){ W.generateTerrain(seed,maxHeight); }
 
@@ -79,7 +92,7 @@ int lc_river_get_flow(int river_id, double* out_flow, int n){ return W.riverGetF
 int lc_trace_droplet(int ix, int iy, int* out_idx, int max_len){ return W.traceDroplet(ix,iy,out_idx,max_len); }
 
 // ---- Roads ----
-int lc_road_build_straight(int ax, int ay, int bx, int by){ return W.roadBuildStraight(ax,ay,bx,by); }
+int lc_road_build_straight(int ax, int ay, int bx, int by){ return W.makeRoadStraight({ax,ay},{bx,by}); }
 
 int lc_road_length(int road_id){ return W.roadLength(road_id); }
 
@@ -117,7 +130,7 @@ double lc_factory_produce(int fid, double N){ return W.factoryProduce(fid,N); }
 
 // ---- PathFinder ----
 // Bind to current map and prepare internal buffers
-int lc_pf_bind_to_map(){ return W.pfBindToMap(); }
+int lc_pf_bind_to_map(){ return W.BindPathFinderToMap(); }
 
 void lc_pf_set_cost_params(double ch2, double chminus, double chplus){ W.pf.setCostParams(ch2,chminus,chplus); }
 

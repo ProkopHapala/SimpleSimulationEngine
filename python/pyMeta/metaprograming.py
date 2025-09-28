@@ -99,11 +99,11 @@ def parse_cpp_header( iline0, ichr, lines ):
             iend   = 0
         else:
             iline += 1
-        print "line %i: >>%s<<" %(iline,line)
+        print("line %i: >>%s<<" %(iline,line))
         args += line.strip().split(',')
     #args = filter("", args)
     args = [x for x in args if x!=""]
-    print "args : ", args
+    print("args : ", args)
     return args,iline,ibr
     
 def parse_cpp_func( iline0, ichr, fun_name, lines ):
@@ -116,7 +116,7 @@ def ctype2py( cstr ):
     global new_array_types
     ichr  = cstr.find('*')
     if(ichr>-1):
-        for key,val in array_types.iteritems():
+        for key,val in array_types.items():
             if key in cstr:
                 ichr+=1
                 if not (val in old_array_types):
@@ -124,12 +124,12 @@ def ctype2py( cstr ):
                     #print "adding arraytype : ", val,new_array_types 
                 return (cstr[ichr:].strip(),cstr[:ichr].strip(),val[1])
     else:
-        for key,val in prim_types.iteritems():
+        for key,val in prim_types.items():
             ichr = cstr.find(key)
             if ichr>-1:
                 ichr+=len(key)
                 return (cstr[ichr:].strip(),cstr[:ichr].strip(),val)
-    print "ERROR ctype2py:   ", cstr
+    print("ERROR ctype2py:   ", cstr)
     #return "TYPE_NOT_FOUND"
     return None
     
@@ -138,7 +138,7 @@ def write_python_interface(func_obj, wraper=True,  cppcomment=True ):
     #print "args : ", func_obj[1]
     args     = [ ctype2py( arg ) for arg in func_obj[1] ]
     ret      = prim_types.get(func_obj[2])
-    print  funname,args
+    print(funname,args)
     s = "" 
     if cppcomment:
         s += "".join( [ "#"+s for s in func_obj[3] ] )                                                        
@@ -175,8 +175,8 @@ def check_existing_tokens( func_names, py_name ):
 def generate_interface( cpp_name, py_name, func_names ):
     if( os.path.isfile(py_name) ):
         check_existing_tokens( func_names, py_name )
-        print "old_array_types", old_array_types
-        print "func_names", func_names
+        print("old_array_types", old_array_types)
+        print("func_names", func_names)
         py_file  = open(py_name, 'a')
         py_file.write("#========= auto update : %s\n" %str(datetime.datetime.now()) )
     else:
@@ -198,8 +198,8 @@ def generate_interface( cpp_name, py_name, func_names ):
                 func_names.remove(fun_name)
                 break
         iline+=1 
-    print "old_array_types", old_array_types
-    print "new_array_types", new_array_types
+    print("old_array_types", old_array_types)
+    print("new_array_types", new_array_types)
     py_file.write( write_arraytypes( ) + "\n" ) 
     for func in new_funcs_interfaces:
         py_file.write( func + "\n" )

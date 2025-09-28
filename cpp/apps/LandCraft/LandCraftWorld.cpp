@@ -100,12 +100,12 @@ bool LandCraftWorld::loadConfig(const char* fname){
             else{ if(!saveTerrainDefault()){ printf("[LandCraftWorld] save_terrain failed.\n"); } }
         }
     }
-    if(!haveMap && mapSize>0){ makeMap(mapSize,mapStep,false); haveMap=true; }
+    if(!haveMap && mapSize>0){ allocMap(mapSize,mapStep); haveMap=true; }
     fclose(f);
     return true;
 }
 
-void LandCraftWorld::makeMap(int sz, double step, bool /*newMap*/){
+void LandCraftWorld::allocMap(int sz, double step ){
     printf("LandCraftWorld::makeMap(%d, %f)\n", sz, step);
     // World does not own the GUI ruler; we only size and initialize hydraulics here.
     hydro.allocate( {sz,sz} );
@@ -116,7 +116,7 @@ void LandCraftWorld::makeMap(int sz, double step, bool /*newMap*/){
 }
 
 void LandCraftWorld::makeMapCached(int sz, double step, bool newMap){
-    makeMap(sz,step,false);
+    allocMap(sz,step);
     bool loaded=false;
     if(!newMap){ loaded = loadTerrainDefault(); }
     if(!loaded){
