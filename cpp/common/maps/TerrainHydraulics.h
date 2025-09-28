@@ -382,8 +382,8 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     // Operates on plain arrays: ground[], water[], moveCost[] as spill levels
     inline void ensure_aux_buffers(){
         if(moveCost==NULL) _realloc(moveCost,ntot);
-        if(toBasin  ==NULL) _realloc(toBasin,ntot);
-        if(toTile   ==NULL) _realloc(toTile ,ntot);
+        if(toBasin ==NULL) _realloc(toBasin,ntot);
+        if(toTile  ==NULL) _realloc(toTile ,ntot);
     }
 
     // Collect boundary cells as default outlets

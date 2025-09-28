@@ -91,6 +91,59 @@ def save(ground_path: str, water_path: str) -> int:
     return lib.lc_save(ground_path.encode('utf-8'), water_path.encode('utf-8'))
 
 # Note: generate_terrain_bisec is not exported by C layer; use make_terrain_bisec + normalize via generate_terrain if needed.
+
+# ------------- Basin Filling (HydraulicGrid2D) -------------
+# Bellman-Ford (full-grid sweeps)
+lib.lc_basin_bellman_boundary.argtypes = [c_int, c_int]
+lib.lc_basin_bellman_boundary.restype  = c_int
+def basin_bellman_boundary(max_iters: int, apply_to_water: bool = True) -> int:
+    return lib.lc_basin_bellman_boundary(max_iters, 1 if apply_to_water else 0)
+
+lib.lc_basin_bellman.argtypes = [array1i, c_int, c_int, c_int]
+lib.lc_basin_bellman.restype  = c_int
+def basin_bellman(seeds: np.ndarray, max_iters: int, apply_to_water: bool = True) -> int:
+    seeds = np.ascontiguousarray(seeds, dtype=np.int32)
+    return lib.lc_basin_bellman(seeds, seeds.size, max_iters, 1 if apply_to_water else 0)
+
+# Dijkstra-like (priority-flood)
+lib.lc_basin_dijkstra_boundary.argtypes = [c_int]
+lib.lc_basin_dijkstra_boundary.restype  = None
+def basin_dijkstra_boundary(apply_to_water: bool = True):
+    return lib.lc_basin_dijkstra_boundary(1 if apply_to_water else 0)
+
+lib.lc_basin_dijkstra.argtypes = [array1i, c_int, c_int]
+lib.lc_basin_dijkstra.restype  = None
+def basin_dijkstra(seeds: np.ndarray, apply_to_water: bool = True):
+    seeds = np.ascontiguousarray(seeds, dtype=np.int32)
+    return lib.lc_basin_dijkstra(seeds, seeds.size, 1 if apply_to_water else 0)
+
+# Contour-based two-wave (no PQ)
+lib.lc_basin_contour_begin_flood.argtypes = [array1i, c_int, c_double]
+lib.lc_basin_contour_begin_flood.restype  = None
+def basin_contour_begin_flood(seeds: np.ndarray, level_cap: float):
+    seeds = np.ascontiguousarray(seeds, dtype=np.int32)
+    return lib.lc_basin_contour_begin_flood(seeds, seeds.size, level_cap)
+
+lib.lc_basin_contour_flood_step.argtypes = [c_double]
+lib.lc_basin_contour_flood_step.restype  = c_int
+def basin_contour_flood_step(level_cap: float) -> int:
+    return lib.lc_basin_contour_flood_step(level_cap)
+
+lib.lc_basin_contour_begin_drain.argtypes = []
+lib.lc_basin_contour_begin_drain.restype  = None
+def basin_contour_begin_drain():
+    return lib.lc_basin_contour_begin_drain()
+
+lib.lc_basin_contour_drain_step.argtypes = []
+lib.lc_basin_contour_drain_step.restype  = c_int
+def basin_contour_drain_step() -> int:
+    return lib.lc_basin_contour_drain_step()
+
+lib.lc_basin_contour_finish.argtypes = [c_int]
+lib.lc_basin_contour_finish.restype  = None
+def basin_contour_finish(apply_to_water: bool = True):
+    return lib.lc_basin_contour_finish(1 if apply_to_water else 0)
+    
 lib.lc_load.argtypes = [c_char_p, c_char_p]
 lib.lc_load.restype  = c_int
 def load(ground_path: str, water_path: str) -> int:

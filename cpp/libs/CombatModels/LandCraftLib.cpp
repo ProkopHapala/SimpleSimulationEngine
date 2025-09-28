@@ -31,6 +31,11 @@ static std::unordered_map<std::string, int*>    g_ibuffers;
 static void lc_init_buffers_impl(){
     g_buffers["ground"] = W.hydro.ground;
     g_buffers["water" ] = W.hydro.water;
+    // Ensure auxiliary buffers exist before exposing them
+    W.hydro.ensure_aux_buffers();
+    g_buffers["moveCost"] = W.hydro.moveCost;
+    g_ibuffers["toBasin"] = W.hydro.toBasin;
+    g_ibuffers["toTile" ] = W.hydro.toTile;
 }
 
 static void lc_clear_roads(){ W.roadsClear(); }
@@ -154,5 +159,23 @@ int lc_pf_make_paths(){ W.pf.makePaths(); return (int)W.pf.paths.size(); }
 int lc_pf_get_num_paths(){ return W.pf.getNumPaths(); }
 int lc_pf_get_path_length(int path_id){ return W.pf.getPathLength(path_id); }
 int lc_pf_get_path(int path_id, int* out_idx, int maxn){ return W.pf.getPath(path_id,out_idx,maxn); }
+
+// ---- Basin Filling (HydraulicGrid2D) ----
+int  lc_basin_bellman_boundary(int maxIters, int applyToWater){ return W.hydro.basinFill_BellmanFord_Boundary(maxIters, applyToWater!=0); }
+int  lc_basin_bellman(const int* seeds, int nSeeds, int maxIters, int applyToWater){
+    std::vector<int> v; if(seeds && nSeeds>0){ v.assign(seeds,seeds+nSeeds); }
+    return W.hydro.basinFill_BellmanFord(v, maxIters, applyToWater!=0);
+}
+void lc_basin_dijkstra_boundary(int applyToWater){ W.hydro.basinFill_Dijkstra_Boundary(applyToWater!=0); }
+void lc_basin_dijkstra(const int* seeds, int nSeeds, int applyToWater){
+    std::vector<int> v; if(seeds && nSeeds>0){ v.assign(seeds,seeds+nSeeds); }
+    W.hydro.basinFill_Dijkstra(v, applyToWater!=0);
+}
+// Contour two-wave (no PQ)
+void lc_basin_contour_begin_flood(const int* seeds, int nSeeds, double levelCap){ std::vector<int> v; if(seeds&&nSeeds>0){ v.assign(seeds,seeds+nSeeds); } W.hydro.basinFill_Contour_beginFlood(v, levelCap); }
+int  lc_basin_contour_flood_step(double levelCap){ return W.hydro.basinFill_Contour_floodStep(levelCap); }
+void lc_basin_contour_begin_drain(){ W.hydro.basinFill_Contour_beginDrain(); }
+int  lc_basin_contour_drain_step(){ return W.hydro.basinFill_Contour_drainStep(); }
+void lc_basin_contour_finish(int applyToWater){ W.hydro.basinFill_Contour_finish(applyToWater!=0); }
 
 } // extern "C"

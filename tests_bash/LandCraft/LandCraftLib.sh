@@ -37,4 +37,38 @@ export LSAN_OPTIONS=detect_leaks=0:report_objects=0:verbosity=0
 
 # ====== RUN
 
+# --- Examples (uncomment one below to run) ---
+# NOTE: All examples call tests_bash/LandCraft/test_landcraft.py
+# Terrain size defaults to 512x512 unless overridden via --nx --ny
+
+# Example A: Default (load cache or generate), contour basin, apply, plot overlays
+#python3 -u test_landcraft.py --basin contour --basin-apply 1 --plot 2
+
+# Example B: Dijkstra (priority-flood) with apply and interactive plot
+#python3 -u test_landcraft.py --basin dijkstra --basin-apply 1 --plot 2
+
+# Example C: Bellman-Ford boundary with max 200 iterations, apply
+#python3 -u test_landcraft.py --basin bellman --basin-iters 200 --basin-apply 1 --plot 2
+
+# Example D: Contour with explicit level cap (no PQ); cap=300.0
+#python3 -u test_landcraft.py --basin contour --basin-level-cap 300.0 --basin-apply 1 --plot 2
+
+# Example E: Add explicit drain seed at (256,256) with initial water level 200
+#python3 -u test_landcraft.py --basin dijkstra --drain-x 256 --drain-y 256 --drain-level 200 --basin-apply 1 --plot 2
+
+# Example F: Different neighborhood (4-neigh) and smaller grid
+#python3 -u test_landcraft.py --nx 256 --ny 256 --neighbors 8 --basin dijkstra --basin-apply 1 --plot 2
+
+# Example G: Generate terrain via C++ pipeline (noise+erosion), then dijkstra
+#python3 -u test_landcraft.py --terrain cpp --basin dijkstra --basin-apply 1 --plot 2
+
+# Example H: Bisect noise with droplet erosion, then dijkstra
+#python3 -u test_landcraft.py --terrain cpp_bisec --erosion-iters 200 --erosion-drops 20000 --erosion-steps 50 --basin dijkstra --basin-apply 1 --plot 2
+
+# Example I: Relax/outflow baseline (no basin), set outflow and iterate
+#python3 -u test_landcraft.py --basin none --outflow-x 0 --outflow-y 0 --relax-iters 200 --plot 2
+
+# Example J: Use cache load/save folders
+#python3 -u test_landcraft.py --load-prefix ./ --save-prefix ./ --basin dijkstra --basin-apply 1 --plot 2
+
 python3 -u test_landcraft.py 2>&1 | tee test_landcraft.log
