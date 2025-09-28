@@ -77,13 +77,6 @@
 
 #include <algorithm>
 
-#include "LandCraftWorld.h"
-
-// C API for LandCraft (used by Lua bindings and some app helpers)
-//#include "../../libs/LandCraft/LandCraftLib.h"
-
-LandCraftWorld W; // shared world instance
-
 #ifdef LUA
 #include "LuaHelpers.h"
 #include "LandCraftLua.h"
@@ -115,31 +108,38 @@ class LandCraftApp : public AppSDL2OGL { public:
 
     enum class Actions{ generateTerrain, relaxWater, relaxWaterHex, save, load, outflow, inflow, findRivers, terrainViewMode, traceDroplet };
 
-    // ---- World propertis which are being moved to LandCraftWorld W;
     // ---- Map Geography & 2D Hydraulics
-    // Vec2d  map_center;
-    // double maxHeight = 500.0;
+
+    Vec2d  map_center;
+    double maxHeight = 500.0;
     SimplexRuler     ruler;
     Ruler2DFast      square_ruler;
-    // HydraulicGrid2D  hydraulics;
-    // double * ground   = NULL;
-    // double * water    = NULL;
+
+    HydraulicGrid2D  hydraulics;
+    double * ground   = NULL;
+    double * water    = NULL;
+
     double drawHeight = 0;
+
     // ---- Hydraulics 1D
+
     Hydraulics1D hydro1d;
     const int   nTraceMax = 256;
     int         nTrace    = 0;
     int       * trace     = NULL;
-    // std::vector<int> river;
-    // std::vector<int> feeders;
-    // // ------- Economy
-    // std::unordered_map<std::string,Commodity*>  commodities;
-    // std::unordered_map<std::string,Technology*> technologies;
-    // // ------- Roads & Vehicles
-    // RoadBuilder roadBuilder;
-    // std::vector<RoadVehicleType*>  vehicleTypes;
-    // std::vector<Road*>             roads;
-    // std::vector<RoadVehicle*>      vehicles;
+
+    std::vector<int> river;
+    std::vector<int> feeders;
+
+    // ------- Economy
+    std::unordered_map<std::string,Commodity*>  commodities;
+    std::unordered_map<std::string,Technology*> technologies;
+
+    // ------- Roads & Vehicles
+    RoadBuilder roadBuilder;
+    std::vector<RoadVehicleType*>  vehicleTypes;
+    std::vector<Road*>             roads;
+    std::vector<RoadVehicle*>      vehicles;
 
     // ------- GUI
     GUI gui;
@@ -191,12 +191,12 @@ class LandCraftApp : public AppSDL2OGL { public:
 	void registerCommands();
     void registerDrawLayers();
 
-    // void generateTerrain();
-    // void loadTechnologies( const char* fname);
-    // void makeMap( int sz, double step, bool newMap );
-    // void makeRivers();
-    // void makeRoads();
-    // void makeVehicles();
+    void generateTerrain();
+    void loadTechnologies( const char* fname);
+    void makeMap( int sz, double step, bool newMap );
+    void makeRivers();
+    void makeRoads();
+    void makeVehicles();
 
     void hydro1D_update();
 	void hydroRelaxUpdate();
@@ -212,19 +212,18 @@ class LandCraftApp : public AppSDL2OGL { public:
 
     void drawVehicles();
 
-    int addRoadStright( Vec2i p1, Vec2i p2 ){
-        int id = W.makeRoadStraight(p1,p2);
-        if(id>=0 && !W.roads.empty()) addRoadPlot(W.roads.back());
-        return id;
-    }
-    void addRoadPlot(Road* road);
-    void addRiverPlot(int iRiver, float scFlow);
+	void addRoadStright( Vec2i p1, Vec2i p2 );
+	void addRoadPlot(Road* road);
+	void addRiverPlot(int iRiver, float scFlow);
 
-    void commandDispatch( int icommand );
+	void commandDispatch( int icommand );
 
-    LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
+	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
+
+
+// ------------------------------------------------------------------
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     default_font_texture   = makeTexture    ( "common_resources/dejvu_sans_mono.bmp" );
@@ -239,20 +238,12 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     registerCommands();
     registerDrawLayers();
 
-    // TODO(modular-init): Config-driven initialization; see data/world.ini
-    // The old explicit sequence is kept commented below for reference.
-    W.loadConfig("data/world.ini");
-    // Ensure the hex ruler matches the world grid, otherwise drawTerrain indices go out of bounds
-    if(W.ready){
-        ruler.setSize(W.hydro.n.x, W.hydro.n.y);
-        ruler.setStep(50.0);
-    }
-    // W.loadTechnologies("data/Technologies.txt");
-    // W.makeMap(128,50,false);
-    // W.generateTerrain();
-    // W.makeRivers();
-    // W.makeRoadStraight({10,15}, {55,38});
-    // W.makeVehicles();
+    loadTechnologies( "data/Technologies.txt" );
+
+    makeMap   (128,50,false);
+    makeRivers();
+    makeRoads();
+    makeVehicles();
     cmdPars.execFile( "data/comands.ini" );
 
 
@@ -266,22 +257,19 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //hydro1d.clear();
     //bisectNoise1D(4,hydro1d.ground,-1.0,0.0);
     VecN::set(hydro1d.n,5.0,hydro1d.water);
-    // allocate droplet trace buffer now that map exists
-    trace = new int[nTraceMax];
 
 
-    // Fill random water on top of ground to visualize
-    if(W.ready){
-        for(int i=0; i<W.hydro.ntot; i++) W.hydro.water[i] = W.hydro.ground[i] + randf(0,20.0);
-        W.relaxHex(36,39);
+    // Fill random watter
+    for(int i=0; i<hydraulics.ntot; i++){
+        hydraulics.water[i] = hydraulics.ground[i] + randf(0,20.0);;
     }
+    hydraulics.relaxWater( {36, 39});
 
     gui.layoutRow(10,10);
 
 #ifdef LUA
     if(!gLua){
-        gLua = luaL_newstate();
-        luaL_openlibs(gLua);
+        gLua = Lua::create();
         LandCraftLua::register_api(gLua);
         // Optional demo script auto-run
         if( fileExist("data/landcraft_demo.lua") ){
@@ -307,7 +295,7 @@ void LandCraftApp::draw(){
 	glPopMatrix();
 
 	// ----- Hydraulics 2D
-    if(bRunHydroRelax) W.hydroRelaxStep();
+    if(bRunHydroRelax) hydroRelaxUpdate();
     //if(bRunOutflow)    hydraulics.outflow_step();
 	//if( doDrain==1 ){ hydraulics.outflow_step(); }else if (doDrain==-1){ hydraulics.inflow_step();  }
 
@@ -317,8 +305,8 @@ void LandCraftApp::draw(){
     if(bDrawTraceDroplet) drawDropletTrace( );
 
 	// ----- Transport (Roads, Vehicles)
-    if(bDrawRoads   ){ glColor3f( 1.0, 1.0, 1.0 ); if(!W.roads.empty()) drawRoad( W.roads[0] ); }
-    if(bRunVehicles ) W.vehiclesStep(2.0);
+    if(bDrawRoads   ){ glColor3f( 1.0, 1.0, 1.0 ); drawRoad( roads[0] ); }
+    if(bRunVehicles )updateVehicles();
     if(bDrawVehicles)drawVehicles();
 
     // ----- Mouse  & Misc (debug?)
@@ -348,73 +336,73 @@ void LandCraftApp::drawHUD(){
 
 void LandCraftApp::commandDispatch( int icommand ){
     switch( (Actions)icommand ){
-        case Actions::generateTerrain : W.generateTerrain(); break;
-        case Actions::relaxWater      : W.hydro.relaxWater(); break;
+        case Actions::generateTerrain : generateTerrain(); break;
+        case Actions::relaxWater      : hydraulics.relaxWater(); break;
         //case myKeyBind: // does not work
         case Actions::relaxWaterHex   :{
             int ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
-            W.hydro.relaxWater( ruler.i2ip(ihex) );
+            hydraulics.relaxWater( ruler.i2ip(ihex) );
             }break;
         case Actions::save :
-            saveBin( "data/ground.bin", sizeof(double)*W.hydro.ntot, (char*)W.hydro.ground );
-            saveBin( "data/water.bin",  sizeof(double)*W.hydro.ntot,  (char*)W.hydro.water  );
+            saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+            saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
             break;
         case Actions::load :{
             bool ok = true;
             if( fileExist("data/ground.bin") ){
-                if( loadBin( "data/ground.bin", sizeof(double)*W.hydro.ntot, (char*)W.hydro.ground, /*bExitOnErr*/false ) != 0 ) ok = false;
+                if( loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground, /*bExitOnErr*/false ) != 0 ) ok = false;
             }else{ ok = false; }
             if( fileExist("data/water.bin") ){
-                if( loadBin( "data/water.bin", sizeof(double)*W.hydro.ntot,  (char*)W.hydro.water,  /*bExitOnErr*/false ) != 0 ) ok = false;
+                if( loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water,  /*bExitOnErr*/false ) != 0 ) ok = false;
             }else{ ok = false; }
             if(!ok){
                 printf("[LandCraft] Load requested but terrain files missing/corrupt -> generating new terrain.\n");
-                W.generateTerrain();
+                generateTerrain();
             }
             terrainViewMode = 1;
             }break;
         case Actions::outflow :{
-            for(int i=0; i<W.hydro.ntot; i++){ W.hydro.known[i]=false; }
+            for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
             int ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
-            W.hydro.contour2[0] = ihex;
-            W.hydro.nContour++;
+            hydraulics.contour2[0] = ihex;
+            hydraulics.nContour++;
             printf( "idrain  %i \n", ihex  );
-            W.hydro.water[ihex]  = W.hydro.ground[ihex];
-            W.hydro.isOutflow    = true;
+            water[ihex]          = ground[ihex];
+            hydraulics.isOutflow = true;
             terrainViewMode = 1;
             //doDrain = 1;
             }break;
         case Actions::inflow :{
-            for(int i=0; i<W.hydro.ntot; i++){ W.hydro.known[i]=false; }
+            for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
             int ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
-            W.hydro.contour2[0] = ihex;
-            W.hydro.nContour++;
+            hydraulics.contour2[0] = ihex;
+            hydraulics.nContour++;
             printf( "idrain  %i \n", ihex   );
-            W.hydro.water[ihex]  = W.hydro.ground[ihex] + 10.0;
-            W.hydro.isOutflow    = false;
+            water[ihex]          = ground[ihex] + 10.0;
+            hydraulics.isOutflow = false;
             terrainViewMode = 1;
             //doDrain = -1;
             }break;
         case Actions::findRivers :
-            W.hydro.gatherRain( 100.0 );
+            hydraulics.gatherRain( 100.0 );
             terrainViewMode = 2;
             //val=0.0; ihex=0;
-            //for( int isink : W.hydro.sinks ){ double w=W.hydro.water[isink]; if(w>val){val=w; ihex=isink; } } // find largest river
-            //W.hydro.trackRiver( ihex, 50.0, river, feeders );
-            W.hydro.findAllRivers( 50.0 );
-            //for(int i=0; i<W.hydro.ntot; i++){ W.hydro.known[i]=false; }
-            //W.hydro.trackRiverRecursive( ihex, 50.0, NULL );
+            //for( int isink : hydraulics.sinks ){ double w=water[isink]; if(w>val){val=w; ihex=isink; } } // find largest river
+            //hydraulics.trackRiver( ihex, 50.0, river, feeders );
+            hydraulics.findAllRivers( 50.0 );
+            //for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
+            //hydraulics.trackRiverRecursive( ihex, 50.0, NULL );
             break;
         case Actions::terrainViewMode :
             terrainViewMode=(terrainViewMode%2)+1;
             break;
         case Actions::traceDroplet :{
             int ihex   = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
-            nTrace = W.hydro.traceDroplet( {ihex%W.hydro.n.x, ihex/W.hydro.n.x}, nTraceMax, trace );
+            nTrace = hydraulics.traceDroplet( {ihex%hydraulics.n.x, ihex/hydraulics.n.x}, nTraceMax, trace );
             }break;
     }
     roadProfile.clear();
-    addRoadPlot(W.roads[0]);
+    addRoadPlot(roads[0]);
     roadProfile.update();
     roadProfile.autoAxes(0.5,0.2);
     roadProfile.render();
@@ -445,11 +433,11 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_LEFT:
                     if( activeGUIPanel == 0 ){
                         ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                        if( (ihex>=0) && (ihex<W.hydro.ntot) ){
-                            drawHeight = W.hydro.ground[ihex];
+                        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+                            drawHeight = ground[ihex];
                             printf( "[LandCraft] pick drawHeight=%f at ihex=%d\n", drawHeight, ihex );
                         }else{
-                            printf( "[LandCraft] left-click outside map: ihex=%d ntot=%d (ignoring)\n", ihex, W.hydro.ntot );
+                            printf( "[LandCraft] left-click outside map: ihex=%d ntot=%d (ignoring)\n", ihex, hydraulics.ntot );
                         }
                     }
                     else if( activeGUIPanel == riverList ){
@@ -462,8 +450,8 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:
                     //printf( "left button pressed !!!! " );
                     iBuildStartHex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                    if( (iBuildStartHex<0) || (iBuildStartHex>=W.hydro.ntot) ){
-                        printf( "[LandCraft] right-click start outside map: ihex=%d ntot=%d\n", iBuildStartHex, W.hydro.ntot );
+                    if( (iBuildStartHex<0) || (iBuildStartHex>=hydraulics.ntot) ){
+                        printf( "[LandCraft] right-click start outside map: ihex=%d ntot=%d\n", iBuildStartHex, hydraulics.ntot );
                         iBuildStartHex = -1;
                     }
                     break;
@@ -475,20 +463,20 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:
                     if( iBuildStartHex>=0 ){
                         int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                        if( (ihex>=0) && (ihex<W.hydro.ntot) ){
-                            for(Road* road : W.roads){ delete road; }
-                            W.roads.clear();
+                        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+                            for(Road* road : roads){ delete road; }
+                            roads.clear();
                             addRoadStright( ruler.i2ip(iBuildStartHex), ruler.i2ip(ihex) );
 
-                            if(!W.roads.empty()){
+                            if(!roads.empty()){
                                 roadProfile.clear();
-                                addRoadPlot(W.roads[0]);
+                                addRoadPlot(roads[0]);
                                 roadProfile.update();
                                 roadProfile.autoAxes(0.5,0.2);
                                 roadProfile.render();
                             }
                         }else{
-                            printf( "[LandCraft] right-click end outside map: ihex=%d ntot=%d (ignoring)\n", ihex, W.hydro.ntot );
+                            printf( "[LandCraft] right-click end outside map: ihex=%d ntot=%d (ignoring)\n", ihex, hydraulics.ntot );
                         }
                     }
                     iBuildStartHex=-1;
@@ -518,12 +506,12 @@ void LandCraftApp::mouseHandling( ){
     //mouse_begin_y = HEIGHT - mouse_begin_y;
     if( buttons & SDL_BUTTON(SDL_BUTTON_LEFT) ){
         int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-        if( (ihex>=0) && (ihex<W.hydro.ntot) ){
-            W.hydro.ground[ihex] = drawHeight;
+        if( (ihex>=0) && (ihex<hydraulics.ntot) ){
+            hydraulics.ground[ihex] = drawHeight;
         }else{
-            printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, W.hydro.ntot);
+            printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, hydraulics.ntot);
             // Click outside map; ignore safely
-            //printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, W.hydro.ntot);
+            //printf("[LandCraft] mouse paint outside map: ihex=%d ntot=%d\n", ihex, hydraulics.ntot);
         }
     }
 };
@@ -590,180 +578,183 @@ void LandCraftApp::printASCItable( int imin, int imax  ){
 
 // ------------------------------------------------------------------
 
-// void LandCraftApp::loadTechnologies(const char* fname ){
-//     //FILE* pFile = fopen("data/Technologies.txt", "r" );
-//     FILE* pFile = fopen(fname, "r" );
-//     if (!pFile){ printf("Unable to open file!\n"); exit(0); }
-//     while( true ){
-//         Technology* tech = new Technology();
-//         if( tech->fromFile(pFile) ){
-//             tech->print();
-//             W.techIndex[tech->name] = (int)W.techs.size();
-//             W.techs.push_back(tech);
-//         }else{
-//             delete tech;
-//             break;
-//         }
-//     }
-// }
+void LandCraftApp::loadTechnologies(const char* fname ){
+    //FILE* pFile = fopen("data/Technologies.txt", "r" );
+    FILE* pFile = fopen(fname, "r" );
+    if (!pFile){ printf("Unable to open file!\n"); exit(0); }
+    while( true ){
+        Technology* tech = new Technology();
+        if( tech->fromFile(pFile) ){
+            tech->print();
+            technologies[tech->name]=tech;
+            //technologies.insert({tech->name,tech});
+            //technologies[tech->name]->print();
+        }else{
+            delete tech;
+            break;
+        }
+    }
+}
 
 // ------------------------------------------------------------------
 
-// void  LandCraftApp::makeMap( int sz, double step, bool newMap ){
-//     //ruler.setSize(128,128);
-//     //ruler.setStep(50);
-//     ruler.setSize(sz,sz );
-//     ruler.setStep(step  );
-//     map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
-//     trace = new int [nTraceMax];
+void  LandCraftApp::makeMap( int sz, double step, bool newMap ){
+    //ruler.setSize(128,128);
+    //ruler.setStep(50);
+    ruler.setSize(sz,sz );
+    ruler.setStep(step  );
+    map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
+    trace = new int [nTraceMax];
 
-//     W.hydro.allocate( {ruler.na,ruler.nb} );
-//     W.hydro.initNeighs_6(false);
-//     W.hydro.allocate_outflow();
-//     // Prefer loading cached terrain; if files are missing or load fails, generate new
-//     bool haveGround = fileExist("data/ground.bin");
-//     bool haveWater  = fileExist("data/water.bin");
-//     bool wantNew    = newMap || !haveGround || !haveWater;
-//     if( wantNew ){
-//         generateTerrain();
-//         // Cache generated terrain for next run
-//         saveBin( "data/ground.bin", sizeof(double)*W.hydro.ntot, (char*)W.hydro.ground );
-//         saveBin( "data/water.bin",  sizeof(double)*W.hydro.ntot,  (char*)W.hydro.water  );
-//     }else{
-//         int er1 = loadBin( "data/ground.bin", sizeof(double)*W.hydro.ntot, (char*)W.hydro.ground, /*bExitOnErr*/false );
-//         int er2 = loadBin( "data/water.bin",  sizeof(double)*W.hydro.ntot, (char*)W.hydro.water,  /*bExitOnErr*/false );
-//         if( (er1!=0) || (er2!=0) ){
-//             printf("[LandCraft] Cached terrain load failed -> generating new terrain.\n");
-//             generateTerrain();
-//             saveBin( "data/ground.bin", sizeof(double)*W.hydro.ntot, (char*)W.hydro.ground );
-//             saveBin( "data/water.bin",  sizeof(double)*W.hydro.ntot,  (char*)W.hydro.water  );
-//         }
-//     }
-// }
+    hydraulics.allocate( {ruler.na,ruler.nb} );
+    hydraulics.initNeighs_6(false);
+    ground = hydraulics.ground;
+    water  = hydraulics.water;
+    hydraulics.allocate_outflow();
+    // Prefer loading cached terrain; if files are missing or load fails, generate new
+    bool haveGround = fileExist("data/ground.bin");
+    bool haveWater  = fileExist("data/water.bin");
+    bool wantNew    = newMap || !haveGround || !haveWater;
+    if( wantNew ){
+        generateTerrain();
+        // Cache generated terrain for next run
+        saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+        saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+    }else{
+        int er1 = loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground, /*bExitOnErr*/false );
+        int er2 = loadBin( "data/water.bin",  sizeof(double)*hydraulics.ntot, (char*)water,  /*bExitOnErr*/false );
+        if( (er1!=0) || (er2!=0) ){
+            printf("[LandCraft] Cached terrain load failed -> generating new terrain.\n");
+            generateTerrain();
+            saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+            saveBin( "data/water.bin",  sizeof(double)*hydraulics.ntot,  (char*)water  );
+        }
+    }
+}
 
-// // ------------------------------------------------------------------
+// ------------------------------------------------------------------
 
-// void LandCraftApp::generateTerrain(){
-//     printf("[LandCraft] generateTerrain(): synthesizing terrain and water cache...\n");
-//     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
-//     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
-//     srand(16464);
-//     W.hydro.ground[0]=0.2;
-//     bisecNoise( 7, W.hydro.ground, -1.0/256, 1.0/256 );
-//     W.hydro.initNeighs_6(false);
-//     //hydraulics.errodeDroples( 1000, 100, +0.1, 0.15, 0.9, {10, 10}, {100, 100} );
-//     for( int j=0; j<500; j++ ){
-//         int isz = 25;
-//         int ix0 = rand()%(W.hydro.n.x-isz);
-//         int iy0 = rand()%(W.hydro.n.y-isz);
-//         //printf("%i : %i %i \n", j, ix0, iy0);
-//         //                         n nStepMax, w,  disolve, sediment, ix0, iy0, ix1, iy1
-//         //hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, ix0, iy0, ix0+isz, iy0+isz );
-//         W.hydro.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
-//         //hydraulics.errodeDroples( 200, 500,   0.02, 0.1,    0.0,   0,0, hydraulics.nx, hydraulics.ny ); // fast
-//     }
-//     for(int i=0; i<W.hydro.ntot; i++){ W.hydro.ground[i] *= W.maxHeight; W.hydro.water[i] = W.hydro.ground[i]; }
-//     /*
-//     hydraulics.init_outflow( 500.0 );
-//     int n = 0;
-//     for(int ix=0; ix<ruler.na; ix++){ int idx=ix;                     hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
-//     for(int ix=0; ix<ruler.na; ix++){ int idx=ix+ruler.ntot-ruler.na; hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
-//     for(int iy=0; iy<ruler.nb; iy++){ int idx=iy*    ruler.na;        hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
-//     for(int iy=0; iy<ruler.nb; iy++){ int idx=(iy+1)*ruler.na-1;      hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
-//     hydraulics.nContour = n;
-//     hydraulics.isOutflow = true;
-//     //doDrain = 1;
-//     */
-// }
+void LandCraftApp::generateTerrain(){
+    printf("[LandCraft] generateTerrain(): synthesizing terrain and water cache...\n");
+    //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+    //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
+    srand(16464);
+    hydraulics.ground[0]=0.2;
+    bisecNoise( 7, hydraulics.ground, -1.0/256, 1.0/256 );
+    hydraulics.initNeighs_6(false);
+    //hydraulics.errodeDroples( 1000, 100, +0.1, 0.15, 0.9, {10, 10}, {100, 100} );
+    for( int j=0; j<500; j++ ){
+        int isz = 25;
+        int ix0 = rand()%(hydraulics.n.x-isz);
+        int iy0 = rand()%(hydraulics.n.y-isz);
+        //printf("%i : %i %i \n", j, ix0, iy0);
+        //                         n nStepMax, w,  disolve, sediment, ix0, iy0, ix1, iy1
+        //hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, ix0, iy0, ix0+isz, iy0+isz );
+        hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
+        //hydraulics.errodeDroples( 200, 500,   0.02, 0.1,    0.0,   0,0, hydraulics.nx, hydraulics.ny ); // fast
+    }
+    for(int i=0; i<hydraulics.ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
+    /*
+    hydraulics.init_outflow( 500.0 );
+    int n = 0;
+    for(int ix=0; ix<ruler.na; ix++){ int idx=ix;                     hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int ix=0; ix<ruler.na; ix++){ int idx=ix+ruler.ntot-ruler.na; hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int iy=0; iy<ruler.nb; iy++){ int idx=iy*    ruler.na;        hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int iy=0; iy<ruler.nb; iy++){ int idx=(iy+1)*ruler.na-1;      hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    hydraulics.nContour = n;
+    hydraulics.isOutflow = true;
+    //doDrain = 1;
+    */
+}
 
-// // -----------------------------------------------------------------
+// -----------------------------------------------------------------
 
-// void LandCraftApp::makeRivers(){
-//     double wmax = W.hydro.gatherRain( 100.0 ); printf("wmax %f \n",wmax ); // exit(0);
-//     terrainViewMode = 2;
-//     W.hydro.findAllRivers( 50.0 );
+void LandCraftApp::makeRivers(){
+    double wmax = hydraulics.gatherRain( 100.0 ); printf("wmax %f \n",wmax ); // exit(0);
+    terrainViewMode = 2;
+    hydraulics.findAllRivers( 50.0 );
 
-//     std::sort(W.hydro.rivers.begin(), W.hydro.rivers.end(), [](River* a, River* b) { return a->path.size() > b->path.size(); } );
+    std::sort(hydraulics.rivers.begin(), hydraulics.rivers.end(), [](River* a, River* b) { return a->path.size() > b->path.size(); } );
 
-//     //DropDownList* riverList = new DropDownList("Rivers",100.0,300.0,200.0,5);
-//     riverList = new DropDownList("Rivers",20.0,HEIGHT-100.0,200.0,5);
-//     gui.addPanel( riverList );
-//     //printf( "FOUND %i RIVERS \n", W.hydro.rivers.size() );
-//     for(int i=0; i<W.hydro.rivers.size(); i++ ){
-//         std::string name = "river " + std::to_string(i) +  " ("+ std::to_string( W.hydro.rivers[i]->path.size() )  +")";
-//         //printf( "%s \n", name.c_str() );
-//         riverList->addItem( name );
-//     };
-//     //exit(0);
+    //DropDownList* riverList = new DropDownList("Rivers",100.0,300.0,200.0,5);
+    riverList = new DropDownList("Rivers",20.0,HEIGHT-100.0,200.0,5);
+    gui.addPanel( riverList );
+    //printf( "FOUND %i RIVERS \n", hydraulics.rivers.size() );
+    for(int i=0; i<hydraulics.rivers.size(); i++ ){
+        std::string name = "river " + std::to_string(i) +  " ("+ std::to_string( hydraulics.rivers[i]->path.size() )  +")";
+        //printf( "%s \n", name.c_str() );
+        riverList->addItem( name );
+    };
+    //exit(0);
 
-//     // plot rivers
-//     riverProfile.init();
-//     riverProfile.fontTex = fontTex;
-//     riverProfile.clrGrid = 0xFF404040;
-//     addRiverPlot(6, -1);
-//     addRiverPlot(6,0.1);
-//     //exit(0);
-//     //addRiverPlot(2);
-//     //addRiverPlot(3);
+    // plot rivers
+    riverProfile.init();
+    riverProfile.fontTex = fontTex;
+    riverProfile.clrGrid = 0xFF404040;
+    addRiverPlot(6, -1);
+    addRiverPlot(6,0.1);
+    //exit(0);
+    //addRiverPlot(2);
+    //addRiverPlot(3);
 
-// }
+}
 
-// // ------------------------------------------------------------------
+// ------------------------------------------------------------------
 
-// void LandCraftApp::makeRoads(  ){
-//     addRoadStright( {10,15}, {55,38} );
-//     // plot road profile
-//     roadProfile.init();
-//     roadProfile.fontTex = fontTex;
-//     roadProfile.clrGrid = 0xFF404040;
-//     if(!W.roads.empty()) addRoadPlot(W.roads[0]);
-//     roadProfile.update();
-//     roadProfile.autoAxes(0.5,0.2);
-//     roadProfile.render();
-// }
+void LandCraftApp::makeRoads(  ){
+    addRoadStright( {10,15}, {55,38} );
+    // plot road profile
+    roadProfile.init();
+    roadProfile.fontTex = fontTex;
+    roadProfile.clrGrid = 0xFF404040;
+    addRoadPlot(roads[0]);
+    roadProfile.update();
+    roadProfile.autoAxes(0.5,0.2);
+    roadProfile.render();
+}
 
-//     //exit(0);
-// void LandCraftApp::makeVehicles( ){
-//     RoadVehicleType* vehicleType= new RoadVehicleType();
-//     W.vehicleTypes.push_back(vehicleType);
-//     RoadVehicle* vehicle = new RoadVehicle();
-//     vehicle->road = W.roads[0];
-//     vehicle->type = vehicleType;
-//     W.vehicles.push_back( vehicle );
-// }
+    //exit(0);
+void LandCraftApp::makeVehicles( ){
+    RoadVehicleType* vehicleType= new RoadVehicleType();
+    vehicleTypes.push_back(vehicleType);
+    RoadVehicle* vehicle = new RoadVehicle();
+    vehicle->road = roads[0];
+    vehicle->type = vehicleType;
+    vehicles.push_back( vehicle );
+}
 
-// // ------------------------------------------------------------------
+// ------------------------------------------------------------------
 
-// void LandCraftApp::addRoadStright( Vec2i p1, Vec2i p2 ){
-//     Road* road  = new Road();
-//     W.roads.push_back( road );
-//     roadBuilder.road = road;
-//     roadBuilder.path.clear();
-//     //std::list<int> lst;
-//     //lst.push_back(15454);
-//     //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
-//     //printf( " %i \n", lst.back() );
-//     //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
-//     //rt.print();
-//     //roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
-//     roadBuilder.path.push_back( (RoadTile){p1.x,p1.y,0.0} );
-//     //roadBuilder.path.push_back ( rt );
-//     //roadBuilder.path.end()->print();
-//     //roadBuilder.pushStright ( {55,38}     );
-//     roadBuilder.pushStright ( p2  );
-//     for( RoadTile& p : roadBuilder.path ){
-//         int i     = W.hydro.ip2i( (Vec2i){p.ia,p.ib} );
-//         //p.height = hydraulics.ground[i];
-//         //printf( "road (%i,%i)%i  (%i) %g \n", p.ia,p.ib, i, hydraulics.n.x, p.height );
-//     };
-//     //exit(0);
-//     roadBuilder.writeIt();
-// }
+void LandCraftApp::addRoadStright( Vec2i p1, Vec2i p2 ){
+    Road* road  = new Road();
+    roads.push_back( road );
+    roadBuilder.road = road;
+    roadBuilder.path.clear();
+    //std::list<int> lst;
+    //lst.push_back(15454);
+    //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
+    //printf( " %i \n", lst.back() );
+    //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
+    //rt.print();
+    //roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
+    roadBuilder.path.push_back( (RoadTile){p1.x,p1.y,0.0} );
+    //roadBuilder.path.push_back ( rt );
+    //roadBuilder.path.end()->print();
+    //roadBuilder.pushStright ( {55,38}     );
+    roadBuilder.pushStright ( p2  );
+    for( RoadTile& p : roadBuilder.path ){
+        int i     = hydraulics.ip2i( (Vec2i){p.ia,p.ib} );
+        //p.height = hydraulics.ground[i];
+        //printf( "road (%i,%i)%i  (%i) %g \n", p.ia,p.ib, i, hydraulics.n.x, p.height );
+    };
+    //exit(0);
+    roadBuilder.writeIt();
+}
 
 // ------------------------------------------------------------------
 
 void LandCraftApp::addRiverPlot(int iRiver, float scFlow){
-    River* thisRiver = W.hydro.rivers[iRiver];
+    River* thisRiver = hydraulics.rivers[iRiver];
     //DataLine2D * riverH1 = new DataLine2D(thisRiver->path.size());
     //riverProfile.lines.push_back( riverH1 );
     //riverH1->linspan(0,thisRiver->path.size());
@@ -771,8 +762,8 @@ void LandCraftApp::addRiverPlot(int iRiver, float scFlow){
     int ii=0;
     if(scFlow>0){
         for( int i : thisRiver->path ){
-            //W.hydro.i2ip(i);
-            //riverH1->ys[ii] = W.hydro.water[i] * scFlow;
+            //hydraulics.i2ip(i);
+            //riverH1->ys[ii] = hydraulics.water[i] * scFlow;
             riverH1->ys[ii] = thisRiver->flow[ii] * scFlow;
             //riverH1->ys[ii] = thisRiver->flow[ii];
             //printf( "road[%i] h flow %g \n", ii, riverH1->ys[ii] );
@@ -780,7 +771,7 @@ void LandCraftApp::addRiverPlot(int iRiver, float scFlow){
         };
     }else{
         for( int i : thisRiver->path ){
-            riverH1->ys[ii] = W.hydro.ground[i];
+            riverH1->ys[ii] = hydraulics.ground[i];
             //printf( "road[%i] h height %g \n", ii, riverH1->ys[ii] );
             ii++;
         };
@@ -809,9 +800,9 @@ void LandCraftApp::addRoadPlot(Road* road){
 
     for( int ii=0; ii<n; ii++ ){
         RoadTile& p = road->path[ii];
-        int i = W.hydro.ip2i({p.ia,p.ib});
-        double h = W.hydro.ground[i];
-        double w = W.hydro.water [i];
+        int i = hydraulics.ip2i({p.ia,p.ib});
+        double h = hydraulics.ground[i];
+        double w = hydraulics.water [i];
         roadH1->ys[ii] = w;
         roadH2->ys[ii] = h;
         //roadH2->ys[ii] = h + w;
@@ -829,20 +820,20 @@ void LandCraftApp::addRoadPlot(Road* road){
 void LandCraftApp::terrainColor( int i ){
     double maxDepth = 50.0;
     double depth;
-    double w = W.hydro.water [i];
-    double g = W.hydro.ground[i];
+    double w = water [i];
+    double g = ground[i];
     switch( terrainViewMode ){
         case 1:
             depth = clamp( (w-g)/maxDepth, 0.0, 1.0 );
             //w-=g; if(w)depth=clamp( sqrt(w-g)*0.05, 0.0, 1.0 );
-            g /= W.maxHeight;
+            g /= maxHeight;
             glColor3f( (1-depth)*g, (1-depth)*(1-g), depth );
             break;
         case 2:
             //w *= 0.1;
             //w *= log(w*5.0)*0.1;
             w=sqrt(w)*0.05;
-            if( W.hydro.known[i] ){ glColor3f( 1, 0, 0 ); }else{ glColor3f( w, w, w ); }
+            if( hydraulics.known[i] ){ glColor3f( 1, 0, 0 ); }else{ glColor3f( w, w, w ); }
             break;
     }
     //glColor3f( 1.0,1.0,1.0 );
@@ -908,7 +899,7 @@ void LandCraftApp::drawRiver( River* river ){
 void LandCraftApp::drawSinks(){
     // draw sinks
     glColor3f( 0.0, 1.0, 1.0 );
-    for(int isink : W.hydro.sinks ){
+    for(int isink : hydraulics.sinks ){
         Vec2d p;
         ruler.nodePoint( isink,p);
         Draw2D::drawPointCross_d( p, 100.0 );
@@ -932,18 +923,33 @@ void LandCraftApp::drawDropletTrace(){
 // ----------------------------------------
 
 void LandCraftApp::drawRivers( ){
-    // draw all rivers from world
-    for( River* rv: W.hydro.rivers ){
-        Draw::color_of_hash( rv->path[0]+54877 );
-        drawRiver( rv );
+    // draw river
+    glBegin(GL_LINE_STRIP);
+    glColor3f( 0.0, 1.0, 1.0 );
+    for(int i : river ){
+        Vec2d p;
+        ruler.nodePoint(i,p);
+        glVertex3f( p.x, p.y, 100.0 );
     }
-    // highlight selected
-    if(riverList && riverList->iSelected>=0 && riverList->iSelected<(int)W.hydro.rivers.size()){
-        glLineWidth( 3 );
-        glColor3f( 0.0,1.0,0.0 );
-        drawRiver( W.hydro.rivers[riverList->iSelected] );
-        glLineWidth( 1 );
+    glEnd();
+    // draw feeders
+    glColor3f( 1.0, 0.0, 1.0 );
+    for(int i : feeders ){
+        Vec2d p;
+        ruler.nodePoint( i,p);
+        Draw2D::drawPointCross_d( p, 30.0 );
     }
+    // draw all rivers
+    for( River* river: hydraulics.rivers ){
+        //printf( " path size: %i \n", river->path.size() );
+        Draw::color_of_hash( river->path[0]+54877 );
+        drawRiver( river );
+    }
+    //River* thisRiver = ;
+    glLineWidth( 3 );
+    glColor3f( 0.0,1.0,0.0 );
+    drawRiver( hydraulics.rivers[riverList->iSelected] );
+    glLineWidth( 1 );
 }
 
 // ------------------------------------------------------------------
@@ -966,7 +972,7 @@ void LandCraftApp::drawRoad( Road* road ){
 // ------------------------------------------------------------------
 
 void LandCraftApp::     updateVehicles   (){
-	for( RoadVehicle* veh : W.vehicles ){
+	for( RoadVehicle* veh : vehicles ){
         //veh->moveStep( 1.0 );
         veh->move( 2.0 );
         //if( !veh->onWay ){ veh->idir*=-1; veh->onWay=true; }
@@ -977,7 +983,7 @@ void LandCraftApp::     updateVehicles   (){
 
 void LandCraftApp::     drawVehicles    (){
 	//if(frameCount>100) exit(0);
-	for( RoadVehicle* veh : W.vehicles ){
+	for( RoadVehicle* veh : vehicles ){
         Vec2d p;
         //veh->ipath
         RoadTile& tile = veh->road->path[veh->ipath];
@@ -1022,15 +1028,19 @@ void LandCraftApp::hydroRelaxUpdate(){
     terrainViewMode = 1;
     double DEBUG_wsum_before=0.0;
     double DEBUG_E_before   =0.0;
-    W.hydro.sumWater( DEBUG_wsum_before, DEBUG_E_before );
-    // TODO(deprecated): simulation moved to W.hydroRelaxStep(); keep this wrapper for diagnostics only
-    W.hydroRelaxStep();
+    hydraulics.sumWater( DEBUG_wsum_before, DEBUG_E_before );
+    hydraulics.relaxWater();
+    for(int iy=0; iy<hydraulics.n.y; iy++){
+    //for(int iy=0; iy<hydraulics.n.y; iy+=3){
+        hydraulics.relaxWaterRasterX( iy, 0, hydraulics.n.x, 1.0 );
+        hydraulics.relaxWaterRasterY( iy, 0, hydraulics.n.x, 1.0 );
+    }
     double DEBUG_wsum_after=0.0;
     double DEBUG_E_after   =0.0;
-    W.hydro.sumWater( DEBUG_wsum_after, DEBUG_E_after );
+    hydraulics.sumWater( DEBUG_wsum_after, DEBUG_E_after );
     printf( "DEBUG relaxWater[%i] dE %g | %g -> %g \n", frameCount, DEBUG_E_before-DEBUG_E_after,  DEBUG_E_before, DEBUG_E_after );
     if(fabs(DEBUG_wsum_before-DEBUG_wsum_after)>1e-6 ){
-        printf( "DEBUG ERROR in hydroRelaxStep water before,after diff %g | %g %g \n", DEBUG_wsum_before-DEBUG_wsum_after, DEBUG_wsum_before, DEBUG_wsum_after );
+        printf( "DEBUG ERROR in hydraulics.relaxWater water before,after diff %g | %g %g \n", DEBUG_wsum_before-DEBUG_wsum_after, DEBUG_wsum_before, DEBUG_wsum_after );
         exit(0);
     }
     if(frameCount<=200) fprintf( file_relax_debug, " %i %g %g \n", frameCount, DEBUG_E_after,  DEBUG_E_before-DEBUG_E_after );
@@ -1045,7 +1055,7 @@ void LandCraftApp::hydroRelaxUpdate(){
         ind = ruler.wrap_index(ind);
         int i = ruler.ip2i(ind);
         //printf("i %i (%i,%i) \n",i, ind.x, ind.y );
-        W.hydro.ground[i] = randf(0.0,1.0);
+        ground[i] = randf(0.0,1.0);
 	}
 }
 
@@ -1068,9 +1078,6 @@ int main(int argc, char *argv[]){
 
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
     printf( "argc %i \n", argc );
-    // Initialize shared world state first so both app and C-API operate on same instance
-    W.init("cpp/apps/LandCraft/data");
-
     SDL_DisplayMode dm = initSDLOGL( 8 );
     int junk;
     thisApp = new LandCraftApp( junk, dm.w-150, dm.h-100 ); 

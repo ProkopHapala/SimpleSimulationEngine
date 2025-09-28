@@ -11,6 +11,25 @@
 namespace LandCraftLua {
 
 // --- Helpers ---
+inline double getDoubleFieldDef(lua_State* L, const char* key, double defv){
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    double out = defv;
+    if(lua_isnumber(L, -1)) out = lua_tonumber(L, -1);
+    lua_pop(L,1);
+    return out;
+}
+
+inline long getIntFieldDef(lua_State* L, const char* key, long defv){
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    long out = defv;
+    if(lua_isnumber(L, -1)){
+        double f = lua_tonumber(L, -1); long li = floor(f); if(li==f) out=li; else out=defv;
+    }
+    lua_pop(L,1);
+    return out;
+}
 inline void pushIntArray(lua_State* L, const int* a, int n){
     lua_createtable(L, n, 0);
     for(int i=0;i<n;i++){ lua_pushinteger(L, (lua_Integer)a[i]); lua_rawseti(L, -2, i+1); }
@@ -35,7 +54,7 @@ inline void pushDoubleArray(lua_State* L, const double* a, int n){
 // Example: l_GenerateTerrain{ seed:int }
 inline int l_GenerateTerrain(lua_State* L){
     unsigned int seed = (unsigned int)Lua::getIntField(L, "seed");
-    double maxH = Lua::getDoubleField(L, "maxHeight", 500.0);
+    double maxH = getDoubleFieldDef(L, "maxHeight", 500.0);
     lc_generate_terrain(seed, maxH);
     return 0;
 }
@@ -86,7 +105,7 @@ inline int l_RiverPath(lua_State* L){
 inline int l_TraceDroplet(lua_State* L){
     int ix = Lua::getIntField(L, "ix");
     int iy = Lua::getIntField(L, "iy");
-    int maxn = Lua::getIntField(L, "max", 256);
+    int maxn = (int)getIntFieldDef(L, "max", 256);
     std::vector<int> tmp(maxn);
     int n = lc_trace_droplet(ix,iy,tmp.data(), maxn);
     if(n<0) n=0; pushIntArray(L, tmp.data(), n);
@@ -116,50 +135,49 @@ inline int l_RoadProfile(lua_State* L){
 
 // Registration helper
 inline void register_api(lua_State* L){
-    lua_register(L, "generate_terrain", l_GenerateTerrain);
-    lua_register(L, "relax_all",       l_RelaxAll);
-    lua_register(L, "relax_hex",       l_RelaxHex);
-    lua_register(L, "gather_rain",     l_GatherRain);
-    lua_register(L, "find_rivers",     l_FindRivers);
-    lua_register(L, "river_path",      l_RiverPath);
-    lua_register(L, "trace_droplet",   l_TraceDroplet);
-    lua_register(L, "build_road",      l_BuildRoad);
-    lua_register(L, "road_profile",    l_RoadProfile);
+    // core
+    lua_pushcclosure(L, l_GenerateTerrain, 0); lua_setglobal(L, "generate_terrain");
+    lua_pushcclosure(L, l_RelaxAll,       0); lua_setglobal(L, "relax_all");
+    lua_pushcclosure(L, l_RelaxHex,       0); lua_setglobal(L, "relax_hex");
+    lua_pushcclosure(L, l_GatherRain,     0); lua_setglobal(L, "gather_rain");
+    lua_pushcclosure(L, l_FindRivers,     0); lua_setglobal(L, "find_rivers");
+    lua_pushcclosure(L, l_RiverPath,      0); lua_setglobal(L, "river_path");
+    lua_pushcclosure(L, l_TraceDroplet,   0); lua_setglobal(L, "trace_droplet");
+    lua_pushcclosure(L, l_BuildRoad,      0); lua_setglobal(L, "build_road");
+    lua_pushcclosure(L, l_RoadProfile,    0); lua_setglobal(L, "road_profile");
 
-    // ---- Hydraulics inflow/outflow/save/load ----
-    lua_register(L, "inflow", [](lua_State* L)->int{
-        int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); double d = Lua::getDoubleField(L, "delta", 10.0); lc_set_inflow_at(ix,iy,d); return 0; });
-    lua_register(L, "outflow", [](lua_State* L)->int{
-        int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); lc_set_outflow_at(ix,iy); return 0; });
-    lua_register(L, "save_terrain", [](lua_State* L)->int{
-        const char* g = Lua::getStringField(L, "ground"); const char* w = Lua::getStringField(L, "water"); int er = lc_save(g,w); lua_pushinteger(L, er); return 1; });
-    lua_register(L, "load_terrain", [](lua_State* L)->int{
-        const char* g = Lua::getStringField(L, "ground"); const char* w = Lua::getStringField(L, "water"); int er = lc_load(g,w); lua_pushinteger(L, er); return 1; });
+    // inflow/outflow/save/load
+    lua_pushcclosure(L, [](lua_State* L)->int{ int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); double d = getDoubleFieldDef(L, "delta", 10.0); lc_set_inflow_at(ix,iy,d); return 0; }, 0); lua_setglobal(L, "inflow");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); lc_set_outflow_at(ix,iy); return 0; }, 0); lua_setglobal(L, "outflow");
+    lua_pushcclosure(L, [](lua_State* L)->int{ const char* g = Lua::getStringField(L, "ground"); const char* w = Lua::getStringField(L, "water"); int er = lc_save(g,w); lua_pushinteger(L, er); return 1; }, 0); lua_setglobal(L, "save_terrain");
+    lua_pushcclosure(L, [](lua_State* L)->int{ const char* g = Lua::getStringField(L, "ground"); const char* w = Lua::getStringField(L, "water"); int er = lc_load(g,w); lua_pushinteger(L, er); return 1; }, 0); lua_setglobal(L, "load_terrain");
 
-    // ---- Vehicles ----
-    lua_register(L, "vehicle_type_default", [](lua_State* L)->int{ int id = lc_vehicle_type_create_default(); lua_pushinteger(L,id); return 1; });
-    lua_register(L, "vehicle_spawn", [](lua_State* L)->int{ int road = Lua::getIntField(L, "road"); int type = Lua::getIntField(L, "type", 0); int id = lc_vehicle_spawn_on_road(road,type); lua_pushinteger(L,id); return 1; });
-    lua_register(L, "vehicle_step_all", [](lua_State* L)->int{ double dt = Lua::getDoubleField(L, "dt", 1.0); lc_vehicle_step_all(dt); return 0; });
-    lua_register(L, "vehicle_state", [](lua_State* L)->int{ int vid = Lua::getIntField(L, "id"); int ip=0,dir=0,on=0; int er = lc_vehicle_get_state(vid,&ip,&dir,&on); lua_pushinteger(L, er); lua_pushinteger(L, ip); lua_pushinteger(L, dir); lua_pushboolean(L, on!=0); return 4; });
+    // vehicles
+    lua_pushcclosure(L, [](lua_State* L)->int{ int id = lc_vehicle_type_create_default(); lua_pushinteger(L,id); return 1; }, 0); lua_setglobal(L, "vehicle_type_default");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int road = Lua::getIntField(L, "road"); int type = (int)getIntFieldDef(L, "type", 0); int id = lc_vehicle_spawn_on_road(road,type); lua_pushinteger(L,id); return 1; }, 0); lua_setglobal(L, "vehicle_spawn");
+    lua_pushcclosure(L, [](lua_State* L)->int{ double dt = getDoubleFieldDef(L, "dt", 1.0); lc_vehicle_step_all(dt); return 0; }, 0); lua_setglobal(L, "vehicle_step_all");
+    // register vehicle_state via a named function to avoid macro issues with lambdas
+    auto l_VehicleState = [](lua_State* L)->int{ int vid = Lua::getIntField(L, "id"); int ip=0,dir=0,on=0; int er = lc_vehicle_get_state(vid,&ip,&dir,&on); lua_pushinteger(L, er); lua_pushinteger(L, ip); lua_pushinteger(L, dir); lua_pushboolean(L, on!=0); return 4; };
+    lua_pushcclosure(L, l_VehicleState, 0); lua_setglobal(L, "vehicle_state");
 
-    // ---- Economy ----
-    lua_register(L, "econ_load", [](lua_State* L)->int{ const char* f = Lua::getStringField(L, "file"); int n = lc_econ_load_technologies(f); lua_pushinteger(L, n); return 1; });
-    lua_register(L, "factory_new", [](lua_State* L)->int{ int id = lc_factory_create(); lua_pushinteger(L,id); return 1; });
-    lua_register(L, "factory_set_tech", [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); int tid = Lua::getIntField(L, "tech"); int er = lc_factory_set_technology(fid,tid); lua_pushinteger(L, er); return 1; });
-    lua_register(L, "factory_set", [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); const char* c = Lua::getStringField(L, "commodity"); double a = Lua::getDoubleField(L, "amount"); int er = lc_factory_set_stock(fid,c,a); lua_pushinteger(L, er); return 1; });
-    lua_register(L, "factory_get", [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); const char* c = Lua::getStringField(L, "commodity"); double a=0; int er = lc_factory_get_stock(fid,c,&a); lua_pushinteger(L, er); lua_pushnumber(L,a); return 2; });
-    lua_register(L, "factory_produce", [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); double N = Lua::getDoubleField(L, "N"); double m = lc_factory_produce(fid,N); lua_pushnumber(L,m); return 1; });
+    // economy
+    lua_pushcclosure(L, [](lua_State* L)->int{ const char* f = Lua::getStringField(L, "file"); int n = lc_econ_load_technologies(f); lua_pushinteger(L, n); return 1; }, 0); lua_setglobal(L, "econ_load");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int id = lc_factory_create(); lua_pushinteger(L,id); return 1; }, 0); lua_setglobal(L, "factory_new");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); int tid = Lua::getIntField(L, "tech"); int er = lc_factory_set_technology(fid,tid); lua_pushinteger(L, er); return 1; }, 0); lua_setglobal(L, "factory_set_tech");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); const char* c = Lua::getStringField(L, "commodity"); double a = Lua::getDoubleField(L, "amount"); int er = lc_factory_set_stock(fid,c,a); lua_pushinteger(L, er); return 1; }, 0); lua_setglobal(L, "factory_set");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); const char* c = Lua::getStringField(L, "commodity"); double a=0; int er = lc_factory_get_stock(fid,c,&a); lua_pushinteger(L, er); lua_pushnumber(L,a); return 2; }, 0); lua_setglobal(L, "factory_get");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int fid = Lua::getIntField(L, "id"); double N = Lua::getDoubleField(L, "N"); double m = lc_factory_produce(fid,N); lua_pushnumber(L,m); return 1; }, 0); lua_setglobal(L, "factory_produce");
 
-    // ---- PathFinder ----
-    lua_register(L, "pf_bind", [](lua_State* L)->int{ (void)L; int er = lc_pf_bind_to_map(); lua_pushinteger(L, er); return 1; });
-    lua_register(L, "pf_params", [](lua_State* L)->int{ double ch2 = Lua::getDoubleField(L, "ch2", 1.0); double chm = Lua::getDoubleField(L, "chminus", 0.0); double chp = Lua::getDoubleField(L, "chplus", 0.0); lc_pf_set_cost_params(ch2,chm,chp); return 0; });
-    lua_register(L, "pf_clear_centers", [](lua_State* L)->int{ (void)L; lc_pf_clear_centers(); return 0; });
-    lua_register(L, "pf_add_center", [](lua_State* L)->int{ int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); lc_pf_add_center(ix,iy); return 0; });
-    lua_register(L, "pf_prepare", [](lua_State* L)->int{ (void)L; lc_pf_prepare(); return 0; });
-    lua_register(L, "pf_step", [](lua_State* L)->int{ (void)L; int d = lc_pf_step(); lua_pushinteger(L,d); return 1; });
-    lua_register(L, "pf_find_connections", [](lua_State* L)->int{ (void)L; int n = lc_pf_find_connections(); lua_pushinteger(L,n); return 1; });
-    lua_register(L, "pf_make_paths", [](lua_State* L)->int{ (void)L; int n = lc_pf_make_paths(); lua_pushinteger(L,n); return 1; });
-    lua_register(L, "pf_paths", [](lua_State* L)->int{ int np = lc_pf_get_num_paths(); lua_createtable(L, np, 0); for(int i=0;i<np;i++){ int len = lc_pf_get_path_length(i); std::vector<int> tmp(len); int m = lc_pf_get_path(i, tmp.data(), len); pushIntArray(L, tmp.data(), m); lua_rawseti(L, -2, i+1);} return 1; });
+    // pathfinder
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; int er = lc_pf_bind_to_map(); lua_pushinteger(L, er); return 1; }, 0); lua_setglobal(L, "pf_bind");
+    lua_pushcclosure(L, [](lua_State* L)->int{ double ch2 = getDoubleFieldDef(L, "ch2", 1.0); double chm = getDoubleFieldDef(L, "chminus", 0.0); double chp = getDoubleFieldDef(L, "chplus", 0.0); lc_pf_set_cost_params(ch2,chm,chp); return 0; }, 0); lua_setglobal(L, "pf_params");
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; lc_pf_clear_centers(); return 0; }, 0); lua_setglobal(L, "pf_clear_centers");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int ix = Lua::getIntField(L, "ix"); int iy = Lua::getIntField(L, "iy"); lc_pf_add_center(ix,iy); return 0; }, 0); lua_setglobal(L, "pf_add_center");
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; lc_pf_prepare(); return 0; }, 0); lua_setglobal(L, "pf_prepare");
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; int d = lc_pf_step(); lua_pushinteger(L,d); return 1; }, 0); lua_setglobal(L, "pf_step");
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; int n = lc_pf_find_connections(); lua_pushinteger(L,n); return 1; }, 0); lua_setglobal(L, "pf_find_connections");
+    lua_pushcclosure(L, [](lua_State* L)->int{ (void)L; int n = lc_pf_make_paths(); lua_pushinteger(L,n); return 1; }, 0); lua_setglobal(L, "pf_make_paths");
+    lua_pushcclosure(L, [](lua_State* L)->int{ int np = lc_pf_get_num_paths(); lua_createtable(L, np, 0); for(int i=0;i<np;i++){ int len = lc_pf_get_path_length(i); std::vector<int> tmp(len); int m = lc_pf_get_path(i, tmp.data(), len); pushIntArray(L, tmp.data(), m); lua_rawseti(L, -2, i+1);} return 1; }, 0); lua_setglobal(L, "pf_paths");
 }
 
 } // namespace LandCraftLua

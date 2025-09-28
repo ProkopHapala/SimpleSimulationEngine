@@ -372,6 +372,43 @@ class HydraulicGrid2D :public Grid2DAlg { public:
         delete [] water;
     };
 
+    // ===== Basin Filling (Lakes) =====
+    // Operates on plain arrays: ground[], water[], moveCost[] as spill levels
+    inline void ensure_aux_buffers(){
+        if(moveCost==NULL) _realloc(moveCost,ntot);
+        if(toBasin  ==NULL) _realloc(toBasin,ntot);
+        if(toTile   ==NULL) _realloc(toTile ,ntot);
+    }
+
+    // Collect boundary cells as default outlets
+    void collectBoundarySeeds(std::vector<int>& seeds) const;
+
+    // Bellman-Ford-like wave relaxation. Writes spill levels to moveCost; optionally applies to water
+    int  basinFill_BellmanFord(const std::vector<int>& seeds, int maxIters, bool applyToWater);
+    // One full-grid relaxation sweep; returns number of changes in this sweep
+    int  basinFill_BellmanFord_step();
+    inline int basinFill_BellmanFord_Boundary(int maxIters, bool applyToWater){
+        std::vector<int> seeds; collectBoundarySeeds(seeds); return basinFill_BellmanFord(seeds,maxIters,applyToWater);
+    }
+
+    // Dijkstra-like (priority-flood) for comparison
+    void basinFill_Dijkstra(const std::vector<int>& seeds, bool applyToWater);
+    inline void basinFill_Dijkstra_Boundary(bool applyToWater){
+        std::vector<int> seeds; collectBoundarySeeds(seeds); basinFill_Dijkstra(seeds,applyToWater);
+    }
+
+    // ===== Contour-based Two-Wave (no PQ) =====
+    // Phase 1: Flood from given seeds up to levelCap using 1D contour expansion
+    void basinFill_Contour_beginFlood(const std::vector<int>& seeds, double levelCap);
+    // Single contour propagation step; returns number of newly updated cells
+    int  basinFill_Contour_floodStep(double levelCap);
+    // Phase 2: Drain from boundary/sea/user drains collected during flood into sinks vector
+    void basinFill_Contour_beginDrain();
+    // Single contour propagation step for draining (monotonic lowering); returns changes
+    int  basinFill_Contour_drainStep();
+    // Apply moveCost to water (do not lower below ground)
+    void basinFill_Contour_finish(bool applyToWater);
+
 };
 
 #endif

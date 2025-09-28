@@ -2,23 +2,21 @@
 # Simple
 
 - Floading terrain
-- critical angle of repose
+- critical angle of repose (sypny uhel)
   - some materials does not have angle of repose
-- Edit terraain height - save, load
+- Edit terrain height - save, load
 
 
-- build power plant, watermil
+- contruction using water - build power plant, watermil
 - Slopes with respect to sun control plants which can grow there
 - Wind controled by terrain (coarse grained)
 
-
-
 #### Which facilities depend on terrain?
 - Harbor - cover ships from waves
-- dam/powerplant - max height and gradient with minimal barrier
+- dam/powerplant - max height differece and gradient with minimal barriers
 - irrigation
 - channel/watterway with channel lock
-- road/train
+- road/train - minimal slope, minimal lengh, minimal cost
 
 - Basins - map of all pixels associated to particular sink
     - each sink can set water level independently
@@ -36,3 +34,31 @@
 		-  identify sink-less pixelss (those which does not have lower laying neighbor
 		- from each sinkless pixel build 1D river upwards
 		- for each pixel find neighbor with highest flow, this is the main branch, if there are other neighbors with flow higher than treshhold, they are other side branches (feeders)
+
+# Modular world initialization and separation of concerns (SoC)
+
+- **Goal**: The World class (`LandCraftWorld`) owns all simulation state and steps. The App (`LandCraft_main.cpp`) owns only GUI, input, and rendering.
+- **Init sequence (config-driven, similar to `LandTactics/LTWorld`)**:
+  - `W.init(dataPath)`
+  - `W.loadTechnologies(data/Technologies.txt)`
+  - `W.makeMap(size, step, useCache)`
+  - If no cache or `useCache=false`: `W.generateTerrain()` and save caches
+  - `W.makeRivers()`
+  - `W.makeRoadStraight(seedA, seedB)` (or load from file)
+  - `W.makeVehicles()`
+- **Config file** (future): `data/world.ini` or `data/world.lua` listing steps with parameters and file paths.
+  - map.size, map.step, terrain.cache.on, terrain.cache.paths
+  - river.min_flow, river.mode
+  - roads.from=auto|file, vehicles.default_type
+  - techs.file
+- **Runtime update separation**:
+  - Simulation steps in world:
+    - `W.hydroRelaxStep()`
+    - `W.vehiclesStep(dt)`
+  - Rendering in app:
+    - `drawTerrain()`, `drawRivers()`, `drawRoad()`, `drawVehicles()`
+  - App should not modify simulation arrays directly except via well-defined world methods.
+- **Cleanup TODOs**:
+  - Replace `drawRoad(roads[0])` with `if(!W.roads.empty()) drawRoad(W.roads[0])` in `draw()`.
+  - Remove/comment legacy app init functions once world init compiles and runs (`makeMap`, `generateTerrain`, `makeRivers`, `makeRoads`, `makeVehicles`).
+  - Strip debug prints/rendering from simulation code paths; keep diagnostics as return values or behind verbosity flags.

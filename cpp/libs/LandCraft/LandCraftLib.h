@@ -1,14 +1,16 @@
 #ifndef LandCraftLib_h
 #define LandCraftLib_h
 
-#ifdef __cplusplus
+
 extern "C" {
-#endif
 
 // Buffers
 void     lc_init_buffers();
 double*  lc_getBuff(const char* name);
 int*     lc_getIBuff(const char* name);
+
+// World
+void lc_world_init(const char* dataFolder);
 
 // Map & Terrain
 void lc_map_init(int nx, int ny);
@@ -69,8 +71,8 @@ int  lc_pf_get_num_paths();
 int  lc_pf_get_path_length(int path_id);
 int  lc_pf_get_path(int path_id, int* out_idx, int maxn);
 
-#ifdef __cplusplus
-}
-#endif
+
+
+} // extern "C"
 
 #endif // LandCraftLib_h

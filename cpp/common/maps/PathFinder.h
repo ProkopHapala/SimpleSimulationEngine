@@ -41,6 +41,12 @@ class PathFinder :public Grid2DAlg { public:
         terrain_cost=terrain_cost_;
     }
 
+    // ---- Convenience API (thin helpers to avoid boilerplate in World) ----
+    inline void setCostParams(double ch2_, double chminus_, double chplus_){ ch2=ch2_; chminus=chminus_; chplus=chplus_; }
+    inline void clearCenters(){ centers.clear(); }
+    inline void addCenter(const Vec2i& c){ centers.push_back(c); }
+    inline void addCenter(int ix, int iy){ centers.push_back({ix,iy}); }
+
     // TODO: Inflow/outflow  +  Rivers
 	void allocate(int n=-1){
         if( n<0 ) n=ntot;
@@ -56,7 +62,7 @@ class PathFinder :public Grid2DAlg { public:
         delete [] contour1; delete [] contour2;
         delete [] toBasin; delete toTile; delete moveCosts;
     }
-
+    
     inline double heightCost(double dh){
         double val = ch2 * dh*dh;
         if( dh>0 ){ val+=chplus*dh; }else{ val-=chminus*dh; }
@@ -80,6 +86,9 @@ class PathFinder :public Grid2DAlg { public:
             moveCosts[ii] = 0.0;
         }
     }
+
+    // Convenience: return frontier growth after single step
+    inline int stepDelta(){ int n0=nContour; path_step(); return nContour-n0; }
 
     void path_step(){
         printf( "========== path_step ====== nContour: %i nneigh %i\n", nContour, nneigh );
@@ -183,6 +192,20 @@ class PathFinder :public Grid2DAlg { public:
             track( *w, item.second.x, item.second.y);
             paths.push_back( w );
         }
+    }
+
+    // Introspection helpers
+    inline int getNumPaths() const { return (int)paths.size(); }
+    inline int getPathLength(int path_id) const {
+        if(path_id<0||path_id>=(int)paths.size()) return -1;
+        return (int)paths[path_id]->path.size();
+    }
+    inline int getPath(int path_id, int* out_idx, int maxn) const{
+        if(path_id<0||path_id>=(int)paths.size()) return -1;
+        const auto* w = paths[path_id];
+        int m = (int)w->path.size(); if(maxn<m) m=maxn;
+        for(int i=0;i<m;i++){ out_idx[i]=w->path[i]; }
+        return m;
     }
 
 };

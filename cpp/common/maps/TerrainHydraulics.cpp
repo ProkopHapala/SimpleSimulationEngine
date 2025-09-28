@@ -1,5 +1,7 @@
 
 #include "TerrainHydraulics.h"  // THE HEADER
+#include <limits>
+#include <queue>
 
 // ====================    HydraulicGrid2D
 // ====================    DropletErrosion
@@ -12,6 +14,91 @@ void HydraulicGrid2D::initDroplet ( double w, double disolve, double sediment, V
     droplet.y = ipmin.y + rand()%(ipmax.y-ipmin.y);
     droplet_h  = ground[ip2i( droplet )];
     //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
+}
+
+// ==================== Contour-based Two-Wave (no PQ) ====================
+
+void HydraulicGrid2D::basinFill_Contour_beginFlood(const std::vector<int>& seeds, double levelCap){
+    ensure_aux_buffers();
+    const double INF = std::numeric_limits<double>::infinity();
+    // initialize spill levels very high; we will monotonically decrease with fmax(
+    for(int i=0;i<ntot;i++){ moveCost[i]=INF; known[i]=false; }
+    nContour=0; nContour_old=0;
+    // seed
+    for(int s:seeds){
+        if((s<0)||(s>=ntot)) continue;
+        double L0 = fmax(ground[s], water?water[s]:ground[s]);
+        if(levelCap>0) L0 = fmin(L0, levelCap);
+        moveCost[s]=L0; contour2[nContour++]=s; known[s]=true;
+    }
+}
+
+int HydraulicGrid2D::basinFill_Contour_floodStep(double levelCap){
+    // one expansion step using contour buffers; returns number of additions
+    int added=0;
+    nContour_old = nContour; nContour=0; int* cur=contour2; int* nxt=contour1; // reuse swap scheme
+    for(int ii=0; ii<nContour_old; ii++) known[cur[ii]] = false; // allow re-enqueue if improved further
+    for(int ii=0; ii<nContour_old; ii++){
+        int i = cur[ii];
+        Vec2i ip0 = i2ip(i);
+        double Li = moveCost[i];
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = ip0 + neighs[ing]; if(!validIndex(ip)) continue;
+            int j = ip2i(ip);
+            double cand = fmax( ground[j], Li );
+            if(levelCap>0) cand = fmin(cand, levelCap);
+            if(cand < moveCost[j]){
+                moveCost[j]=cand;
+                if(!known[j]){ known[j]=true; nxt[nContour++]=j; added++; }
+            }
+        }
+    }
+    // swap
+    int* tmp=contour2; contour2=contour1; contour1=tmp;
+    return added;
+}
+
+void HydraulicGrid2D::basinFill_Contour_beginDrain(){
+    // Seed drains from boundary (and any additional sinks already in sinks vector)
+    nContour=0; nContour_old=0;
+    for(int i=0;i<ntot;i++) known[i]=false;
+    std::vector<int> seeds; collectBoundarySeeds(seeds);
+    for(int s: seeds){
+        if((s<0)||(s>=ntot)) continue;
+        // boundary spill is at least ground height
+        double L0 = fmax(ground[s], 0.0);
+        if(L0 < moveCost[s]){ moveCost[s]=L0; }
+        contour2[nContour++]=s; known[s]=true;
+    }
+    for(int s: sinks){ if(!known[s]){ contour2[nContour++]=s; known[s]=true; } }
+}
+
+int HydraulicGrid2D::basinFill_Contour_drainStep(){
+    // Similar to flood step but without cap; we only lower moveCost
+    int added=0;
+    nContour_old = nContour; nContour=0; int* cur=contour2; int* nxt=contour1;
+    for(int ii=0; ii<nContour_old; ii++) known[cur[ii]] = false;
+    for(int ii=0; ii<nContour_old; ii++){
+        int i = cur[ii];
+        Vec2i ip0 = i2ip(i);
+        double Li = moveCost[i];
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = ip0 + neighs[ing]; if(!validIndex(ip)) continue;
+            int j = ip2i(ip);
+            double cand = fmax( ground[j], Li );
+            if(cand < moveCost[j]){
+                moveCost[j]=cand;
+                if(!known[j]){ known[j]=true; nxt[nContour++]=j; added++; }
+            }
+        }
+    }
+    int* tmp=contour2; contour2=contour1; contour1=tmp;
+    return added;
+}
+
+void HydraulicGrid2D::basinFill_Contour_finish(bool applyToWater){
+    if(!applyToWater) return;
+    for(int i=0;i<ntot;i++) if(moveCost[i]>=ground[i]) if(water[i]<moveCost[i]) water[i]=moveCost[i];
 }
 
 bool HydraulicGrid2D::droplet_step( ){
@@ -252,4 +339,103 @@ void HydraulicGrid2D::extend_outflow( float val, int oi, int i ){
     }
 }
 
+
+// ====================    Basin Filling (Lakes)
+
+void HydraulicGrid2D::collectBoundarySeeds(std::vector<int>& seeds) const{
+    seeds.clear();
+    // Top and bottom rows
+    for(int ix=0; ix<n.x; ix++){
+        seeds.push_back(ix);
+        seeds.push_back((n.y-1)*n.x + ix);
+    }
+    // Left and right columns
+    for(int iy=0; iy<n.y; iy++){
+        seeds.push_back(iy*n.x);
+        seeds.push_back(iy*n.x + (n.x-1));
+    }
+}
+
+// Bellman-Ford-like relaxation of spill levels over all grid
+int HydraulicGrid2D::basinFill_BellmanFord_step(){
+    const double INF = std::numeric_limits<double>::infinity();
+    int nChanged=0;
+    for(int iy=0; iy<n.y; iy++){
+        for(int ix=0; ix<n.x; ix++){
+            Vec2i ip0 = {ix,iy};
+            int i = ip2i(ip0);
+            double Li = moveCost[i];
+            double best = Li;
+            for(int ing=0; ing<nneigh; ing++){
+                Vec2i ip = ip0 + neighs[ing];
+                if(!validIndex(ip)) continue; // basin outlets are at boundary; no wrap here
+                int j = ip2i(ip);
+                double Lj = moveCost[j]; if(Lj==INF) continue;
+                double cand = fmax( ground[i], Lj );
+                if(cand < best) best=cand;
+            }
+            if(best < Li){ moveCost[i]=best; nChanged++; }
+        }
+    }
+    return nChanged;
+}
+
+int HydraulicGrid2D::basinFill_BellmanFord(const std::vector<int>& seeds, int maxIters, bool applyToWater){
+    ensure_aux_buffers();
+    const double INF = std::numeric_limits<double>::infinity();
+    for(int i=0;i<ntot;i++){ moveCost[i]=INF; }
+    for(int s:seeds){ if((s>=0)&&(s<ntot)) moveCost[s]=fmax(ground[s], water?water[s]:ground[s]); }
+
+    int it=0;
+    for(; it<maxIters; it++){
+        int changed = basinFill_BellmanFord_step();
+        if(changed==0) break;
+    }
+
+    if(applyToWater){
+        for(int i=0;i<ntot;i++){
+            double L = moveCost[i];
+            if(!(L>=ground[i])) continue; // skip INF
+            if(water[i] < L) water[i]=L;
+        }
+    }
+    return it;
+}
+
+// Dijkstra-like priority-flood for comparison
+void HydraulicGrid2D::basinFill_Dijkstra(const std::vector<int>& seeds, bool applyToWater){
+    ensure_aux_buffers();
+    const double INF = std::numeric_limits<double>::infinity();
+    struct Node{ int i; double L; };
+    struct Cmp{ bool operator()(const Node& a, const Node& b) const { return a.L > b.L; } };
+    std::priority_queue<Node,std::vector<Node>,Cmp> pq;
+
+    for(int i=0;i<ntot;i++){ moveCost[i]=INF; }
+    for(int s:seeds){
+        if((s<0)||(s>=ntot)) continue;
+        double L0 = fmax(ground[s], water?water[s]:ground[s]);
+        moveCost[s]=L0; pq.push({s,L0});
+    }
+
+    while(!pq.empty()){
+        Node cur = pq.top(); pq.pop();
+        if(cur.L != moveCost[cur.i]) continue; // stale
+        Vec2i ip0 = i2ip(cur.i);
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = ip0 + neighs[ing];
+            if(!validIndex(ip)) continue; // no wrap
+            int k = ip2i(ip);
+            double cand = fmax( ground[k], cur.L );
+            if(cand < moveCost[k]){ moveCost[k]=cand; pq.push({k,cand}); }
+        }
+    }
+
+    if(applyToWater){
+        for(int i=0;i<ntot;i++){
+            double L = moveCost[i];
+            if(!(L>=ground[i])) continue; // skip INF
+            if(water[i] < L) water[i]=L;
+        }
+    }
+}
 

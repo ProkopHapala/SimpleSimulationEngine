@@ -5,11 +5,11 @@
 #include <vector>
 #include <unordered_map>
 
-void printMap_d( const std::unordered_map<std::string,double>& mapa ){
+inline void printMap_d( const std::unordered_map<std::string,double>& mapa ){
     for(auto it : mapa ){ printf("%s=%f ", it.first.c_str(), it.second ); }; printf("\n");
 }
 
-void str2map( char * str, std::unordered_map<std::string,double>& mapa ){
+inline void str2map( char * str, std::unordered_map<std::string,double>& mapa ){
     //char s[256];
     //strcpy(s, "one two three");
     //printf( "%s\n", str );
