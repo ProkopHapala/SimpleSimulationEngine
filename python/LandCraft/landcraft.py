@@ -63,16 +63,34 @@ lib.lc_map_init.restype  = None
 def map_init(nx: int, ny: int):
     return lib.lc_map_init(nx, ny)
 
-lib.lc_generate_terrain.argtypes = [ctypes.c_uint, c_double]
+lib.lc_generate_terrain.argtypes = [c_int, c_double]
 lib.lc_generate_terrain.restype  = None
-def generate_terrain(seed: int = 16464, max_height: float = 500.0):
+def generate_terrain(seed: int, max_height: float):
     return lib.lc_generate_terrain(seed, max_height)
+
+# Flexible terrain helpers
+lib.lc_make_terrain_bisec.argtypes = [c_int]
+lib.lc_make_terrain_bisec.restype  = None
+def make_terrain_bisec(seed: int = 16464):
+    return lib.lc_make_terrain_bisec(seed)
+
+lib.lc_droplet_erosion.argtypes = [c_int, c_int, c_int, c_int, c_double, c_double, c_double]
+lib.lc_droplet_erosion.restype  = None
+def droplet_erosion(niter: int, nDrops: int, nStepMax: int, margin: int, erodeMin: float, erodeMax: float, erodeProb: float):
+    return lib.lc_droplet_erosion(niter, nDrops, nStepMax, margin, erodeMin, erodeMax, erodeProb)
+
+lib.lc_set_neighbors.argtypes = [c_int]
+lib.lc_set_neighbors.restype  = None
+def set_neighbors(n: int):
+    """Set neighborhood topology: 4 (von Neumann), 6 (hex-like), or 8 (Moore)."""
+    return lib.lc_set_neighbors(n)
 
 lib.lc_save.argtypes = [c_char_p, c_char_p]
 lib.lc_save.restype  = c_int
 def save(ground_path: str, water_path: str) -> int:
     return lib.lc_save(ground_path.encode('utf-8'), water_path.encode('utf-8'))
 
+# Note: generate_terrain_bisec is not exported by C layer; use make_terrain_bisec + normalize via generate_terrain if needed.
 lib.lc_load.argtypes = [c_char_p, c_char_p]
 lib.lc_load.restype  = c_int
 def load(ground_path: str, water_path: str) -> int:

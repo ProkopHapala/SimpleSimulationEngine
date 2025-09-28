@@ -66,6 +66,13 @@ void lc_map_init(int nx, int ny){ W.allocMap(Vec2i{nx,ny}); lc_init_buffers_impl
 // Procedural terrain generation (simple: bisecNoise + scale); seed is optional
 void lc_generate_terrain(unsigned int seed, double maxHeight){ W.generateTerrain(seed,maxHeight); }
 
+// Flexible terrain helpers
+void lc_make_terrain_bisec(int seed){ W.makeTerrainBisec(seed); }
+void lc_droplet_erosion(int niter, int nDrops, int nStepMax, int margin, double erodeMin, double erodeMax, double erodeProb){
+    W.droplerErosion(niter,nDrops,nStepMax,margin,erodeMin,erodeMax,erodeProb);
+}
+void lc_set_neighbors(int n){ W.setNeighbors(n); }
+
 // Save/Load terrain arrays (raw binary)
 int lc_save(const char* ground_path, const char* water_path){ return W.save(ground_path, water_path); }
 

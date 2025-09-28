@@ -130,31 +130,40 @@ void LandCraftWorld::makeMapCached(Vec2i ns, double step, bool newMap){
     }
 }
 
+void LandCraftWorld::droplerErosion(int niter, int nDrops, int nStepMax, int margin, double erodeMin, double erodeMax, double erodeProb){
+    int nx = hydro.n.x, ny = hydro.n.y;
+    if (nx<=4 || ny<=4){ printf("[LandCraftWorld] droplerErosion(): ERROR: grid too small %dx%d\n", nx, ny); exit(0); }
+    for( int j=0; j<niter; j++ ){
+        int isz = std::min(margin, std::min(nx,ny)-2);
+        if(isz<=0) break;
+        int ix0 = (nx>isz)? rand()%(nx-isz) : 0;
+        int iy0 = (ny>isz)? rand()%(ny-isz) : 0;
+        //void HydraulicGrid2D::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax ){
+        //hydro.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
+        hydro.errodeDroples( nDrops, nStepMax, erodeMin, erodeMax, erodeProb, {ix0, iy0}, {ix0+isz, iy0+isz} );
+    }
+}
+
+void LandCraftWorld::makeTerrainBisec( int seed){
+    srand(seed);
+    int nx = hydro.n.x, ny = hydro.n.y;
+    int nx_pow2 = (nx==ny)? ilog2_pow2(nx) : -1;
+    int ny_pow2 = (ny==nx)? ilog2_pow2(ny) : -1;
+    if( (nx_pow2<0) || (ny_pow2<0) ){ printf("[LandCraftWorld] makeTerrainBisec(): ERROR: not power of 2 grid nx%d ny%d\n", nx, ny); exit(0); }
+    hydro.ground[0]=0.2;
+    bisecNoise( nx_pow2, hydro.ground, -1.0/(double)(1<<nx_pow2), 1.0/(double)(1<<nx_pow2) );
+    hydro.initNeighs_6(false);
+}
+
 void LandCraftWorld::generateTerrain(){
     printf("LandCraftWorld::generateTerrain()\n");
     // Simple synthetic terrain
-    srand(16464);
-    int nx = hydro.n.x, ny = hydro.n.y;
-    if(nx!=ny){ printf("[LandCraftWorld] generateTerrain(): non-square grid %dx%d; skipping bisecNoise.\n", nx, ny); }
-    int npow = (nx==ny)? ilog2_pow2(nx) : -1;
-    if(npow<0){
-        // Fallback: flat ground
-        for(int i=0;i<hydro.ntot;i++){ hydro.ground[i]=0.0; hydro.water[i]=0.0; }
-    }else{
-        hydro.ground[0]=0.2;
-        bisecNoise( npow, hydro.ground, -1.0/(double)(1<<npow), 1.0/(double)(1<<npow) );
-    }
+    makeTerrainBisec(16464);
+    // default neighbors unchanged
     hydro.initNeighs_6(false);
-    if(nx>4 && ny>4){
-        for( int j=0; j<500; j++ ){
-            int isz = std::min(25, std::min(nx,ny)-2);
-            if(isz<=0) break;
-            int ix0 = (nx>isz)? rand()%(nx-isz) : 0;
-            int iy0 = (ny>isz)? rand()%(ny-isz) : 0;
-            hydro.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
-        }
-    }
-    for(int i=0; i<hydro.ntot; i++){ hydro.ground[i] *= maxHeight; hydro.water[i] = hydro.ground[i]; }
+    // erosion: (niter, nDrops, nStepMax, margin, erodeMin, erodeMax, erodeProb)
+    droplerErosion( 100, 400, 500, 25, 0.1, 0.15, 0.9 );
+    hydro.normalize_ground(maxHeight);
 }
 
 void LandCraftWorld::makeRivers(){
@@ -162,6 +171,16 @@ void LandCraftWorld::makeRivers(){
     double wmax = hydro.gatherRain( 100.0 ); (void)wmax;
     hydro.findAllRivers( 50.0 );
     std::sort(hydro.rivers.begin(), hydro.rivers.end(), [](River* a, River* b){ return a->path.size() > b->path.size(); } );
+}
+
+void LandCraftWorld::setNeighbors(int n){
+    if(n==6){
+        hydro.initNeighs_6(false);
+    }else if(n==4 || n==8){
+        hydro.initNeighsSquareN(n);
+    }else{
+        printf("[LandCraftWorld] setNeighbors(%d): unsupported; use 4,6,8. Keeping previous.\n", n);
+    }
 }
 
 // ---------- Transport ----------

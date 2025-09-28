@@ -54,6 +54,12 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     int* toBasin     = NULL;
     int* toTile      = NULL;
 
+    // ========== Functions
+
+    inline void normalize_ground(double maxHeight){
+        for(int i=0; i<ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
+    }
+
     inline void sumWater( double& wsum, double& E ){
         for(int i=0; i<ntot;i++){
             double g  = ground[i];

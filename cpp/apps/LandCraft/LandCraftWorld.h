@@ -64,6 +64,10 @@ public:
     void generateTerrain();
     //void mapInit(int nx, int ny){ makeMap(nx, (double)0.0, false); /* step handled by GUI; keep grid only */ }
     void generateTerrain(unsigned int seed, double maxHeight);
+    // Flexible terrain helpers
+    void makeTerrainBisec(int seed=16464);
+    void droplerErosion(int niter, int nDrops, int nStepMax, int margin, double erodeMin, double erodeMax, double erodeProb);
+    void setNeighbors(int n); // 4,6,8; 6 uses hex-like pattern via initNeighs_6(false)
     int  save(const char* ground_path, const char* water_path);
     int  load(const char* ground_path, const char* water_path);
     bool loadTerrainDefault();
