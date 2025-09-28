@@ -10,6 +10,9 @@
 #include <cstdint>
 #include <unistd.h> // getcwd
 
+// Small helper: integer log2 if n is power-of-two; otherwise -1
+static inline int ilog2_pow2(int n){ if(n<=0) return -1; if(n & (n-1)) return -1; int p=0; while((1<<p)<n) p++; return p; }
+
 // NOTE: This file moves non-GUI initialization from the app into the shared world.
 // TODO: Make all these steps config-driven (similar to LTWorld), e.g. parse
 //       dataPath + "/world.ini" or a Lua script that lists initialization steps.
@@ -82,7 +85,7 @@ bool LandCraftWorld::loadConfig(const char* fname){
             char rel[512]; if(sscanf(p, "%511s", rel)==1) loadTechnologies(rel);
         }else if( strcmp(key, "terrain")==0 ){
             int sz; double step; if(sscanf(p, "%d %lf", &sz, &step)==2){
-                makeMapCached(sz,step,false);
+                makeMapCached(Vec2i{sz,sz},step,false);
                 haveMap=true; mapSize=sz; mapStep=step;
             }
         }else if( strcmp(key, "rivers")==0 ){
@@ -100,23 +103,24 @@ bool LandCraftWorld::loadConfig(const char* fname){
             else{ if(!saveTerrainDefault()){ printf("[LandCraftWorld] save_terrain failed.\n"); } }
         }
     }
-    if(!haveMap && mapSize>0){ allocMap(mapSize,mapStep); haveMap=true; }
+    if(!haveMap && mapSize>0){ allocMap({mapSize,mapSize}); haveMap=true; }
     fclose(f);
     return true;
 }
 
-void LandCraftWorld::allocMap(int sz, double step ){
-    printf("LandCraftWorld::makeMap(%d, %f)\n", sz, step);
+void LandCraftWorld::allocMap( Vec2i ns ){
+    printf("LandCraftWorld::allocMap({%i,%i})\n", ns.x, ns.y);
     // World does not own the GUI ruler; we only size and initialize hydraulics here.
-    hydro.allocate( {sz,sz} );
+    hydro.allocate( ns );
     hydro.initNeighs_6(false);
     hydro.allocate_outflow();
     ready = true;
     // buffer maps are owned by the C API layer; nothing to do here
 }
 
-void LandCraftWorld::makeMapCached(int sz, double step, bool newMap){
-    allocMap(sz,step);
+void LandCraftWorld::makeMapCached(Vec2i ns, double step, bool newMap){
+    printf("LandCraftWorld::makeMapCached({%i,%i}, %f, %d)\n", ns.x, ns.y, step, newMap);
+    allocMap(ns);
     bool loaded=false;
     if(!newMap){ loaded = loadTerrainDefault(); }
     if(!loaded){
@@ -130,14 +134,25 @@ void LandCraftWorld::generateTerrain(){
     printf("LandCraftWorld::generateTerrain()\n");
     // Simple synthetic terrain
     srand(16464);
-    hydro.ground[0]=0.2;
-    bisecNoise( 7, hydro.ground, -1.0/256, 1.0/256 );
+    int nx = hydro.n.x, ny = hydro.n.y;
+    if(nx!=ny){ printf("[LandCraftWorld] generateTerrain(): non-square grid %dx%d; skipping bisecNoise.\n", nx, ny); }
+    int npow = (nx==ny)? ilog2_pow2(nx) : -1;
+    if(npow<0){
+        // Fallback: flat ground
+        for(int i=0;i<hydro.ntot;i++){ hydro.ground[i]=0.0; hydro.water[i]=0.0; }
+    }else{
+        hydro.ground[0]=0.2;
+        bisecNoise( npow, hydro.ground, -1.0/(double)(1<<npow), 1.0/(double)(1<<npow) );
+    }
     hydro.initNeighs_6(false);
-    for( int j=0; j<500; j++ ){
-        int isz = 25;
-        int ix0 = rand()%(hydro.n.x-isz);
-        int iy0 = rand()%(hydro.n.y-isz);
-        hydro.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
+    if(nx>4 && ny>4){
+        for( int j=0; j<500; j++ ){
+            int isz = std::min(25, std::min(nx,ny)-2);
+            if(isz<=0) break;
+            int ix0 = (nx>isz)? rand()%(nx-isz) : 0;
+            int iy0 = (ny>isz)? rand()%(ny-isz) : 0;
+            hydro.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
+        }
     }
     for(int i=0; i<hydro.ntot; i++){ hydro.ground[i] *= maxHeight; hydro.water[i] = hydro.ground[i]; }
 }
@@ -208,12 +223,25 @@ void LandCraftWorld::roadsClear(){
 void LandCraftWorld::generateTerrain(unsigned int seed, double maxH){
     if(!ready) return;
     srand(seed);
-    int npow = 7;
-    hydro.ground[0]=0.2;
-    bisecNoise( npow, hydro.ground, -1.0/256, 1.0/256 );
-    for(int j=0;j<64;j++){
-        int isz=16; int ix0=rand()%(hydro.n.x-isz); int iy0=rand()%(hydro.n.y-isz);
-        hydro.errodeDroples(200,300,+0.05,0.10,0.8, {ix0,iy0}, {ix0+isz,iy0+isz});
+    int nx = hydro.n.x, ny = hydro.n.y;
+    if(nx!=ny){ printf("[LandCraftWorld] generateTerrain(seed): non-square grid %dx%d; skipping bisecNoise.\n", nx, ny); }
+    int npow = (nx==ny)? ilog2_pow2(nx) : -1;
+    if(npow<0){
+        // Fallback: flat
+        for(int i=0;i<hydro.ntot;i++){ hydro.ground[i]=0.0; hydro.water[i]=0.0; }
+    }else{
+        hydro.ground[0]=0.2;
+        // scale random amplitude with grid size
+        double amp = 1.0/(double)(1<<npow);
+        bisecNoise( npow, hydro.ground, -amp, +amp );
+        // erosion confined within bounds
+        int nDrops = std::max(16, nx*ny/64);
+        for(int j=0;j<nDrops;j++){
+            int isz = std::max(2, std::min(16, std::min(nx,ny)/4));
+            int ix0 = (nx>isz)? rand()%(nx-isz) : 0;
+            int iy0 = (ny>isz)? rand()%(ny-isz) : 0;
+            hydro.errodeDroples(200,300,+0.05,0.10,0.8, {ix0,iy0}, {ix0+isz,iy0+isz});
+        }
     }
     for(int i=0;i<hydro.ntot;i++){ hydro.water[i]=hydro.ground[i]*maxH; hydro.ground[i]*=maxH; }
 }

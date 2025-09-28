@@ -62,7 +62,7 @@ int*    lc_getIBuff(const char* name){ auto it=g_ibuffers.find(name); return (it
 
 // ---- Map & Terrain ----
 // Initialize grid and allocate ground/water arrays
-void lc_map_init(int nx, int ny){ W.allocMap(nx,ny); lc_init_buffers_impl(); }
+void lc_map_init(int nx, int ny){ W.allocMap(Vec2i{nx,ny}); lc_init_buffers_impl(); }
 // Procedural terrain generation (simple: bisecNoise + scale); seed is optional
 void lc_generate_terrain(unsigned int seed, double maxHeight){ W.generateTerrain(seed,maxHeight); }
 

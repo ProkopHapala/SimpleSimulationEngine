@@ -59,8 +59,8 @@ public:
     void loadTechnologies(const char* fname);
 
     // Terrain/Hydraulics
-    void allocMap(int sz, double step);
-    void makeMapCached(int sz, double step, bool newMap);
+    void allocMap(Vec2i ns);
+    void makeMapCached(Vec2i ns, double step, bool newMap);
     void generateTerrain();
     //void mapInit(int nx, int ny){ makeMap(nx, (double)0.0, false); /* step handled by GUI; keep grid only */ }
     void generateTerrain(unsigned int seed, double maxHeight);

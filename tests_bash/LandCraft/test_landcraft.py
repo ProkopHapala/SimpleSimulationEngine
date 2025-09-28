@@ -65,10 +65,10 @@ def basin_fill(outflow_xy=(0,0), n_iter=50, verbose=1):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='LandCraft ctypes smoke test')
-    ap.add_argument('--nx',              type=int, default=128)
-    ap.add_argument('--ny',              type=int, default=128)
+    ap.add_argument('--nx',              type=int, default=256)
+    ap.add_argument('--ny',              type=int, default=256)
     ap.add_argument('--data-folder',     type=str, default=None, help='Optional base data folder (e.g., tests_bash/apps/data)')
-    ap.add_argument('--terrain',         type=str, default='none', choices=['none','cpp','gauss','rand','sine','flat'], help='How to set terrain: none (leave as is), cpp (generate_terrain), or python models')
+    ap.add_argument('--terrain',         type=str, default='cpp', choices=['none','cpp','gauss','rand','sine','flat'], help='How to set terrain: none (leave as is), cpp (generate_terrain), or python models')
     ap.add_argument('--seed',            type=int, default=16464)
     ap.add_argument('--max-height',      type=float, default=500.0)
     ap.add_argument('--outflow-x',       type=int, default=0)
@@ -78,17 +78,14 @@ if __name__ == '__main__':
     ap.add_argument('--plot',            type=int, default=2, help='Show/save matplotlib plots of ground/water')
     args = ap.parse_args()
 
-    print("DEBUG 1")
-    lc.world_init(args.data_folder)
-    print("DEBUG 2")
-    lc.map_init(args.nx, args.ny)
-    print("DEBUG 3")
 
+    lc.world_init(args.data_folder)
+    lc.map_init(args.nx, args.ny)
+ 
     # 2) Init buffers and wrap as NumPy arrays
     ground, water = get_buffers(args.nx, args.ny)
     print(f"Buffers ready: ground.shape={ground.shape}, water.shape={water.shape}")
-    print("DEBUG 4")
-    
+
     # 3) Set terrain
     if args.terrain == 'cpp':
         lc.generate_terrain(args.seed, args.max_height)
@@ -100,25 +97,31 @@ if __name__ == '__main__':
         print(f"Terrain set in Python: kind={args.terrain}")
     else:
         print('Terrain left unchanged (none).')
-    print("DEBUG 5")
-
+  
     # 4) Droplet erosion (hydraulic erosion)
     # NOTE: direct droplet-erosion step is not exposed in the C API.
     # - lc.generate_terrain() includes built-in erosion; use --terrain cpp to exercise it.
     # - Alternatively, add a dedicated C API binding for W.hydro.errodeDroples if needed.
-    print("DEBUG 6")
+
     # 5) Basin filling (set outflow + relax)
     basin_fill(outflow_xy=(args.outflow_x, args.outflow_y), n_iter=args.relax_iters, verbose=1)
-    print("DEBUG 7")
+
     # Optional: compute rivers after rain gathering
     wmax = lc.gather_rain(100.0)
     n_riv = lc.find_all_rivers(args.rivers_min_flow)
     print(f"Rivers found: {n_riv} (wmax={wmax:.3f})")
-    print("DEBUG 8")
 
-    # Write images without matplotlib (ASan-safe)
-    save_pgm('ground.pgm', ground)
-    save_pgm('water.pgm',  water)
+
+    #min,max of ground and water
+    print("ground min,max=", np.min(ground), np.max(ground))
+    print("water  min,max=", np.min(water), np.max(water))
+
+    #print('ground[0,:10]=', np.array2string(ground[:,:], precision=3))
+    #print('water [0,:10]=', np.array2string(water [:,:], precision=3))
+
+    # # Write images without matplotlib (ASan-safe)
+    # save_pgm('ground.pgm', ground)
+    # save_pgm('water.pgm',  water)
     
     # Optional plotting
     # mode 1 (default): save images via matplotlib.image (no pyplot, avoids ft2font)
@@ -132,10 +135,10 @@ if __name__ == '__main__':
     elif args.plot == 2:
         import matplotlib.pyplot as plt
         fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-        im0 = axs[0].imshow(ground, origin='lower', cmap='terrain')
+        im0 = axs[0].imshow(ground, origin='lower', cmap='terrain', interpolation='nearest')
         axs[0].set_title('Ground height')
         fig.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
-        im1 = axs[1].imshow(water, origin='lower', cmap='viridis')
+        im1 = axs[1].imshow(water, origin='lower', cmap='viridis', interpolation='nearest')
         axs[1].set_title('Water level')
         fig.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
         plt.tight_layout()
@@ -143,8 +146,8 @@ if __name__ == '__main__':
         plt.show()
 
     # Show a few samples for sanity
-    print('ground[0,:10]=', np.array2string(ground[0,:10], precision=3))
-    print('water [0,:10]=', np.array2string(water [0,:10], precision=3))
-    print("DEBUG 9")
+    # print('ground[0,:10]=', np.array2string(ground[:,:], precision=3))
+    # print('water [0,:10]=', np.array2string(water [:,:], precision=3))
+    # print("DEBUG 9")
 
 

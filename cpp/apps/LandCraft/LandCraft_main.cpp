@@ -37,6 +37,7 @@
 #include <vector>
 #include <unordered_map>
 #include <math.h>
+#include <assert.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -227,8 +228,8 @@ class LandCraftApp : public AppSDL2OGL { public:
 };
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
-    default_font_texture   = makeTexture    ( "common_resources/dejvu_sans_mono.bmp" );
-    //default_font_texture = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    //default_font_texture   = makeTexture    ( "common_resources/dejvu_sans_mono.bmp" );
+    default_font_texture = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     fontTex                = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     riverProfile.fontTex = fontTex;
@@ -580,11 +581,13 @@ void LandCraftApp::registerDrawLayers(){
 
 void LandCraftApp::printASCItable( int imin, int imax  ){
     /// print ASCITable for debugging
-    int len = imax-imin;
-    char str[len];
+    assert(imax > imin); // DEBUG: ensure positive length
+    int len = imax - imin;
+    char str[len + 1]; // +1 for null terminator
     for ( int i=0; i<len; i++ ){
         str[i] = (char)(i+imin);
     }
+    str[len] = '\0';
     printf("%s\n", str );
 };
 
