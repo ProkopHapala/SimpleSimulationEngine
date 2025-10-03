@@ -11,6 +11,71 @@ from sparse import (
 from projective_dynamics import make_pd_rhs, make_pd_Aii0, makeSparseSystem
 from truss import Truss
 
+
+VBD_WORKGROUP_SIZE = 32
+VBD_NEIGHBOR_LIMIT = 128
+
+
+def build_rest_length_dense(neigh_lists, bonds, l0s, n_max):
+    """Dense rest-length table matching the padded neighbor layout."""
+    assert len(bonds) == len(l0s), "bonds and l0s must have identical length"
+    pair_rest = {}
+    for (ia, ib), rest in zip(bonds, l0s):
+        pair_rest[(int(ia), int(ib))] = float(rest)
+        pair_rest[(int(ib), int(ia))] = float(rest)
+    rest_dense = np.zeros((len(neigh_lists), n_max), dtype=np.float32)
+    for vid, neigh in enumerate(neigh_lists):
+        for jj, nj in enumerate(neigh):
+            rest_dense[vid, jj] = pair_rest[(vid, nj)]
+    return rest_dense
+
+
+def build_vbd_chunks(padded_neighs, color_groups, chunk_size=VBD_WORKGROUP_SIZE, neighbor_limit=VBD_NEIGHBOR_LIMIT):
+    """Split each color into workgroup batches respecting vertex and neighbor limits."""
+    _, n_max = padded_neighs.shape
+    chunks_per_color = []
+    for group in color_groups:
+        color_vertices = list(group)
+        cursor = 0
+        color_chunks = []
+        while cursor < len(color_vertices):
+            vertices = []
+            neighbors = []
+            neighbor_map = {}
+            while cursor < len(color_vertices) and len(vertices) < chunk_size:
+                vid = int(color_vertices[cursor])
+                row = padded_neighs[vid]
+                neigh_list = [int(n) for n in row if n >= 0]
+                new_neighbors = [n for n in neigh_list if n not in neighbor_map]
+                if neighbors and len(neighbors) + len(new_neighbors) > neighbor_limit:
+                    break
+                if not neighbors and len(new_neighbors) > neighbor_limit:
+                    raise ValueError(f"Vertex {vid} uses {len(new_neighbors)} neighbors > limit {neighbor_limit}")
+                vertices.append(vid)
+                for n in neigh_list:
+                    if n not in neighbor_map:
+                        neighbor_map[n] = len(neighbors)
+                        neighbors.append(n)
+                cursor += 1
+            if not vertices:
+                raise RuntimeError("Unable to pack VBD workgroup; adjust neighbor limit or chunk size")
+            slot_table = np.full((chunk_size, n_max), -1, dtype=np.int32)
+            for local_idx, vid in enumerate(vertices):
+                row = padded_neighs[vid]
+                for jj in range(n_max):
+                    nid = row[jj]
+                    if nid < 0:
+                        break
+                    slot_table[local_idx, jj] = neighbor_map[nid]
+            color_chunks.append({
+                "vertices": np.array(vertices, dtype=np.int32),
+                "neighbors": np.array(neighbors, dtype=np.int32),
+                "slot_table": slot_table,
+            })
+        chunks_per_color.append(color_chunks)
+    return chunks_per_color
+
+
 class TrussOpenCLSolver:
     def __init__(self):
         # Initialize OpenCL
@@ -38,6 +103,16 @@ class TrussOpenCLSolver:
         self.color_group_buf = None
         self.n_points = None
         self.n_max = None
+        self.y_buf = None
+        self.l0_buf = None
+        self.neighs_dense = None
+        self.kngs_dense = None
+        self.rest_lengths_dense = None
+        self.vbd_chunks = None
+        self.color_groups_host = None
+        self.last_bonds = None
+        self.last_l0s = None
+        self.last_neigh_lists = None
 
     def _init_pd_system(self, truss, dt, gravity, fixed_points):
         """Initialize the projective dynamics system"""
@@ -58,9 +133,12 @@ class TrussOpenCLSolver:
         b    = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
         
         self.n_max = n_max
+        self.last_bonds = bonds
+        self.last_l0s = l0s
+        self.last_neigh_lists = neighs
         return pos_pred, masses, neighs, kngs, Aii, b
 
-    def _create_ocl_buffers(self, pos_pred, masses, neighs, kngs, Aii, b):
+    def _create_ocl_buffers(self, pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=None, y=None):
         """Create and initialize OpenCL buffers"""
         mf = cl.mem_flags
         
@@ -73,6 +151,8 @@ class TrussOpenCLSolver:
         
         # Create dense arrays from sparse data
         padded_neighs, padded_kngs, n_max = neighs_to_dense_arrays(neighs, kngs, self.n_max if self.n_max is not None else max(len(ng) for ng in neighs))
+        self.neighs_dense = padded_neighs
+        self.kngs_dense = padded_kngs
         
         # Create buffers
         self.x_buf      = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=x_padded)
@@ -82,6 +162,21 @@ class TrussOpenCLSolver:
         self.kngs_buf   = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=padded_kngs)
         self.Aii_buf    = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Aii)
         self.r_buf      = cl.Buffer(self.ctx, mf.READ_WRITE, x_padded.nbytes)
+
+        if rest_lengths is not None:
+            assert rest_lengths.shape == padded_neighs.shape, "rest_lengths must match neighbor layout"
+            self.rest_lengths_dense = rest_lengths.astype(np.float32, copy=False)
+            self.l0_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.rest_lengths_dense)
+        else:
+            self.rest_lengths_dense = None
+            self.l0_buf = None
+
+        if y is not None:
+            y_padded = np.zeros_like(x_padded)
+            y_padded[:, :3] = y
+            self.y_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=y_padded)
+        else:
+            self.y_buf = None
 
     def _prepare_color_groups(self, neighs):
         """Prepare color groups for Gauss-Seidel"""
@@ -96,7 +191,17 @@ class TrussOpenCLSolver:
         mf = cl.mem_flags
         self.color_group_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=flat_groups)
         
+        self.color_groups_host = color_groups
         return color_counts
+
+    def build_vbd_work_chunks(self, chunk_size=VBD_WORKGROUP_SIZE, neighbor_limit=VBD_NEIGHBOR_LIMIT):
+        """Pack per-color vertex chunks for the VBD kernel."""
+        if self.neighs_dense is None:
+            raise ValueError("Dense neighbor table not initialized; call _create_ocl_buffers first")
+        if self.color_groups_host is None:
+            raise ValueError("Color groups not prepared; call _prepare_color_groups first")
+        self.vbd_chunks = build_vbd_chunks(self.neighs_dense, self.color_groups_host, chunk_size, neighbor_limit)
+        return self.vbd_chunks
 
     def solve_pd_arrays(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
         """Solve projective dynamics using OpenCL with pre-computed arrays"""
@@ -159,10 +264,10 @@ class TrussOpenCLSolver:
 
         return x_out[:, :3]  # Return only xyz coordinates
 
-    def solve_pd_gauss_seidel(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, errs=None, bPrint=False):
+    def solve_pd_gauss_seidel(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, errs=None, bPrint=False, *, masses=None, rest_lengths=None, y=None):
         """Solve projective dynamics using OpenCL with colored Gauss-Seidel method"""
         # Create OpenCL buffers
-        self._create_ocl_buffers(pos_pred, None, neighs, kngs, Aii, b)
+        self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=rest_lengths, y=y)
         self.n_max = n_max
         self.n_points = len(pos_pred)
         
@@ -204,12 +309,12 @@ class TrussOpenCLSolver:
     def solve_pd_gauss_seidel_truss(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, errs=None, bPrint=False):
         """Solve projective dynamics for a truss using colored Gauss-Seidel"""
         pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
-        return self.solve_pd_gauss_seidel(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, errs, bPrint)
+        return self.solve_pd_gauss_seidel(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, errs, bPrint, masses=masses)
 
     def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
         """Original solve_pd that initializes arrays internally"""
         pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
-        return self.solve_pd_arrays(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, nsub, errs, bPrint)
+        return self.solve_pd_arrays(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, nsub, errs, bPrint, masses=masses)
 
     def solve_pd_event(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1):
         # Initialize system and create buffers
@@ -252,6 +357,86 @@ class TrussOpenCLSolver:
                 break
 
         return x_out[:, :3]  # Return only xyz coordinates
+
+    def solve_vbd(self, truss, dt, gravity, fixed_points=None, niter=1, det_eps=1e-6, errs=None, bPrint=False):
+        """Run Vertex Block Descent iterations on the GPU."""
+        if dt <= 0:
+            raise ValueError("dt must be positive")
+        pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
+        inv_h2 = np.float32(1.0 / (dt * dt))
+
+        rest_dense = build_rest_length_dense(self.last_neigh_lists, self.last_bonds, self.last_l0s, self.n_max)
+        y_pred = pos_pred.astype(np.float32, copy=True)
+
+        self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=rest_dense, y=y_pred)
+        self.n_points = len(pos_pred)
+
+        color_counts = self._prepare_color_groups(neighs)
+        self.build_vbd_work_chunks()
+
+        if self.l0_buf is None or self.y_buf is None:
+            raise RuntimeError("VBD buffers not initialized (l0/y missing)")
+
+        mf = cl.mem_flags
+
+        chunk_vertices_host = np.full(VBD_WORKGROUP_SIZE, -1, dtype=np.int32)
+        chunk_neighbors_host = np.full(VBD_NEIGHBOR_LIMIT, -1, dtype=np.int32)
+        chunk_slot_host = np.full(VBD_WORKGROUP_SIZE * self.n_max, -1, dtype=np.int32)
+
+        chunk_vertices_buf = cl.Buffer(self.ctx, mf.READ_ONLY, chunk_vertices_host.nbytes)
+        chunk_neighbors_buf = cl.Buffer(self.ctx, mf.READ_ONLY, chunk_neighbors_host.nbytes)
+        chunk_slot_buf = cl.Buffer(self.ctx, mf.READ_ONLY, chunk_slot_host.nbytes)
+
+        for itr in range(niter):
+            if bPrint:
+                print(f"TrussOpenCLSolver::solve_vbd() itr {itr}")
+            for color_chunks in self.vbd_chunks:
+                for chunk in color_chunks:
+                    vertices = chunk["vertices"]
+                    neighbors = chunk["neighbors"]
+                    slot_table = chunk["slot_table"]
+
+                    vcount = int(len(vertices))
+                    ncount = int(len(neighbors))
+
+                    chunk_vertices_host.fill(-1)
+                    if vcount > 0:
+                        chunk_vertices_host[:vcount] = vertices
+
+                    chunk_neighbors_host.fill(-1)
+                    if ncount > 0:
+                        chunk_neighbors_host[:ncount] = neighbors
+
+                    np.copyto(chunk_slot_host, -1)
+                    slot_flat = slot_table.reshape(-1).astype(np.int32, copy=False)
+                    chunk_slot_host[:slot_flat.size] = slot_flat
+
+                    cl.enqueue_copy(self.queue, chunk_vertices_buf, chunk_vertices_host)
+                    cl.enqueue_copy(self.queue, chunk_neighbors_buf, chunk_neighbors_host)
+                    cl.enqueue_copy(self.queue, chunk_slot_buf, chunk_slot_host)
+
+                    event = self.prg.vbd_vertex_chunk(
+                        self.queue, (VBD_WORKGROUP_SIZE,), (VBD_WORKGROUP_SIZE,),
+                        self.x_buf, self.y_buf,
+                        chunk_vertices_buf, chunk_neighbors_buf, chunk_slot_buf,
+                        self.neighs_buf, self.kngs_buf, self.l0_buf,
+                        np.int32(vcount), np.int32(ncount),
+                        np.int32(self.n_max), inv_h2, np.float32(det_eps)
+                    )
+                    event.wait()
+
+        x_out = np.zeros((self.n_points, 4), dtype=np.float32)
+        cl.enqueue_copy(self.queue, x_out, self.x_buf)
+        v_out = None
+        if self.y_buf is not None:
+            y_out = np.zeros_like(x_out)
+            cl.enqueue_copy(self.queue, y_out, self.y_buf)
+            v_out = (x_out[:, :3] - y_out[:, :3]) / np.float32(dt)
+        if errs is not None:
+            errs.append(0.0)
+        if v_out is not None:
+            return x_out[:, :3], v_out
+        return x_out[:, :3], None
 
 def setup_test_problem(nx=2, ny=2):
     """Common setup for test problems"""

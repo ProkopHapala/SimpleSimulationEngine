@@ -19,8 +19,17 @@
 //             #print(f"    j={j}, k={k}, x[j]={x[j]}, sum_j={sum_j}")
 //         x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
 //         r[i]     = b[i] - (-sum_j + Aii[i]*x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+
+// TODO(VBD): Vertex Block Descent kernels must be launched per color to preserve Gauss-Seidel ordering.
+// Each launch will iterate over pre-packed workgroups of size 32, where the host provides
+// (a) up to 32 vertex indices for the block and (b) the full set of their neighbor indices
+// (<=128) so that no entries from the `neighs` table are missing within shared local memory.
+// Python driver is responsible for building these chunk buffers before dispatch.
 //         #print(f"  Final: b[i]={b[i]}, Aii[i]={Aii[i]}, x_out[i]={x_out[i]}, r[i]={r[i]}")
 //     return x_out, r
+
+#define VBD_WORKGROUP_SIZE 32
+#define VBD_NEIGHBOR_LIMIT 128
 
 __kernel void jacobi_iteration_sparse(
     __global const float4* x,        // [npoint,4] solution candiate for position + mass {x,y,z,mass} 
@@ -118,16 +127,13 @@ __kernel void gauss_seidel_iteration_colored(
         const float k = kngs[j0 + jj];
         sum_j += k * x[j].xyz;  // Off-diagonal contribution
     }
-    
     const float3 bi = b[i].xyz;  // Fixed: Use i instead of iG
     x[i] = (float4){ (bi + sum_j) / Aii[i], xi.w };  // Update solution in-place
     r[i] = (float4){ bi + sum_j - Aii[i] * xi.xyz, 0.0f };  // Calculate residual
 }
 
-// =========== Optimized kernel using local memory and group-wise processing ===========
-//    Not sure if this is faster than the original kernel
 
-// Optimized Jacobi iteration kernel using local memory and group-wise processing
+
 __kernel void jacobi_iteration_sparse_local(
     __global const float4* x,              // [npoint,4] solution candidate for position + mass {x,y,z,mass}
     __global const float4* b,              // [npoint,4] RHS vector b {x,y,z, ?}
@@ -197,4 +203,124 @@ __kernel void jacobi_iteration_sparse_local(
     
     //printf("  Final: b[i]=(%f, %f, %f), Aii[i]=%f\n", bi.x, bi.y, bi.z, Aii[iG]);
     //printf("  x_out[i]=(%f, %f, %f), r[i]=(%f, %f, %f)\n",     x_out[iG].x, x_out[iG].y, x_out[iG].z,  r[iG].x, r[iG].y, r[iG].z);
+}
+
+
+// =========== Optimized kernel using local memory and group-wise processing ===========
+//    Not sure if this is faster than the original kernel
+//    TODO(VBD): Vertex Block Descent kernels must be launched per color to preserve Gauss-Seidel ordering.
+//    Each launch will iterate over pre-packed workgroups of size 32, where the host provides
+//    (a) up to 32 vertex indices for the block and (b) the full set of their neighbor indices
+//    (<=128) so that no entries from the `neighs` table are missing within shared local memory.
+//    Python driver is responsible for building these chunk buffers before dispatch.
+
+__kernel void vbd_vertex_chunk(
+    __global float4* x,
+    __global const float4* y,
+    __global const int* chunk_vertices,
+    __global const int* chunk_neighbors,
+    __global const int* slot_table,
+    __global const int* neighs,
+    __global const float* kngs,
+    __global const float* rest_lengths,
+    const int vcount,
+    const int ncount,
+    const int nmax,
+    const float inv_h2,
+    const float det_eps
+){
+    const int lid = get_local_id(0);
+    const int gid = get_global_id(0);
+    if (lid >= VBD_WORKGROUP_SIZE || gid >= VBD_WORKGROUP_SIZE) return;
+
+    __local float4 loc_x[VBD_WORKGROUP_SIZE];
+    __local float4 loc_y[VBD_WORKGROUP_SIZE];
+    __local float4 loc_neighbors[VBD_NEIGHBOR_LIMIT];
+    __local int loc_neighbor_index[VBD_WORKGROUP_SIZE * 128];
+
+    if (lid < vcount){
+        const int vid = chunk_vertices[lid];
+        loc_x[lid] = x[vid];
+        loc_y[lid] = y[vid];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (int idx = lid; idx < ncount; idx += VBD_WORKGROUP_SIZE){
+        const int nid = chunk_neighbors[idx];
+        loc_neighbors[idx] = x[nid];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (int idx = lid; idx < vcount * nmax; idx += VBD_WORKGROUP_SIZE){
+        loc_neighbor_index[idx] = slot_table[idx];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (lid >= vcount) return;
+
+    const int vid = chunk_vertices[lid];
+    const float4 xi = loc_x[lid];
+    const float4 yi = loc_y[lid];
+
+    float3 grad = (float3)(0.0f);
+    float H[9];
+    H[0]=H[4]=H[8]=inv_h2 * xi.w;
+    H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
+
+    const int base = vid * nmax;
+    const int slot_base = lid * nmax;
+
+    for (int jj = 0; jj < nmax; ++jj){
+        const int packed = loc_neighbor_index[slot_base + jj];
+        if (packed < 0) break;
+
+        const int nslot = packed;
+        float4 xj = loc_neighbors[nslot];
+        const int nj = chunk_neighbors[nslot];
+
+        const float k = kngs[base + jj];
+        const float rest = rest_lengths[base + jj];
+
+        float3 d = xi.xyz - xj.xyz;
+        float len = length(d);
+        if (len > 1e-7f){
+            float3 dir = d / len;
+            float coeff = k * (len - rest);
+            grad += coeff * dir;
+            float3 outer0 = dir * dir.x;
+            float3 outer1 = dir * dir.y;
+            float3 outer2 = dir * dir.z;
+            float sdiag = k * rest / len;
+            H[0] += k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
+            H[4] += k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
+            H[8] += k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
+            H[1] -= k * dir.x * dir.y - sdiag * dir.x * dir.y;
+            H[2] -= k * dir.x * dir.z - sdiag * dir.x * dir.z;
+            H[5] -= k * dir.y * dir.z - sdiag * dir.y * dir.z;
+            H[3] = H[1];
+            H[6] = H[2];
+            H[7] = H[5];
+        }
+    }
+
+    grad += inv_h2 * (xi.xyz - yi.xyz);
+    float c00 = H[4]*H[8] - H[5]*H[7];
+    float c01 = H[2]*H[7] - H[1]*H[8];
+    float c02 = H[1]*H[5] - H[2]*H[4];
+    float c10 = H[5]*H[6] - H[3]*H[8];
+    float c11 = H[0]*H[8] - H[2]*H[6];
+    float c12 = H[2]*H[3] - H[0]*H[5];
+    float c20 = H[3]*H[7] - H[4]*H[6];
+    float c21 = H[1]*H[6] - H[0]*H[7];
+    float c22 = H[0]*H[4] - H[1]*H[3];
+
+    float det = H[0]*c00 + H[1]*c10 + H[2]*c20;
+    if (fabs(det) < det_eps) return;
+
+    float inv_det = 1.0f/det;
+    float dx0 = (c00*grad.x + c01*grad.y + c02*grad.z) * inv_det;
+    float dx1 = (c10*grad.x + c11*grad.y + c12*grad.z) * inv_det;
+    float dx2 = (c20*grad.x + c21*grad.y + c22*grad.z) * inv_det;
+
+    x[vid].xyz = xi.xyz - (float3)(dx0, dx1, dx2);
 }
