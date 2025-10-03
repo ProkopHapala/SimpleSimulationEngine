@@ -10,7 +10,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser( description="Run a simple Vertex Block Descent step on a cloth-like truss grid." )
     parser.add_argument("--nx",            type=int,   default=10, help="Number of cells in the X direction (grid has nx+1 points).")
     parser.add_argument("--ny",            type=int,   default=10, help="Number of cells in the Y direction (grid has ny+1 points).")
-    parser.add_argument("--dt",            type=float, default=0.033, help="Simulation time step (seconds).")
+    parser.add_argument("--dt",            type=float, default=0.03, help="Simulation time step (seconds).")
     parser.add_argument("--mass",          type=float, default=1.0, help="Mass assigned to interior grid vertices.")
     parser.add_argument("--anchor-mass",   type=float, default=100.0, help="Mass assigned to fixed corner vertices (handled by Truss.build_grid_2d).")
     parser.add_argument("--edge",          type=float, default=1.0, help="Rest length of grid edges (meters).")
@@ -24,6 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-pin",        type=int,   default=0, help="Do not pin the default corner vertices; treat all vertices as free.")
     parser.add_argument("--no-plot",       type=int,   default=0, help="Skip plotting the initial and final grids.")
     parser.add_argument("--savefig",       type=str,   default="run_vbd_cloth.png", help="Path to save the comparison plot instead of displaying it.")
+    parser.add_argument("--serial",        type=int,   default=1, help="Use serial VBD kernel (simpler, for debugging).")
     args = parser.parse_args()
 
     solver = TrussOpenCLSolver()
@@ -48,15 +49,26 @@ if __name__ == "__main__":
 
     initial_points = truss.points.copy()
 
-    positions, velocities = solver.solve_vbd(
-        truss,
-        dt=args.dt,
-        gravity=total_accel,
-        fixed_points=fixed_points,
-        niter=args.niter,
-        det_eps=args.det_eps,
-        bPrint=bool(args.verbose),
-    )
+    if bool(args.serial):
+        positions, velocities = solver.solve_vbd_serial(
+            truss,
+            dt=args.dt,
+            gravity=total_accel,
+            fixed_points=fixed_points,
+            niter=args.niter,
+            det_eps=args.det_eps,
+            bPrint=bool(args.verbose),
+        )
+    else:
+        positions, velocities = solver.solve_vbd(
+            truss,
+            dt=args.dt,
+            gravity=total_accel,
+            fixed_points=fixed_points,
+            niter=args.niter,
+            det_eps=args.det_eps,
+            bPrint=bool(args.verbose),
+        )
 
     if fixed_points is not None and len(fixed_points) > 0:
         positions[fixed_points] = initial_points[fixed_points]

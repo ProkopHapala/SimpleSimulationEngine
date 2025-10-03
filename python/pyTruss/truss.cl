@@ -324,3 +324,74 @@ __kernel void vbd_vertex_chunk(
 
     x[vid].xyz = xi.xyz - (float3)(dx0, dx1, dx2);
 }
+
+__kernel void vbd_vertex_serial(
+    __global float4* x,
+    __global const float4* y,
+    __global const int* neighs,
+    __global const float* kngs,
+    __global const float* rest_lengths,
+    const int n_points,
+    const int nmax,
+    const float inv_h2,
+    const float det_eps
+){
+    if (get_global_id(0) != 0) return;
+
+    for (int vid = 0; vid < n_points; ++vid){
+        float4 xi = x[vid];
+        float4 yi = y[vid];
+
+        float3 grad = (float3)(0.0f);
+        float H[9];
+        H[0]=H[4]=H[8]=inv_h2 * xi.w;
+        H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
+
+        const int base = vid * nmax;
+        for (int jj = 0; jj < nmax; ++jj){
+            const int nb = neighs[base + jj];
+            if (nb < 0) break;
+            const float k = kngs[base + jj];
+            const float rest = rest_lengths[base + jj];
+
+            float3 d = xi.xyz - x[nb].xyz;
+            float len = length(d);
+            if (len > 1e-7f){
+                float3 dir = d / len;
+                grad += k * (len - rest) * dir;
+                float sdiag = k * rest / len;
+                H[0] += k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
+                H[4] += k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
+                H[8] += k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
+                H[1] -= k * dir.x * dir.y - sdiag * dir.x * dir.y;
+                H[2] -= k * dir.x * dir.z - sdiag * dir.x * dir.z;
+                H[5] -= k * dir.y * dir.z - sdiag * dir.y * dir.z;
+                H[3] = H[1];
+                H[6] = H[2];
+                H[7] = H[5];
+            }
+        }
+
+        grad += inv_h2 * (xi.xyz - yi.xyz);
+
+        float c00 = H[4]*H[8] - H[5]*H[7];
+        float c01 = H[2]*H[7] - H[1]*H[8];
+        float c02 = H[1]*H[5] - H[2]*H[4];
+        float c10 = H[5]*H[6] - H[3]*H[8];
+        float c11 = H[0]*H[8] - H[2]*H[6];
+        float c12 = H[2]*H[3] - H[0]*H[5];
+        float c20 = H[3]*H[7] - H[4]*H[6];
+        float c21 = H[1]*H[6] - H[0]*H[7];
+        float c22 = H[0]*H[4] - H[1]*H[3];
+
+        float det = H[0]*c00 + H[1]*c10 + H[2]*c20;
+        if (fabs(det) < det_eps) continue;
+
+        float inv_det = 1.0f / det;
+        float dx0 = (c00*grad.x + c01*grad.y + c02*grad.z) * inv_det;
+        float dx1 = (c10*grad.x + c11*grad.y + c12*grad.z) * inv_det;
+        float dx2 = (c20*grad.x + c21*grad.y + c22*grad.z) * inv_det;
+
+        x[vid].xyz = xi.xyz - (float3)(dx0, dx1, dx2);
+    }
+}

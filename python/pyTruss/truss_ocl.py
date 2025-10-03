@@ -438,6 +438,47 @@ class TrussOpenCLSolver:
             return x_out[:, :3], v_out
         return x_out[:, :3], None
 
+    def solve_vbd_serial(self, truss, dt, gravity, fixed_points=None, niter=1, det_eps=1e-6, errs=None, bPrint=False):
+        """Run Vertex Block Descent serially on the GPU (single work-item)."""
+        if dt <= 0:
+            raise ValueError("dt must be positive")
+        pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
+        inv_h2 = np.float32(1.0 / (dt * dt))
+
+        rest_dense = build_rest_length_dense(self.last_neigh_lists, self.last_bonds, self.last_l0s, self.n_max)
+        y_pred = pos_pred.astype(np.float32, copy=True)
+
+        self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=rest_dense, y=y_pred)
+        self.n_points = len(pos_pred)
+
+        if self.l0_buf is None or self.y_buf is None:
+            raise RuntimeError("VBD buffers not initialized (l0/y missing)")
+
+        for itr in range(niter):
+            if bPrint:
+                print(f"TrussOpenCLSolver::solve_vbd_serial() itr {itr}")
+            event = self.prg.vbd_vertex_serial(
+                self.queue, (1,), None,
+                self.x_buf, self.y_buf,
+                self.neighs_buf, self.kngs_buf, self.l0_buf,
+                np.int32(self.n_points), np.int32(self.n_max),
+                inv_h2, np.float32(det_eps)
+            )
+            event.wait()
+
+        x_out = np.zeros((self.n_points, 4), dtype=np.float32)
+        cl.enqueue_copy(self.queue, x_out, self.x_buf)
+        v_out = None
+        if self.y_buf is not None:
+            y_out = np.zeros_like(x_out)
+            cl.enqueue_copy(self.queue, y_out, self.y_buf)
+            v_out = (x_out[:, :3] - y_out[:, :3]) / np.float32(dt)
+        if errs is not None:
+            errs.append(0.0)
+        if v_out is not None:
+            return x_out[:, :3], v_out
+        return x_out[:, :3], None
+
 def setup_test_problem(nx=2, ny=2):
     """Common setup for test problems"""
     dt = 1.0
