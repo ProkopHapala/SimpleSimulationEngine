@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser( description="Run a simple Vertex Block Descent step on a cloth-like truss grid." )
     parser.add_argument("--nx",            type=int,   default=2, help="Number of cells in the X direction (grid has nx+1 points).")
     parser.add_argument("--ny",            type=int,   default=0, help="Number of cells in the Y direction (grid has ny+1 points).")
-    parser.add_argument("--dt",            type=float, default=0.1, help="Simulation time step (seconds).")
+    parser.add_argument("--dt",            type=float, default=0.2, help="Simulation time step (seconds).")
     parser.add_argument("--mass",          type=float, default=1.0, help="Mass assigned to interior grid vertices.")
     parser.add_argument("--anchor-mass",   type=float, default=1.0e+6, help="Mass assigned to fixed corner vertices (handled by Truss.build_grid_2d).")
     parser.add_argument("--edge",          type=float, default=1.0, help="Rest length of grid edges (meters).")
@@ -34,8 +34,8 @@ if __name__ == "__main__":
     parser.add_argument("--diag-stiffness",type=float, default=0.0, help="Spring stiffness for diagonal edges (if >0).")
     parser.add_argument("--gravity",       type=float, nargs=3, default=(0.0, -9.81, 0.0), help="Gravity vector (m/s^2).")
     parser.add_argument("--extra-accel",   type=float, nargs=3, default=(0.0, 0.0, 0.0), help="Additional acceleration applied to all vertices (m/s^2).")
-    parser.add_argument("--nsteps",        type=int,   default=100, help="Number of simulation time steps.")
-    parser.add_argument("--niter",         type=int,   default=10, help="Number of VBD solver iterations per step.")
+    parser.add_argument("--nsteps",        type=int,   default=5, help="Number of simulation time steps.")
+    parser.add_argument("--niter",         type=int,   default=3, help="Number of VBD solver iterations per step.")
     parser.add_argument("--det-eps",       type=float, default=1e-6, help="Determinant threshold for skipping ill-conditioned Hessians.")
     parser.add_argument("--solver",        type=str,   default="vbd", help="Solver name (vbd, pd, jacobi, etc.).")
     parser.add_argument("--verbose",       type=int,   default=1, help="Print iteration progress from the solver.")
@@ -143,6 +143,7 @@ if __name__ == "__main__":
                 "niter": args.niter,
                 "det_eps": args.det_eps,
                 "serial": bool(args.serial),
+                "verbose": args.verbose,
             },
             fixed_points=fixed_points,
             track_indices=track_indices,

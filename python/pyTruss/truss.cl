@@ -36,22 +36,31 @@ inline void init_hessian(float* H, float diag){
     H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
 }
 
-inline void accum_vertex_hessian(float* H, float3 dir, float k, float sdiag){
-    const float k_diag = k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
-    const float k_diag_y = k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
-    const float k_diag_z = k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
-    const float k_xy = k * dir.x * dir.y - sdiag * dir.x * dir.y;
-    const float k_xz = k * dir.x * dir.z - sdiag * dir.x * dir.z;
-    const float k_yz = k * dir.y * dir.z - sdiag * dir.y * dir.z;
-    H[0] += k_diag;
-    H[4] += k_diag_y;
-    H[8] += k_diag_z;
-    H[1] -= k_xy;
-    H[2] -= k_xz;
-    H[5] -= k_yz;
-    H[3] = H[1];
-    H[6] = H[2];
-    H[7] = H[5];
+inline void accum_vertex_hessian(float* H, float3 dir, float k, float rest, float len){
+    float coeff_iso, coeff_dir;
+    if (len > 1e-7f){
+        float inv_len = 1.0f / len;
+        coeff_iso = k * (1.0f - rest * inv_len);
+        coeff_dir = k * (rest * inv_len);
+    }else{
+        coeff_iso = k;
+        coeff_dir = k;
+        dir = (float3)(0.0f);
+    }
+
+    float3 row0 = (float3)(dir.x * dir.x, dir.x * dir.y, dir.x * dir.z);
+    float3 row1 = (float3)(dir.y * dir.x, dir.y * dir.y, dir.y * dir.z);
+    float3 row2 = (float3)(dir.z * dir.x, dir.z * dir.y, dir.z * dir.z);
+
+    H[0] += coeff_iso + coeff_dir * row0.x;
+    H[1] += coeff_dir * row0.y;
+    H[2] += coeff_dir * row0.z;
+    H[3] += coeff_dir * row1.x;
+    H[4] += coeff_iso + coeff_dir * row1.y;
+    H[5] += coeff_dir * row1.z;
+    H[6] += coeff_dir * row2.x;
+    H[7] += coeff_dir * row2.y;
+    H[8] += coeff_iso + coeff_dir * row2.z;
 }
 
 inline float3 solve3x3(const float* H, float3 grad, const float det_eps){
@@ -305,9 +314,12 @@ __kernel void vbd_vertex_chunk(
     float4 xi = loc_x[lid];
     const float4 yi = loc_y[lid];
 
-    float3 grad = (float3)(0.0f);
+    const float mass = xi.w;
+    const float weight = mass * inv_h2;
+
+    float3 grad = weight * (xi.xyz - yi.xyz);
     float H[9];
-    init_hessian(H, inv_h2 * xi.w);
+    init_hessian(H, weight);
 
     const int base = vid * nmax;
     const int slot_base = lid * nmax;
@@ -316,22 +328,17 @@ __kernel void vbd_vertex_chunk(
         const int packed = loc_neighbor_index[slot_base + jj];
         if (packed < 0) break;
 
-        const int nslot = packed;
-        float4 xj = loc_neighbors[nslot];
-        const int nj = chunk_neighbors[nslot];
-
+        float4 xj = loc_neighbors[packed];
         const float k = kngs[base + jj];
         const float rest = rest_lengths[base + jj];
 
-        float3 d = xi.xyz - xj.xyz;
-        float len = length(d);
-        if (len > 1e-7f){
-            float3 dir = d / len;
-            float coeff = k * (len - rest);
-            grad += coeff * dir;
-            float sdiag = k * rest / len;
-            accum_vertex_hessian(H, dir, k, sdiag);
-        }
+        float3 d   = xi.xyz - xj.xyz;
+        float len  = length(d);
+        float3 dir = (float3)(0.0f);
+        if (len > 1e-7f) dir = d / len;
+
+        grad += k * (len - rest) * dir;
+        accum_vertex_hessian(H, dir, k, rest, len);
     }
 
     grad += inv_h2 * (xi.xyz - yi.xyz);
@@ -357,9 +364,12 @@ __kernel void vbd_vertex_serial(
         float4 xi = x[vid];
         float4 yi = y[vid];
 
-        float3 grad = (float3)(0.0f);
+        const float mass = xi.w;
+        const float weight = mass * inv_h2;
+
+        float3 grad = weight * (xi.xyz - yi.xyz);
         float H[9];
-        init_hessian(H, inv_h2 * xi.w);
+        init_hessian(H, weight);
 
         const int base = vid * nmax;
         for (int jj = 0; jj < nmax; ++jj){
@@ -368,17 +378,26 @@ __kernel void vbd_vertex_serial(
             const float k = kngs[base + jj];
             const float rest = rest_lengths[base + jj];
 
-            float3 d = xi.xyz - x[nb].xyz;
+            const float3 xj = x[nb].xyz;
+            float3 d = xi.xyz - xj;
             float len = length(d);
+            const float safe_len = fmax(len, 1e-7f);
+            float3 dir = (float3)(0.0f);
             if (len > 1e-7f){
-                float3 dir = d / len;
-                grad += k * (len - rest) * dir;
-                float sdiag = k * rest / len;
-                accum_vertex_hessian(H, dir, k, sdiag);
+                dir = d / safe_len;
             }
+
+            const float stretch = len - rest;
+            grad += k * stretch * dir;
+
+            accum_vertex_hessian(H, dir, k, rest, len);
         }
 
-        grad += inv_h2 * (xi.xyz - yi.xyz);
+        if (vid == 1){
+            printf("[GPU] grad[1] = (%10.4g, %10.4g, %10.4g)\n", grad.x, grad.y, grad.z);
+            printf("[GPU] H[1]    = [%10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g]\n", H[0],H[1],H[2], H[3],H[4],H[5], H[6],H[7],H[8]);
+        }
+
         const float3 dx = solve3x3(H, grad, det_eps);
         xi.xyz -= dx;
         x[vid] = xi;

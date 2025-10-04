@@ -272,23 +272,40 @@ def solve_vbd_serial_gpu(
     y32 = workspace["y_host"]
     x32.fill(0.0)
     y32.fill(0.0)
-    x32[:, :3] = x.astype(np.float32, copy=False)
 
+    # Load current state and predicted positions into pinned host buffers.
+    pos_np = x.astype(np.float32, copy=False)
     y_pred = x + dt * v + (dt * dt) * gravity
     y_pred = y_pred.astype(np.float32, copy=False)
     if fixed.size > 0:
         y_pred[fixed] = x[fixed].astype(np.float32, copy=False)
+
+    mass32 = solver.masses.astype(np.float32, copy=False)
+    x32[:, :3] = pos_np
+    x32[:, 3] = mass32
     y32[:, :3] = y_pred
 
     cl.enqueue_copy(queue, workspace["x_buf"], x32)
     cl.enqueue_copy(queue, workspace["y_buf"], y32)
 
-    for _ in range(max(1, niter)):
+    verbose_iter = int(config.get("verbose", 0))
+    n_iter = max(1, niter)
+
+    buf_a = workspace["x_buf"]
+
+    need_logging = bool(verbose_iter) or VERBOSITY >= 2
+    if need_logging:
+        lerp_prev = x.astype(np.float64, copy=True)
+        lerp_curr = np.zeros_like(lerp_prev)
+    else:
+        lerp_prev = lerp_curr = None
+
+    for itr_idx in range(n_iter):
         event = runtime.prg.vbd_vertex_serial(
             queue,
             (1,),
             None,
-            workspace["x_buf"],
+            buf_a,
             workspace["y_buf"],
             workspace["neighs_buf"],
             workspace["kngs_buf"],
@@ -299,16 +316,23 @@ def solve_vbd_serial_gpu(
             det_eps,
         )
         event.wait()
-        if VERBOSITY >= 2:
-            cl.enqueue_copy(queue, x32, workspace["x_buf"])
-            queue.finish()
-            pos_iter = x32[:, :3].astype(np.float64, copy=True)
-            vel_iter = (pos_iter - x) / dt
-            if fixed.size > 0:
-                vel_iter[fixed] = 0.0
-            _print_state("[GPU][VBD iter]", pos_iter, vel_iter)
 
-    cl.enqueue_copy(queue, x32, workspace["x_buf"])
+        if need_logging:
+            cl.enqueue_copy(queue, x32, buf_a)
+            queue.finish()
+            lerp_curr[:, :] = x32[:, :3].astype(np.float64)
+            dx_iter = lerp_curr - lerp_prev
+            max_dx = np.linalg.norm(dx_iter, axis=1).max()
+            if verbose_iter:
+                print(f"    VBD iter {itr_idx}: max |dx| = {max_dx:.3e}")
+            if VERBOSITY >= 2:
+                vel_iter = (lerp_curr - x) / dt
+                if fixed.size > 0:
+                    vel_iter[fixed] = 0.0
+                _print_state(f"[GPU][VBD iter {itr_idx + 1}/{n_iter}]", lerp_curr, vel_iter)
+            lerp_prev[:, :] = lerp_curr
+
+    cl.enqueue_copy(queue, x32, buf_a)
     queue.finish()
 
     x_out = x32[:, :3].astype(np.float64, copy=True)

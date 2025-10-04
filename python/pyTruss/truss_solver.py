@@ -317,6 +317,13 @@ def solve_vbd(truss, *, state: dict, dt: float, gravity: np.ndarray,
         if fixed.size > 0:
             H[fixed_mask] = eye_mass[fixed_mask]
 
+        if VERBOSITY >= 2 and n_points > 1:
+            ivert = 1
+            gi = grad[ivert]
+            Hi = H[ivert]
+            print(f"[CPU][VBD iter {itr}] grad[{ivert}] = {gi}")
+            print(f"[CPU][VBD iter {itr}] H[{ivert}] =\n{Hi}")
+
         max_dx = 0.0
         for vid in range(n_points):
             if fixed_mask[vid]:
