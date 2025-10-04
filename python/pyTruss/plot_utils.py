@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
-def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_color='b', point_size=20, color_by_stiffness=False, cmap='viridis',  show_colorbar=True, ks=None, label=None):
+def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_color='b', point_size=20, color_by_stiffness=False, cmap='viridis',  show_colorbar=True, ks=None, label=None, margin=0.2):
     """
     Plot the truss efficiently using LineCollection.
     
@@ -23,39 +23,26 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
     """
     #if ax is None: _, ax = plt.subplots(figsize=(10, 10))
     if ax is None: ax = plt.gca()
-    
-    # Prepare line segments for LineCollection
     segments = []
-    for i, j in bonds:
-        segments.append([points[i, :2], points[j, :2]])
-    
-    # Create LineCollection
+    for i, j in bonds: segments.append([points[i, :2], points[j, :2]])
     lc = LineCollection(segments, linewidths=1)
-    
     if color_by_stiffness:
         if ks is None:
             raise ValueError("ks (stiffness values) must be provided when color_by_stiffness=True")
-        # Normalize colors by stiffness
         lc.set_array(np.array(ks))
         lc.set_cmap(cmap)
-        if show_colorbar:
-            plt.colorbar(lc, ax=ax, label='Stiffness')
+        if show_colorbar: plt.colorbar(lc, ax=ax, label='Stiffness')
     else:
         lc.set_color(edge_color)
-    
     lc.set_alpha(edge_alpha)
     ax.add_collection(lc)
     
-    if point_size is not None:
-        ax.scatter(points[:, 0], points[:, 1], c=point_color, s=point_size, zorder=2, label=label)
-    
-    # Set equal aspect ratio and grid
+    if point_size is not None:  ax.scatter(points[:, 0], points[:, 1], c=point_color, s=point_size, zorder=2, label=label)
     ax.set_aspect('equal')
     ax.grid(True)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    
-    # Update limits
-    ax.autoscale()
-    
+    ax.set_xlim(points[:, 0].min()-margin, points[:, 0].max()+margin)
+    ax.set_ylim(points[:, 1].min()-margin, points[:, 1].max()+margin)
+    #ax.autoscale()
     return ax
