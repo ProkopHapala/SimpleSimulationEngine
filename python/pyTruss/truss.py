@@ -15,9 +15,11 @@ class Truss:
         self.bonds = []                 # List of (i,j) tuples for bonds
         self.ks = np.array([])          # Spring constants for each bond
         self.fixed = set()              # Set of fixed point indices
+        self._rest_lengths = np.array([])
 
     def build_rope(self, n: int, m: float = 1.0, m_end: float = 1000.0, l: float = 1.0):
         """Build a simple rope-like truss"""
+        self._rest_lengths = np.array([])
         self.bonds = [(i, i+1) for i in range(n-1)]
         self.masses = np.ones(n) * m
         self.masses[0] = self.masses[-1] = m_end
@@ -26,9 +28,11 @@ class Truss:
         self.points[:, 0] = np.arange(n) * l + x0 + l/2
         self.ks = np.ones(len(self.bonds))
         self.fixed = {0, n-1}
+        self._update_rest_lengths()
 
     def build_grid_2d(self, nx: int, ny: int, m: float = 1.0, m_end: float = 1000.0, l: float = 1.0, k: float = 1.0, k_diag: float = -1.0):
         """Build a 2D grid truss"""
+        self._rest_lengths = np.array([])
         np_total = (nx + 1) * (ny + 1)
         self.points = np.zeros((np_total, 3))
         self.masses = np.ones(np_total) * m
@@ -66,10 +70,12 @@ class Truss:
         # Fix corners
         self.fixed = {0, nx}
         self.masses[list(self.fixed)] = m_end
+        self._update_rest_lengths()
 
     def ngon_truss(self, p0: np.ndarray, p1: np.ndarray, ax: np.ndarray, 
                    n: int = 8, k: float = 1.0):
         """Create a regular n-gon truss"""
+        self._rest_lengths = np.array([])
         dir = p1 - p0
         r = np.linalg.norm(dir)
         dir = dir / r
@@ -95,6 +101,7 @@ class Truss:
         self.bonds = bonds
         self.ks = np.ones(len(bonds)) * k
         self.masses = np.ones(n)
+        self._update_rest_lengths()
 
     def wheel(self, p0: np.ndarray, p1: np.ndarray, ax: np.ndarray, width: float, n: int = 8, k_scale: float = 1.0, k_dict: List[float] = None):
         """
@@ -207,6 +214,7 @@ class Truss:
         self.bonds = [(e.i, e.j) for e in edges]
         self.ks = np.array([k_dict[e.kind] * k_scale for e in edges])
         self.masses = np.ones(len(points))
+        self._update_rest_lengths()
 
     def get_neighbor_list(self) -> List[Set[int]]:
         """Return list of neighbors for each point"""
@@ -229,7 +237,15 @@ class Truss:
 
     def get_rest_lengths(self) -> np.ndarray:
         """Return rest lengths of all bonds based on initial configuration"""
-        return np.linalg.norm(self.get_bond_vectors(), axis=1)
+        if self._rest_lengths.size != len(self.bonds):
+            self._update_rest_lengths()
+        return self._rest_lengths.copy()
+
+    def _update_rest_lengths(self):
+        if len(self.bonds) == 0:
+            self._rest_lengths = np.array([])
+        else:
+            self._rest_lengths = np.linalg.norm(self.get_bond_vectors(), axis=1)
         
     def get_pd_quantities(self):
         """

@@ -14,6 +14,37 @@ This document rewrites article [Vertex Block Descent, A.Chen,(2024)](https://dl.
 
 ---
 
+## Design notes: modular implicit dynamics in `Truss`
+
+- **`Truss.run_dynamics()` outer loop**
+  - Encapsulate implicit Euler stepping over `nsteps`, updating `(x, v)` using shared routines for inertia/anchor handling and force accumulation.
+  - Accepts solver handle (callable or object) operating on current state; solver returns updated positions after solving local system.
+  - Maintains diagnostics/trajectory logging flags; keeps plotting separate per global repo rules.
+
+- **Solver interface** (Python prototype)
+  ```python
+  def solve_step(truss: Truss, dt: float, gravity: np.ndarray, *, solver_state: dict) -> np.ndarray:
+      """Return new positions for current step given truss.points, velocities."""
+  ```
+  - `solver_state` allows caching matrices/preconditioners between steps.
+  - Velocity update stays in `run_dynamics()` (`v = (x_new - x_old) / dt`).
+
+- **Existing solvers to plug in**
+  - Projective Dynamics dense/iterative Python versions (`python/pyTruss/projective_dynamics.py`, `python/pyTruss/projective_dynamics_iterative.py`).
+  - Julia PD reference (`Julia/try_julia_plot/ProjectiveDynamics.jl`) mirrors the same structure: outer implicit loop + solver selection (`solve_linear_system!`, Gauss-Seidel, Jacobi, etc.).
+  - Vertex Block Descent (`solve_vbd_numpy` and OpenCL kernel) should implement the same interface, returning relaxed positions per step.
+
+- **System assembly reuse**
+  - `Truss` exposes geometry/mass/rest-length queries; add helpers to build inertia term (`M/h^2`), gather constraint projections shared by PD and VBD.
+  - Solver receives `y = x + dt*v + dt^2*a_ext`, fixed mask, bond data; avoids duplicating setup code seen today in `solve_vbd_numpy()`.
+
+- **Next steps before coding**
+  - Refactor CPU PD/VBD solvers to adopt common interface (`SolverContext` objects storing pre-factorizations).
+  - Implement `Truss.run_dynamics()` orchestrating: compute `y`, call solver, update `(x, v)`, append trajectories if requested.
+  - Update CLI (`run_vbd_cloth.py`) to select solver via flag (`--solver pd|vbd|gs|jacobi`), pass options through to `run_dynamics()`.
+
+---
+
 ## Notation
 
 * Number of vertices: $N$
