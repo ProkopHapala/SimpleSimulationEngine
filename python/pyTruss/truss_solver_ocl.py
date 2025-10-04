@@ -8,6 +8,19 @@ from sparse import build_neighbor_list, neigh_stiffness, neighs_to_dense_arrays
 from truss import Truss
 
 
+VERBOSITY = 0
+
+
+def set_verbosity(level: int) -> None:
+    global VERBOSITY
+    VERBOSITY = int(level)
+
+
+def _print_state(tag: str, positions: np.ndarray, velocities: np.ndarray) -> None:
+    print(f"{tag} positions:\n{positions}")
+    print(f"{tag} velocities:\n{velocities}")
+
+
 def build_rest_length_dense(neigh_lists: List[List[int]], bonds: np.ndarray, l0s: np.ndarray, n_max: int) -> np.ndarray:
     """Dense rest-length table matching the padded neighbor layout."""
     print("truss_solver_ocl.build_rest_length_dense()")
@@ -201,6 +214,8 @@ class TrussSolverOCL:
                 trajectory.append(x[track_idx].copy())
             if self.verbose and (step == 0 or (step + 1) % max(1, nsteps // 10) == 0):
                 print(f"  [GPU] Step {step + 1}/{nsteps}, t={dt * (step + 1):.3f} s")
+            if VERBOSITY >= 1:
+                _print_state(f"[GPU][step {step + 1}/{nsteps}]", x, v)
 
         self.x = x
         self.v = v
@@ -284,6 +299,14 @@ def solve_vbd_serial_gpu(
             det_eps,
         )
         event.wait()
+        if VERBOSITY >= 2:
+            cl.enqueue_copy(queue, x32, workspace["x_buf"])
+            queue.finish()
+            pos_iter = x32[:, :3].astype(np.float64, copy=True)
+            vel_iter = (pos_iter - x) / dt
+            if fixed.size > 0:
+                vel_iter[fixed] = 0.0
+            _print_state("[GPU][VBD iter]", pos_iter, vel_iter)
 
     cl.enqueue_copy(queue, x32, workspace["x_buf"])
     queue.finish()

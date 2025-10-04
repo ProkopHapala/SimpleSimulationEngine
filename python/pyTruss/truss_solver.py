@@ -11,6 +11,19 @@ import numpy as np
 from typing import List, Tuple, Callable, Optional, Dict, Any
 
 
+VERBOSITY = 0
+
+
+def set_verbosity(level: int) -> None:
+    global VERBOSITY
+    VERBOSITY = int(level)
+
+
+def _print_state(tag: str, positions: np.ndarray, velocities: np.ndarray) -> None:
+    print(f"{tag} positions:\n{positions}")
+    print(f"{tag} velocities:\n{velocities}")
+
+
 class TrussSolver:
     """
     Implicit Euler dynamics driver with pluggable solver callbacks.
@@ -217,6 +230,8 @@ class TrussSolver:
                 trajectory.append(x[track_idx].copy())
             if self.verbose and (step == 0 or (step + 1) % max(1, nsteps // 10) == 0):
                 print(f"  Step {step + 1}/{nsteps}, t={dt * (step + 1):.3f} s")
+            if VERBOSITY >= 1:
+                _print_state(f"[CPU][step {step + 1}/{nsteps}]", x, v)
 
         self.x = x
         self.v = v
@@ -319,6 +334,11 @@ def solve_vbd(truss, *, state: dict, dt: float, gravity: np.ndarray,
 
         if verbose:
             print(f"    VBD iter {itr}: max |dx| = {max_dx:.3e}")
+        if VERBOSITY >= 2:
+            vel_iter = (x_curr - x) / dt
+            if fixed.size > 0:
+                vel_iter[fixed_mask] = 0.0
+            _print_state(f"[CPU][VBD iter {itr + 1}/{niter}]", x_curr, vel_iter)
 
     if fixed.size > 0:
         x_curr[fixed_mask] = x[fixed_mask]

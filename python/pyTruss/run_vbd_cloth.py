@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from truss        import Truss
 from truss_solver import TrussSolver, get_solver
 from truss_solver_ocl import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
+import truss_solver as truss_solver_module
+import truss_solver_ocl as truss_solver_ocl_module
 from plot_utils   import plot_truss
 
 '''
@@ -46,9 +48,14 @@ if __name__ == "__main__":
     parser.add_argument("--chain",         type=int,   default=0, help="Treat the grid as a 1D chain (forces ny=0).")
     parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
+    parser.add_argument("--verb",          type=int,   default=0, help="Diagnostic verbosity: 0=off, 1=per step, 2=per solver iteration.")
     args = parser.parse_args()
 
     truss = Truss()
+
+    verb_level = max(0, int(args.verb))
+    truss_solver_module.set_verbosity(verb_level)
+    truss_solver_ocl_module.set_verbosity(verb_level)
 
     ny_effective = 0 if bool(args.chain) else args.ny
     truss.build_grid_2d(
