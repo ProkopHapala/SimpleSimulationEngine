@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from truss        import Truss
-from truss_ocl    import TrussSolverOCL
 from truss_solver import TrussSolver, get_solver
+from truss_solver_ocl import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
 from plot_utils   import plot_truss
 
 '''
@@ -48,7 +48,6 @@ if __name__ == "__main__":
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
     args = parser.parse_args()
 
-    solver = TrussSolverOCL()
     truss = Truss()
 
     ny_effective = 0 if bool(args.chain) else args.ny
@@ -103,7 +102,7 @@ if __name__ == "__main__":
                         raise ValueError(f"track vertex index {idx} out of range (0..{len(truss.points)-1})")
 
     run_cpu = bool(args.cpu or args.compare)
-    run_gpu = True  # GPU path is always available; compare mode runs both
+    run_gpu = not bool(args.cpu and not args.compare)
 
     cpu_positions = cpu_velocities = None
     gpu_positions = gpu_velocities = None
@@ -127,18 +126,22 @@ if __name__ == "__main__":
     if run_gpu:
         if run_cpu:
             truss.points = initial_points.copy()
-        gpu_positions, gpu_velocities, gpu_traj = solver.run_vbd_timesteps(
+        gpu_solver_callback = get_solver_ocl("vbd_serial" if bool(args.serial) else "vbd")
+        gpu_solver = TrussSolverOCLGPU(
             truss,
-            nsteps=args.nsteps,
             dt=args.dt,
-            gravity=total_accel,
+            gravity=total_accel.astype(np.float64),
+            solver=gpu_solver_callback,
+            solver_config={
+                "niter": args.niter,
+                "det_eps": args.det_eps,
+                "serial": bool(args.serial),
+            },
             fixed_points=fixed_points,
-            niter=args.niter,
-            det_eps=args.det_eps,
-            serial=bool(args.serial),
             track_indices=track_indices,
-            bPrint=bool(args.verbose),
+            verbose=int(args.verbose),
         )
+        gpu_positions, gpu_velocities, gpu_traj = gpu_solver.run(args.nsteps)
 
     if bool(args.compare) and run_cpu and gpu_positions is not None:
         diff_pos = gpu_positions - cpu_positions
