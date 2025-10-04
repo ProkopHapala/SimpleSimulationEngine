@@ -2,13 +2,22 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from truss import Truss, solve_vbd_numpy
-from truss_ocl import TrussOpenCLSolver
-from plot_utils import plot_truss
-
+from truss        import Truss
+from truss_ocl    import TrussSolverOCL
+from truss_solver import TrussSolver, get_solver
+from plot_utils   import plot_truss
 
 '''
-python run_vbd_cloth.py --nx 3 --ny 0 --niter 10 --serial 1 --cpu 1
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 100 --niter 10 --stiffness 1000000.0--cpu 1 --anchor-mode left
+
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 1000.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0 --cpu 1 --anchor-mode both 
+
+python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 1000.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0 --cpu 1 --anchor-mode both 
+
 '''
 
 if __name__ == "__main__":
@@ -23,21 +32,23 @@ if __name__ == "__main__":
     parser.add_argument("--diag-stiffness",type=float, default=0.0, help="Spring stiffness for diagonal edges (if >0).")
     parser.add_argument("--gravity",       type=float, nargs=3, default=(0.0, -9.81, 0.0), help="Gravity vector (m/s^2).")
     parser.add_argument("--extra-accel",   type=float, nargs=3, default=(0.0, 0.0, 0.0), help="Additional acceleration applied to all vertices (m/s^2).")
-    parser.add_argument("--niter",         type=int,   default=10, help="Number of VBD iterations to run.")
+    parser.add_argument("--nsteps",        type=int,   default=100, help="Number of simulation time steps.")
+    parser.add_argument("--niter",         type=int,   default=10, help="Number of VBD solver iterations per step.")
     parser.add_argument("--det-eps",       type=float, default=1e-6, help="Determinant threshold for skipping ill-conditioned Hessians.")
+    parser.add_argument("--solver",        type=str,   default="vbd", help="Solver name (vbd, pd, jacobi, etc.).")
     parser.add_argument("--verbose",       type=int,   default=1, help="Print iteration progress from the solver.")
     parser.add_argument("--no-pin",        type=int,   default=0, help="Do not pin the default corner vertices; treat all vertices as free.")
     parser.add_argument("--no-plot",       type=int,   default=0, help="Skip plotting the initial and final grids.")
     parser.add_argument("--savefig",       type=str,   default="run_vbd_cloth.png", help="Path to save the comparison plot instead of displaying it.")
     parser.add_argument("--serial",        type=int,   default=1, help="Use OpenCL serial VBD kernel (simpler, for debugging).")
-    parser.add_argument("--cpu",           type=int,   default=1, help="Run NumPy reference VBD solver.")
+    parser.add_argument("--cpu",           type=int,   default=0, help="Run NumPy reference VBD solver.")
     parser.add_argument("--compare",       type=int,   default=0, help="Run both CPU and GPU solvers and report differences.")
     parser.add_argument("--chain",         type=int,   default=0, help="Treat the grid as a 1D chain (forces ny=0).")
-    parser.add_argument("--anchor-mode",   type=str,   default="both", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
+    parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
     args = parser.parse_args()
 
-    solver = TrussOpenCLSolver()
+    solver = TrussSolverOCL()
     truss = Truss()
 
     ny_effective = 0 if bool(args.chain) else args.ny
@@ -92,50 +103,42 @@ if __name__ == "__main__":
                         raise ValueError(f"track vertex index {idx} out of range (0..{len(truss.points)-1})")
 
     run_cpu = bool(args.cpu or args.compare)
-    run_gpu = not args.compare or True
+    run_gpu = True  # GPU path is always available; compare mode runs both
 
     cpu_positions = cpu_velocities = None
     gpu_positions = gpu_velocities = None
-    cpu_traj = [] if run_cpu and track_indices is not None else None
-
-    if track_indices is not None and not run_cpu:
-        print("Warning: --track requires --cpu or --compare; trajectories will not be recorded for GPU-only runs.")
+    cpu_traj = gpu_traj = None
 
     if run_cpu:
-        cpu_positions, cpu_velocities = solve_vbd_numpy(
+        solver_callback = get_solver(args.solver)
+        solver_config = {'niter': args.niter, 'det_eps': args.det_eps, 'verbose': args.verbose}
+        cpu_solver = TrussSolver(
             truss,
             dt=args.dt,
             gravity=total_accel.astype(np.float64),
-            velocities=np.zeros_like(initial_points, dtype=np.float64),
+            solver=solver_callback,
+            solver_config=solver_config,
+            fixed_points=fixed_points,
+            track_indices=track_indices,
+            verbose=0,
+        )
+        cpu_positions, cpu_velocities, cpu_traj = cpu_solver.run(args.nsteps)
+
+    if run_gpu:
+        if run_cpu:
+            truss.points = initial_points.copy()
+        gpu_positions, gpu_velocities, gpu_traj = solver.run_vbd_timesteps(
+            truss,
+            nsteps=args.nsteps,
+            dt=args.dt,
+            gravity=total_accel,
             fixed_points=fixed_points,
             niter=args.niter,
             det_eps=args.det_eps,
-            verbose=args.verbose,
+            serial=bool(args.serial),
             track_indices=track_indices,
-            trajectory=cpu_traj,
+            bPrint=bool(args.verbose),
         )
-
-    if bool(args.compare) or not run_cpu:
-        if bool(args.serial):
-            gpu_positions, gpu_velocities = solver.solve_vbd_serial(
-                truss,
-                dt=args.dt,
-                gravity=total_accel,
-                fixed_points=fixed_points,
-                niter=args.niter,
-                det_eps=args.det_eps,
-                bPrint=bool(args.verbose),
-            )
-        else:
-            gpu_positions, gpu_velocities = solver.solve_vbd(
-                truss,
-                dt=args.dt,
-                gravity=total_accel,
-                fixed_points=fixed_points,
-                niter=args.niter,
-                det_eps=args.det_eps,
-                bPrint=bool(args.verbose),
-            )
 
     if bool(args.compare) and run_cpu and gpu_positions is not None:
         diff_pos = gpu_positions - cpu_positions
@@ -153,6 +156,12 @@ if __name__ == "__main__":
 
     positions = cpu_positions if run_cpu else gpu_positions
     velocities = cpu_velocities if run_cpu else gpu_velocities
+    traj_to_plot = None
+    if track_indices is not None:
+        if run_cpu and cpu_traj is not None:
+            traj_to_plot = cpu_traj
+        elif gpu_traj is not None:
+            traj_to_plot = gpu_traj
 
     if fixed_points is not None and len(fixed_points) > 0:
         positions[fixed_points] = initial_points[fixed_points]
@@ -167,7 +176,7 @@ if __name__ == "__main__":
     print(f"  delta position min: {delta_min}")
     print(f"  delta position max: {delta_max}")
 
-    print(f"VBD finished after {args.niter} iterations")
+    print(f"Simulation finished: {args.nsteps} steps, {args.niter} solver iterations/step")
     print(f"  lowest y-position: {min_y:.6f} m")
     print(f"  max vertical drop: {max_drop:.6f} m")
     print(f"  pinned vertices: {('none' if fixed_points is None else fixed_points)}")
@@ -182,11 +191,10 @@ if __name__ == "__main__":
         plot_truss(initial_points, truss.bonds, ax=ax, edge_color='tab:blue', point_color='tab:blue', label='initial')
         plot_truss(positions, truss.bonds, ax=ax, edge_color='tab:red', point_color='tab:red', label='final')
 
-        if cpu_traj and len(cpu_traj) > 0 and track_indices is not None:
-            traj_arr = np.stack(cpu_traj, axis=0)  # [nstep, ntrack, 3]
+        if traj_to_plot is not None and track_indices is not None:
             for i, vid in enumerate(track_indices):
-                label = f"track {vid} (CPU)" if i == 0 else None
-                ax.plot(traj_arr[:, i, 0], traj_arr[:, i, 1], linestyle='--', marker='o', markersize=2, color='tab:green', label=label)
+                label = f"track {vid}" if i == 0 else None
+                ax.plot(traj_to_plot[:, i, 0], traj_to_plot[:, i, 1], linestyle='-', marker='o', markersize=2, color='tab:green', label=label)
 
         ax.legend()
         ax.set_title("Cloth grid before/after VBD")

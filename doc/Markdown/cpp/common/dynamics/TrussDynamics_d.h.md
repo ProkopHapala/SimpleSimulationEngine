@@ -244,6 +244,20 @@ The `TrussDynamics_d` class is the core class for simulating the dynamics of a t
 - `solveLinearizedConjugateGradient`: Solve the linearized truss system using conjugate gradient method.
 - `dotPD`: Calculates the matrix-vector product Ap.
 
+###### Linear solver families in `run_LinSolve`
+- **Jacobi / JacobiDiff (`updateIterativeJacobi*`)**
+  Lightweight fixed-point iterations that relax each degree of freedom independently using diagonal mass and spring terms. `Jacobi` works on absolute positions, while `JacobiDiff` advances displacement from the previously converged state to reduce drift. Cheap per iteration but typically the slowest to converge.
+- **Gauss-Seidel (`updateGaussSeidel_lin`)**
+  Sequential sweep that immediately reuses freshly updated positions, accelerating convergence compared to Jacobi at the cost of strict ordering and poor parallel scalability.
+- **Momentum variants (`updateIterativeMomentum*`)**
+  Apply over-relaxation / Nesterov-style mixing to Jacobi or Gauss-Seidel updates. `JacobiMomentum` and `GSMomentum` mix the newly computed iterate with a velocity-like buffer, `JacobiFlyMomentum` and `GSFlyMomentum` recompute forces on-the-fly to avoid explicit stiffness assembly, and `MomentumDiff` operates on displacements analogous to `JacobiDiff`. These modes improve stability and convergence in stiff scenes without forming dense factorizations.
+- **Direct Cholesky (`Cholesky`, `CholeskySparse`)**
+  Build the global Projective Dynamics matrix once, factor it via LDLᵀ, and solve each step through forward/back substitution (dense or sparse). Highest per-step cost and memory footprint, but delivers convergence in a single iteration and is robust under large time steps. Requires preprocessing (`prepare_LinearSystem`) and is best for moderately sized systems or when reuse across many steps amortizes setup.
+- **Conjugate Gradient (`CG`, `CGsparse`)**
+  Krylov-space iterative solver that uses only matrix-vector products (`dotPD`) and optional preconditioning. Scales to large sparse systems and supports early termination via tolerance (`cg_tol`), but needs good preconditioners to match direct solver accuracy.
+- **ExternDiff (`updateIterativeExternDiff`)**
+  Delegates the displacement solve to an external linear solver provided through `extern_solve`, enabling experimentation with specialized factorization or GPU backends while integrating with the same predictor/corrector loop.
+
 ##### Linearized Truss Simulation
 - `prepareLinearizedTruss`: Prepares the linearized truss for simulation.
 - `evalTrussForcesLinearized`: Evaluates the forces in the linearized truss.

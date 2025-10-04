@@ -31,6 +31,49 @@
 #define VBD_WORKGROUP_SIZE 32
 #define VBD_NEIGHBOR_LIMIT 128
 
+inline void init_hessian(float* H, float diag){
+    H[0]=H[4]=H[8]=diag;
+    H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
+}
+
+inline void accum_vertex_hessian(float* H, float3 dir, float k, float sdiag){
+    const float k_diag = k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
+    const float k_diag_y = k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
+    const float k_diag_z = k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
+    const float k_xy = k * dir.x * dir.y - sdiag * dir.x * dir.y;
+    const float k_xz = k * dir.x * dir.z - sdiag * dir.x * dir.z;
+    const float k_yz = k * dir.y * dir.z - sdiag * dir.y * dir.z;
+    H[0] += k_diag;
+    H[4] += k_diag_y;
+    H[8] += k_diag_z;
+    H[1] -= k_xy;
+    H[2] -= k_xz;
+    H[5] -= k_yz;
+    H[3] = H[1];
+    H[6] = H[2];
+    H[7] = H[5];
+}
+
+inline float3 solve3x3(const float* H, float3 grad, const float det_eps){
+    const float c00 = H[4]*H[8] - H[5]*H[7];
+    const float c01 = H[2]*H[7] - H[1]*H[8];
+    const float c02 = H[1]*H[5] - H[2]*H[4];
+    const float c10 = H[5]*H[6] - H[3]*H[8];
+    const float c11 = H[0]*H[8] - H[2]*H[6];
+    const float c12 = H[2]*H[3] - H[0]*H[5];
+    const float c20 = H[3]*H[7] - H[4]*H[6];
+    const float c21 = H[1]*H[6] - H[0]*H[7];
+    const float c22 = H[0]*H[4] - H[1]*H[3];
+    const float det = H[0]*c00 + H[1]*c10 + H[2]*c20;
+    if (fabs(det) < det_eps) return (float3)(0.0f, 0.0f, 0.0f);
+    const float inv_det = 1.0f / det;
+    float3 dx;
+    dx.x = (c00*grad.x + c01*grad.y + c02*grad.z) * inv_det;
+    dx.y = (c10*grad.x + c11*grad.y + c12*grad.z) * inv_det;
+    dx.z = (c20*grad.x + c21*grad.y + c22*grad.z) * inv_det;
+    return dx;
+}
+
 __kernel void jacobi_iteration_sparse(
     __global const float4* x,        // [npoint,4] solution candiate for position + mass {x,y,z,mass} 
     __global const float4* b,        // [npoint,4] RHS vector b {x,y,z, ? }
@@ -259,13 +302,12 @@ __kernel void vbd_vertex_chunk(
     if (lid >= vcount) return;
 
     const int vid = chunk_vertices[lid];
-    const float4 xi = loc_x[lid];
+    float4 xi = loc_x[lid];
     const float4 yi = loc_y[lid];
 
     float3 grad = (float3)(0.0f);
     float H[9];
-    H[0]=H[4]=H[8]=inv_h2 * xi.w;
-    H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
+    init_hessian(H, inv_h2 * xi.w);
 
     const int base = vid * nmax;
     const int slot_base = lid * nmax;
@@ -287,42 +329,15 @@ __kernel void vbd_vertex_chunk(
             float3 dir = d / len;
             float coeff = k * (len - rest);
             grad += coeff * dir;
-            float3 outer0 = dir * dir.x;
-            float3 outer1 = dir * dir.y;
-            float3 outer2 = dir * dir.z;
             float sdiag = k * rest / len;
-            H[0] += k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
-            H[4] += k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
-            H[8] += k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
-            H[1] -= k * dir.x * dir.y - sdiag * dir.x * dir.y;
-            H[2] -= k * dir.x * dir.z - sdiag * dir.x * dir.z;
-            H[5] -= k * dir.y * dir.z - sdiag * dir.y * dir.z;
-            H[3] = H[1];
-            H[6] = H[2];
-            H[7] = H[5];
+            accum_vertex_hessian(H, dir, k, sdiag);
         }
     }
 
     grad += inv_h2 * (xi.xyz - yi.xyz);
-    float c00 = H[4]*H[8] - H[5]*H[7];
-    float c01 = H[2]*H[7] - H[1]*H[8];
-    float c02 = H[1]*H[5] - H[2]*H[4];
-    float c10 = H[5]*H[6] - H[3]*H[8];
-    float c11 = H[0]*H[8] - H[2]*H[6];
-    float c12 = H[2]*H[3] - H[0]*H[5];
-    float c20 = H[3]*H[7] - H[4]*H[6];
-    float c21 = H[1]*H[6] - H[0]*H[7];
-    float c22 = H[0]*H[4] - H[1]*H[3];
-
-    float det = H[0]*c00 + H[1]*c10 + H[2]*c20;
-    if (fabs(det) < det_eps) return;
-
-    float inv_det = 1.0f/det;
-    float dx0 = (c00*grad.x + c01*grad.y + c02*grad.z) * inv_det;
-    float dx1 = (c10*grad.x + c11*grad.y + c12*grad.z) * inv_det;
-    float dx2 = (c20*grad.x + c21*grad.y + c22*grad.z) * inv_det;
-
-    x[vid].xyz = xi.xyz - (float3)(dx0, dx1, dx2);
+    const float3 dx = solve3x3(H, grad, det_eps);
+    xi.xyz -= dx;
+    x[vid] = xi;
 }
 
 __kernel void vbd_vertex_serial(
@@ -344,8 +359,7 @@ __kernel void vbd_vertex_serial(
 
         float3 grad = (float3)(0.0f);
         float H[9];
-        H[0]=H[4]=H[8]=inv_h2 * xi.w;
-        H[1]=H[2]=H[3]=H[5]=H[6]=H[7]=0.0f;
+        init_hessian(H, inv_h2 * xi.w);
 
         const int base = vid * nmax;
         for (int jj = 0; jj < nmax; ++jj){
@@ -360,38 +374,64 @@ __kernel void vbd_vertex_serial(
                 float3 dir = d / len;
                 grad += k * (len - rest) * dir;
                 float sdiag = k * rest / len;
-                H[0] += k * (1.0f - dir.x * dir.x) + sdiag * dir.x * dir.x;
-                H[4] += k * (1.0f - dir.y * dir.y) + sdiag * dir.y * dir.y;
-                H[8] += k * (1.0f - dir.z * dir.z) + sdiag * dir.z * dir.z;
-                H[1] -= k * dir.x * dir.y - sdiag * dir.x * dir.y;
-                H[2] -= k * dir.x * dir.z - sdiag * dir.x * dir.z;
-                H[5] -= k * dir.y * dir.z - sdiag * dir.y * dir.z;
-                H[3] = H[1];
-                H[6] = H[2];
-                H[7] = H[5];
+                accum_vertex_hessian(H, dir, k, sdiag);
             }
         }
 
         grad += inv_h2 * (xi.xyz - yi.xyz);
+        const float3 dx = solve3x3(H, grad, det_eps);
+        xi.xyz -= dx;
+        x[vid] = xi;
+    }
+}
 
-        float c00 = H[4]*H[8] - H[5]*H[7];
-        float c01 = H[2]*H[7] - H[1]*H[8];
-        float c02 = H[1]*H[5] - H[2]*H[4];
-        float c10 = H[5]*H[6] - H[3]*H[8];
-        float c11 = H[0]*H[8] - H[2]*H[6];
-        float c12 = H[2]*H[3] - H[0]*H[5];
-        float c20 = H[3]*H[7] - H[4]*H[6];
-        float c21 = H[1]*H[6] - H[0]*H[7];
-        float c22 = H[0]*H[4] - H[1]*H[3];
 
-        float det = H[0]*c00 + H[1]*c10 + H[2]*c20;
-        if (fabs(det) < det_eps) continue;
+// =============================================================================
+// ===  Displacement ("Diff") Projective Dynamics helpers ======================
+// =============================================================================
 
-        float inv_det = 1.0f / det;
-        float dx0 = (c00*grad.x + c01*grad.y + c02*grad.z) * inv_det;
-        float dx1 = (c10*grad.x + c11*grad.y + c12*grad.z) * inv_det;
-        float dx2 = (c20*grad.x + c21*grad.y + c22*grad.z) * inv_det;
+// Serial Jacobi iteration operating on displacement variables (dp).
+__kernel void jacobi_iteration_diff_serial(
+    __global const float4* x_in,    // [npoint,4] current displacement iterate
+    __global const float4* bvec,    // [npoint,4] RHS xyz + diagonal w
+    __global const int*    neighs,  // [npoint,nmax]
+    __global const float*  kngs,    // [npoint,nmax]
+    __global       float4* x_out,   // [npoint,4] output displacement iterate
+    const int nmax,
+    const int npoint
+){
+    if(get_global_id(0) != 0) return;
+    for(int i=0; i<npoint; i++){
+        float3 sum_j = (float3)(0.0f);
+        const int j0 = i * nmax;
+        for(int jj=0; jj<nmax; jj++){
+            const int j = neighs[j0 + jj];
+            if(j < 0) break;
+            const float k = kngs[j0 + jj];
+            sum_j += k * x_in[j].xyz;
+        }
+        const float4 bi  = bvec[i];
+        const float  Aii = bi.w;
+        float3 xi = (bi.xyz + sum_j) / Aii;
+        x_out[i] = (float4)(xi, x_in[i].w);
+    }
+}
 
-        x[vid].xyz = xi.xyz - (float3)(dx0, dx1, dx2);
+// Serial momentum mixing stage mirroring updateIterativeMomentumDiff().
+__kernel void pd_momentum_mix_serial(
+    __global       float4* x_curr,     // [npoint,4] current displacement iterate (psa)
+    __global const float4* x_new,      // [npoint,4] freshly computed iterate (psb)
+    __global       float4* dps_store,  // [npoint,4] momentum buffer (linsolve_yy)
+    const float bmix,
+    const int   npoint
+){
+    if(get_global_id(0) != 0) return;
+    for(int i=0; i<npoint; i++){
+        float3 p_new = x_new[i].xyz;
+        float3 mom   = dps_store[i].xyz;
+        float3 p_mixed = p_new + mom * bmix;
+        float3 delta   = p_mixed - x_curr[i].xyz;
+        x_curr   [i] = (float4)(p_mixed, x_curr[i].w);
+        dps_store[i] = (float4)(delta,  dps_store[i].w);
     }
 }

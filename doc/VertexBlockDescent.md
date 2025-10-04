@@ -39,9 +39,19 @@ This document rewrites article [Vertex Block Descent, A.Chen,(2024)](https://dl.
   - Solver receives `y = x + dt*v + dt^2*a_ext`, fixed mask, bond data; avoids duplicating setup code seen today in `solve_vbd_numpy()`.
 
 - **Next steps before coding**
-  - Refactor CPU PD/VBD solvers to adopt common interface (`SolverContext` objects storing pre-factorizations).
-  - Implement `Truss.run_dynamics()` orchestrating: compute `y`, call solver, update `(x, v)`, append trajectories if requested.
-  - Update CLI (`run_vbd_cloth.py`) to select solver via flag (`--solver pd|vbd|gs|jacobi`), pass options through to `run_dynamics()`.
+  - Split responsibilities:
+    - `truss.py`: pure geometry/model utilities (`Truss` container, free builders like `make_grid`, `make_rope`, material helpers, rest-length maintenance).
+    - `truss_solver.py`: implicit dynamics loop (compute `y`, apply solver callback, update `(x, v)`), solver registry, diagnostics.
+  - Define solver callback signature
+    ```python
+    def solver_step(truss: Truss, *, state: dict, dt: float, gravity: np.ndarray,
+                    x: np.ndarray, v: np.ndarray, fixed: np.ndarray,
+                    config: dict) -> np.ndarray:
+        """Return relaxed positions x_new; may mutate state for caching."""
+    ```
+  - Provide reference adapters for existing solvers: PD dense (`projective_dynamics.py`), PD iterative (`projective_dynamics_iterative.py`), VBD (`solve_vbd_numpy`), plus simple Jacobi/LU fallbacks.
+  - Implement reusable utilities in `truss_solver.py` mirroring C++ `TrussDynamics_d` but simplified: inertia matrix assembly, fixed-point enforcement, velocity update, optional trajectory logging.
+  - Update CLI (`run_vbd_cloth.py`) to construct geometry via `truss.py`, pick solver via `--solver`, and call `run_dynamics()`; keep plotting logic isolated.
 
 ---
 

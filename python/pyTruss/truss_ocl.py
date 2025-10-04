@@ -18,6 +18,7 @@ VBD_NEIGHBOR_LIMIT = 128
 
 def build_rest_length_dense(neigh_lists, bonds, l0s, n_max):
     """Dense rest-length table matching the padded neighbor layout."""
+    print("truss_ocl.build_rest_length_dense()")
     assert len(bonds) == len(l0s), "bonds and l0s must have identical length"
     pair_rest = {}
     for (ia, ib), rest in zip(bonds, l0s):
@@ -32,6 +33,7 @@ def build_rest_length_dense(neigh_lists, bonds, l0s, n_max):
 
 def build_vbd_chunks(padded_neighs, color_groups, chunk_size=VBD_WORKGROUP_SIZE, neighbor_limit=VBD_NEIGHBOR_LIMIT):
     """Split each color into workgroup batches respecting vertex and neighbor limits."""
+    print("truss_ocl.build_vbd_chunks()")
     _, n_max = padded_neighs.shape
     chunks_per_color = []
     for group in color_groups:
@@ -76,8 +78,9 @@ def build_vbd_chunks(padded_neighs, color_groups, chunk_size=VBD_WORKGROUP_SIZE,
     return chunks_per_color
 
 
-class TrussOpenCLSolver:
+class TrussSolverOCL:
     def __init__(self):
+        print("TrussSolverOCL::__init__()")
         # Initialize OpenCL
         platforms = cl.get_platforms()
         self.ctx = cl.Context(
@@ -116,6 +119,7 @@ class TrussOpenCLSolver:
 
     def _init_pd_system(self, truss, dt, gravity, fixed_points):
         """Initialize the projective dynamics system"""
+        print("TrussSolverOCL::_init_pd_system()")
         # Get truss data
         bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
         neighbs = build_neighbor_list(bonds, len(points))
@@ -140,6 +144,7 @@ class TrussOpenCLSolver:
 
     def _create_ocl_buffers(self, pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=None, y=None):
         """Create and initialize OpenCL buffers"""
+        print("TrussSolverOCL::_create_ocl_buffers()")
         mf = cl.mem_flags
         
         # Pad arrays for OpenCL
@@ -180,6 +185,7 @@ class TrussOpenCLSolver:
 
     def _prepare_color_groups(self, neighs):
         """Prepare color groups for Gauss-Seidel"""
+        print("TrussSolverOCL::_prepare_color_groups()")
         # Color the graph
         colors, color_groups = color_graph(neighs)
         
@@ -196,6 +202,7 @@ class TrussOpenCLSolver:
 
     def build_vbd_work_chunks(self, chunk_size=VBD_WORKGROUP_SIZE, neighbor_limit=VBD_NEIGHBOR_LIMIT):
         """Pack per-color vertex chunks for the VBD kernel."""
+        print("TrussSolverOCL::build_vbd_work_chunks()")
         if self.neighs_dense is None:
             raise ValueError("Dense neighbor table not initialized; call _create_ocl_buffers first")
         if self.color_groups_host is None:
@@ -205,6 +212,7 @@ class TrussOpenCLSolver:
 
     def solve_pd_arrays(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
         """Solve projective dynamics using OpenCL with pre-computed arrays"""
+        print("TrussSolverOCL::solve_pd_arrays()")
         # Create OpenCL buffers from input arrays
         self._create_ocl_buffers(pos_pred, None, neighs, kngs, Aii, b)
         self.n_max = n_max
@@ -266,6 +274,7 @@ class TrussOpenCLSolver:
 
     def solve_pd_gauss_seidel(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, errs=None, bPrint=False, *, masses=None, rest_lengths=None, y=None):
         """Solve projective dynamics using OpenCL with colored Gauss-Seidel method"""
+        print("TrussSolverOCL::solve_pd_gauss_seidel()")
         # Create OpenCL buffers
         self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b, rest_lengths=rest_lengths, y=y)
         self.n_max = n_max
@@ -360,8 +369,8 @@ class TrussOpenCLSolver:
 
     def solve_vbd(self, truss, dt, gravity, fixed_points=None, niter=1, det_eps=1e-6, errs=None, bPrint=False):
         """Run Vertex Block Descent iterations on the GPU."""
-        if dt <= 0:
-            raise ValueError("dt must be positive")
+        print("TrussSolverOCL::solve_vbd()\n")
+        if dt <= 0: raise ValueError("dt must be positive")
         pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
         inv_h2 = np.float32(1.0 / (dt * dt))
 
@@ -374,8 +383,7 @@ class TrussOpenCLSolver:
         color_counts = self._prepare_color_groups(neighs)
         self.build_vbd_work_chunks()
 
-        if self.l0_buf is None or self.y_buf is None:
-            raise RuntimeError("VBD buffers not initialized (l0/y missing)")
+        if self.l0_buf is None or self.y_buf is None: raise RuntimeError("VBD buffers not initialized (l0/y missing)")
 
         mf = cl.mem_flags
 
@@ -438,8 +446,214 @@ class TrussOpenCLSolver:
             return x_out[:, :3], v_out
         return x_out[:, :3], None
 
+    def run_vbd_timesteps(self, truss, nsteps, dt, gravity, fixed_points=None, *, niter=1, det_eps=1e-6,
+                          serial=True, track_indices=None, bPrint=False):
+        """Integrate multiple implicit Euler steps with the GPU VBD solver, recording trajectories."""
+        print("TrussSolverOCL::run_vbd_timesteps()")
+        if nsteps <= 0:
+            raise ValueError("nsteps must be positive")
+        gravity = np.asarray(gravity, dtype=np.float32)
+        positions = truss.points.astype(np.float64, copy=True)
+        velocities = np.zeros_like(positions)
+
+        track_idx = None
+        traj = None
+        if track_indices is not None:
+            track_idx = np.asarray(track_indices, dtype=int)
+            if track_idx.size == 0:
+                track_idx = None
+            else:
+                traj = np.zeros((nsteps + 1, track_idx.size, 3), dtype=np.float64)
+                traj[0] = positions[track_idx]
+
+        for step in range(nsteps):
+            truss.points[...] = positions
+            if serial:
+                new_pos, v_out = self.solve_vbd_serial(
+                    truss, dt, gravity, fixed_points,
+                    niter=niter, det_eps=det_eps, errs=None, bPrint=bPrint
+                )
+            else:
+                new_pos, v_out = self.solve_vbd(
+                    truss, dt, gravity, fixed_points,
+                    niter=niter, det_eps=det_eps, errs=None, bPrint=bPrint
+                )
+
+            new_pos = new_pos.astype(np.float64, copy=False)
+            if v_out is not None:
+                new_vel = v_out.astype(np.float64, copy=False)
+            else:
+                new_vel = (new_pos - positions) / dt
+
+            positions = new_pos
+            velocities = new_vel
+
+            if track_idx is not None:
+                traj[step + 1] = positions[track_idx]
+
+        truss.points[...] = positions
+        return positions, velocities, traj
+
+    @staticmethod
+    def _compute_diff_rhs_numpy(pos_ref, neighs_dense, kngs_dense, rest_dense, masses, dt, fixed_points=None):
+        """Compute displacement RHS and diagonal in double precision (NumPy on CPU)."""
+        print("TrussSolverOCL::_compute_diff_rhs_numpy()")
+        n_points, n_max = neighs_dense.shape
+        inv_dt2 = 1.0 / (dt * dt)
+        b = np.zeros((n_points, 3), dtype=np.float64)
+        Aii = masses.astype(np.float64) * inv_dt2
+        for i in range(n_points):
+            pi = pos_ref[i]
+            bi = np.zeros(3, dtype=np.float64)
+            Aii_i = Aii[i]
+            
+            for jj in range(n_max):
+                j = neighs_dense[i, jj]
+                if j < 0:
+                    break
+                k = float(kngs_dense[i, jj])
+                l0 = float(rest_dense[i, jj])
+                pj = pos_ref[j]
+                dij = pi - pj
+                l = np.linalg.norm(dij)
+                if l > 1e-15:
+                    scale = k * (l0 / l - 1.0)
+                    bi += dij * scale
+                Aii_i += k
+            
+            b[i] = bi
+            Aii[i] = Aii_i
+        
+        # Clamp fixed points
+        if fixed_points is not None and len(fixed_points) > 0:
+            b[fixed_points] = 0.0
+            Aii[fixed_points] = 1e12  # Large diagonal for fixed points
+        
+        return b, Aii
+
+    def solve_pd_diff(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, use_momentum=False, bmix=0.7, errs=None, bPrint=False):
+        """Displacement-based Projective Dynamics solver.
+        
+        CPU (double precision): computes RHS and reference positions
+        GPU (single precision): iterates on displacements
+        """
+        # Initialize system
+        pos_pred, masses, neighs, kngs, Aii_abs, b_abs = self._init_pd_system(truss, dt, gravity, fixed_points)
+        rest_dense = build_rest_length_dense(self.last_neigh_lists, self.last_bonds, self.last_l0s, self.n_max)
+        
+        # CPU: Compute diff RHS in double precision
+        pos_ref = pos_pred.astype(np.float64, copy=True)
+        b_diff, Aii_diff = self._compute_diff_rhs_numpy(pos_ref, self.neighs_dense, self.kngs_dense, 
+                                                         rest_dense, masses, dt, fixed_points)
+        
+        # Prepare OpenCL buffers
+        mf = cl.mem_flags
+        n_points = len(pos_ref)
+        
+        # Pad arrays for GPU
+        b_padded = np.zeros((n_points, 4), dtype=np.float32)
+        b_padded[:, :3] = b_diff.astype(np.float32)
+        Aii_f32 = Aii_diff.astype(np.float32)
+        
+        dpos_host = np.zeros((n_points, 4), dtype=np.float32)
+        dpos_host[:, 3] = masses.astype(np.float32)  # Store mass in w component
+        
+        # Create buffers
+        self.x_buf      = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=dpos_host)
+        self.x_out_buf  = cl.Buffer(self.ctx, mf.READ_WRITE, dpos_host.nbytes)
+        self.b_buf      = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=b_padded)
+        self.neighs_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.neighs_dense)
+        self.kngs_buf   = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.kngs_dense.astype(np.float32))
+        self.Aii_buf    = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Aii_f32)
+        self.r_buf      = cl.Buffer(self.ctx, mf.READ_WRITE, dpos_host.nbytes)
+        
+        if use_momentum:
+            mom_host = np.zeros_like(dpos_host)
+            mom_buf  = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=mom_host)
+        
+        self.n_points = n_points
+        
+        # Iteration loop
+        r_host = np.zeros_like(dpos_host)
+        last_buf = self.x_buf
+        
+        for itr in range(niter):
+            events = []
+            for sub_iter in range(nsub):
+                if last_buf is self.x_buf:
+                    event = self.prg.jacobi_iteration_diff_serial(
+                        self.queue, (1,), None,
+                        self.x_buf, self.b_buf, self.neighs_buf, self.kngs_buf,
+                        self.x_out_buf,
+                        np.int32(self.n_max), np.int32(self.n_points)
+                    )
+                    last_buf = self.x_out_buf
+                else:
+                    event = self.prg.jacobi_iteration_diff_serial(
+                        self.queue, (1,), None,
+                        self.x_out_buf, self.b_buf, self.neighs_buf, self.kngs_buf,
+                        self.x_buf,
+                        np.int32(self.n_max), np.int32(self.n_points)
+                    )
+                    last_buf = self.x_buf
+                events.append(event)
+            
+            cl.wait_for_events(events)
+            
+            # Apply momentum mixing if enabled
+            if use_momentum and itr > 0:
+                self.prg.pd_momentum_mix_serial(
+                    self.queue, (1,), None,
+                    last_buf, last_buf, mom_buf,
+                    np.float32(bmix), np.int32(self.n_points)
+                ).wait()
+            
+            # Clamp fixed points
+            if fixed_points is not None and len(fixed_points) > 0:
+                cl.enqueue_copy(self.queue, dpos_host, last_buf)
+                dpos_host[fixed_points, :3] = 0.0
+                cl.enqueue_copy(self.queue, last_buf, dpos_host)
+            
+            # Check convergence
+            cl.enqueue_copy(self.queue, r_host, self.r_buf)
+            cl.enqueue_copy(self.queue, dpos_host, last_buf)
+            
+            err_vec = np.sum(r_host*r_host, axis=0)
+            if errs is not None:
+                errs.append(np.sqrt(err_vec))
+            if bPrint:
+                print(f"solve_pd_diff() itr={itr} err={np.sqrt(err_vec.sum()):.3e}")
+            if np.sqrt(err_vec.sum()) < tol:
+                break
+        
+        # CPU: Reconstruct absolute positions in double precision
+        displacements = dpos_host[:, :3].astype(np.float64)
+        positions = pos_ref + displacements
+        
+        return positions, displacements
+
+    def solve_pd_unified(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, 
+                         method='diff', nsub=1, use_momentum=False, bmix=0.7, 
+                         det_eps=1e-6, errs=None, bPrint=False):
+        """Unified Projective Dynamics solver with method selection.
+        
+        Parameters:
+            method: 'diff' for displacement Jacobi, 'vbd' for Vertex Block Descent
+            nsub: sub-iterations per convergence check (only for 'diff')
+            use_momentum: enable momentum mixing (only for 'diff')
+            bmix: momentum mixing parameter (only for 'diff')
+            det_eps: determinant threshold (only for 'vbd')
+        """
+        if method == 'diff':
+            return self.solve_pd_diff(truss, dt, gravity, fixed_points, niter, tol, nsub, use_momentum, bmix, errs, bPrint)
+        elif method == 'vbd':
+            return self.solve_vbd_serial(truss, dt, gravity, fixed_points, niter, det_eps, errs, bPrint)
+        else:
+            raise ValueError(f"Unknown method '{method}'. Choose 'diff' or 'vbd'.")
+
     def solve_vbd_serial(self, truss, dt, gravity, fixed_points=None, niter=1, det_eps=1e-6, errs=None, bPrint=False):
         """Run Vertex Block Descent serially on the GPU (single work-item)."""
+        print("TrussSolverOCL::solve_vbd_serial()")
         if dt <= 0:
             raise ValueError("dt must be positive")
         pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
@@ -481,6 +695,7 @@ class TrussOpenCLSolver:
 
 def setup_test_problem(nx=2, ny=2):
     """Common setup for test problems"""
+    print("truss_ocl.setup_test_problem()")
     dt = 1.0
     gravity = np.array([0., -9.81, 0.0])
     fixed_points = [0]
@@ -508,7 +723,8 @@ def setup_test_problem(nx=2, ny=2):
     return truss, pos_pred, neighs, kngs, Aii, b, n_max
 
 def test_against_reference():
-    print("\nTesting against reference implementation:")
+    print("truss_ocl.test_against_reference()")
+    print("test_against_reference()\n")
     dt = 1.0
     gravity = np.array([0., -9.81, 0.0])
     fixed_points = [0]
@@ -578,6 +794,7 @@ def test_against_reference():
     return x_ref, x_ocl
 
 def test_Jacobi_vs_python():
+    print("truss_ocl.test_Jacobi_vs_python()")
     print("\nRunning Jacobi solver comparison...")
     
     # Setup test problem
@@ -607,6 +824,7 @@ def test_Jacobi_vs_python():
     plt.show()
 
 def test_GaussSeidel_vs_python():
+    print("truss_ocl.test_GaussSeidel_vs_python()")
     print("\nRunning Gauss-Seidel solver comparison...")
     
     # Setup test problem
@@ -638,6 +856,32 @@ def test_GaussSeidel_vs_python():
     plt.legend()
     plt.show()
 
+def test_diff_vs_vbd():
+    """Compare displacement Jacobi vs VBD solvers."""
+    print("truss_ocl.test_diff_vs_vbd()")
+    print("\nComparing Displacement Jacobi vs VBD:")
+    dt = 0.1
+    gravity = np.array([0., -9.81, 0.0])
+    fixed_points = [0]
+    truss = Truss()
+    truss.build_grid_2d(nx=3, ny=3, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    solver = TrussOpenCLSolver()
+    # Test displacement-based Jacobi (double precision RHS on CPU)
+    print("\n1. Displacement Jacobi (CPU double precision RHS + GPU single precision iterate):")
+    errs_diff = []
+    pos_diff, dpos_diff = solver.solve_pd_diff( truss, dt, gravity, fixed_points=fixed_points, niter=20, tol=1e-6, nsub=2, use_momentum=False, errs=errs_diff, bPrint=True  )
+    # Reset system for VBD
+    solver = TrussOpenCLSolver()
+    # Test VBD
+    print("\n2. Vertex Block Descent:")
+    errs_vbd = []
+    pos_vbd, _ = solver.solve_vbd_serial( truss, dt, gravity, fixed_points=fixed_points, niter=20, det_eps=1e-6, errs=errs_vbd, bPrint=True )
+    # Compare final positions
+    diff = np.linalg.norm(pos_diff - pos_vbd)
+    print(f"\nPosition difference between methods: {diff:.3e}")
+    
+    return pos_diff, pos_vbd
+
 if __name__ == "__main__":
     from projective_dynamics import makeSparseSystem
     from sparse import (
@@ -649,4 +893,5 @@ if __name__ == "__main__":
     # Run tests
     #test_against_reference()
     #test_Jacobi_vs_python()
-    test_GaussSeidel_vs_python()
+    #test_GaussSeidel_vs_python()
+    test_diff_vs_vbd()

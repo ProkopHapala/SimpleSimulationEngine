@@ -42,7 +42,7 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
     ax.grid(True)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.set_xlim(points[:, 0].min()-margin, points[:, 0].max()+margin)
-    ax.set_ylim(points[:, 1].min()-margin, points[:, 1].max()+margin)
+    #ax.set_xlim(points[:, 0].min()-margin, points[:, 0].max()+margin)
+    #ax.set_ylim(points[:, 1].min()-margin, points[:, 1].max()+margin)
     #ax.autoscale()
     return ax

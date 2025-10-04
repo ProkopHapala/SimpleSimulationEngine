@@ -188,8 +188,10 @@ if __name__ == "__main__":
     ax = pu.plot_truss(points, truss.bonds, edge_color='b', label='Initial Points')
 
     # Solve using projective dynamics
-    new_points, new_velocity = solve_pd( points, velocity, bonds, masses, ks,  dt=0.02, n_iter=20,  fixed_points=fixed,  
-                                         call_back=lambda x: pu.plot_truss(x, truss.bonds, ax=ax, edge_color='k', edge_alpha=0.1) )
+    new_points, new_velocity = solve_pd( 
+        points, velocity, bonds, masses, ks,  dt=0.02, n_iter=20,  fixed_points=fixed,  
+        call_back=lambda x: pu.plot_truss(x, truss.bonds, ax=ax, edge_color='k', edge_alpha=0.1) 
+    )
 
     pu.plot_truss(new_points, truss.bonds, ax=ax, edge_color='r', label='Final Points')
     plt.show()
