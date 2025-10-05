@@ -95,17 +95,50 @@ class TrussSolver:
         self._neigh_indices: Optional[np.ndarray] = None
         self._neigh_k: Optional[np.ndarray] = None
         self._neigh_l0: Optional[np.ndarray] = None
-
         self._linear_matrix: Optional[np.ndarray] = None
         self._linear_diag: Optional[np.ndarray] = None
         self._cholesky_factor: Optional[np.ndarray] = None
 
         self.solver_state: Dict[str, Any] = {'owner': self}
-
-        # Predictor/corrector buffers for per-step solve
         self.ps_pred = np.zeros_like(self.x)
         self.ps_cor = np.zeros_like(self.x)
         self.forces = np.zeros_like(self.x)
+
+    def _build_linear_diff_system(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        self._ensure_fly_neighbors()
+        neighs = self._neigh_indices
+        kngs = self._neigh_k
+        l0ngs = self._neigh_l0
+        max_neighs = self._max_neighs or 0
+
+        rhs = np.zeros_like(self.ps_pred)
+        diag = self.mass_diag.copy()
+        for vid in range(self.n_points):
+            pi = self.ps_pred[vid]
+            bi = np.zeros(3, dtype=np.float64)
+            Aii = self.mass_diag[vid]
+            for jj in range(max_neighs):
+                j = neighs[vid, jj]
+                if j < 0:
+                    break
+                k = kngs[vid, jj]
+                rest = l0ngs[vid, jj]
+                pj = self.ps_pred[j]
+                dij = pi - pj
+                length = np.linalg.norm(dij)
+                safe = max(length, 1e-9)
+                bi += dij * k * (rest / safe - 1.0)
+                Aii += k
+            rhs[vid] = bi
+            diag[vid] = Aii
+
+        fixed_mask = np.zeros(self.n_points, dtype=bool)
+        if self.fixed.size > 0:
+            fixed_mask[self.fixed] = True
+            rhs[fixed_mask] = 0.0
+            diag[fixed_mask] = 1.0
+
+        return rhs, diag, fixed_mask
 
     def reset_state(self, *, positions: Optional[np.ndarray] = None,
                     velocities: Optional[np.ndarray] = None) -> None:
@@ -491,30 +524,38 @@ def solve_iterative_momentum(solver: TrussSolver, config: dict) -> None:
 
 def solve_jacobi_diff(solver: TrussSolver, config: dict) -> None:
     """Jacobi-Diff: precomputed linear RHS, iterate on displacements."""
+    rhs, diag, fixed_mask = solver._build_linear_diff_system()
     niter = int(config.get('niter', 20))
-    bonds = solver.bonds
-    ks = solver.ks
-    rest_vec = solver.rest_vectors
-    diag = solver.mass_diag.copy()
-    b = solver.mass_diag[:, None] * solver.ps_pred
-    if bonds.size > 0:
-        np.add.at(diag, bonds[:, 0], ks)
-        np.add.at(diag, bonds[:, 1], ks)
-        np.add.at(b, bonds[:, 0], ks[:, None] * rest_vec)
-        np.add.at(b, bonds[:, 1], -ks[:, None] * rest_vec)
-    inv_diag = 1.0 / np.maximum(diag, 1e-12)
-    dp = np.zeros_like(solver.ps_pred)
-    dp_next = dp.copy()
-    for _ in range(niter):
-        sum_term = np.zeros_like(dp)
-        if bonds.size > 0:
-            np.add.at(sum_term, bonds[:, 0], ks[:, None] * dp[bonds[:, 1]])
-            np.add.at(sum_term, bonds[:, 1], ks[:, None] * dp[bonds[:, 0]])
-        dp_next[:] = (b + sum_term) * inv_diag[:, None]
-        if solver.fixed.size > 0:
-            dp_next[solver.fixed] = 0.0
-        dp, dp_next = dp_next, dp
-    solver.ps_cor[:] = solver.ps_pred + dp
+    solver._ensure_fly_neighbors()
+    neighs = solver._neigh_indices
+    kngs = solver._neigh_k
+    max_neighs = solver._max_neighs or 0
+
+    dp_in = np.zeros_like(solver.ps_pred)
+    dp_out = np.zeros_like(dp_in)
+
+    for it in range(niter):
+        max_step = 0.0
+        for vid in range(solver.n_points):
+            if fixed_mask[vid]:
+                dp_out[vid] = 0.0
+                continue
+            sum_j = np.zeros(3, dtype=np.float64)
+            for jj in range(max_neighs):
+                j = neighs[vid, jj]
+                if j < 0:
+                    break
+                sum_j += kngs[vid, jj] * dp_in[j]
+            new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
+            step = np.linalg.norm(new_dp - dp_in[vid])
+            if step > max_step:
+                max_step = step
+            dp_out[vid] = new_dp
+        dp_in, dp_out = dp_out, dp_in
+        if VERBOSITY >= 2:
+            print(f"[CPU][JacobiDiff iter {it + 1}/{niter}] max |Δdp| = {max_step:.3e}")
+
+    solver.ps_cor[:] = solver.ps_pred + dp_in
     if solver.fixed.size > 0:
         solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
 
@@ -568,43 +609,41 @@ def solve_jacobi_fly(solver: TrussSolver, config: dict) -> None:
 
 def solve_gs_diff(solver: TrussSolver, config: dict) -> None:
     """GS-Diff: precomputed linear RHS, in-place Gauss-Seidel on displacements."""
+    rhs, diag, fixed_mask = solver._build_linear_diff_system()
     niter = int(config.get('niter', 20))
-    bonds = solver.bonds
-    ks = solver.ks
-    rest_vec = solver.rest_vectors
-    diag = solver.mass_diag.copy()
-    b = solver.mass_diag[:, None] * solver.ps_pred
-    if bonds.size > 0:
-        np.add.at(diag, bonds[:, 0], ks)
-        np.add.at(diag, bonds[:, 1], ks)
-        np.add.at(b, bonds[:, 0], ks[:, None] * rest_vec)
-        np.add.at(b, bonds[:, 1], -ks[:, None] * rest_vec)
-    inv_diag = 1.0 / np.maximum(diag, 1e-12)
+    solver._ensure_fly_neighbors()
+    neighs = solver._neigh_indices
+    kngs = solver._neigh_k
+    max_neighs = solver._max_neighs or 0
+
     dp = np.zeros_like(solver.ps_pred)
-    fixed_mask = np.zeros(solver.n_points, dtype=bool)
-    if solver.fixed.size > 0:
-        fixed_mask[solver.fixed] = True
-    for _ in range(niter):
+
+    for it in range(niter):
+        max_step = 0.0
         for vid in range(solver.n_points):
             if fixed_mask[vid]:
+                dp[vid] = 0.0
                 continue
-            sum_term = np.zeros(3, dtype=np.float64)
-            mask_i = (bonds[:, 0] == vid)
-            mask_j = (bonds[:, 1] == vid)
-            for idx in np.where(mask_i)[0]:
-                j = bonds[idx, 1]
-                sum_term += ks[idx] * dp[j]
-            for idx in np.where(mask_j)[0]:
-                i = bonds[idx, 0]
-                sum_term += ks[idx] * dp[i]
-            dp[vid] = (b[vid] + sum_term) * inv_diag[vid]
+            sum_j = np.zeros(3, dtype=np.float64)
+            for jj in range(max_neighs):
+                j = neighs[vid, jj]
+                if j < 0:
+                    break
+                sum_j += kngs[vid, jj] * dp[j]
+            new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
+            step = np.linalg.norm(new_dp - dp[vid])
+            if step > max_step:
+                max_step = step
+            dp[vid] = new_dp
+        if VERBOSITY >= 2:
+            print(f"[CPU][GSDiff iter {it + 1}/{niter}] max |Δdp| = {max_step:.3e}")
+
     solver.ps_cor[:] = solver.ps_pred + dp
     if solver.fixed.size > 0:
         solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
 
 
 def solve_gs_fly(solver: TrussSolver, config: dict) -> None:
-    """GS-Fly: Copy of TrussDynamics_d::updateGaussSeidel_fly()."""
     niter = int(config.get('niter', 10))
     solver._ensure_fly_neighbors()
     max_neighs = solver._max_neighs or 0

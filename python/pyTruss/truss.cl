@@ -604,7 +604,7 @@ __kernel void GS_fly(
 }
 
 /**
- * @brief kernel jacobi_truss_diff : Iterative linear Jacobi solver for pre-computed truss dynamics.
+ * @brief kernel jacobi_diff : Iterative linear Jacobi solver for pre-computed truss dynamics.
  *
  * Solves the linear system `A * dp = b'` for vertex displacements `dp`, where the system matrix
  * diagonal (A_ii) and the right-hand-side (b') are pre-computed and passed in via `bvec`.
@@ -620,7 +620,7 @@ __kernel void GS_fly(
  *     iterative updates on-chip, maximizing performance by avoiding global memory access within the loop.
  *   - Final results are written back once after all iterations are complete.
  */
-__kernel void jacobi_truss_diff(
+__kernel void jacobi_diff(
     __global float4*      dp,      // 1 : [nverts,4] in/out displacements dp = p - p0
     __global const int*   neighs,  // 2 : [nverts,MAX_NEIGHBORS] neighbor indices
     __global const float* kngs,    // 3 : [nverts,MAX_NEIGHBORS] stiffness k_ij for each neighbor
