@@ -394,10 +394,10 @@ __kernel void vbd_vertex_serial(
             accum_vertex_hessian(H, dir, k, rest, len);
         }
 
-        if (vid == 1){
-            printf("[GPU] grad[1] = (%10.4g, %10.4g, %10.4g)\n", grad.x, grad.y, grad.z);
-            printf("[GPU] H[1]    = [%10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g]\n", H[0],H[1],H[2], H[3],H[4],H[5], H[6],H[7],H[8]);
-        }
+        // if (vid == 1){
+        //     printf("[GPU] grad[1] = (%10.4g, %10.4g, %10.4g)\n", grad.x, grad.y, grad.z);
+        //     printf("[GPU] H[1]    = [%10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g; %10.4g %10.4g %10.4g]\n", H[0],H[1],H[2], H[3],H[4],H[5], H[6],H[7],H[8]);
+        // }
 
         const float3 dx = solve3x3(H, grad, det_eps);
         xi.xyz -= dx;

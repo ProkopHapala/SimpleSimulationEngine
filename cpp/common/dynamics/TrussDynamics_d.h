@@ -384,6 +384,7 @@ void updateIterativeMomentumDiff(Vec3d* psa, Vec3d* psb );
 void updateIterativeExternDiff(Vec3d* psa, Vec3d* psb );
 void prepare_LinearSystem(bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true );
 void dampPoints(double Vdamping );
+void linsolve( Vec3d* ps_pred, Vec3d* ps_cor );
 void run_LinSolve(int niter);
 void run_Cholesky_omp_simd(int niter);
 void run_Cholesky_omp(int niter);

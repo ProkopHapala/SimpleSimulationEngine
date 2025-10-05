@@ -22,6 +22,72 @@ where:
   $$
   where $p_0$ and $v_0$ are reference position and velocity, $f_{ext}$ are external forces (e.g. gravity), and $f_{int}$ are internal spring contributions.
 
+### 1.1 Update loop in C++
+
+Implicit Euler integration loop with linear solver. Velocity is taken as $v = \frac{p_{k+1}-p_{k}}{\Delta t}$.
+
+```C++
+    void run_LinSolve(int niter) {
+        memcpy(ps_cor, points, nPoint * sizeof(Vec3d)); // backup current positions
+        double dt2    = dt * dt;
+        double inv_dt = 1/dt;
+        double cdamp  = fmax( 1-damping*dt, 0. );
+        for (int iter = 0; iter < niter; iter++) {
+            getForce( forces, points, vel, dt );
+            //  Predictor step
+            for (int i=0;i<nPoint;i++){ 
+                ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*(dt2/points[i].w);  // inertial prediction
+            }
+            // Apply fixed constraints
+            if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
+            // solve linear system for implicit euler step
+            linsolve( ps_pred, ps_cor );            
+            //   Corrector step
+            double l2sum = 0.0;
+            for (int i=0;i<nPoint;i++) {
+                Vec3d v   = ps_cor[i] - points[i].f;
+                v.mul(inv_dt);
+                v.mul( cdamp );  // damp velocity
+                if(kFix){ if( kFix[i] > 1e-8){ v=Vec3dZero; } }
+                vel[i].f    = v;
+                points[i].f = ps_cor[i];  // update positions
+            }            
+            time += dt;
+        } // for iter ( time stepping )
+    }
+```
+
+### 1.2 Iterative Linear solver
+
+```C++
+    void TrussDynamics_d::updateIterativeMomentum( Vec3d* psa, Vec3d* psb ){
+        updatePD_RHS(psa, bvec );
+        for (int i = 0; i < nSolverIters; i++) {  
+            switch( (LinSolveMethod)linSolveMethod ){
+                case LinSolveMethod::JacobiMomentum:    { updateJacobi_lin( psa, psb, bvec ); } break;
+                case LinSolveMethod::JacobiFlyMomentum: { updateJacobi_fly( psa, psb );       } break;
+                case LinSolveMethod::GSMomentum:        { 
+                    for (int j=0; j<nPoint; j++){ psb[j]=psa[j]; }
+                    updateGaussSeidel_lin( psb, bvec ); 
+                } break; 
+                case LinSolveMethod::GSFlyMomentum:     { 
+                    for (int j=0; j<nPoint; j++){ psb[j]=psa[j]; }
+                    updateGaussSeidel_fly( psb ); 
+                } break; 
+            }
+            double bmix = mixer.get_bmix( i );                 // bmix_k = bmix(k)
+            if( (i==0) || (i>=(nSolverIters-1) ) ) bmix = 0.0; // make sure we stop momentum mixing for the last iteration      
+            for(int j=0; j<nPoint; j++){ 
+                Vec3d p = psb[j]; 
+                p.add_mul( interia[j], bmix );   //    p_{k+1} = p'_k + bmix d_k
+                interia[j] = p - psa[j];         //    d_{k+1} = p_{k+1} - p_k
+                psa[j]         = p;
+            }
+        }
+        for (int i=0; i<nPoint; i++){ psb[i]=psa[i]; } // final update
+    }
+```
+
 Direct factorization of $A$ is too expensive for GPU-based, interactive, or large-scale problems. Instead, we use **iterative relaxation methods**: Jacobi or Gauss–Seidel. These methods update vertex displacements locally and converge progressively.
 
 ## 2. Working with Displacements

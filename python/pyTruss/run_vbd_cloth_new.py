@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from truss        import Truss
+from truss import Truss
 
 from truss_solver import TrussSolver, get_solver
 import truss_solver as truss_solver_module
@@ -11,13 +11,13 @@ import truss_solver as truss_solver_module
 # from   truss_solver_bak3 import TrussSolver, get_solver
 # import truss_solver_bak3 as     truss_solver_module
 
-from truss_solver_ocl import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
-import truss_solver_ocl as truss_solver_ocl_module
-from plot_utils   import plot_truss
+import truss_solver_ocl_new as truss_solver_ocl_mod
+from truss_solver_ocl_new import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
+from plot_utils import plot_truss
 
 
 CPU_SOLVER_CHOICES = set(truss_solver_module.SOLVERS.keys())
-GPU_SOLVER_CHOICES = set(truss_solver_ocl_module.SOLVERS.keys())
+GPU_SOLVER_CHOICES = set(truss_solver_ocl_mod.SOLVERS.keys())
 ALL_SOLVER_CHOICES = tuple(sorted(CPU_SOLVER_CHOICES | GPU_SOLVER_CHOICES))
 
 
@@ -71,9 +71,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-pin",        type=int,   default=0, help="Do not pin the default corner vertices; treat all vertices as free.")
     parser.add_argument("--no-plot",       type=int,   default=0, help="Skip plotting the initial and final grids.")
     parser.add_argument("--savefig",       type=str,   default="run_vbd_cloth.png", help="Path to save the comparison plot instead of displaying it.")
-    parser.add_argument("--serial",        type=int,   default=1, help="Use OpenCL serial VBD kernel (simpler, for debugging).")
-    parser.add_argument("--cpu",           type=int,   default=1, help="Run NumPy reference VBD solver.")
-    parser.add_argument("--compare",       type=int,   default=0, help="Run both CPU and GPU solvers and report differences.")
+    parser.add_argument("--nloc",          type=int,   default=32, help="OpenCL local work size for new GPU solver.")
+    parser.add_argument("--device",        type=int,   default=0, help="OpenCL device index for new GPU solver.")
+    parser.add_argument("--cpu",           type=int,   default=0, help="Also run CPU solver for comparison.")
     parser.add_argument("--chain",         type=int,   default=0, help="Treat the grid as a 1D chain (forces ny=0).")
     parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     verb_level = max(0, int(args.verb))
     truss_solver_module.set_verbosity(verb_level)
-    truss_solver_ocl_module.set_verbosity(verb_level)
+    truss_solver_ocl_mod.set_verbosity(verb_level)
 
     ny_effective = 0 if bool(args.chain) else args.ny
     truss.build_grid_2d(
@@ -156,22 +156,16 @@ if __name__ == "__main__":
                     if idx < 0 or idx >= len(truss.points):
                         raise ValueError(f"track vertex index {idx} out of range (0..{len(truss.points)-1})")
 
-    run_cpu = bool(args.cpu or args.compare)
-    run_gpu = not bool(args.cpu and not args.compare)
+    run_cpu = bool(args.cpu)
+    run_gpu = True
 
     solver_name = args.solver
     if run_cpu and solver_name not in CPU_SOLVER_CHOICES:
         raise ValueError(f"CPU solver '{solver_name}' not available; choices: {sorted(CPU_SOLVER_CHOICES)}")
-    if run_gpu:
-        gpu_solver_set = GPU_SOLVER_CHOICES
-        # Allow serial flag to switch the kernel variant automatically when selecting generic VBD.
-        desired_gpu_solver = solver_name
-        if desired_gpu_solver == "vbd" and bool(args.serial) and "vbd_serial" in gpu_solver_set:
-            desired_gpu_solver = "vbd_serial"
-        if desired_gpu_solver not in gpu_solver_set:
-            raise ValueError(f"GPU solver '{solver_name}' not available; GPU provides: {sorted(gpu_solver_set)}")
-    else:
-        desired_gpu_solver = None
+    gpu_solver_set = GPU_SOLVER_CHOICES
+    desired_gpu_solver = solver_name
+    if desired_gpu_solver not in gpu_solver_set:
+        raise ValueError(f"GPU solver '{solver_name}' not available for new OpenCL path; GPU provides: {sorted(gpu_solver_set)}")
 
     cpu_positions = cpu_velocities = None
     gpu_positions = gpu_velocities = None
@@ -200,32 +194,26 @@ if __name__ == "__main__":
     if run_gpu:
         if run_cpu:
             truss.points = initial_points.copy()
-        gpu_solver_name = desired_gpu_solver if desired_gpu_solver is not None else solver_name
+        gpu_solver_name = desired_gpu_solver
         gpu_solver_callback = get_solver_ocl(gpu_solver_name)
-        gpu_config = {"verbose": args.verbose}
-        if gpu_solver_name in {"vbd", "vbd_serial"}:
-            gpu_config.update({
-                "niter": args.niter,
-                "det_eps": args.det_eps,
-                "serial": bool(args.serial) if gpu_solver_name == "vbd" else True,
-            })
-        elif gpu_solver_name in {"jacobi_diff"}:
-            gpu_config.update({"niter": args.niter})
-        elif gpu_solver_name in {"jacobi_fly"}:
-            gpu_config.update({"niter": args.niter})
+        gpu_config = {"verbose": args.verbose, "niter": args.niter, "det_eps": args.det_eps}
         gpu_solver = TrussSolverOCLGPU(
             truss,
             dt=args.dt,
             gravity=total_accel.astype(np.float64),
-            solver=gpu_solver_callback,
-            solver_config=gpu_config,
             fixed_points=fixed_points,
-            track_indices=track_indices,
-            verbose=int(args.verbose),
+            nloc=int(args.nloc),
+            device_index=int(args.device),
         )
-        gpu_positions, gpu_velocities, gpu_traj = gpu_solver.run(args.nsteps)
+        gpu_positions, gpu_velocities, gpu_traj = gpu_solver.run(
+            args.nsteps,
+            solver_callback=gpu_solver_callback,
+            solver_config=gpu_config,
+            track_indices=track_indices,
+            verbose=bool(args.verbose),
+        )
 
-    if bool(args.compare) and run_cpu and gpu_positions is not None:
+    if run_cpu and gpu_positions is not None:
         diff_pos = gpu_positions - cpu_positions
         diff_vel = None
         if gpu_velocities is not None and cpu_velocities is not None:

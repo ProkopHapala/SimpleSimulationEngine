@@ -905,6 +905,78 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
         }
     }
 
+    void TrussDynamics_d::linsolve( Vec3d* ps_pred, Vec3d* ps_cor ){
+        long t0 = getCPUticks();
+        switch( (LinSolveMethod)linSolveMethod ){
+            case LinSolveMethod::Jacobi:{
+                //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
+                updateIterativeJacobi( ps_pred, ps_cor  );
+            } break;
+            case LinSolveMethod::JacobiDiff:{
+                updateIterativeJacobiDiff( ps_pred, ps_cor );
+            } break;
+            case LinSolveMethod::MomentumDiff:{
+                updateIterativeMomentumDiff( ps_pred, ps_cor );
+            }break;
+            case LinSolveMethod::ExternDiff:{
+                updateIterativeExternDiff( ps_pred, ps_cor );
+            } break;
+            case LinSolveMethod::GaussSeidel:{
+                //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
+                for (int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; }
+                updatePD_RHS(ps_cor, bvec );
+                for (int i = 0; i < nSolverIters; i++) {  
+                    updateGaussSeidel_lin( ps_cor, bvec ); 
+                }
+            } break;
+            case LinSolveMethod::JacobiMomentum:
+            case LinSolveMethod::GSMomentum: 
+            case LinSolveMethod::JacobiFlyMomentum:
+            case LinSolveMethod::GSFlyMomentum:
+                updateIterativeMomentum( ps_pred, ps_cor );
+                break;
+            case LinSolveMethod::CholeskySparse:{
+                //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::CholeskySparse \n");
+                // Solve using LDLT decomposition (assuming you have this method)
+                //solve_LDLT_sparse(b, ps_cor);
+                rhs_ProjectiveDynamics(ps_pred, linsolve_b );
+                Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, neighsLDLT, nNeighMaxLDLT );
+                for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+                Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMaxLDLT );
+            } break;
+            case LinSolveMethod::Cholesky:{
+                //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::Cholesky \n");
+                //Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
+                //Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)ps_cor );
+                //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
+                rhs_ProjectiveDynamics(ps_pred, linsolve_b );
+                Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );
+                for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+                LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
+                //Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
+                //if( checkDist( nPoint, ps_pred, ps_cor, 2 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
+
+            } break;
+            case LinSolveMethod::CG:{
+                //printf("TrussDynamics_d_d::run_LinSolve()  LinSolveMethod::CG \n");
+                rhs_ProjectiveDynamics(ps_pred, linsolve_b );
+                for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
+                cg_tol = 1e-2;
+                cgSolver_niterdone += cgSolver.solve( cg_tol );
+                
+            } break;
+            case LinSolveMethod::CGsparse:{} break;
+        }    
+        time_LinSolver += (getCPUticks()-t0)*1e-6;
+        //mat2file<double>( "points.log",  nPoint,4, (double*)points      );
+        //mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
+        //mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
+        //mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_b  );
+        //mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
+        //mat2file<double>( "ps_cor.log",  nPoint,3, (double*)ps_cor      );
+    }
+    
+
     __attribute__((hot)) 
     void TrussDynamics_d::run_LinSolve(int niter) {
         printf( "TrussDynamics_d::run_LinSolve()  linSolveMethod=%i nSolverIters=%i ps_cor=%p points=%p \n", linSolveMethod, nSolverIters, ps_cor, points  );
@@ -937,76 +1009,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
             // Apply fixed constraints
             if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
             // Compute right-hand side
-            
-            long t0 = getCPUticks();
-            switch( (LinSolveMethod)linSolveMethod ){
-                case LinSolveMethod::Jacobi:{
-                    //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
-                    updateIterativeJacobi( ps_pred, ps_cor  );
-                } break;
-                case LinSolveMethod::JacobiDiff:{
-                    updateIterativeJacobiDiff( ps_pred, ps_cor );
-                } break;
-                case LinSolveMethod::MomentumDiff:{
-                    updateIterativeMomentumDiff( ps_pred, ps_cor );
-                }break;
-                case LinSolveMethod::ExternDiff:{
-                    updateIterativeExternDiff( ps_pred, ps_cor );
-                } break;
-                case LinSolveMethod::GaussSeidel:{
-                    //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
-                    for (int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; }
-                    updatePD_RHS(ps_cor, bvec );
-                    for (int i = 0; i < nSolverIters; i++) {  
-                        updateGaussSeidel_lin( ps_cor, bvec ); 
-                    }
-                } break;
-                case LinSolveMethod::JacobiMomentum:
-                case LinSolveMethod::GSMomentum: 
-                case LinSolveMethod::JacobiFlyMomentum:
-                case LinSolveMethod::GSFlyMomentum:
-                    updateIterativeMomentum( ps_pred, ps_cor );
-                    break;
-                case LinSolveMethod::CholeskySparse:{
-                    //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::CholeskySparse \n");
-                    // Solve using LDLT decomposition (assuming you have this method)
-                    //solve_LDLT_sparse(b, ps_cor);
-                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
-                    Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, neighsLDLT, nNeighMaxLDLT );
-                    for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-                    Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMaxLDLT );
-                } break;
-                case LinSolveMethod::Cholesky:{
-                    //printf("TrussDynamics_d::run_LinSolve()  LinSolveMethod::Cholesky \n");
-                    //Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
-                    //Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)ps_cor );
-                    //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
-                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
-                    Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );
-                    for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-                    LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
-                    //Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
-                    //if( checkDist( nPoint, ps_pred, ps_cor, 2 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
-
-                } break;
-                case LinSolveMethod::CG:{
-                    //printf("TrussDynamics_d_d::run_LinSolve()  LinSolveMethod::CG \n");
-                    rhs_ProjectiveDynamics(ps_pred, linsolve_b );
-                    for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
-                    cg_tol = 1e-2;
-                    cgSolver_niterdone += cgSolver.solve( cg_tol );
-                    
-                } break;
-                case LinSolveMethod::CGsparse:{} break;
-            }
-            time_LinSolver += (getCPUticks()-t0)*1e-6;
-            //mat2file<double>( "points.log",  nPoint,4, (double*)points      );
-            //mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
-            //mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
-            //mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_b  );
-            //mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
-            //mat2file<double>( "ps_cor.log",  nPoint,3, (double*)ps_cor      );
-
+            linsolve( ps_pred, ps_cor );
             //exit(0);
 
             // Compute residual
