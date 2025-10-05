@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 from truss        import Truss
 from truss_solver import TrussSolver, get_solver
@@ -8,6 +9,22 @@ from truss_solver_ocl import TrussSolverOCL as TrussSolverOCLGPU, get_solver as 
 import truss_solver as truss_solver_module
 import truss_solver_ocl as truss_solver_ocl_module
 from plot_utils   import plot_truss
+
+
+def plot_graph_coloring(truss: Truss, vertex_colors: np.ndarray, partitions, ax=None, cmap_name: str = "tab20"):
+    if vertex_colors.size == 0:
+        return ax
+    if ax is None:
+        ax = plt.gca()
+    n_colors = int(vertex_colors.max()) + 1
+    palette = cm.get_cmap(cmap_name, n_colors)(np.linspace(0.0, 1.0, n_colors))
+    node_colors = palette[vertex_colors.astype(int)]
+    ax = plot_truss(truss.points, truss.bonds, ax=ax, edge_color='0.3', edge_alpha=0.5, point_size=60, node_colors=node_colors)
+    for color_id, verts in enumerate(partitions):
+        p = truss.points[verts[0], :2]
+        ax.text(p[0], p[1], str(color_id), color='k', fontsize=10, ha='center', va='center')
+    ax.set_title("Graph coloring (color id annotated)")
+    return ax
 
 '''
 python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 100 --niter 10 --stiffness 1000000.0--cpu 1 --anchor-mode left
@@ -49,6 +66,8 @@ if __name__ == "__main__":
     parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
     parser.add_argument("--verb",          type=int,   default=0, help="Diagnostic verbosity: 0=off, 1=per step, 2=per solver iteration.")
+    parser.add_argument("--test-coloring", type=int,   default=0, help="Run graph coloring test and plotting before simulation.")
+    parser.add_argument("--color-seed",    type=int,   default=-1, help="Seed for graph coloring RNG (negative for random).")
     args = parser.parse_args()
 
     truss = Truss()
@@ -67,6 +86,23 @@ if __name__ == "__main__":
         k=args.stiffness,
         k_diag=args.diag_stiffness,
     )
+
+    coloring_enabled = bool(args.test_coloring)
+    coloring_seed = None if args.color_seed < 0 else int(args.color_seed)
+    vertex_colors = np.array([], dtype=int)
+    color_partitions = []
+    if coloring_enabled:
+        vertex_colors, color_partitions = truss.color_graph(seed=coloring_seed)
+        truss.verify_graph_coloring(vertex_colors)
+        n_colors = 0 if vertex_colors.size == 0 else int(vertex_colors.max()) + 1
+        print(f"Graph coloring succeeded: {n_colors} colors")
+        print(f"  partition sizes: {[len(part) for part in color_partitions]}")
+        if not bool(args.no_plot) and vertex_colors.size:
+            fig_color, ax_color = plt.subplots(figsize=(6, 6))
+            plot_graph_coloring(truss, vertex_colors, color_partitions, ax=ax_color)
+            plt.tight_layout()
+        plt.show()
+        exit()
 
     anchor_mode = args.anchor_mode.lower()
     if anchor_mode not in {"none", "left", "right", "both"}:

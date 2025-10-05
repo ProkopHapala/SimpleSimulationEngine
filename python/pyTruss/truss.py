@@ -266,6 +266,93 @@ class Truss:
         neighs = self.get_neighbor_list()
         return bonds, self.points, self.masses, self.ks, list(self.fixed), l0s, neighs
 
+    def color_graph(self, seed=None) -> Tuple[np.ndarray, List[List[int]]]:
+        """
+        Partitions the truss vertices into colors for parallel Gauss-Seidel solvers.
+
+        This method implements a parallel randomized coloring algorithm inspired by
+        the principles in the "Vivace" paper (e.g., Luby's MIS algorithm). In each
+        round, it identifies a "Maximal Independent Set" (MIS) of the remaining
+        uncolored vertices and assigns them a new color. An independent set is a
+        group of vertices where no two are connected by a bond.
+        see: 
+            - Marco Fratarcangeli et al. "Vivace: A Practical Gauss-seidel Method for Stable Soft Body Dynamics", ACM Transactions on Graphics (SIGGRAPH Asia), (2016)
+            - http://doi.acm.org/10.1145/2980179.2982437
+            - https://mfratarcangeli.github.io/publication/sigasia2016/
+
+        Args:
+            seed (int, optional): A seed for the random number generator to ensurereproducible colorings. Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, List[List[int]]]:
+            - A numpy array where the index is the vertex ID and the value is its color ID.
+            - A list of lists, where each inner list contains the vertex IDs for one color.
+        """
+        if seed is not None:
+            np.random.seed(seed)
+
+        n_points = len(self.points)
+        if n_points == 0:
+            return np.array([]), []
+            
+        neighbors = self.get_neighbor_list()
+        
+        vertex_colors = np.full(n_points, -1, dtype=int)
+        uncolored_nodes = set(range(n_points))
+        current_color_id = 0
+
+        while uncolored_nodes:
+            # 1. Assign a random value to each uncolored node.
+            # This is the "parallel" step where each node acts independently.
+            random_values = {node: np.random.rand() for node in uncolored_nodes}
+            
+            independent_set = set()
+            
+            # 2. Identify the Maximal Independent Set (MIS).
+            # A node joins the MIS if its random value is higher than all of its
+            # uncolored neighbors. This is a local, parallelizable check.
+            for node in uncolored_nodes:
+                is_local_max = True
+                for neighbor in neighbors[node]:
+                    if neighbor in uncolored_nodes and random_values.get(neighbor, -1) > random_values[node]:
+                        is_local_max = False
+                        break
+                if is_local_max:
+                    independent_set.add(node)
+            
+            # 3. Assign the current color to all nodes in the MIS.
+            for node in independent_set:
+                vertex_colors[node] = current_color_id
+            
+            # 4. Update the set of uncolored nodes and advance the color.
+            uncolored_nodes -= independent_set
+            current_color_id += 1
+            
+        # 5. Format the output into partitions.
+        num_colors = current_color_id
+        partitions = [[] for _ in range(num_colors)]
+        for i, color in enumerate(vertex_colors):
+            if color != -1:
+                partitions[color].append(i)
+        
+        return vertex_colors, partitions
+
+    def verify_graph_coloring( self, vertex_colors: np.ndarray) -> None:
+        if vertex_colors.size != len(self.points):
+            raise ValueError(f"color array has length {vertex_colors.size}, expected {len(self.points)}")
+        neighbors = self.get_neighbor_list()
+        conflicts = []
+        for i, neighs in enumerate(neighbors):
+            for j in neighs:
+                if j <= i:
+                    continue
+                if vertex_colors[i] == vertex_colors[j]:
+                    conflicts.append((i, j, int(vertex_colors[i])))
+        if conflicts:
+            for i, j, color in conflicts:
+                print(f"Coloring conflict: vertices {i} and {j} share color {color}")
+            raise ValueError(f"Invalid graph coloring: detected {len(conflicts)} conflicts")
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

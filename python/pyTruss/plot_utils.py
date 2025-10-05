@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
-def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_color='b', point_size=20, color_by_stiffness=False, cmap='viridis',  show_colorbar=True, ks=None, label=None, margin=0.2):
+def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_color='b', point_size=20, color_by_stiffness=False, cmap='viridis',  show_colorbar=True, ks=None, label=None, node_colors=None, margin=0.2):
     """
     Plot the truss efficiently using LineCollection.
     
@@ -19,7 +19,7 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
         show_colorbar: whether to show colorbar when color_by_stiffness=True
         ks: array of stiffness values for each bond (required if color_by_stiffness=True)
         label: label for legend
-        node_colors: optional list of colors for nodes, overrides point_color if provided
+        node_colors: optional per-node RGBA colors, overrides point_color if provided
     """
     #if ax is None: _, ax = plt.subplots(figsize=(10, 10))
     if ax is None: ax = plt.gca()
@@ -37,7 +37,9 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
     lc.set_alpha(edge_alpha)
     ax.add_collection(lc)
     
-    if point_size is not None:  ax.scatter(points[:, 0], points[:, 1], c=point_color, s=point_size, zorder=2, label=label)
+    if point_size is not None:
+        color_data = node_colors if node_colors is not None else point_color
+        ax.scatter(points[:, 0], points[:, 1], c=color_data, s=point_size, zorder=2, label=label)
     ax.set_aspect('equal')
     ax.grid(True)
     ax.set_xlabel('X')
