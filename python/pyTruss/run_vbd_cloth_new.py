@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("--nloc",          type=int,   default=32, help="OpenCL local work size for new GPU solver.")
     parser.add_argument("--device",        type=int,   default=0, help="OpenCL device index for new GPU solver.")
     parser.add_argument("--cpu",           type=int,   default=0, help="Also run CPU solver for comparison.")
+    parser.add_argument("--gpu",           type=int,   default=-1, help="Run GPU solver (defaults to opposite of --cpu when -1).")
     parser.add_argument("--chain",         type=int,   default=0, help="Treat the grid as a 1D chain (forces ny=0).")
     parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
@@ -157,15 +158,19 @@ if __name__ == "__main__":
                         raise ValueError(f"track vertex index {idx} out of range (0..{len(truss.points)-1})")
 
     run_cpu = bool(args.cpu)
-    run_gpu = True
+    if int(args.gpu) >= 0:
+        run_gpu = bool(args.gpu)
+    else:
+        run_gpu = not run_cpu
 
     solver_name = args.solver
     if run_cpu and solver_name not in CPU_SOLVER_CHOICES:
         raise ValueError(f"CPU solver '{solver_name}' not available; choices: {sorted(CPU_SOLVER_CHOICES)}")
-    gpu_solver_set = GPU_SOLVER_CHOICES
-    desired_gpu_solver = solver_name
-    if desired_gpu_solver not in gpu_solver_set:
-        raise ValueError(f"GPU solver '{solver_name}' not available for new OpenCL path; GPU provides: {sorted(gpu_solver_set)}")
+    if run_gpu:
+        gpu_solver_set = GPU_SOLVER_CHOICES
+        desired_gpu_solver = solver_name
+        if desired_gpu_solver not in gpu_solver_set:
+            raise ValueError(f"GPU solver '{solver_name}' not available for new OpenCL path; GPU provides: {sorted(gpu_solver_set)}")
 
     cpu_positions = cpu_velocities = None
     gpu_positions = gpu_velocities = None
