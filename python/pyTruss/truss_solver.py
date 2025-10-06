@@ -19,6 +19,73 @@ def set_verbosity(level: int) -> None:
     VERBOSITY = int(level)
 
 
+def _iter_logging_enabled(config: dict) -> bool:
+    return bool(config.get('capture_iters'))
+
+
+def _ensure_log_base(solver: 'TrussSolver') -> None:
+    if 'iter_logs' not in solver.solver_state:
+        solver.solver_state['iter_logs'] = {}
+    if 'log_base' not in solver.solver_state:
+        solver.solver_state['log_base'] = solver.ps_pred.copy()
+
+
+def _log_iteration_state(solver: 'TrussSolver', config: dict, data: np.ndarray,
+                         max_step: Optional[float], *, is_displacement: bool) -> None:
+    if not _iter_logging_enabled(config):
+        return
+    logs = solver.solver_state.setdefault('iter_logs', {})
+    label = config.get('log_label', 'solver')
+    entry = logs.setdefault(label, {'positions': [], 'max_step': []})
+    base = solver.solver_state.get('log_base')
+    if base is None:
+        base = solver.ps_pred
+    positions = base + data if is_displacement else data
+    entry['positions'].append(np.array(positions, copy=True))
+    if max_step is not None:
+        entry['max_step'].append(float(max_step))
+
+
+def estimate_iterative_spectral_radius(solver: 'TrussSolver', method: str = 'jacobi_diff') -> float:
+    """Compute spectral radius of the selected linear iteration matrix (debug helper).
+
+    Parameters
+    ----------
+    solver : TrussSolver
+        Solver instance providing assembled linear system via `_get_linear_matrix()`.
+    method : str
+        Iterative scheme to analyze. Supported values: 'jacobi', 'jacobi_diff',
+        'gs', 'gs_diff'.
+
+    Returns
+    -------
+    float
+        Spectral radius (max |λ|) of the iteration matrix.
+    """
+    matrix = solver._get_linear_matrix()
+    n = matrix.shape[0]
+    diag = np.diag(matrix)
+    if diag.size != n:
+        raise ValueError("diagonal extraction failed for spectral radius estimate")
+
+    if method in ('jacobi', 'jacobi_diff'):
+        inv_diag = 1.0 / diag
+        iteration = np.eye(n) - inv_diag[:, None] * matrix
+    elif method in ('gs', 'gs_diff'):
+        D = np.diag(diag)
+        L = np.tril(matrix, k=-1)
+        U = np.triu(matrix, k=1)
+        DL = D + L
+        iteration = -np.linalg.solve(DL, U)
+    else:
+        raise ValueError(f"unsupported method '{method}' for spectral radius estimate")
+
+    eigvals = np.linalg.eigvals(iteration)
+    if eigvals.size == 0:
+        raise ValueError("eigenvalue computation returned empty result")
+    return float(np.max(np.abs(eigvals)))
+
+
 def _apply_fixed(x: np.ndarray, fixed_idx: np.ndarray, fixed_vals: np.ndarray) -> None:
     if fixed_idx.size == 0:
         return
@@ -374,6 +441,10 @@ def solve_vbd(solver: TrussSolver, config: dict) -> None:
 
     solver._ensure_fly_neighbors()
 
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+
     neighs = solver._neigh_indices
     kngs = solver._neigh_k
     l0ngs = solver._neigh_l0
@@ -389,6 +460,9 @@ def solve_vbd(solver: TrussSolver, config: dict) -> None:
     y = solver.ps_pred.copy()
 
     I3 = np.eye(3, dtype=np.float64)
+
+    if capture_iters:
+        _log_iteration_state(solver, config, x_curr, 0.0, is_displacement=False)
 
     for itr in range(niter):
         if solver.fixed.size > 0:
@@ -446,6 +520,9 @@ def solve_vbd(solver: TrussSolver, config: dict) -> None:
                 vel_iter[fixed_mask] = 0.0
             _print_state(f"[CPU][VBD iter {itr + 1}/{niter}]", x_curr, vel_iter)
 
+        if capture_iters:
+            _log_iteration_state(solver, config, x_curr, max_dx, is_displacement=False)
+
     if solver.fixed.size > 0:
         x_curr[fixed_mask] = solver.x[fixed_mask]
 
@@ -481,125 +558,316 @@ def solve_cholesky(solver: TrussSolver, config: dict) -> None:
     solver.solver_state['last_flat'] = flat.copy()
 
 
+def _momentum_params(config: dict) -> dict:
+    params = {
+        'b_start': float(config.get('b_start', 0.55)),
+        'b_end': float(config.get('b_end', 0.75)),
+        'b_last': float(config.get('b_last', 0.0)),
+        'istart': int(config.get('istart', 3)),
+        'iend': config.get('iend'),
+        'niter': int(config.get('niter', 10)),
+    }
+    if params['iend'] is None:
+        params['iend'] = max(params['istart'] + 1, params['niter'] - 1)
+    else:
+        params['iend'] = int(params['iend'])
+    params['istart'] = max(0, params['istart'])
+    params['iend'] = max(params['istart'], params['iend'])
+    params['niter'] = max(1, params['niter'])
+    return params
+
+
+def _momentum_mix(params: dict, itr: int) -> float:
+    niter = params['niter']
+    if itr == 0 or itr >= niter - 1:
+        return params['b_last']
+    if itr < params['istart']:
+        return 0.0
+    if itr >= params['iend']:
+        return params['b_end']
+    span = params['iend'] - params['istart']
+    if span <= 0:
+        return params['b_end']
+    t = (itr - params['istart']) / span
+    return params['b_start'] + t * (params['b_end'] - params['b_start'])
+
+
 def solve_iterative_momentum(solver: TrussSolver, config: dict) -> None:
+    """Momentum-accelerated iterative solver. Matches C++ updateIterativeMomentum architecture."""
     print("truss_solver.solve_iterative_momentum()")
-    matrix = solver._get_linear_matrix()
-    diag = solver._get_linear_diag()
-    rhs = solver._assemble_linear_rhs(solver.ps_pred)
+    
+    # Sub-solver selection
+    sub_method = config.get('sub_method', 'jacobi_diff')
+    if sub_method not in ['jacobi_diff', 'gs_diff', 'jacobi_fly', 'gs_fly']:
+        raise ValueError(f"Invalid sub_method '{sub_method}' for momentum solver")
+    
+    params = _momentum_params(config)
+    niter = params['niter']
+    
+    state = solver.solver_state
+    inertia = state.get('inertia')
+    if inertia is None or inertia.shape != solver.ps_pred.shape:
+        inertia = np.zeros_like(solver.ps_pred)
+    
+    solver._ensure_fly_neighbors()
+
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+
+    # Pre-compute RHS ONCE for *_lin methods (matches C++ updatePD_dRHS call)
+    rhs = diag = fixed_mask = None
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        rhs, diag, fixed_mask = solver._build_linear_diff_system()
+    
+    # For *_diff methods: iterate on displacements dp (psa/psb are dp, not positions)
+    # For *_fly methods: iterate on positions directly
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        psa = np.zeros_like(solver.ps_pred)  # dp_in
+        psb = np.zeros_like(psa)             # dp_out
+    else:
+        psa = solver.ps_pred.copy()
+        psb = np.zeros_like(psa)
+    
+    is_diff = sub_method in ['jacobi_diff', 'gs_diff']
+    if capture_iters:
+        _log_iteration_state(solver, config, psa, 0.0, is_displacement=is_diff)
+
+    for i in range(niter):
+        # Single iteration (matches C++ updateJacobi_lin, updateGaussSeidel_lin, etc.)
+        if sub_method == 'jacobi_diff':
+            _update_jacobi_lin(solver, psa, psb, rhs, diag, fixed_mask)
+        elif sub_method == 'gs_diff':
+            psb[:] = psa  # GS needs copy for in-place update
+            _update_gs_lin(solver, psb, rhs, diag, fixed_mask)
+        elif sub_method == 'jacobi_fly':
+            _update_jacobi_fly(solver, psa, psb)
+        elif sub_method == 'gs_fly':
+            psb[:] = psa
+            _update_gs_fly(solver, psb)
+        
+        bmix = _momentum_mix(params, i)
+        
+        # Momentum mixing: p_{k+1} = p'_k + bmix * d_k
+        p = psb + bmix * inertia
+        np.subtract(p, psa, out=inertia)  # d_{k+1} = p_{k+1} - p_k
+        
+        max_step = float(np.abs(inertia).max())
+        if VERBOSITY >= 2:
+            print(f"[CPU][Momentum iter {i+1}/{niter}] bmix={bmix:.2f} max |Δp| = {max_step:.3e}")
+
+        psa[:] = p                # p_k = p_{k+1}
+        if capture_iters:
+            _log_iteration_state(solver, config, psa, max_step, is_displacement=is_diff)
+    
+    # Final result
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        solver.ps_cor[:] = solver.ps_pred + psa  # position = predictor + displacement
+    else:
+        solver.ps_cor[:] = psa  # psa already holds positions
+    
+    if solver.fixed.size > 0:
+        solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
+    state['inertia'] = inertia
+
+
+def _ensure_state_array(state: dict, key: str, ref: np.ndarray) -> np.ndarray:
+    arr = state.get(key)
+    if arr is None or arr.shape != ref.shape:
+        arr = ref.copy()
+        state[key] = arr
+    return arr
+
+
+def solve_iterative_chebyshev(solver: TrussSolver, config: dict) -> None:
+    """Chebyshev-accelerated iterative solver."""
+    print("truss_solver.solve_iterative_chebyshev()")
+
+    sub_method = config.get('sub_method', 'jacobi_diff')
+    if sub_method not in ['jacobi_diff', 'gs_diff', 'jacobi_fly', 'gs_fly']:
+        raise ValueError(f"Invalid sub_method '{sub_method}' for chebyshev solver")
+
+    rho = float(config.get('rho', 0.95))
+    delayed = max(0, int(config.get('delayed_start', 5)))
+    gamma = float(config.get('gamma', 1.0))
+    niter = max(1, int(config.get('niter', 10)))
 
     state = solver.solver_state
-    flat_prev = state.get('last_flat')
-    if flat_prev is None or flat_prev.shape[0] != solver.ndof:
-        flat = solver.ps_pred.reshape(-1).astype(np.float64, copy=True)
+
+    solver._ensure_fly_neighbors()
+
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+
+    rhs = diag = fixed_mask = None
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        rhs, diag, fixed_mask = solver._build_linear_diff_system()
+
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        psa = np.zeros_like(solver.ps_pred)
+        psb = np.zeros_like(psa)
     else:
-        flat = flat_prev.copy()
-    solver._enforce_fixed_flat(flat)
+        psa = solver.ps_pred.copy()
+        psb = np.zeros_like(psa)
 
-    momentum = state.get('momentum')
-    if momentum is None or momentum.shape[0] != solver.ndof:
-        momentum = np.zeros(solver.ndof, dtype=np.float64)
+    prev = _ensure_state_array(state, 'cheb_prev', psa)
+    prev2 = _ensure_state_array(state, 'cheb_prev2', psa)
 
-    niter = int(config.get('niter', 10))
-    beta = float(config.get('momentum_beta', config.get('momentum', 0.85)))
-    beta = max(0.0, min(beta, 0.999))
-    relax = float(config.get('relaxation', 1.0))
-    relax = max(1e-6, relax)
+    omega = 1.0
+    is_diff = sub_method in ['jacobi_diff', 'gs_diff']
 
-    for itr in range(max(1, niter)):
-        residual = rhs - matrix @ flat
-        solver._zero_fixed_flat(residual)
-        delta = (relax * residual) / diag
-        momentum = beta * momentum + delta
-        solver._zero_fixed_flat(momentum)
-        flat += momentum
-        solver._enforce_fixed_flat(flat)
-        if config.get('tol'):
-            tol = float(config['tol'])
-            if np.linalg.norm(residual, ord=np.inf) < tol:
+    if capture_iters:
+        _log_iteration_state(solver, config, psa, 0.0, is_displacement=is_diff)
+
+    for itr in range(niter):
+        if sub_method == 'jacobi_diff':
+            _update_jacobi_lin(solver, psa, psb, rhs, diag, fixed_mask)
+        elif sub_method == 'gs_diff':
+            psb[:] = psa
+            _update_gs_lin(solver, psb, rhs, diag, fixed_mask)
+        elif sub_method == 'jacobi_fly':
+            _update_jacobi_fly(solver, psa, psb)
+        else:  # gs_fly
+            psb[:] = psa
+            _update_gs_fly(solver, psb)
+
+        if gamma != 1.0:
+            # under-relaxation: psa holds previous iterate
+            psb[:] = gamma * (psb - psa) + psa
+
+        if itr < delayed:
+            omega = 1.0
+            p_next = psb.copy()
+        else:
+            if itr == delayed:
+                omega = 2.0 / max(2.0 - rho * rho, 1e-9)
+            else:
+                denom = 4.0 - rho * rho * omega
+                omega = 4.0 / max(denom, 1e-9)
+            p_next = prev + omega * (psb - prev2)
+
+        delta = float(np.linalg.norm(p_next - psa, ord=np.inf))
+        if VERBOSITY >= 2:
+            print(f"[CPU][Chebyshev iter {itr+1}/{niter}] omega={omega:.3f} max |Δp| = {delta:.3e}")
+
+        prev2[:] = prev
+        prev[:] = p_next
+        psa[:] = p_next
+        if capture_iters:
+            _log_iteration_state(solver, config, psa, delta, is_displacement=is_diff)
+
+    if sub_method in ['jacobi_diff', 'gs_diff']:
+        solver.ps_cor[:] = solver.ps_pred + psa
+    else:
+        solver.ps_cor[:] = psa
+
+    if solver.fixed.size > 0:
+        solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
+
+    state['cheb_prev'] = prev
+    state['cheb_prev2'] = prev2
+
+def _update_jacobi_lin(solver: TrussSolver, dp_in: np.ndarray, dp_out: np.ndarray, 
+                       rhs: np.ndarray, diag: np.ndarray, fixed_mask: np.ndarray) -> float:
+    """Single Jacobi iteration on linearized system. Matches C++ updateJacobi_lin."""
+    neighs = solver._neigh_indices
+    kngs = solver._neigh_k
+    max_neighs = solver._max_neighs or 0
+    max_step = 0.0
+    
+    for vid in range(solver.n_points):
+        if fixed_mask[vid]:
+            dp_out[vid] = 0.0
+            continue
+        sum_j = np.zeros(3, dtype=np.float64)
+        for jj in range(max_neighs):
+            j = neighs[vid, jj]
+            if j < 0:
                 break
+            sum_j += kngs[vid, jj] * dp_in[j]
+        new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
+        step = np.linalg.norm(new_dp - dp_in[vid])
+        if step > max_step:
+            max_step = step
+        dp_out[vid] = new_dp
+    return max_step
 
-    state['momentum'] = momentum
-    state['last_flat'] = flat.copy()
-    solver.ps_cor[:] = flat.reshape(-1, 3)
 
 def solve_jacobi_diff(solver: TrussSolver, config: dict) -> None:
     """Jacobi-Diff: precomputed linear RHS, iterate on displacements."""
     rhs, diag, fixed_mask = solver._build_linear_diff_system()
     niter = int(config.get('niter', 20))
     solver._ensure_fly_neighbors()
-    neighs = solver._neigh_indices
-    kngs = solver._neigh_k
-    max_neighs = solver._max_neighs or 0
 
     dp_in = np.zeros_like(solver.ps_pred)
     dp_out = np.zeros_like(dp_in)
 
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+        _log_iteration_state(solver, config, dp_in, 0.0, is_displacement=True)
+
     for it in range(niter):
-        max_step = 0.0
-        for vid in range(solver.n_points):
-            if fixed_mask[vid]:
-                dp_out[vid] = 0.0
-                continue
-            sum_j = np.zeros(3, dtype=np.float64)
-            for jj in range(max_neighs):
-                j = neighs[vid, jj]
-                if j < 0:
-                    break
-                sum_j += kngs[vid, jj] * dp_in[j]
-            new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
-            step = np.linalg.norm(new_dp - dp_in[vid])
-            if step > max_step:
-                max_step = step
-            dp_out[vid] = new_dp
+        max_step = _update_jacobi_lin(solver, dp_in, dp_out, rhs, diag, fixed_mask)
         dp_in, dp_out = dp_out, dp_in
         if VERBOSITY >= 2:
             print(f"[CPU][JacobiDiff iter {it + 1}/{niter}] max |Δdp| = {max_step:.3e}")
+        if capture_iters:
+            _log_iteration_state(solver, config, dp_in, max_step, is_displacement=True)
 
     solver.ps_cor[:] = solver.ps_pred + dp_in
     if solver.fixed.size > 0:
         solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
 
 
+def _update_jacobi_fly(solver: TrussSolver, ps_in: np.ndarray, ps_out: np.ndarray) -> float:
+    """Single Jacobi-fly iteration. Matches C++ updateJacobi_fly."""
+    neighs = solver._neigh_indices
+    kngs = solver._neigh_k
+    l0ngs = solver._neigh_l0
+    max_neighs = solver._max_neighs or 0
+    max_step = 0.0
+    
+    for i in range(solver.n_points):
+        pi = ps_in[i]
+        Ii = solver.mass_diag[i]
+        sum_j = pi * Ii  # bi = M_i/dt^2 * p_i
+        Aii = Ii
+        for jj in range(max_neighs):
+            jG = neighs[i, jj]
+            if jG < 0:
+                break
+            k = kngs[i, jj]
+            l0_ij = l0ngs[i, jj]
+            pj = ps_in[jG]
+            dij = pi - pj
+            length = np.linalg.norm(dij)
+            safe = max(length, 1e-8)
+            sum_j += dij * (k * l0_ij / safe)
+            sum_j += pj * k
+            Aii += k
+        new_pi = sum_j / max(Aii, 1e-12)
+        step = np.linalg.norm(new_pi - pi)
+        if step > max_step:
+            max_step = step
+        ps_out[i] = new_pi
+    
+    if solver.fixed.size > 0:
+        ps_out[solver.fixed] = solver.x[solver.fixed]
+    return max_step
+
+
 def solve_jacobi_fly(solver: TrussSolver, config: dict) -> None:
     """Jacobi-Fly: Copy of TrussDynamics_d::updateJacobi_fly() and OpenCL jacobi_fly kernel."""
     niter = int(config.get('niter', 10))
     solver._ensure_fly_neighbors()
-    max_neighs = solver._max_neighs or 0
-    neighs = solver._neigh_indices
-    kngs = solver._neigh_k
-    l0ngs = solver._neigh_l0
 
     ps_in = solver.ps_pred.copy()
     ps_out = ps_in.copy()
     
-    # Match C++ updateJacobi_fly: for i in nPoint: sum_j = Ii*pi; for jj in nNeighMax: sum_j += k*l0*dij/|dij| + k*pj; ps_out[i] = sum_j/Aii
     for it in range(niter):
-        max_step = 0.0
-        for i in range(solver.n_points):
-            pi = ps_in[i]
-            Ii = solver.mass_diag[i]
-            sum_j = pi * Ii  # bi = M_i/dt^2 * p_i
-            Aii = Ii
-            for jj in range(max_neighs):
-                jG = neighs[i, jj]
-                if jG < 0:
-                    break
-                k = kngs[i, jj]
-                l0_ij = l0ngs[i, jj]
-                pj = ps_in[jG]
-                dij = pi - pj
-                length = np.linalg.norm(dij)
-                safe = max(length, 1e-8)
-                sum_j += dij * (k * l0_ij / safe)  # sum_j.add_mul(dij, k*par.x/l)
-                sum_j += pj * k                    # sum_j.add_mul(pj, k)
-                Aii += k
-            new_pi = sum_j / max(Aii, 1e-12)
-            step = np.linalg.norm(new_pi - pi)
-            if step > max_step:
-                max_step = step
-            ps_out[i] = new_pi
-        if solver.fixed.size > 0:
-            ps_out[solver.fixed] = solver.x[solver.fixed]
+        max_step = _update_jacobi_fly(solver, ps_in, ps_out)
         ps_in, ps_out = ps_out, ps_in
         if VERBOSITY >= 2:
             print(f"[CPU][JacobiFly iter {it + 1}/{niter}] max |Δp| = {max_step:.3e}")
@@ -607,80 +875,108 @@ def solve_jacobi_fly(solver: TrussSolver, config: dict) -> None:
     solver.ps_cor[:] = ps_in
 
 
+def _update_gs_lin(solver: TrussSolver, dp: np.ndarray, 
+                   rhs: np.ndarray, diag: np.ndarray, fixed_mask: np.ndarray) -> float:
+    """Single Gauss-Seidel iteration on linearized system. Matches C++ updateGaussSeidel_lin."""
+    neighs = solver._neigh_indices
+    kngs = solver._neigh_k
+    max_neighs = solver._max_neighs or 0
+    max_step = 0.0
+    
+    for vid in range(solver.n_points):
+        if fixed_mask[vid]:
+            dp[vid] = 0.0
+            continue
+        sum_j = np.zeros(3, dtype=np.float64)
+        for jj in range(max_neighs):
+            j = neighs[vid, jj]
+            if j < 0:
+                break
+            sum_j += kngs[vid, jj] * dp[j]
+        new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
+        step = np.linalg.norm(new_dp - dp[vid])
+        if step > max_step:
+            max_step = step
+        dp[vid] = new_dp
+    return max_step
+
+
 def solve_gs_diff(solver: TrussSolver, config: dict) -> None:
     """GS-Diff: precomputed linear RHS, in-place Gauss-Seidel on displacements."""
     rhs, diag, fixed_mask = solver._build_linear_diff_system()
     niter = int(config.get('niter', 20))
     solver._ensure_fly_neighbors()
-    neighs = solver._neigh_indices
-    kngs = solver._neigh_k
-    max_neighs = solver._max_neighs or 0
 
     dp = np.zeros_like(solver.ps_pred)
 
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+        _log_iteration_state(solver, config, dp, 0.0, is_displacement=True)
+
     for it in range(niter):
-        max_step = 0.0
-        for vid in range(solver.n_points):
-            if fixed_mask[vid]:
-                dp[vid] = 0.0
-                continue
-            sum_j = np.zeros(3, dtype=np.float64)
-            for jj in range(max_neighs):
-                j = neighs[vid, jj]
-                if j < 0:
-                    break
-                sum_j += kngs[vid, jj] * dp[j]
-            new_dp = (rhs[vid] + sum_j) / max(diag[vid], 1e-12)
-            step = np.linalg.norm(new_dp - dp[vid])
-            if step > max_step:
-                max_step = step
-            dp[vid] = new_dp
+        max_step = _update_gs_lin(solver, dp, rhs, diag, fixed_mask)
         if VERBOSITY >= 2:
             print(f"[CPU][GSDiff iter {it + 1}/{niter}] max |Δdp| = {max_step:.3e}")
+        if capture_iters:
+            _log_iteration_state(solver, config, dp, max_step, is_displacement=True)
 
     solver.ps_cor[:] = solver.ps_pred + dp
     if solver.fixed.size > 0:
         solver.ps_cor[solver.fixed] = solver.x[solver.fixed]
 
 
-def solve_gs_fly(solver: TrussSolver, config: dict) -> None:
-    niter = int(config.get('niter', 10))
-    solver._ensure_fly_neighbors()
-    max_neighs = solver._max_neighs or 0
+def _update_gs_fly(solver: TrussSolver, ps: np.ndarray) -> float:
+    """Single Gauss-Seidel-fly iteration. Matches C++ updateGaussSeidel_fly."""
     neighs = solver._neigh_indices
     kngs = solver._neigh_k
     l0ngs = solver._neigh_l0
+    max_neighs = solver._max_neighs or 0
+    max_step = 0.0
+    
+    for i in range(solver.n_points):
+        pi = ps[i]
+        Ii = solver.mass_diag[i]
+        sum_j = pi * Ii
+        Aii = Ii
+        for jj in range(max_neighs):
+            jG = neighs[i, jj]
+            if jG < 0:
+                break
+            k = kngs[i, jj]
+            l0_ij = l0ngs[i, jj]
+            pj = ps[jG]
+            dij = pi - pj
+            length = np.linalg.norm(dij)
+            safe = max(length, 1e-8)
+            sum_j += dij * (k * l0_ij / safe)
+            sum_j += pj * k
+            Aii += k
+        new_pi = sum_j / max(Aii, 1e-12)
+        step = np.linalg.norm(new_pi - pi)
+        if step > max_step:
+            max_step = step
+        ps[i] = new_pi
+    return max_step
+
+
+def solve_gs_fly(solver: TrussSolver, config: dict) -> None:
+    """GS-Fly: Gauss-Seidel with on-the-fly force computation."""
+    niter = int(config.get('niter', 10))
+    solver._ensure_fly_neighbors()
 
     ps = solver.ps_pred.copy()
+    capture_iters = _iter_logging_enabled(config)
+    if capture_iters:
+        _ensure_log_base(solver)
+        _log_iteration_state(solver, config, ps, 0.0, is_displacement=False)
     
-    # Match C++ updateGaussSeidel_fly: in-place update
     for it in range(niter):
-        max_step = 0.0
-        for i in range(solver.n_points):
-            pi = ps[i]
-            Ii = solver.mass_diag[i]
-            sum_j = pi * Ii
-            Aii = Ii
-            for jj in range(max_neighs):
-                jG = neighs[i, jj]
-                if jG < 0:
-                    break
-                k = kngs[i, jj]
-                l0_ij = l0ngs[i, jj]
-                pj = ps[jG]
-                dij = pi - pj
-                length = np.linalg.norm(dij)
-                safe = max(length, 1e-8)
-                sum_j += dij * (k * l0_ij / safe)
-                sum_j += pj * k
-                Aii += k
-            new_pi = sum_j / max(Aii, 1e-12)
-            step = np.linalg.norm(new_pi - pi)
-            if step > max_step:
-                max_step = step
-            ps[i] = new_pi
+        max_step = _update_gs_fly(solver, ps)
         if VERBOSITY >= 2:
             print(f"[CPU][GSFly iter {it + 1}/{niter}] max |Δp| = {max_step:.3e}")
+        if capture_iters:
+            _log_iteration_state(solver, config, ps, max_step, is_displacement=False)
     
     solver.ps_cor[:] = ps
     if solver.fixed.size > 0:
@@ -693,13 +989,13 @@ SOLVERS = {
     'vbd_serial': solve_vbd,
     'direct': solve_direct,
     'cholesky': solve_cholesky,
-    'momentum': solve_iterative_momentum,
     'jacobi_diff': solve_jacobi_diff,
     'jacobi_fly': solve_jacobi_fly,
     'gs_diff': solve_gs_diff,
     'gs_fly': solve_gs_fly,
+    'momentum': solve_iterative_momentum,
+    'chebyshev': solve_iterative_chebyshev,
 }
-
 
 def get_solver(name: str) -> Callable:
     """Retrieve solver callback by name."""

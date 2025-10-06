@@ -81,6 +81,10 @@ if __name__ == "__main__":
     parser.add_argument("--verb",          type=int,   default=0, help="Diagnostic verbosity: 0=off, 1=per step, 2=per solver iteration.")
     parser.add_argument("--test-coloring", type=int,   default=0, help="Run graph coloring test and plotting before simulation.")
     parser.add_argument("--color-seed",    type=int,   default=-1, help="Seed for graph coloring RNG (negative for random).")
+    parser.add_argument("--sub-method",    type=str,   default="jacobi_diff", choices=["jacobi_diff", "gs_diff", "jacobi_fly", "gs_fly"], help="Sub-solver for iterative accelerators (momentum/chebyshev).")
+    parser.add_argument("--rho",            type=float, default=0.95, help="Spectral radius estimate for Chebyshev acceleration.")
+    parser.add_argument("--delayed-start",  dest="delayed_start", type=int, default=2, help="Number of initial iterations without Chebyshev acceleration.")
+    parser.add_argument("--gamma",          type=float, default=1.0, help="Under-relaxation factor for Chebyshev global solve (<=1).")
     args = parser.parse_args()
 
     truss = Truss()
@@ -181,7 +185,20 @@ if __name__ == "__main__":
         solver_config = {'verbose': args.verbose}
         if args.solver in {"vbd", "vbd_serial"}:
             solver_config.update({'niter': args.niter, 'det_eps': args.det_eps})
-        elif args.solver in {"momentum", "jacobi_diff", "jacobi_diff_cpu", "gs_diff", "gs_diff_cpu",
+        elif args.solver == "momentum":
+            solver_config.update({
+                'niter': args.niter,
+                'sub_method': args.sub_method
+            })
+        elif args.solver == "chebyshev":
+            solver_config.update({
+                'niter': args.niter,
+                'sub_method': args.sub_method,
+                'rho': args.rho,
+                'delayed_start': args.delayed_start,
+                'gamma': args.gamma,
+            })
+        elif args.solver in {"jacobi_diff", "jacobi_diff_cpu", "gs_diff", "gs_diff_cpu",
                              "jacobi_fly", "jacobi_fly_cpu", "gs_fly", "gs_fly_cpu"}:
             solver_config['niter'] = args.niter
         cpu_solver = TrussSolver(
