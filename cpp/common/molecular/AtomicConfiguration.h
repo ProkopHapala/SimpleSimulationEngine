@@ -4,6 +4,8 @@
 
 #include "Vec3.h"
 #include "PBCsystem.h"
+#include "globals.h"
+
 
 class AtomicConfiguration{ public:
     int   natoms;

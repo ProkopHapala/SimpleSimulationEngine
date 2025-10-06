@@ -107,6 +107,33 @@ def _spectral_radius_method(solver_name: str, sub_method: str) -> Optional[str]:
     return None
 
 
+def _parse_solver_suite(spec: str) -> List[Tuple[str, Optional[str], Optional[str]]]:
+    entries: List[Tuple[str, Optional[str], Optional[str]]] = []
+    if not spec:
+        return entries
+    tokens = [tok.strip() for tok in spec.split(',') if tok.strip()]
+    for token in tokens:
+        label: Optional[str] = None
+        sub_method: Optional[str] = None
+        solver_spec = token
+        if ':' in solver_spec:
+            solver_part, label_part = solver_spec.split(':', 1)
+            solver_spec = solver_part.strip()
+            label = label_part.strip() or None
+        if '[' in solver_spec:
+            if not solver_spec.endswith(']'):
+                raise ValueError(f"Malformed solver suite entry '{token}' (missing ']')")
+            solver_name, sub_part = solver_spec.split('[', 1)
+            solver_name = solver_name.strip()
+            sub_method = sub_part[:-1].strip()
+        else:
+            solver_name = solver_spec.strip()
+        if not solver_name:
+            raise ValueError(f"Empty solver name in suite entry '{token}'")
+        entries.append((solver_name, sub_method, label))
+    return entries
+
+
 def _run_solver_once(args: argparse.Namespace, solver_name: str, label: str,
                      base_positions: np.ndarray, displacement: np.ndarray,
                      fixed_points: List[int]) -> Dict[str, object]:
@@ -262,6 +289,8 @@ python run_solver_debug.py --nx 5 --ny 5 --anchor-mode both --niter 20 --solver 
 
 python run_solver_debug.py --nx 5 --ny 5 --anchor-mode both --niter 20 --solver gs_diff --ref-solver vbd  --verb 2
 
+prokop@GTX3090:~/git/SimpleSimulationEngine/python/pyTruss$ python run_solver_debug.py --solver-suite "vbd:VBD,gs_diff:GS-diff,jacobi_diff:Jacobi-diff,jacobi_fly:Jacobi-fly,gs_fly:GS-fly" --csv-path solver_suite.csv --nx 4 --ny 4 --niter 20 
+
 '''
 
 if __name__ == "__main__":
@@ -302,6 +331,8 @@ if __name__ == "__main__":
     parser.add_argument("--verb",          type=int,   default=0,     help="Set truss solver verbosity (0 quiet, 1 steps, 2 per-iter).")
     parser.add_argument("--no-plot", action="store_true",             help="Disable plotting.")
     parser.add_argument("--estimate-rho", action="store_true",        help="Estimate and print spectral radius for supported solvers.")
+    parser.add_argument("--solver-suite",  type=str,   default="",    help="Comma-separated solvers to compare; entries may use 'solver[sub_method]:label'. Overrides --solver/--ref-solver.")
+    parser.add_argument("--csv-path",      type=str,   default="",    help="Optional output CSV path for convergence traces.")
 
     args = parser.parse_args()
 
@@ -314,16 +345,49 @@ if __name__ == "__main__":
     displacement = _make_displacement(base_positions, fixed_points, args)
     vertices = _parse_vertices(args.plot_vertices, base_positions.shape[0])
 
-    results: Dict[str, Dict[str, object]] = {}
+    suite_entries = _parse_solver_suite(args.solver_suite)
+    if not suite_entries:
+        suite_entries = []
+        if args.ref_solver.lower() != "none":
+            suite_entries.append((args.ref_solver, None, "reference"))
+        suite_entries.append((args.solver, None, "solver"))
 
-    if args.ref_solver.lower() != "none":
-        ref_label = "reference"
-        ref_result = _run_solver_once(args, args.ref_solver, ref_label, base_positions, displacement, fixed_points)
-        results['reference'] = ref_result
+    solver_requests: List[Dict[str, object]] = []
+    used_labels: Dict[str, int] = {}
+    for idx, (solver_name, sub_method_override, label) in enumerate(suite_entries):
+        label_final = label or solver_name or f"solver_{idx}"
+        count = used_labels.get(label_final, 0)
+        if count > 0:
+            label_final = f"{label_final}_{count}"
+        used_labels[label_final] = count + 1
 
-    test_label = "solver"
-    test_result = _run_solver_once(args, args.solver, test_label, base_positions, displacement, fixed_points)
-    results['test'] = test_result
+        cfg = _solver_config(args, label_final)
+        if sub_method_override:
+            cfg['sub_method'] = sub_method_override
+
+        solver_requests.append({
+            'solver': solver_name,
+            'config': cfg,
+            'label': label_final,
+            'estimate_rho': args.estimate_rho,
+        })
+
+    def truss_factory() -> Truss:
+        return _build_truss(args)
+
+    results = ts.run_solver_suite(
+        truss_factory,
+        dt=args.dt,
+        displacement=displacement,
+        solver_requests=solver_requests,
+        base_positions=base_positions,
+        fixed_points=fixed_points,
+        estimate_rho=args.estimate_rho,
+    )
+
+    if args.csv_path:
+        ts.write_convergence_csv(results, args.csv_path)
 
     _print_summary(results)
     _plot_results(base_positions, displacement, vertices, args.zoom, base_truss, results, args)
+

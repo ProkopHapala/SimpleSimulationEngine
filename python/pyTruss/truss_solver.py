@@ -7,8 +7,11 @@ Provides implicit Euler time-stepping with pluggable solver backends:
 - Jacobi/Gauss-Seidel
 """
 
+import csv
+import math
+
 import numpy as np
-from typing import List, Tuple, Callable, Optional, Dict, Any
+from typing import List, Tuple, Callable, Optional, Dict, Any, Sequence
 
 
 VERBOSITY = 0
@@ -1003,3 +1006,236 @@ def get_solver(name: str) -> Callable:
     if name not in SOLVERS:
         raise ValueError(f"Unknown solver '{name}'; available: {list(SOLVERS.keys())}")
     return SOLVERS[name]
+
+
+def select_spectral_radius_method(solver_name: str, sub_method: str) -> Optional[str]:
+    """Return compatible spectral radius estimation scheme for the solver."""
+    name = solver_name.lower()
+    if name in {'jacobi_diff', 'jacobi'}:
+        return 'jacobi_diff'
+    if name in {'gs_diff', 'gauss_seidel'}:
+        return 'gs_diff'
+    if name in {'momentum', 'chebyshev'}:
+        sub = str(sub_method).lower()
+        if sub in {'jacobi_diff', 'gs_diff'}:
+            return sub
+        return None
+    return None
+
+
+def _execute_solver_method(
+    solver: 'TrussSolver',
+    *,
+    solver_name: str,
+    label: str,
+    base_positions: np.ndarray,
+    displacement: np.ndarray,
+    config: Dict[str, Any],
+    estimate_rho: bool,
+    spectral_method: Optional[str],
+) -> Dict[str, Any]:
+    """Run a single solver method on the provided solver instance."""
+
+    solver.solver_callback = get_solver(solver_name)
+    solver.solver_config = dict(config)
+    solver.verbose = int(solver.solver_config.get('verbose', solver.verbose))
+
+    base_copy = base_positions.astype(np.float64, copy=True)
+    initial = base_copy + displacement
+    zero_vel = np.zeros_like(base_copy)
+
+    solver.reset_state(positions=base_copy, velocities=zero_vel)
+    solver.truss.points[:] = base_copy
+
+    solver.ps_pred[:] = initial
+    solver.ps_cor[:] = initial
+    if solver.fixed.size > 0:
+        solver.ps_pred[solver.fixed] = base_copy[solver.fixed]
+        solver.ps_cor[solver.fixed] = base_copy[solver.fixed]
+
+    state = solver.solver_state
+    state['iter_logs'] = {}
+    state['log_base'] = solver.ps_pred.copy()
+    state['diagnostics'] = {}
+
+    diagnostics = state['diagnostics']
+    if estimate_rho:
+        method = spectral_method or select_spectral_radius_method(solver_name, solver.solver_config.get('sub_method', ''))
+        if method is not None:
+            try:
+                rho = estimate_iterative_spectral_radius(solver, method=method)
+                diagnostics['spectral_method'] = method
+                diagnostics['spectral_radius'] = rho
+            except Exception as err:
+                diagnostics['spectral_method'] = method
+                diagnostics['spectral_radius_error'] = str(err)
+        else:
+            diagnostics['spectral_radius_error'] = 'unsupported solver for estimation'
+
+    solver.solver_callback(solver, solver.solver_config)
+
+    logs = state.get('iter_logs', {}).get(label)
+    if logs and logs.get('positions'):
+        positions = np.stack(logs['positions'], axis=0)
+        max_entries = logs.get('max_step', [])
+        max_step = np.array(max_entries, dtype=np.float64)
+        if max_step.size < positions.shape[0]:
+            pad = positions.shape[0] - max_step.size
+            max_step = np.pad(max_step, (0, pad))
+        deltas = np.linalg.norm(positions[1:] - positions[:-1], axis=2)
+        residual = deltas.max(axis=1) if deltas.size else np.array([], dtype=np.float64)
+    else:
+        final_pos = solver.ps_cor.copy()
+        positions = np.stack([initial, final_pos], axis=0)
+        diff = final_pos - initial
+        max_delta = float(np.max(np.abs(diff))) if diff.size else 0.0
+        max_step = np.array([0.0, max_delta], dtype=np.float64)
+        residual = np.array([max_delta], dtype=np.float64) if diff.size else np.array([], dtype=np.float64)
+
+    return {
+        'label': label,
+        'solver': solver_name,
+        'positions': positions,
+        'max_step': max_step,
+        'residual': residual,
+        'base': base_copy,
+        'initial': initial.copy(),
+        'final': positions[-1],
+        'diagnostics': diagnostics.copy(),
+    }
+
+
+def run_solver_suite(
+    truss_factory: Callable[[], Any],
+    dt: float,
+    displacement: np.ndarray,
+    solver_requests: List[Any],
+    *,
+    base_positions: Optional[np.ndarray] = None,
+    fixed_points: Optional[Sequence[int]] = None,
+    gravity: Optional[np.ndarray] = None,
+    estimate_rho: bool = False,
+) -> Dict[str, Dict[str, Any]]:
+    """Run identical initial state across multiple solvers and collect traces."""
+
+    template_truss = truss_factory()
+    template_points = template_truss.points.astype(np.float64, copy=True)
+    base = template_points if base_positions is None else np.asarray(base_positions, dtype=np.float64)
+    if base.shape != template_points.shape:
+        raise ValueError("base_positions shape mismatch with template truss")
+
+    disp_array = np.asarray(displacement, dtype=np.float64)
+    if disp_array.shape != base.shape:
+        raise ValueError("displacement shape mismatch")
+
+    if fixed_points is None:
+        fixed_seq = sorted(template_truss.fixed)
+    else:
+        fixed_seq = list(int(idx) for idx in fixed_points)
+
+    gravity_vec = np.zeros(3, dtype=np.float64) if gravity is None else np.asarray(gravity, dtype=np.float64)
+    if gravity_vec.shape != (3,):
+        raise ValueError(f"gravity vector must be length 3, got {gravity_vec.shape}")
+
+    prepared: List[Dict[str, Any]] = []
+    for idx, spec in enumerate(solver_requests):
+        if isinstance(spec, dict):
+            solver_name = spec['solver']
+            config = dict(spec.get('config', {}))
+            label = spec.get('label', solver_name)
+            request_estimate = bool(spec.get('estimate_rho', estimate_rho))
+            spectral_method = spec.get('spectral_method')
+        elif isinstance(spec, tuple):
+            if len(spec) == 3:
+                solver_name, config, label = spec
+            elif len(spec) == 2:
+                solver_name, config = spec
+                label = f"solver_{idx}"
+            else:
+                raise ValueError("solver request tuple must have 2 or 3 entries")
+            config = dict(config)
+            request_estimate = estimate_rho
+            spectral_method = None
+        else:
+            raise TypeError("solver_requests entries must be dict or tuple")
+
+        if not label:
+            label = f"solver_{idx}"
+
+        config.setdefault('capture_iters', True)
+        config.setdefault('log_label', label)
+
+        prepared.append({
+            'solver': solver_name,
+            'config': config,
+            'label': label,
+            'estimate_rho': request_estimate,
+            'spectral_method': spectral_method,
+        })
+
+    if not prepared:
+        return {}
+
+    shared_solver = TrussSolver(
+        truss_factory(),
+        dt=dt,
+        gravity=gravity_vec,
+        solver=get_solver(prepared[0]['solver']),
+        solver_config=dict(prepared[0]['config']),
+        fixed_points=fixed_seq,
+        verbose=int(prepared[0]['config'].get('verbose', 0)),
+    )
+
+    results: Dict[str, Dict[str, Any]] = {}
+    for entry in prepared:
+        result = _execute_solver_method(
+            shared_solver,
+            solver_name=entry['solver'],
+            label=entry['label'],
+            base_positions=base,
+            displacement=disp_array,
+            config=entry['config'],
+            estimate_rho=entry['estimate_rho'],
+            spectral_method=entry['spectral_method'],
+        )
+        results[entry['label']] = result
+
+    return results
+
+
+def iter_convergence_rows(results: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Convert solver results to per-iteration convergence rows."""
+    rows: List[Dict[str, Any]] = []
+    for data in results.values():
+        solver_name = data['solver']
+        label = data.get('label', solver_name)
+        max_step = np.asarray(data.get('max_step', []), dtype=np.float64)
+        residual = np.asarray(data.get('residual', []), dtype=np.float64)
+        for itr, step_val in enumerate(max_step):
+            if itr == 0:
+                resid_val = float('nan')
+            else:
+                idx = itr - 1
+                resid_val = residual[idx] if idx < residual.size else float('nan')
+            rows.append({
+                'solver': solver_name,
+                'label': label,
+                'iteration': itr,
+                'max_step': float(step_val),
+                'residual': float(resid_val),
+            })
+    return rows
+
+
+def write_convergence_csv(results: Dict[str, Dict[str, Any]], csv_path: str) -> None:
+    """Persist convergence rows into a CSV file."""
+    fieldnames = ['solver', 'label', 'iteration', 'max_step', 'residual']
+    rows = iter_convergence_rows(results)
+    with open(csv_path, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            output = dict(row)
+            if math.isnan(output['residual']):
+                output['residual'] = ''
+            writer.writerow(output)
