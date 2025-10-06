@@ -47,7 +47,12 @@ def chebyshev_accelerator(x_tilde_k1, x_k, x_k_minus_1, omega):
     """Applies the Chebyshev acceleration formula."""
     return x_k_minus_1 + omega * (x_tilde_k1 - x_k_minus_1)
 
-def chebyshev_omega_update(k, rho, S, prev_omega):
+def momentum_accelerator(x_tilde_k1, x_k, x_k_minus_1, bmix):
+    """Applies the Heavy Ball momentum acceleration formula."""
+    inertia = x_k - x_k_minus_1
+    return x_tilde_k1 + bmix * inertia
+
+def chebyshev_omega_update(k, rho, S, prev_omega, **kwargs):
     """
     Calculates the dynamic omega parameter for Chebyshev acceleration.
 
@@ -63,6 +68,31 @@ def chebyshev_omega_update(k, rho, S, prev_omega):
     if k < S: return 1.0
     if k == S: return 2.0 / (2.0 - rho**2) if rho**2 < 2.0 else 1.0
     return 4.0 / (4.0 - rho**2 * prev_omega) if (4.0 - rho**2 * prev_omega) != 0 else 1.0
+
+def momentum_bmix_update(k, **kwargs):
+    """
+    Calculates the b_mix parameter for momentum acceleration.
+    This follows the schedule from the C++ implementation.
+    """
+    niter = kwargs.get('max_iters', 20)
+    istart = kwargs.get('b_istart', 3)
+    iend = kwargs.get('b_iend', niter - 1)
+    b_start = kwargs.get('b_start', 0.2)
+    b_end = kwargs.get('b_end', 0.2)
+    b_last = kwargs.get('b_last', 0.0)
+
+    if k == 0 or k >= niter - 1:
+        return b_last
+    if k < istart:
+        return 0.0
+    if k >= iend:
+        return b_end
+    
+    span = iend - istart
+    if span <= 0:
+        return b_end
+    t = (k - istart) / span
+    return b_start + t * (b_end - b_start)
 
 def solve_iterative(A, b, step_func, accelerator_func=None, omega_update_func=None, max_iters=20, tol=1e-9, **kwargs):
     """
@@ -84,6 +114,7 @@ def solve_iterative(A, b, step_func, accelerator_func=None, omega_update_func=No
     # --- Accelerator specific setup ---
     rho = kwargs.get('rho', 0.0)
     S = kwargs.get('S', 0)
+    kwargs['max_iters'] = max_iters # Pass max_iters to omega_update_func
     omega = 1.0
 
     # --- Print Header ---
@@ -99,7 +130,11 @@ def solve_iterative(A, b, step_func, accelerator_func=None, omega_update_func=No
 
         # 2. Apply acceleration if provided
         if accelerator_func:
-            omega = omega_update_func(k, rho, S, omega) if omega_update_func else 1.0
+            # Create a clean kwargs dict for the update function to avoid passing duplicate arguments
+            update_kwargs = kwargs.copy()
+            update_kwargs.pop('rho', None)
+            update_kwargs.pop('S', None)
+            omega = omega_update_func(k, rho=rho, S=S, prev_omega=omega, **update_kwargs) if omega_update_func else 1.0
             x_k1 = accelerator_func(x_tilde_k1, x_k, x_k_minus_1, omega)
         else:
             x_k1 = x_tilde_k1
@@ -148,3 +183,13 @@ def solve_gauss_seidel_chebyshev(A, b, rho, max_iters=20, S=0, tol=1e-9):
     """Solves Ax=b using Gauss-Seidel accelerated with the Chebyshev method."""
     print(f"\n--- Running Gauss-Seidel with Chebyshev Acceleration (rho={rho:.4f}, S={S}) ---")
     return solve_iterative(A, b, gauss_seidel_step, chebyshev_accelerator, chebyshev_omega_update, max_iters=max_iters, tol=tol, rho=rho, S=S)
+
+def solve_jacobi_momentum(A, b, max_iters=20, tol=1e-9, **kwargs):
+    """Solves Ax=b using Jacobi accelerated with the Heavy Ball momentum method."""
+    print(f"\n--- Running Jacobi with Momentum Acceleration ---")
+    return solve_iterative(A, b, jacobi_step, momentum_accelerator, momentum_bmix_update, max_iters=max_iters, tol=tol, **kwargs)
+
+def solve_gauss_seidel_momentum(A, b, max_iters=20, tol=1e-9, **kwargs):
+    """Solves Ax=b using Gauss-Seidel accelerated with the Heavy Ball momentum method."""
+    print(f"\n--- Running Gauss-Seidel with Momentum Acceleration ---")
+    return solve_iterative(A, b, gauss_seidel_step, momentum_accelerator, momentum_bmix_update, max_iters=max_iters, tol=tol, **kwargs)

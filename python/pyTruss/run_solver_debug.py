@@ -134,82 +134,54 @@ def _parse_solver_suite(spec: str) -> List[Tuple[str, Optional[str], Optional[st
     return entries
 
 
-def _run_solver_once(args: argparse.Namespace, solver_name: str, label: str,
+def _run_solver_once(solver: ts.TrussSolver, args: argparse.Namespace, solver_name: str, label: str,
                      base_positions: np.ndarray, displacement: np.ndarray,
                      fixed_points: List[int]) -> Dict[str, object]:
-    truss = _build_truss(args)
-    solver_callback = ts.get_solver(solver_name)
-    cfg = _solver_config(args, label)
-
-    solver = ts.TrussSolver(
-        truss,
-        dt=args.dt,
-        gravity=np.zeros(3, dtype=np.float64),
-        solver=solver_callback,
-        solver_config=cfg,
-        fixed_points=fixed_points,
-        verbose=0,
-    )
-
-    base = base_positions.copy()
-    initial = base + displacement
-    initial_copy = initial.copy()
-
-    solver.x[:] = base
-    solver.v[:] = 0.0
-    solver.ps_pred[:] = initial
-    solver.ps_cor[:] = initial
-    if solver.fixed.size > 0:
-        solver.ps_pred[solver.fixed] = base[solver.fixed]
-        solver.ps_cor[solver.fixed] = base[solver.fixed]
-
-    solver.solver_state['iter_logs'] = {}
-    solver.solver_state['log_base'] = solver.ps_pred.copy()
-
-    if getattr(args, 'estimate_rho', False):
-        method = _spectral_radius_method(solver_name, args.sub_method)
-        if method is not None:
-            try:
-                rho = ts.estimate_iterative_spectral_radius(solver, method=method)
-                print(f"[spectral-radius] {solver_name} ({method}) = {rho:.6f}")
-            except Exception as err:
-                print(f"[spectral-radius] {solver_name} unavailable: {err}")
-        else:
-            print(f"[spectral-radius] {solver_name} not supported for estimation")
-
-    solver.solver_callback(solver, cfg)
-
-    logs = solver.solver_state.get('iter_logs', {}).get(label)
-    if logs and logs.get('positions'):
-        positions = np.stack(logs['positions'], axis=0)
-        max_entries = logs.get('max_step', [])
-        if max_entries:
-            max_step = np.array(max_entries, dtype=np.float64)
-        else:
-            max_step = np.zeros(positions.shape[0], dtype=np.float64)
-        if max_step.size < positions.shape[0]:
-            pad = positions.shape[0] - max_step.size
-            max_step = np.pad(max_step, (0, pad))
-        deltas = np.linalg.norm(positions[1:] - positions[:-1], axis=2)
-        residual = deltas.max(axis=1) if deltas.size else np.array([], dtype=np.float64)
-    else:
-        final_pos = solver.ps_cor.copy()
-        positions = np.stack([initial_copy, final_pos], axis=0)
-        diff = final_pos - initial_copy
-        max_delta = float(np.max(np.abs(diff))) if diff.size else 0.0
-        max_step = np.array([0.0, max_delta], dtype=np.float64)
-        residual = np.array([max_delta], dtype=np.float64) if diff.size else np.array([], dtype=np.float64)
-
-    return {
-        'label': label,
+    request = {
         'solver': solver_name,
-        'positions': positions,
-        'max_step': max_step,
-        'residual': residual,
-        'base': base,
-        'initial': initial_copy,
-        'final': positions[-1],
+        'config': _solver_config(args, label),
+        'label': label,
+        'estimate_rho': getattr(args, 'estimate_rho', False),
     }
+    results = ts.run_solver_suite(
+        lambda: solver.truss,
+        dt=args.dt,
+        displacement=displacement,
+        solver_requests=[request],
+        base_positions=base_positions,
+        fixed_points=fixed_points,
+        estimate_rho=getattr(args, 'estimate_rho', False),
+        existing_solver=solver,
+    )
+    return results[label]
+
+
+def _maybe_export_linear_matrix(args: argparse.Namespace, solver: ts.TrussSolver,
+                                base_positions: np.ndarray) -> None:
+    if not (args.print_linear_matrix or args.save_linear_matrix_npy or args.save_linear_matrix_txt):
+        return
+
+    zero_vel = np.zeros_like(base_positions)
+    solver.reset_state(positions=base_positions, velocities=zero_vel)
+    solver.ps_pred[:] = base_positions
+    solver.ps_cor[:] = base_positions
+
+    matrix = solver._get_linear_matrix().copy()
+    shape_info = f"Linearized system matrix shape: {matrix.shape}"
+
+    if args.print_linear_matrix:
+        print(shape_info)
+        print(matrix)
+    else:
+        print(shape_info)
+
+    if args.save_linear_matrix_npy:
+        np.save(args.save_linear_matrix_npy, matrix)
+        print(f"Linear matrix saved to {args.save_linear_matrix_npy} (NumPy binary)")
+
+    if args.save_linear_matrix_txt:
+        np.savetxt(args.save_linear_matrix_txt, matrix)
+        print(f"Linear matrix saved to {args.save_linear_matrix_txt} (text)")
 
 
 def _plot_results(base: np.ndarray, displacement: np.ndarray, vertices: List[int], zoom: float,  truss: Truss, results: Dict[str, Dict[str, object]], args: argparse.Namespace) -> None:
@@ -333,17 +305,19 @@ if __name__ == "__main__":
     parser.add_argument("--estimate-rho", action="store_true",        help="Estimate and print spectral radius for supported solvers.")
     parser.add_argument("--solver-suite",  type=str,   default="",    help="Comma-separated solvers to compare; entries may use 'solver[sub_method]:label'. Overrides --solver/--ref-solver.")
     parser.add_argument("--csv-path",      type=str,   default="",    help="Optional output CSV path for convergence traces.")
+    parser.add_argument("--print-linear-matrix", action="store_true", help="Print the assembled linearized solver matrix (Jacobi/GS diff).")
+    parser.add_argument("--save-linear-matrix-npy", type=str, default="", help="Path to save the linearized solver matrix via np.save.")
+    parser.add_argument("--save-linear-matrix-txt", type=str, default="", help="Path to save the linearized solver matrix via np.savetxt.")
 
     args = parser.parse_args()
 
     ts.set_verbosity(args.verb)
 
-    base_truss = _build_truss(args)
-    base_positions = base_truss.points.copy()
-    fixed_points = sorted(base_truss.fixed)
+    plot_truss = _build_truss(args)
 
-    displacement = _make_displacement(base_positions, fixed_points, args)
-    vertices = _parse_vertices(args.plot_vertices, base_positions.shape[0])
+    solver_truss = _build_truss(args)
+    base_positions = solver_truss.points.copy()
+    fixed_points = sorted(solver_truss.fixed)
 
     suite_entries = _parse_solver_suite(args.solver_suite)
     if not suite_entries:
@@ -351,6 +325,22 @@ if __name__ == "__main__":
         if args.ref_solver.lower() != "none":
             suite_entries.append((args.ref_solver, None, "reference"))
         suite_entries.append((args.solver, None, "solver"))
+
+    matrix_solver = suite_entries[0][0] if suite_entries else args.solver
+    shared_solver = ts.TrussSolver(
+        solver_truss,
+        dt=args.dt,
+        gravity=np.zeros(3, dtype=np.float64),
+        solver=ts.get_solver(matrix_solver),
+        solver_config=_solver_config(args, matrix_solver),
+        fixed_points=fixed_points,
+        verbose=args.verb,
+    )
+
+    _maybe_export_linear_matrix(args, shared_solver, base_positions)
+
+    displacement = _make_displacement(base_positions, fixed_points, args)
+    vertices = _parse_vertices(args.plot_vertices, base_positions.shape[0])
 
     solver_requests: List[Dict[str, object]] = []
     used_labels: Dict[str, int] = {}
@@ -373,7 +363,7 @@ if __name__ == "__main__":
         })
 
     def truss_factory() -> Truss:
-        return _build_truss(args)
+        return shared_solver.truss
 
     results = ts.run_solver_suite(
         truss_factory,
@@ -383,11 +373,12 @@ if __name__ == "__main__":
         base_positions=base_positions,
         fixed_points=fixed_points,
         estimate_rho=args.estimate_rho,
+        existing_solver=shared_solver,
     )
 
     if args.csv_path:
         ts.write_convergence_csv(results, args.csv_path)
 
     _print_summary(results)
-    _plot_results(base_positions, displacement, vertices, args.zoom, base_truss, results, args)
+    _plot_results(base_positions, displacement, vertices, args.zoom, plot_truss, results, args)
 

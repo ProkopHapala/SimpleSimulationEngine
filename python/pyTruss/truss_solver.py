@@ -1115,10 +1115,14 @@ def run_solver_suite(
     fixed_points: Optional[Sequence[int]] = None,
     gravity: Optional[np.ndarray] = None,
     estimate_rho: bool = False,
+    existing_solver: Optional['TrussSolver'] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Run identical initial state across multiple solvers and collect traces."""
 
-    template_truss = truss_factory()
+    if existing_solver is not None:
+        template_truss = existing_solver.truss
+    else:
+        template_truss = truss_factory()
     template_points = template_truss.points.astype(np.float64, copy=True)
     base = template_points if base_positions is None else np.asarray(base_positions, dtype=np.float64)
     if base.shape != template_points.shape:
@@ -1176,15 +1180,18 @@ def run_solver_suite(
     if not prepared:
         return {}
 
-    shared_solver = TrussSolver(
-        truss_factory(),
-        dt=dt,
-        gravity=gravity_vec,
-        solver=get_solver(prepared[0]['solver']),
-        solver_config=dict(prepared[0]['config']),
-        fixed_points=fixed_seq,
-        verbose=int(prepared[0]['config'].get('verbose', 0)),
-    )
+    if existing_solver is not None:
+        shared_solver = existing_solver
+    else:
+        shared_solver = TrussSolver(
+            truss_factory(),
+            dt=dt,
+            gravity=gravity_vec,
+            solver=get_solver(prepared[0]['solver']),
+            solver_config=dict(prepared[0]['config']),
+            fixed_points=fixed_seq,
+            verbose=int(prepared[0]['config'].get('verbose', 0)),
+        )
 
     results: Dict[str, Dict[str, Any]] = {}
     for entry in prepared:
