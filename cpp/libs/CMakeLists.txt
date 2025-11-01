@@ -10,4 +10,4 @@ add_subdirectory (Shock)
 add_subdirectory (KosmoSuite)
 
 add_subdirectory (CombatModels)
-
+add_subdirectory (OrbitalWar)

@@ -1,4 +1,4 @@
-﻿
+
 #ifndef  SpaceWorld_h
 #define  SpaceWorld_h
 
@@ -7,6 +7,7 @@
 #include "appliedPhysics.h"
 #include "spaceCombat.h"
 #include "SpaceBodies.h"
+#include "raytrace.h"
 
 
 namespace Time{
@@ -68,6 +69,7 @@ struct SpaceCombatant{
 
 
 class SpaceWorld : public ODEderivObject { public:
+    virtual ~SpaceWorld() = default;
     std::vector<SpaceBody> planets;
     std::vector<SpaceBody> ships;
     //std::vector<SpaceBody> projectiles;

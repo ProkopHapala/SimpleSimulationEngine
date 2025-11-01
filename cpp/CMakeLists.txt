@@ -11,6 +11,27 @@ option(WITH_NET    "build with GUI and 3D graphics (SDL+OpenGL)"                
 option(WITH_MUSIC  "build with GUI and 3D graphics (SDL+OpenGL)"                                    OFF)
 message("OPTIONS: -DRELEASE=${RELEASE} -DWITH_SDL=${WITH_SDL} -DWITH_OMP=${WITH_OMP} -DWITH_OPENCL=${WITH_OPENCL} -DWITH_LUA=${WITH_LUA} -DWITH_NET=${WITH_NET} -DWITH_ASAN=${WITH_ASAN}" )
 
+# Export compile_commands.json for tooling such as clangd and create symlinks
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    set(_COMPILE_COMMANDS_SRC "${CMAKE_BINARY_DIR}/compile_commands.json")
+    set(_COMPILE_COMMANDS_DST "${CMAKE_SOURCE_DIR}/compile_commands.json")
+    if(EXISTS ${_COMPILE_COMMANDS_DST} OR IS_SYMLINK ${_COMPILE_COMMANDS_DST})
+        file(REMOVE ${_COMPILE_COMMANDS_DST})
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${_COMPILE_COMMANDS_SRC} ${_COMPILE_COMMANDS_DST})
+    message(STATUS "clangd compile_commands.json -> ${_COMPILE_COMMANDS_DST}")
+    get_filename_component(_COMPILE_COMMANDS_PARENT ${CMAKE_SOURCE_DIR} DIRECTORY)
+    if(_COMPILE_COMMANDS_PARENT)
+        set(_COMPILE_COMMANDS_PARENT_DST "${_COMPILE_COMMANDS_PARENT}/compile_commands.json")
+        if(EXISTS ${_COMPILE_COMMANDS_PARENT_DST} OR IS_SYMLINK ${_COMPILE_COMMANDS_PARENT_DST})
+            file(REMOVE ${_COMPILE_COMMANDS_PARENT_DST})
+        endif()
+        execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${_COMPILE_COMMANDS_SRC} ${_COMPILE_COMMANDS_PARENT_DST})
+        message(STATUS "clangd compile_commands.json -> ${_COMPILE_COMMANDS_PARENT_DST}")
+    endif()
+endif()
+
 # ==============================
 # ==== FLAGS
 # ==============================
