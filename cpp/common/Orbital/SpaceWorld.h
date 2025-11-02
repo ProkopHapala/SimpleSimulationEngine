@@ -1,13 +1,14 @@
-
 #ifndef  SpaceWorld_h
 #define  SpaceWorld_h
 
 #include <vector>
+#include <cstdio>
 
 #include "appliedPhysics.h"
 #include "spaceCombat.h"
 #include "SpaceBodies.h"
 #include "raytrace.h"
+#include "globals.h"
 
 
 namespace Time{
@@ -207,16 +208,34 @@ class SpaceWorld : public ODEderivObject { public:
 
     void allocateTrjs(int n){
         trj_n = n;
+        const int nAlloc = n + 3;
+        if(verbosity>1){
+            printf("SpaceWorld::allocateTrjs n=%d planets=%zu ships=%zu\n", trj_n, planets.size(), ships.size());
+        }
         for( SpaceBody& b : planets ){
-            //if(b.trjPos) delete [] b.trjPos; b.trjPos = new Vec3d[n];
-            _realloc(b.trjPos,n+3);
+            Vec3d* oldPos = b.trjPos;
+            if(verbosity>2){
+                printf("  planet name=%s body=%p name_ptr=%p trjPos_old=%p\n", b.name.c_str(), (void*)&b, (void*)b.name.c_str(), (void*)oldPos);
+            }
+            _realloc(b.trjPos,nAlloc);
+            if(verbosity>2){
+                printf("    planet new trjPos=%p\n", (void*)b.trjPos);
+            }
         }
         for( SpaceBody& b : ships ){
-            //if(b.trjPos   ) delete [] b.trjPos;    b.trjPos    = new Vec3d[n];
-            //if(b.trjThrust) delete [] b.trjThrust; b.trjThrust = new Vec3d[n];
-            _realloc(b.trjPos,n+3);
-            _realloc(b.trjThrust,n+3);
-            for(int i=0; i<n*3; i++) ((double*)(b.trjThrust))[i] = 0;
+            Vec3d* oldPos = b.trjPos;
+            Vec3d* oldThrust = b.trjThrust;
+            if(verbosity>2){
+                printf("  ship name=%s body=%p name_ptr=%p trjPos_old=%p trjThrust_old=%p\n", b.name.c_str(), (void*)&b, (void*)b.name.c_str(), (void*)oldPos, (void*)oldThrust);
+            }
+            _realloc(b.trjPos,nAlloc);
+            _realloc(b.trjThrust,nAlloc);
+            if(verbosity>2){
+                printf("    ship new trjPos=%p trjThrust=%p\n", (void*)b.trjPos, (void*)b.trjThrust);
+            }
+            for(int i=0; i<nAlloc; i++){
+                b.trjThrust[i].set(0.0,0.0,0.0);
+            }
         }
     }
 
