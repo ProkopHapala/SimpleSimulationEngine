@@ -17,6 +17,13 @@ var mesh;
 
 var str_PixelMap = "vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 );";
 
+var primitivesSrc = "";
+var rayTracerTemplate = "";
+var shaderFilesReady = Promise.all([
+    fetch("Primitives.glslf").then(function(response){ return response.text(); }).then(function(text){ primitivesSrc = text; }),
+    fetch("RayTracer.glslf").then(function(response){ return response.text(); }).then(function(text){ rayTracerTemplate = text; })
+]);
+
 // ---- Functions
 
 var camQuat = new  THREE.Quaternion();    
@@ -63,13 +70,9 @@ function updateShader(element){
 	//console.log(element.value);
 
 	var shader_code="";
-	// see:
-	// http://stackoverflow.com/questions/6348207/making-a-paragraph-in-html-contain-a-text-from-a-file
-	// http://stackoverflow.com/questions/36659202/read-data-in-html-object-tag
-	shader_code += document.getElementById("txtPrimitives").contentDocument.body.childNodes[0].textContent;
+	shader_code += primitivesSrc;
 	shader_code += element.value;
-	//shader_code += document.getElementById("txtRayTracer").contentDocument.body.childNodes[0].textContent;
-	shader_code += document.getElementById("txtRayTracer").contentDocument.body.childNodes[0].textContent.replace("OUTPUT_PIXEL",str_PixelMap);
+	shader_code += rayTracerTemplate.replace("OUTPUT_PIXEL",str_PixelMap);
 			
     var material = new THREE.ShaderMaterial({
         uniforms: uniforms,
@@ -109,7 +112,9 @@ function init_GLSLScreen(screenBoxId,shaderBoxId){
 	};
 	uniforms.resolution.value.x = renderer.domElement.width;
 	uniforms.resolution.value.y = renderer.domElement.height;
-    updateShader( document.getElementById(shaderBoxId) );
+	shaderFilesReady.then(function(){
+	    updateShader( document.getElementById(shaderBoxId) );
+	});
 			
     camera.position.x = 0.0;
     camera.position.y = 0.0;

@@ -8,18 +8,50 @@
     </head>
     
     <script>
-        shader_name = ""
-        function getShaderCode(){
-            var shader_code = "";
-            shader_name =  document.getElementById( "slShader" ).value;
-            s = "src"+shader_name;
-            console.log(s);
-	        shader_code += document.getElementById( s ).contentDocument.body.childNodes[0].textContent;
-	        return shader_code;
+        var shader_name = "";
+        var shaderSources = {};
+
+        function loadShader(name, url){
+            return fetch(url)
+                .then(function(response){ return response.text(); })
+                .then(function(text){ shaderSources[name] = text; });
         }
-        function updateSurface(){ updateShader(getShaderCode()); }
+
+        var shadersReady = Promise.all([
+            loadShader("Vorticity", "Vorticity.glslf"),
+            loadShader("Harmonics", "Harmonics.glslf")
+        ]);
+
+        function getShaderCode(){
+            shader_name = document.getElementById("slShader").value;
+            console.log("Shader:", shader_name);
+            return shaderSources[shader_name] || "";
+        }
+
+        function updateSurface(){
+            if (shaderSources[document.getElementById("slShader").value]){
+                updateShader(getShaderCode());
+                updateShaderSourceView();
+            }else{
+                shadersReady.then(function(){
+                    updateShader(getShaderCode());
+                    updateShaderSourceView();
+                });
+            }
+        }
+
+        function updateShaderSourceView(){
+            var srcElem = document.getElementById("shaderSource");
+            if (srcElem){
+                srcElem.textContent = getShaderCode();
+            }
+        }
+
         function initThis(){ 
-            init_GLSLScreen("GLScreen",getShaderCode()); 
+            shadersReady.then(function(){
+                init_GLSLScreen("GLScreen", getShaderCode()); 
+                updateShaderSourceView();
+            });
         } 
     </script>
     <body onLoad="initThis()">
@@ -30,8 +62,7 @@
                 <option value="Harmonics" >Harmonics</option>
             </select>
             <BR>
-            <object data="Vorticity.glslf" id="srcVorticity"></object> Vorticity</BR>  
-            <object data="Harmonics.glslf" id="srcHarmonics"></object> Harmonics</BR>  
+			<pre id="shaderSource" style="white-space: pre-wrap; border: 1px solid #444; padding: 4px;"></pre>
         </div>
     </body>
 </html>

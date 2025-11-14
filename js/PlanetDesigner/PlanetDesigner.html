@@ -8,17 +8,25 @@
     </head>
     
     <script>
+        var planetTemplateSrc = "";
+        var planetTemplateReady = fetch("Planet.glslf")
+            .then(function(response){ return response.text(); })
+            .then(function(text){ planetTemplateSrc = text; });
+
         function getShaderCode(element){
             var shader_code = "";
-	        //shader_code += element.value;
-	        shader_code += document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent.replace( "TURBULENCE_FUNCTION", element.value );
-	        //console.log(shader_code);
+	        shader_code += planetTemplateSrc.replace("TURBULENCE_FUNCTION", element.value);
 	        return shader_code;
         }
-        function updateSurface(element){ updateShader(getShaderCode(element)); }
+        function updateSurface(element){
+            planetTemplateReady.then(function(){
+                updateShader(getShaderCode(element));
+            });
+        }
         function initThis(){ 
-            //console.log( document.getElementById("txtSurface") );
-            init_GLSLScreen("GLScreen",getShaderCode(document.getElementById("txtSurface"))); 
+            planetTemplateReady.then(function(){
+                init_GLSLScreen("GLScreen", getShaderCode(document.getElementById("txtSurface"))); 
+            });
         } 
     </script>
     <body onLoad="initThis()">
@@ -37,8 +45,10 @@ for (int i  = 0; i < 8; ++i) {
 }
              </textarea></BR> 
              Shader Template </BR> 
+             <!-- GLSL template now loaded via fetch() in the script above.
              <object data="Planet.glslf" id="srcPlanet"></object> </BR> 
-             <!--object data="WrapFun2.glslf" id="srcPlanet"></object--> </BR> 
+             <object data="WrapFun2.glslf" id="srcPlanet"></object> </BR> 
+             -->
              
         </div>
     </body>

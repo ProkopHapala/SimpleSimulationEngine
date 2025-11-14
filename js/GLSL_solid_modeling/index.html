@@ -2,7 +2,7 @@
 <html>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
     <!--script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script-->
-    <script src="GLSLscreen.js"></script>
+    <script src="GLSLscreen.js?v=2"></script>
     <head>
         <title>05.10 - Custom fragment shader</title>
         <style> body { margin: 0; overflow: hidden; } </style>
@@ -23,8 +23,10 @@ vec4 scene( Ray ray ){
     return hit;
 } 
             </textarea>
+            <!-- GLSL sources now loaded via fetch() in GLSLscreen.js
             <object data="RayTracer.glslf" id="txtRayTracer"></object>
             <object data="Primitives.glslf" id="txtPrimitives"></object>
+            -->
         </div>
         <div style="margin-left: 400px; width: 640px;height: 480px;" id="GLScreen"></div>
     </body>

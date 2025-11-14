@@ -8,19 +8,28 @@
     </head>
     
     <script>
+        var wrapTemplateSrc = "";
+        var wrapTemplateReady = fetch("WrapFun3.glslf")
+            .then(function(response){ return response.text(); })
+            .then(function(text){ wrapTemplateSrc = text; });
+
         function getShaderCode(){
-            var shader_code = "";
-	        //shader_code += document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent.replace( "TURBULENCE_FUNCTION", element.value );
-	        shader_code  = document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent;
-	        shader_code  = shader_code.replace( "__NWRAPS__",    document.getElementById("inp_NWRAPS").value );
-	        shader_code  = shader_code.replace( "__VIEW_FUNC__", document.getElementById("slRender").value );
+            var shader_code = wrapTemplateSrc;
+	        shader_code  = shader_code.replace("__NWRAPS__",    document.getElementById("inp_NWRAPS").value);
+	        shader_code  = shader_code.replace("__VIEW_FUNC__", document.getElementById("slRender").value);
 	        return shader_code;
         }
-        function updateSurface(){ updateShader(getShaderCode()); }
+        function updateSurface(){
+            wrapTemplateReady.then(function(){
+                updateShader(getShaderCode());
+            });
+        }
         function initThis(){ 
             initUniforms();
-            init_GLSLScreen("GLScreen",getShaderCode(document.getElementById("txtSurface"))); 
-            updateUniforms();
+            wrapTemplateReady.then(function(){
+                init_GLSLScreen("GLScreen", getShaderCode()); 
+                updateUniforms();
+            });
         } 
         function initUniforms(){
             uniforms['color_DEBUG'] = { value : new THREE.Vector3() };
@@ -83,9 +92,9 @@
              <textarea id="txtSurface" cols="40" rows="5" onChange="updateSurface()">
              </textarea></BR> 
              Shader Template </BR> 
-             <!--object data="Planet.glslf" id="srcPlanet"></object--> </BR> 
+             <!-- GLSL template now loaded via fetch() in the script above.
              <object data="WrapFun3.glslf" id="srcPlanet"></object> </BR> 
-             
+             -->
         </div>
     </body>
 </html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
-    <script src="GLSLscreen.js"></script>
+    <script src="GLSLscreen.js?v=2"></script>
     <head>
         <title>05.10 - Custom fragment shader</title>
         <style> body { margin: 0; overflow: scroll;; } </style>
@@ -25,8 +25,10 @@
         <div style="width: 640px;height: 480px;" id="GLScreen"></div>
         <div style="width: 1200px;">
              Scene Source    </BR> <textarea id="txtScene" cols="40" rows="5" onChange="updateShader(this)"></textarea></BR> 
+             <!-- GLSL sources now loaded via fetch() in GLSLscreen.js
              RayTracer.glslf </BR> <object data="RayTracer.glslf"  id="txtRayTracer"></object> </BR> 
              Primitives.glslf</BR> <object data="Primitives.glslf" id="txtPrimitives"></object> </BR> 
+             -->
         </div>
         <script>selectPrimitive(document.getElementById("slPrimitives"));</script>
     </body>
