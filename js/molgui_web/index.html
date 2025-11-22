@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MolGUI Web</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Three.js (r128 to match reference) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls (usually separate in older versions, but often included in min or via CDN examples) -->
+    <!-- For r128, OrbitControls is not in the main bundle. We need to fetch it from examples. -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+
+
+    <div id="help-overlay">
+        <h3>Controls</h3>
+        <p><strong>Left Click:</strong> Select Atom</p>
+        <p><strong>Drag:</strong> Box Selection</p>
+        <p><strong>Right Drag:</strong> Rotate View</p>
+        <p><strong>Wheel:</strong> Zoom</p>
+        <hr>
+        <p><strong>Modifiers:</strong></p>
+        <ul>
+            <li><kbd>Shift</kbd> + Click/Drag: <strong>Add</strong> to selection</li>
+            <li><kbd>Ctrl</kbd> + Click/Drag: <strong>Subtract</strong> from selection</li>
+            <li>Click Background: <strong>Clear</strong> selection</li>
+        </ul>
+        <hr>
+        <p><strong>Shortcuts:</strong></p>
+        <ul>
+            <li><kbd>G</kbd>: Toggle Gizmo</li>
+            <li><kbd>T</kbd>: Translate Mode</li>
+            <li><kbd>R</kbd>: Rotate Mode</li>
+            <li><kbd>S</kbd>: Scale Mode</li>
+            <li><kbd>Esc</kbd>: Clear Selection</li>
+        </ul>
+    </div>
+
+
+
+    <script src="js/Logger.js?v=5"></script>
+    <script src="js/MMParams.js?v=5"></script>
+    <script src="js/MoleculeSystem.js?v=5"></script>
+    <!-- <script src="js/Shaders.js?v=5"></script> -->
+    <script src="js/Draw3D.js?v=5"></script>
+    <script src="js/LabelRenderer.js?v=5"></script>
+    <script src="js/MoleculeRenderer.js?v=5"></script>
+    <script src="js/IO.js?v=5"></script>
+    <script src="js/ShortcutManager.js?v=5"></script>
+    <script src="js/GUI.js?v=5"></script>
+    <script src="js/Editor.js?v=5"></script>
+
+    <script src="js/main.js?v=5"></script>
+</body>
+
+</html>

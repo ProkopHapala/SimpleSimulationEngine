@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacecraft Editor WebGL</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Three.js (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="side-panel">
+        <div class="panel-section">
+            <h3>View Controls</h3>
+            <div class="control-row">
+                <label>Verbosity:</label>
+                <select id="verbosity-select">
+                    <option value="0">0 (None)</option>
+                    <option value="1" selected>1 (Basic)</option>
+                    <option value="2">2 (Detailed)</option>
+                    <option value="3">3 (Debug)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h3>Scripting</h3>
+            <div class="control-row">
+                <button id="load-script-btn">Load Script...</button>
+                <input type="file" id="script-file-input" style="display: none;" accept=".js,.txt">
+            </div>
+            <textarea id="script-input" spellcheck="false">
+// Test Script
+api.Material("Steel", 7800, 100, 100);
+var n1 = api.Node(vec(0,0,0));
+var n2 = api.Node(vec(2,0,0));
+var n3 = api.Node(vec(0,2,0));
+var n4 = api.Node(vec(0,0,2));
+
+api.Girder(n1, n2, "Steel");
+api.Girder(n1, n3, "Steel");
+api.Girder(n1, n4, "Steel");
+api.Girder(n2, n3, "Steel");
+api.Girder(n2, n4, "Steel");
+api.Girder(n3, n4, "Steel");
+            </textarea>
+            <button id="run-script-btn">Run Script</button>
+        </div>
+
+        <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>Log</h3>
+            <div id="log-content"></div>
+        </div>
+    </div>
+
+    <script src="js/shaders.js"></script>
+    <script src="js/SpaceCraftEngine.js"></script>
+    <script src="js/SpaceCraftRenderer.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
