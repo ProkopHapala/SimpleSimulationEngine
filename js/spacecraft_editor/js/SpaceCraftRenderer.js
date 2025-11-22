@@ -1,211 +1,128 @@
 
-class SpaceCraftRenderer {
+class SpaceCraftRenderer extends MeshRenderer {
     constructor(engine) {
+        super(null, null, 0);
         this.engine = engine;
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
-        this.controls = null;
-
-        // Meshes
-        this.nodeMesh = null;
-        this.girderMesh = null;
+        this.labelMode = 'none';
     }
 
-    init(container) {
-        // 1. Setup Three.js
+    init(container, shaders) {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x222222);
+        this.scene.background = new THREE.Color(0x111111);
 
-        this.camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-        this.camera.position.set(5, 5, 10);
+        // Camera
+        const aspect = container.clientWidth / container.clientHeight;
+        this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+        this.camera.position.set(0, 0, 20);
 
+        // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
 
-        // 2. Controls
+        // Controls
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = false; // Disabled as per user request for snappier control
 
-        // 3. Grid & Axes
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        this.scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 1, 1);
+        this.scene.add(dirLight);
+
+        // MeshRenderer Init
+        this.shaders = shaders;
+        this.capacity = 10000; // Max verts
+
+        MeshRenderer.prototype.init.call(this);
+
+        // 3. Grid & Axes (from original SpaceCraftRenderer)
         this.scene.add(new THREE.GridHelper(20, 20));
         this.scene.add(new THREE.AxesHelper(2));
 
-        // 4. Init GPU Data
-        this.initDataTexture();
-
-        // 5. Init Meshes (Empty initially)
-        this.initNodeMesh();
-        this.initGirderMesh();
-
         // Handle Resize
-        window.addEventListener('resize', () => this.resize());
-    }
-
-    resize() {
-        const container = this.renderer.domElement.parentElement;
-        if (!container) return;
-
-        this.camera.aspect = container.clientWidth / container.clientHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-    }
-
-    initDataTexture() {
-        // Create DataTexture from Engine's MeshBuilder Verts
-        // Format: RGBA (4 floats per pixel)
-        // Type: FloatType
-        // Max size: 4096 verts for now
-        this.maxVerts = 4096;
-        this.posData = new Float32Array(this.maxVerts * 4);
-
-        this.dataTexture = new THREE.DataTexture(
-            this.posData,
-            this.maxVerts,
-            1,
-            THREE.RGBAFormat,
-            THREE.FloatType
-        );
-        this.dataTexture.minFilter = THREE.NearestFilter;
-        this.dataTexture.magFilter = THREE.NearestFilter;
-        this.dataTexture.needsUpdate = true;
-    }
-
-    initNodeMesh() {
-        // Geometry: Simple Plane (Billboard)
-        const geometry = new THREE.PlaneBufferGeometry(1, 1);
-
-        // Instanced Attributes
-        const maxInstances = this.maxVerts;
-        const instancedGeometry = new THREE.InstancedBufferGeometry();
-        instancedGeometry.index = geometry.index;
-        instancedGeometry.attributes = geometry.attributes;
-
-        // aNodeID attribute (0, 1, 2...)
-        const ids = new Float32Array(maxInstances);
-        for (let i = 0; i < maxInstances; i++) ids[i] = i;
-        instancedGeometry.setAttribute('aNodeID', new THREE.InstancedBufferAttribute(ids, 1));
-
-        // Material
-        const material = new THREE.RawShaderMaterial({
-            vertexShader: Shaders.nodeVertex,
-            fragmentShader: Shaders.nodeFragment,
-            uniforms: {
-                uPosTex: { value: this.dataTexture },
-                uTexSize: { value: new THREE.Vector2(this.maxVerts, 1) },
-                uScale: { value: 0.2 },
-                // Standard uniforms
-                modelViewMatrix: { value: new THREE.Matrix4() },
-                projectionMatrix: { value: new THREE.Matrix4() }
-            },
-            side: THREE.DoubleSide,
-            transparent: true
-        });
-
-        // Hook for standard uniforms update
-        material.onBeforeCompile = (shader) => {
-            // This is RawShaderMaterial, so we must manage uniforms manually or use ShaderMaterial
-            // But we are using RawShaderMaterial, so we need to pass standard uniforms manually in render loop?
-            // Actually, Three.js does NOT auto-update uniforms for RawShaderMaterial unless we use `uniformsLib` or similar.
-            // For simplicity, let's assume we update them in `render()` or switch to `ShaderMaterial`.
-            // Let's stick to Raw but ensure we pass matrices.
-        };
-
-        this.nodeMesh = new THREE.Mesh(instancedGeometry, material);
-        this.nodeMesh.frustumCulled = false;
-        this.scene.add(this.nodeMesh);
-    }
-
-    initGirderMesh() {
-        // Geometry: Cylinder (Y-up)
-        const geometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 1.0, 8, 1, true);
-        geometry.translate(0, 0.5, 0); // Pivot at base? No, shader handles it.
-
-        const maxInstances = 4096; // Max edges
-        const instancedGeometry = new THREE.InstancedBufferGeometry();
-        instancedGeometry.index = geometry.index;
-        instancedGeometry.attributes = geometry.attributes;
-
-        // Attributes to be updated
-        this.girderIDs = new Float32Array(maxInstances * 2); // [idA, idB]
-        instancedGeometry.setAttribute('aNodeIDs', new THREE.InstancedBufferAttribute(this.girderIDs, 2));
-
-        const material = new THREE.RawShaderMaterial({
-            vertexShader: Shaders.girderVertex,
-            fragmentShader: Shaders.girderFragment,
-            uniforms: {
-                uPosTex: { value: this.dataTexture },
-                uTexSize: { value: new THREE.Vector2(this.maxVerts, 1) },
-                uThickness: { value: 0.05 },
-                modelViewMatrix: { value: new THREE.Matrix4() },
-                projectionMatrix: { value: new THREE.Matrix4() },
-                viewMatrix: { value: new THREE.Matrix4() }
-            },
-            side: THREE.DoubleSide
-        });
-
-        this.girderMesh = new THREE.Mesh(instancedGeometry, material);
-        this.girderMesh.frustumCulled = false;
-        this.scene.add(this.girderMesh);
+        window.addEventListener('resize', () => this.onWindowResize());
     }
 
     updateGeometry(meshBuilder) {
         if (!meshBuilder) return;
 
-        // 1. Update Texture (Vertices)
-        const verts = meshBuilder.verts; // Flat array [x,y,z, x,y,z...]
-        const numVerts = verts.length / 3;
+        const verts = meshBuilder.verts;
+        const numVerts = verts.length;
 
+        if (numVerts > this.capacity) {
+            console.warn("Mesh exceeds max vertices capacity!");
+            return;
+        }
+
+        // 1. Update Positions
         for (let i = 0; i < numVerts; i++) {
-            this.posData[i * 4] = verts[i * 3];
-            this.posData[i * 4 + 1] = verts[i * 3 + 1];
-            this.posData[i * 4 + 2] = verts[i * 3 + 2];
-            this.posData[i * 4 + 3] = 0; // Type
+            const v = verts[i];
+            this.posData[i * 4] = v.pos.x;
+            this.posData[i * 4 + 1] = v.pos.y;
+            this.posData[i * 4 + 2] = v.pos.z;
+            this.posData[i * 4 + 3] = 1.0;
         }
-        this.dataTexture.needsUpdate = true;
+        this.posTexture.needsUpdate = true;
 
-        // 2. Update Node Count
-        this.nodeMesh.geometry.instanceCount = numVerts;
+        // 2. Update Particles (Nodes)
+        this.updateParticles(numVerts, (i) => {
+            return [0.5, 0.5, 1.0]; // Blue-ish
+        }, (i) => {
+            return 0.2; // Fixed size for nodes
+        });
 
-        // 3. Update Girders (Edges)
-        const edges = meshBuilder.edges; // Flat array [a,b,type,0...]
-        const numEdges = edges.length / 4;
-        const ids = this.girderMesh.geometry.attributes.aNodeIDs.array;
-
-        for (let i = 0; i < numEdges; i++) {
-            ids[i * 2] = edges[i * 4];     // Node A index
-            ids[i * 2 + 1] = edges[i * 4 + 1]; // Node B index
+        // 3. Update Bonds (Girders)
+        const edges = meshBuilder.edges;
+        const pairs = [];
+        for (let i = 0; i < edges.length; i++) {
+            pairs.push([edges[i].x, edges[i].y]);
         }
+        this.updateBonds(pairs);
 
-        this.girderMesh.geometry.attributes.aNodeIDs.needsUpdate = true;
-        this.girderMesh.geometry.instanceCount = numEdges;
+        // 4. Update Labels
+        this.updateLabelsContent();
+    }
+
+    updateLabelsContent() {
+        if (this.labelMode === 'none' || !this.labelMesh) return;
+
+        const numVerts = this.atomMesh.count; // Or track separately
+
+        this.updateLabels((i) => {
+            if (this.labelMode === 'id') {
+                return i.toString();
+            }
+            return "";
+        }, numVerts);
+    }
+
+    setLabelMode(mode) {
+        if (this.labelMode !== mode) {
+            this.labelMode = mode;
+            if (this.labelMesh) {
+                this.labelMesh.visible = (mode !== 'none');
+                if (this.labelMesh.visible) {
+                    this.updateLabelsContent();
+                }
+            }
+        }
     }
 
     update() {
-        this.controls.update();
-
-        // Manually update uniforms for RawShaderMaterial if needed
-        // (Three.js usually handles modelViewMatrix and projectionMatrix for Mesh,
-        // but for RawShaderMaterial we might need to be careful.
-        // However, since we passed them as uniforms, Three.js renderer logic *should* populate them
-        // if we don't override them with static values.
-        // Actually, for RawShaderMaterial, Three.js DOES NOT populate standard uniforms automatically
-        // unless we use `uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.common...])` AND set `lights: true` etc.
-        // OR we manually update them here.)
-
-        if (this.nodeMesh) {
-            this.nodeMesh.material.uniforms.modelViewMatrix.value.copy(this.nodeMesh.modelViewMatrix);
-            this.nodeMesh.material.uniforms.projectionMatrix.value.copy(this.camera.projectionMatrix);
-        }
-        if (this.girderMesh) {
-            this.girderMesh.material.uniforms.modelViewMatrix.value.copy(this.girderMesh.modelViewMatrix);
-            this.girderMesh.material.uniforms.projectionMatrix.value.copy(this.camera.projectionMatrix);
-            this.girderMesh.material.uniforms.viewMatrix.value.copy(this.camera.matrixWorldInverse);
-        }
+        if (this.controls) this.controls.update();
     }
 
     render() {
         this.renderer.render(this.scene, this.camera);
+    }
+
+    onWindowResize() {
+        if (this.camera && this.renderer && this.renderer.domElement.parentElement) {
+            const container = this.renderer.domElement.parentElement;
+            this.camera.aspect = container.clientWidth / container.clientHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(container.clientWidth, container.clientHeight);
+        }
     }
 }

@@ -180,27 +180,45 @@ class GUI {
             labelRow.appendChild(labelSel);
             container.appendChild(labelRow);
 
-            // Label Color
-            const colorRow = document.createElement('div');
-            colorRow.className = 'gui-row';
-            colorRow.style.marginTop = '5px';
+            // Label Color & Size
+            const styleRow = document.createElement('div');
+            styleRow.className = 'gui-row';
+            styleRow.style.marginTop = '5px';
 
             const colorLbl = document.createElement('span');
             colorLbl.textContent = 'Color: ';
-            colorRow.appendChild(colorLbl);
+            styleRow.appendChild(colorLbl);
 
             const colorInput = document.createElement('input');
             colorInput.type = 'color';
             colorInput.value = '#ffffff';
             colorInput.style.flexGrow = '0';
-            colorInput.style.width = '50px';
-            colorInput.oninput = (e) => {
-                if (window.app && window.app.molRenderer && window.app.molRenderer.labelRenderer) {
-                    window.app.molRenderer.labelRenderer.setColor(e.target.value);
+            colorInput.style.width = '40px';
+            styleRow.appendChild(colorInput);
+
+            const sizeLbl = document.createElement('span');
+            sizeLbl.textContent = ' Size: ';
+            sizeLbl.style.marginLeft = '10px';
+            styleRow.appendChild(sizeLbl);
+
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'number';
+            sizeInput.value = '0.5';
+            sizeInput.step = '0.1';
+            sizeInput.min = '0.1';
+            sizeInput.style.width = '50px';
+            styleRow.appendChild(sizeInput);
+
+            const updateLabelStyle = () => {
+                if (window.app && window.app.molRenderer) {
+                    window.app.molRenderer.setLabelStyle(colorInput.value, sizeInput.value);
                 }
             };
-            colorRow.appendChild(colorInput);
-            container.appendChild(colorRow);
+
+            colorInput.oninput = updateLabelStyle;
+            sizeInput.oninput = updateLabelStyle;
+
+            container.appendChild(styleRow);
         });
 
         // --- Section: Gizmo ---

@@ -106,6 +106,65 @@ class GUI {
         document.getElementById('btnViewXZ')?.addEventListener('click', () => setView([0, 20, 0], [0, 0, -1]));
         document.getElementById('btnViewYZ')?.addEventListener('click', () => setView([20, 0, 0], [0, 1, 0]));
 
+        // --- Label Controls ---
+        // Inject into the View section (panel-section)
+        // We need to find the View section. It contains "View" h3.
+        const sections = document.querySelectorAll('.panel-section');
+        let viewSection = null;
+        for (const sec of sections) {
+            if (sec.querySelector('h3')?.textContent === 'View') {
+                viewSection = sec;
+                break;
+            }
+        }
+
+        if (viewSection) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'control-group';
+            labelDiv.style.marginTop = '10px';
+            labelDiv.style.borderTop = '1px solid #444';
+            labelDiv.style.paddingTop = '5px';
+
+            labelDiv.innerHTML = `
+                <label style="display:block; margin-bottom:5px;">Labels:</label>
+                <select id="selLabelMode" style="width:100%; margin-bottom:5px; background:#333; color:#fff; border:1px solid #555;">
+                    <option value="none">None</option>
+                    <option value="id" selected>Node ID</option>
+                </select>
+                <div style="display:flex; gap:5px; align-items: center;">
+                    <span style="font-size:0.9em;">Color:</span>
+                    <input type="color" id="colLabel" value="#ffffff" style="width:30px; height:20px; border:none; padding:0;">
+                    <span style="font-size:0.9em; margin-left:5px;">Size:</span>
+                    <input type="number" id="numLabelSize" value="1.0" step="0.1" style="width:50px; background:#333; color:#fff; border:1px solid #555;">
+                </div>
+            `;
+            viewSection.appendChild(labelDiv);
+
+            // Bind Events
+            const selMode = labelDiv.querySelector('#selLabelMode');
+            const colLabel = labelDiv.querySelector('#colLabel');
+            const numSize = labelDiv.querySelector('#numLabelSize');
+
+            selMode.addEventListener('change', () => {
+                if (this.renderer) this.renderer.setLabelMode(selMode.value);
+            });
+
+            const updateStyle = () => {
+                if (this.renderer) {
+                    this.renderer.setLabelStyle(colLabel.value, parseFloat(numSize.value));
+                }
+            };
+
+            colLabel.addEventListener('input', updateStyle);
+            numSize.addEventListener('input', updateStyle);
+
+            // Set initial state
+            if (this.renderer) {
+                this.renderer.setLabelMode(selMode.value);
+                updateStyle();
+            }
+        }
+
         // --- Tests ---
         const selTest = document.getElementById('selTest');
         const btnRunTest = document.getElementById('btnRunTest');

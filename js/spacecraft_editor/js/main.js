@@ -6,38 +6,73 @@ window.renderer = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Initializing Spacecraft Editor...");
 
-    // 1. Initialize Engine
-    window.engine = new SpaceCraftEngine();
+    // Shader Loading Helper
+    const loadShader = async (url) => {
+        const response = await fetch(url);
+        return await response.text();
+    };
 
-    // 2. Initialize Renderer
-    window.renderer = new SpaceCraftRenderer(window.engine);
-    window.renderer.init(document.getElementById('canvas-container'));
+    // Load all shaders
+    Promise.all([
+        loadShader('../common_resources/shaders/atom.glslv'),
+        loadShader('../common_resources/shaders/atom.glslf'),
+        loadShader('../common_resources/shaders/bond.glslv'),
+        loadShader('../common_resources/shaders/color.glslf'), // bond fragment is just color
+        loadShader('../common_resources/shaders/label.glslv'),
+        loadShader('../common_resources/shaders/label.glslf')
+    ]).then(([atomVert, atomFrag, bondVert, bondFrag, labelVert, labelFrag]) => {
+        console.log("Shaders loaded.");
 
-    // 3. Initialize GUI
-    window.gui = new GUI(window.engine, window.renderer);
+        const shaders = {
+            atom: { vertex: atomVert, fragment: atomFrag },
+            bond: { vertex: bondVert, fragment: bondFrag },
+            label: { vertex: labelVert, fragment: labelFrag },
+            // Map for SpaceCraftRenderer (it expects specific names if we didn't change it fully, 
+            // but we updated SpaceCraftRenderer to use MeshRenderer which uses atom/bond/label keys if we pass them correctly)
+            // Wait, MeshRenderer expects shaders.atom, shaders.bond, shaders.label.
+            // SpaceCraftRenderer init(container, shaders) passes this object.
+            // So we should structure it as MeshRenderer expects.
 
-    // 4. Start Loop
-    // --- UI Elements ---
-    const logElement = document.getElementById('log');
+            // But SpaceCraftRenderer.initMeshes (old) used nodeVertex etc.
+            // We updated SpaceCraftRenderer to call MeshRenderer.init which uses shaders.atom etc.
+            // So this structure is correct for MeshRenderer.
 
-    // Init Logger
-    if (window.logger) {
-        window.logger.setContainer(logElement);
-        window.logger.info("Logger initialized.");
-    }
+            // However, SpaceCraftRenderer.initMeshes also used to look for nodeVertex/Fragment.
+            // But we replaced initMeshes with MeshRenderer.init.
+            // So we are good.
+        };
 
-    // --- Animation Loop ---
-    function animate() {
-        requestAnimationFrame(animate);
+        // 1. Initialize Engine
+        window.engine = new SpaceCraftEngine();
 
-        // Update Engine (Physics/Logic)
-        // window.engine.update(); // TODO: Physics
+        // 2. Initialize Renderer
+        window.renderer = new SpaceCraftRenderer(window.engine);
+        window.renderer.init(document.getElementById('canvas-container'), shaders);
 
-        // Update Renderer
-        window.renderer.update();
-        window.renderer.render();
-    }
-    animate();
+        // 3. Initialize GUI
+        window.gui = new GUI(window.engine, window.renderer);
+
+        // 4. Start Loop
+        // --- UI Elements ---
+        const logElement = document.getElementById('log');
+
+        // Init Logger
+        if (window.logger) {
+            window.logger.setContainer(logElement);
+            window.logger.info("Logger initialized.");
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            window.renderer.update();
+            window.renderer.render();
+        }
+        animate();
+
+    }).catch(err => {
+        console.error("Failed to load shaders:", err);
+    });
 });
 
 // Helper for logging to UI

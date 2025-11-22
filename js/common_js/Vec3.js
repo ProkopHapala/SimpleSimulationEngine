@@ -1,5 +1,5 @@
 
-export class Vec3 {
+class Vec3 {
     constructor(x = 0.0, y = 0.0, z = 0.0) {
         this.x = x;
         this.y = y;
@@ -196,4 +196,11 @@ export class Vec3 {
     toString() {
         return `(${this.x.toFixed(6)}, ${this.y.toFixed(6)}, ${this.z.toFixed(6)})`;
     }
+}
+
+// Export for both module and non-module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Vec3 };
+} else if (typeof window !== 'undefined') {
+    window.Vec3 = Vec3;
 }

@@ -12,18 +12,13 @@ class MolGUIApp {
 
         // Load Shaders first
         try {
-            const vPromise = fetch('shaders/atom.glslv').then(r => r.text());
-            const fPromise = fetch('shaders/atom.glslf').then(r => r.text());
-
-            const bvPromise = fetch('shaders/bond.glslv').then(r => r.text());
-            const svPromise = fetch('shaders/selection.glslv').then(r => r.text());
-
-            // Generic color fragment shader
-            const cfPromise = fetch('shaders/color.glslf').then(r => r.text());
-
-            // Label shaders
-            const lvPromise = fetch('shaders/label.glslv').then(r => r.text());
-            const lfPromise = fetch('shaders/label.glslf').then(r => r.text());
+            const vPromise = fetch('../common_resources/shaders/atom.glslv').then(r => r.text());
+            const fPromise = fetch('../common_resources/shaders/atom.glslf').then(r => r.text());
+            const bvPromise = fetch('../common_resources/shaders/bond.glslv').then(r => r.text());
+            const svPromise = fetch('../common_resources/shaders/selection.glslv').then(r => r.text());
+            const cfPromise = fetch('../common_resources/shaders/color.glslf').then(r => r.text());
+            const lvPromise = fetch('../common_resources/shaders/label.glslv').then(r => r.text());
+            const lfPromise = fetch('../common_resources/shaders/label.glslf').then(r => r.text());
 
             const [vertex, fragment, bVertex, sVertex, colorFrag, lVertex, lFragment] = await Promise.all([
                 vPromise, fPromise, bvPromise, svPromise, cfPromise, lvPromise, lfPromise
@@ -109,7 +104,7 @@ class MolGUIApp {
 
         // 5. MMParams (Load resources)
         this.mmParams = new MMParams();
-        await this.mmParams.loadResources('common_resources/ElementTypes.dat', 'common_resources/AtomTypes.dat');
+        await this.mmParams.loadResources('../common_resources/ElementTypes.dat', '../common_resources/AtomTypes.dat');
 
         // 6. Molecule Renderer (Pass loaded shaders and mmParams)
         this.molRenderer = new MoleculeRenderer(this.scene, this.system, this.shaders, this.mmParams);
