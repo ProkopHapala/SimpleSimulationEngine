@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vec3 Benchmark Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            color: #eee;
+            font-family: monospace;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        select,
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .stat {
+            margin: 5px 0;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "gl-matrix": "https://unpkg.com/gl-matrix@3.4.3/esm/index.js"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="ui">
+        <h2>Vec3 Benchmark</h2>
+        <div class="stat">
+            Method:
+            <select id="methodSelect">
+                <option value="Vec3Obj_Manual">Vec3Obj (Manual)</option>
+                <option value="Vec3Obj_Methods">Vec3Obj (Methods)</option>
+                <option value="Vec3Arr_Manual">Vec3Arr (Manual)</option>
+                <option value="Vec3Arr_Methods">Vec3Arr (Methods)</option>
+                <option value="Vec3Lst_Manual">Vec3Lst (Manual)</option>
+                <option value="Vec3Lst_Methods">Vec3Lst (Methods)</option>
+                <option value="THREE_Manual">THREE (Manual)</option>
+                <option value="THREE_Methods">THREE (Methods)</option>
+                <option value="GLM_Manual">GLM (Manual)</option>
+                <option value="GLM_Methods">GLM (Methods)</option>
+            </select>
+        </div>
+        <div class="stat">
+            Time Step (dt): <input type="number" id="dtInput" value="0.01" step="0.001" min="0.001" max="1"
+                style="width: 80px;">
+        </div>
+        <div class="stat">
+            Steps/Frame: <input type="number" id="stepsInput" value="1" step="1" min="1" max="100" style="width: 80px;">
+        </div>
+        <div class="stat">Bodies: <span id="count">1000</span></div>
+        <div class="stat">FPS: <span id="fps">0</span></div>
+        <div class="stat">Sim Time: <span id="simTime">0</span> ms/step</div>
+        <div class="stat"><button id="resetBtn">Reset Simulation</button></div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import {
+            SimVec3Obj_Manual, SimVec3Obj_Methods,
+            SimVec3Arr_Manual, SimVec3Arr_Methods,
+            SimVec3Lst_Manual, SimVec3Lst_Methods,
+            SimTHREE_Manual, SimTHREE_Methods,
+            SimGLM_Manual, SimGLM_Methods
+        } from './NBody_bench.js';
+
+        const N = 1000;
+        const STEPS_PER_FRAME = 1;
+
+        // ====================================================================
+        // Main Logic
+        // ====================================================================
+
+        const sims = {
+            'Vec3Obj_Manual': new SimVec3Obj_Manual(N),
+            'Vec3Obj_Methods': new SimVec3Obj_Methods(N),
+            'Vec3Arr_Manual': new SimVec3Arr_Manual(N),
+            'Vec3Arr_Methods': new SimVec3Arr_Methods(N),
+            'Vec3Lst_Manual': new SimVec3Lst_Manual(N),
+            'Vec3Lst_Methods': new SimVec3Lst_Methods(N),
+            'THREE_Manual': new SimTHREE_Manual(N),
+            'THREE_Methods': new SimTHREE_Methods(N),
+            'GLM_Manual': new SimGLM_Manual(N),
+            'GLM_Methods': new SimGLM_Methods(N),
+        };
+
+        let currentSim = sims['Vec3Obj_Manual'];
+        currentSim.init();
+
+        // Three.js Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 150;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Particles
+        const geometry = new THREE.BufferGeometry();
+        const posAttr = new THREE.BufferAttribute(new Float32Array(N * 3), 3);
+        geometry.setAttribute('position', posAttr);
+
+        const material = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.5 });
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+        scene.add(new THREE.AxesHelper(10));
+
+        // UI Handlers
+        document.getElementById('methodSelect').addEventListener('change', (e) => {
+            currentSim = sims[e.target.value];
+            currentSim.init(); // Re-init to reset positions
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            currentSim.init();
+        });
+
+        // Loop
+        let lastTime = performance.now();
+        let frames = 0;
+        let lastFpsTime = lastTime;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = parseFloat(document.getElementById('dtInput').value) || 0.01;
+            const stepsPerFrame = parseInt(document.getElementById('stepsInput').value) || 1;
+
+            const startSim = performance.now();
+            currentSim.run(stepsPerFrame, dt);
+            const endSim = performance.now();
+
+            currentSim.sync(posAttr);
+            renderer.render(scene, camera);
+
+            // Stats
+            frames++;
+            const now = performance.now();
+            if (now - lastFpsTime >= 1000) {
+                document.getElementById('fps').innerText = frames;
+                document.getElementById('simTime').innerText = ((endSim - startSim) / stepsPerFrame).toFixed(3);
+                frames = 0;
+                lastFpsTime = now;
+            }
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>

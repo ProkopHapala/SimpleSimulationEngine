@@ -96,3 +96,28 @@ A `DataTexture` (Float32, RGBA) holding node states.
 ## Open Questions / Future Work
 *   **Mesh Generation:** [MeshBuilder2.h](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/geometry/MeshBuilder2.h) has complex logic for "skinning" the truss (plates, hulls). For Phase 1, we will just render the skeleton (Truss). Later, we can implement a Compute Shader or WASM module to generate the hull mesh if needed.
 *   **Physics:** The C++ engine has physics. We might eventually need a WASM port of the C++ physics engine if JS performance isn't enough, but for a "Game Editor", JS physics (Cannon.js or custom simple Verlet) might suffice.
+
+## Session Log: GUI Refinement & Mesh Verification (2025-11-22)
+
+### Accomplishments
+*   **GUI Refactoring:**
+    *   Migrated UI logic from `main.js` to a dedicated `GUI.js` class, mirroring the `molgui_web` architecture.
+    *   Implemented a **resizable side panel** with drag-and-drop functionality, ensuring the WebGL canvas resizes correctly in real-time.
+    *   Compacted the UI layout by reducing padding (2px), margins, and enforcing a **10px global font size** to maximize screen real estate.
+    *   Added **Viewport Controls** (Zoom slider, Plane views: XY, XZ, YZ) and removed redundant controls.
+    *   Improved **Logging System**: Added verbosity control, "Clear" button, and caller info.
+*   **MeshBuilder Integration:**
+    *   Ported `MeshBuilder` logic to JavaScript.
+    *   Implemented `SpaceCraftRenderer` to handle `MeshBuilder` output using `THREE.DataTexture` and `InstancedBufferGeometry`.
+    *   Added a **Test Panel** with `ConstructionBlockTests` to verify procedural generation (e.g., Girders, Cube Nodes).
+
+### Key Insights & Takeaways
+1.  **Compact UI Design:** For complex editors, screen space is premium. Enforcing small fonts (10px) and minimal padding (2px) significantly improves usability by allowing more controls to be visible without scrolling.
+2.  **Centralized GUI Logic:** Encapsulating all UI event handling in a `GUI` class simplifies the main application loop and makes the codebase more maintainable.
+3.  **Manual Resizing:** For split-pane layouts involving WebGL, manually handling the resize event (updating CSS widths and calling `renderer.setSize`) provides better control and smoother performance than relying solely on CSS flexbox.
+4.  **Global Test Exposure:** Exposing test modules globally (e.g., `window.ConstructionBlockTests`) is an effective strategy for simple, non-bundled projects to make tests accessible to the GUI without complex import/export chains.
+5.  **Instanced Rendering:** The use of `THREE.InstancedBufferGeometry` with texture-fetched positions remains the most performant way to render large numbers of repetitive components (nodes, girders) in WebGL.
+
+### Next Steps
+*   **Verify MeshBuilder:** Run the implemented tests ("Girder Simple", "Cube Nodes") to ensure the procedural geometry generation is correct.
+*   **Implement Interaction:** Add raycasting and gizmos to allow selecting and moving nodes in the 3D view.
