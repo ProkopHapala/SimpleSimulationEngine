@@ -26,43 +26,54 @@ body {
     border-left: 1px solid #444;
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 2px;
     box-sizing: border-box;
     z-index: 10;
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+    font-size: 10px;
+}
+
+#side-panel * {
+    font-size: 10px;
 }
 
 .panel-section {
-    margin-bottom: 15px;
+    margin-bottom: 5px;
 }
 
 .control-row {
     display: flex;
-    gap: 10px;
-    margin-bottom: 5px;
+    gap: 2px;
+    margin-bottom: 2px;
     align-items: center;
 }
 
 h3 {
     margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 12px;
+    margin-bottom: 2px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: #aaa;
     border-bottom: 1px solid #555;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
 }
 
-#log-content {
+#log,
+.log-box {
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: auto;
+    /* Horizontal scroll */
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 11px;
-    white-space: pre-wrap;
+    font-size: 10px;
+    white-space: pre;
+    /* No wrap */
     color: #8f8;
     background: #111;
     border: 1px solid #444;
-    padding: 5px;
+    padding: 2px;
     min-height: 100px;
 }
 
@@ -74,10 +85,14 @@ h3 {
     border: 1px solid #555;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 12px;
+    font-size: 10px;
     resize: vertical;
     box-sizing: border-box;
-    padding: 5px;
+    padding: 2px;
+    white-space: pre;
+    /* No wrap */
+    overflow-x: auto;
+    /* Horizontal scroll */
 }
 
 button,
@@ -85,14 +100,27 @@ select {
     background: #444;
     color: #eee;
     border: 1px solid #666;
-    padding: 4px 8px;
+    padding: 2px 4px;
     border-radius: 3px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 10px;
 }
 
 button:hover {
     background: #555;
+}
+
+#gui-resizer {
+    width: 5px;
+    background: #444;
+    cursor: col-resize;
+    z-index: 100;
+    transition: background 0.2s;
+    position: absolute;
+    top: 0;
+    right: 350px;
+    /* Initial width of side-panel */
+    height: 100vh;
 }
 
 #run-script-btn {

@@ -15,20 +15,10 @@
 
 <body>
     <div id="canvas-container"></div>
+    <div id="gui-resizer"></div>
 
     <div id="side-panel">
-        <div class="panel-section">
-            <h3>View Controls</h3>
-            <div class="control-row">
-                <label>Verbosity:</label>
-                <select id="verbosity-select">
-                    <option value="0">0 (None)</option>
-                    <option value="1" selected>1 (Basic)</option>
-                    <option value="2">2 (Detailed)</option>
-                    <option value="3">3 (Debug)</option>
-                </select>
-            </div>
-        </div>
+
 
         <div class="panel-section">
             <h3>Scripting</h3>
@@ -52,18 +42,64 @@ api.Girder(n2, n4, "Steel");
 api.Girder(n3, n4, "Steel");
             </textarea>
             <button id="run-script-btn">Run Script</button>
+            <!-- View Controls -->
+            <div class="panel-section">
+                <h3>View</h3>
+                <div class="control-group">
+                    <label>Zoom: <input type="range" id="zoomSlider" min="-2.0" max="3.0" step="0.1" value="1.0"
+                            style="width: 100%;"></label>
+                </div>
+                <div class="control-group" style="margin-top: 5px;">
+                    <button id="btnViewXY" class="small-btn">XY</button>
+                    <button id="btnViewXZ" class="small-btn">XZ</button>
+                    <button id="btnViewYZ" class="small-btn">YZ</button>
+                </div>
+            </div>
+
+            <!-- Test Panel -->
+            <div class="panel-section">
+                <h3>Tests</h3>
+                <div class="control-group">
+                    <label>Verbosity: <input type="number" id="numVerbosity" value="4" min="0" max="5"
+                            style="width: 40px;"></label>
+                </div>
+                <div class="control-group">
+                    <label><input type="checkbox" id="chkAutoClear" checked> Auto Clear</label>
+                </div>
+                <div class="control-group">
+                    <select id="selTest">
+                        <!-- Populated by JS -->
+                    </select>
+                    <button id="btnRunTest">Run Test</button>
+                </div>
+            </div>
+
+            <!-- Log -->
+            <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Log</h3>
+                    <button id="btnClearLog" style="padding: 2px 5px; font-size: 0.8em;">Clear</button>
+                </div>
+                <div id="log" class="log-box"
+                    style="flex-grow: 1; overflow: auto; background: #111; padding: 5px; border: 1px solid #444; font-family: monospace; font-size: 0.9em;">
+                </div>
+            </div>
         </div>
 
-        <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <h3>Log</h3>
-            <div id="log-content"></div>
-        </div>
-    </div>
+        <!-- Common JS -->
+        <script src="../common_js/Logger.js"></script>
+        <script src="../common_js/Draw3D.js"></script>
 
-    <script src="js/shaders.js"></script>
-    <script src="js/SpaceCraftEngine.js"></script>
-    <script src="js/SpaceCraftRenderer.js"></script>
-    <script src="js/main.js"></script>
+        <!-- Editor JS -->
+        <script src="js/shaders.js"></script>
+        <script src="js/MeshBuilder.js"></script>
+        <script src="js/SpaceCraft.js"></script>
+        <script src="js/SpaceCraft2Mesh.js"></script>
+        <script src="js/constructionBlockTests.js"></script>
+        <script src="js/SpaceCraftEngine.js"></script>
+        <script src="js/SpaceCraftRenderer.js"></script>
+        <script src="js/GUI.js"></script>
+        <script src="js/main.js"></script>
 </body>
 
 </html>

@@ -1,19 +1,15 @@
 class SpaceCraftEngine {
     constructor() {
         // Configuration
-        this.maxNodes = 4096; // Texture size N x 1
-        this.verbosity = 1;
+        this.maxVerts = 10000;
+        // this.verbosity = 2; // Use global window.VERBOSITY_LEVEL
 
-        // Data Arrays (CPU Side)
-        // Nodes: [x, y, z, type]
-        this.nodes = new Float32Array(this.maxNodes * 4);
-        this.nodeCount = 0;
+        // Pipeline Objects
+        this.craft = new SpaceCraft();
+        this.mesh = new MeshBuilder();
 
-        // Girders: [nodeA, nodeB, type, 0]
-        this.girders = []; // Using JS array for now for ease of push, can optimize to Int32Array later
-
-        // GPU Data Texture
-        this.dataTexture = null; // Created by Renderer
+        // GPU Data Texture (still used for positions)
+        this.dataTexture = null;
 
         // Worker
         this.initWorker();
@@ -32,7 +28,7 @@ class SpaceCraftEngine {
                     window.logToUI(msg.payload);
                     break;
                 case 'ERROR':
-                    window.logToUI(`ERROR: ${msg.payload} `);
+                    window.logToUI(`ERROR: ${msg.payload}`);
                     break;
             }
         };
@@ -45,65 +41,57 @@ class SpaceCraftEngine {
     }
 
     reset() {
-        this.nodeCount = 0;
-        this.girders = [];
-        this.nodes.fill(0);
-        window.logToUI("Engine reset.");
+        this.craft.clear();
+        this.mesh.clear();
+        window.logger.info("Engine reset.");
     }
 
     processCommands(cmds) {
         console.log(`Processing ${cmds.length} commands...`);
+
+        // 1. Populate Abstract SpaceCraft
+        // We need a temporary map to resolve Shadow IDs from worker to real objects
+        const idMap = {
+            Node: [],
+            Girder: [],
+            Rope: []
+        };
+
         for (const cmd of cmds) {
             switch (cmd.method) {
-                case 'Node':
-                    this.createNode(cmd.args[0]);
+                case 'Node': {
+                    const n = this.craft.addNode(cmd.args[0]);
+                    idMap.Node.push(n); // Shadow ID corresponds to index
                     break;
-                case 'Girder':
-                    this.createGirder(cmd.args[0], cmd.args[1], cmd.args[2]);
+                }
+                case 'Girder': {
+                    // Args: [id1, id2, matName]
+                    // Worker sends Shadow IDs (indices)
+                    const n1 = idMap.Node[cmd.args[0]];
+                    const n2 = idMap.Node[cmd.args[1]];
+                    if (n1 && n2) {
+                        this.craft.addGirder(n1, n2, cmd.args[2]);
+                    } else {
+                        console.warn("Invalid node IDs in Girder command", cmd.args);
+                    }
                     break;
+                }
                 case 'Material':
                     // TODO: Store materials
                     break;
             }
         }
 
-        // Notify Renderer to update
+        // 2. Generate Concrete Mesh
+        BuildCraft_truss(this.mesh, this.craft);
+
+        if (this.verbosity >= 1) {
+            window.logToUI(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
+        }
+
+        // 3. Notify Renderer to update
         if (window.renderer) {
-            window.renderer.updateGeometry();
+            window.renderer.updateGeometry(this.mesh);
         }
-    }
-
-    createNode(pos) {
-        if (this.nodeCount >= this.maxNodes) {
-            console.warn("Max nodes reached!");
-            return;
-        }
-        const i = this.nodeCount * 4;
-        this.nodes[i] = pos[0];
-        this.nodes[i + 1] = pos[1];
-        this.nodes[i + 2] = pos[2];
-        this.nodes[i + 3] = 0; // Default type
-
-        if (this.verbosity >= 2) {
-            window.logToUI(`Node[${this.nodeCount}]: ${pos[0].toFixed(2)}, ${pos[1].toFixed(2)}, ${pos[2].toFixed(2)} `);
-        }
-
-        this.nodeCount++;
-    }
-
-    createGirder(n1, n2, typeName) {
-        // Simple mapping for now
-        let type = 0;
-        if (typeName === "Steel") type = 1;
-
-        if (this.verbosity >= 2) {
-            window.logToUI(`Girder: ${n1} -> ${n2} (${typeName})`);
-        }
-
-        this.girders.push({
-            n1: n1,
-            n2: n2,
-            type: type
-        });
     }
 }
