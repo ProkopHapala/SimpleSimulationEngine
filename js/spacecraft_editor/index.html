@@ -17,6 +17,65 @@
     <div id="gui-resizer"></div>
     <div id="side-panel">
         <div class="panel-section">
+            <h3>View</h3>
+            
+            <!-- Camera Mode -->
+            <div class="compact-row">
+                <span class="compact-label">Cam:</span>
+                <select id="selCameraMode" class="compact-select">
+                    <option value="persp">Perspective</option>
+                    <option value="ortho" selected>Orthographic</option>
+                </select>
+            </div>
+
+            <!-- Zoom & Presets -->
+            <div class="compact-row">
+                <span class="compact-label">Zoom:</span>
+                <input type="number" id="zoomInput" value="1.0" step="0.1" class="compact-input" style="width: 40px;">
+                <button id="btnViewXY" class="small-btn">XY</button>
+                <button id="btnViewXZ" class="small-btn">XZ</button>
+                <button id="btnViewYZ" class="small-btn">YZ</button>
+            </div>
+
+            <!-- Labels -->
+            <div class="compact-row" style="margin-top: 4px;">
+                <span class="compact-label">Labels:</span>
+                <select id="selLabelMode" class="compact-select">
+                    <option value="none">None</option>
+                    <option value="id" selected>Node ID</option>
+                </select>
+            </div>
+            <div class="compact-row">
+                <span class="compact-label">Color:</span>
+                <input type="color" id="colLabel" value="#00ff00" class="color-input">
+                <span class="compact-label">Size:</span>
+                <input type="number" id="numLabelSize" value="0.04" step="0.01" class="compact-input" style="width: 40px;">
+                <label class="compact-label" style="margin-left: 2px;"><input type="checkbox" checked id="chkLabelFixed">FixScale</label>
+            </div>
+        </div>
+
+        <!-- Test Panel -->
+        <div class="panel-section">
+            <h3>Tests</h3>
+            <div class="compact-row">
+                <span class="compact-label">Verbosity:</span>
+                <span class="compact-label">Log</span>
+                <input type="number" id="numVerbosityUI" value="4" min="0" max="5" class="compact-input" style="width: 30px;">
+                <span class="compact-label">Con</span>
+                <input type="number" id="numVerbosityCon" value="4" min="0" max="5" class="compact-input" style="width: 30px;">
+            </div>
+            <div class="control-group">
+                <label><input type="checkbox" id="chkAutoClear" checked> Auto Clear</label>
+            </div>
+            <div class="control-group">
+                <select id="selTest">
+                    <!-- Populated by JS -->
+                </select>
+                <button id="btnRunTest">Run Test</button>
+            </div>
+        </div>
+
+        <div class="panel-section">
             <h3>Scripting</h3>
             <div class="control-row">
                 <button id="load-script-btn">Load Script...</button>
@@ -27,70 +86,21 @@
 api.Material("Steel", 7800, 100, 100);
 var n1 = api.Node(vec(0,0,0));
 var n2 = api.Node(vec(2,0,0));
-var n3 = api.Node(vec(0,2,0));
-var n4 = api.Node(vec(0,0,2));
-
 api.Girder(n1, n2, "Steel");
-api.Girder(n1, n3, "Steel");
-api.Girder(n1, n4, "Steel");
-api.Girder(n2, n3, "Steel");
-api.Girder(n2, n4, "Steel");
-api.Girder(n3, n4, "Steel");
             </textarea>
             <button id="run-script-btn">Run Script</button>
-            <!-- View Controls -->
-            <div class="panel-section">
-                <h3>View</h3>
-                <div class="control-group">
-                    <label>Zoom: <input type="range" id="zoomSlider" min="-2.0" max="3.0" step="0.1" value="1.0" style="width: 100%;"></label>
-                </div>
-                <div class="control-group" style="margin-top: 5px;">
-                    <button id="btnViewXY" class="small-btn">XY</button>
-                    <button id="btnViewXZ" class="small-btn">XZ</button>
-                    <button id="btnViewYZ" class="small-btn">YZ</button>
-                </div>
-            </div>
+        </div>
 
-            <!-- Test Panel -->
-            <div class="panel-section">
-                <h3>Tests</h3>
-                <div class="control-group">
-                    <label>Verbosity: <input type="number" id="numVerbosity" value="4" min="0" max="5" style="width: 40px;"></label>
-                </div>
-                <div class="control-group">
-                    <label><input type="checkbox" id="chkAutoClear" checked> Auto Clear</label>
-                </div>
-                <div class="control-group">
-                    <select id="selTest">
-                        <!-- Populated by JS -->
-                    </select>
-                    <button id="btnRunTest">Run Test</button>
-                </div>
+        <!-- Log -->
+        <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Log</h3>
+                <button id="btnClearLog" style="padding: 2px 5px; font-size: 0.8em;">Clear</button>
             </div>
-
-            <!-- Labels -->
-            <label style="display:block; margin-bottom:5px;">Labels:</label>
-            <select id="selLabelMode" style="width:100%; margin-bottom:5px; background:#333; color:#fff; border:1px solid #555;">
-                <option value="none">None</option>
-                <option value="id" selected>Node ID</option>
-            </select>
-            <div style="display:flex; gap:5px; align-items: center;">
-                <span style="font-size:0.9em;">Color:</span>
-                <input type="color" id="colLabel" value="#00ff00" style="width:30px; height:20px; border:none; padding:0;">
-                <span style="font-size:0.9em; margin-left:5px;">Size:</span>
-                <input type="number" id="numLabelSize" value="0.4" step="0.1" style="width:50px; background:#333; color:#fff; border:1px solid #555;">
+            <div id="log" class="log-box"
+                style="flex-grow: 1; overflow: auto; background: #111; padding: 5px; border: 1px solid #444; font-family: monospace; font-size: 0.9em;">
             </div>
-
-            <!-- Log -->
-            <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Log</h3>
-                    <button id="btnClearLog" style="padding: 2px 5px; font-size: 0.8em;">Clear</button>
-                </div>
-                <div id="log" class="log-box"
-                    style="flex-grow: 1; overflow: auto; background: #111; padding: 5px; border: 1px solid #444; font-family: monospace; font-size: 0.9em;">
-                </div>
-            </div>
+        </div>
         </div>
 
         <!-- Common JS -->

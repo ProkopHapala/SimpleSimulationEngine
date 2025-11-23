@@ -1,5 +1,6 @@
 // Global Verbosity Level
-window.VERBOSITY_LEVEL = 4; // Default: DEBUG for now
+// Global Verbosity Level
+// window.VERBOSITY_LEVEL removed in favor of Logger instance properties
 
 class Logger {
     static NONE = 0;
@@ -10,10 +11,24 @@ class Logger {
 
     constructor() {
         this.domElement = null; // Will be set by GUI
+        this.consoleVerbosity = 4; // Default: DEBUG
+        this.uiVerbosity = 4;      // Default: DEBUG
     }
 
     setContainer(element) {
         this.domElement = element;
+    }
+
+    setConsoleVerbosity(level) {
+        this.consoleVerbosity = level;
+    }
+
+    setUIVerbosity(level) {
+        this.uiVerbosity = level;
+    }
+
+    shouldLog(level) {
+        return level <= Math.max(this.consoleVerbosity, this.uiVerbosity);
     }
 
     clear() {
@@ -23,8 +38,6 @@ class Logger {
     }
 
     log(message, level = Logger.INFO) {
-        if (level > window.VERBOSITY_LEVEL) return;
-
         // Caller info (simple stack trace parsing)
         let caller = "";
         try {
@@ -49,12 +62,14 @@ class Logger {
         const formattedMsg = caller ? `[${levelStr}] [${caller}] ${message}` : `[${levelStr}] ${message}`;
 
         // Console
-        if (level === Logger.ERROR) console.error(formattedMsg);
-        else if (level === Logger.WARN) console.warn(formattedMsg);
-        else console.log(formattedMsg);
+        if (level <= this.consoleVerbosity) {
+            if (level === Logger.ERROR) console.error(formattedMsg);
+            else if (level === Logger.WARN) console.warn(formattedMsg);
+            else console.log(formattedMsg);
+        }
 
         // DOM
-        if (this.domElement) {
+        if (this.domElement && level <= this.uiVerbosity) {
             const line = document.createElement('div');
             line.textContent = formattedMsg;
             line.style.color = color;

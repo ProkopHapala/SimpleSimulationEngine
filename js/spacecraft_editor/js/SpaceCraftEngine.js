@@ -85,9 +85,7 @@ class SpaceCraftEngine {
         // 2. Generate Concrete Mesh
         BuildCraft_truss(this.mesh, this.craft);
 
-        if (this.verbosity >= 1) {
-            window.logToUI(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
-        }
+        window.logger?.info(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
 
         // 3. Notify Renderer to update
         if (window.renderer) {

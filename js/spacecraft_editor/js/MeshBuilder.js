@@ -1,16 +1,12 @@
 
 class MeshBuilder {
     constructor() {
-        // Vertices: Array of {pos: Vec3, nor: Vec3, uv: {x, y}}
-        this.verts = [];
-        // Edges: Array of {x: int, y: int, z: type, w: type2}
-        this.edges = [];
-        // Chunks: Array of {x: stripStart, y: edgeStart, z: count, w: type}
-        this.chunks = [];
-        // Strips: Flat array of vertex/edge indices for faces
-        this.strips = [];
-        // Blocks: [ivert_start, iedge_start, ichunk_start]
-        this.blocks = [];
+
+        this.verts = [];   // Vertices: Array of {pos: Vec3, nor: Vec3, uv: {x, y}}
+        this.edges = [];   // Edges:    Array of {x: int, y: int, z: type, w: type2}
+        this.chunks = [];  // Chunks:   Array of {x: stripStart, y: edgeStart, z: count, w: type}
+        this.strips = [];  // Strips:   Flat array of vertex/edge indices for faces        
+        this.blocks = [];  // Blocks:   [ivert_start, iedge_start, ichunk_start]
 
         // Temporary vectors (reused to avoid GC)
         this._tmp1 = new Vec3();
@@ -24,7 +20,7 @@ class MeshBuilder {
         this.chunks = [];
         this.strips = [];
         this.blocks = [];
-        if (window.VERBOSITY_LEVEL > 0) window.logger.info("MeshBuilder cleared.");
+        window.logger?.info("MeshBuilder cleared.");
     }
 
     // --- Basic Primitives ---
@@ -40,14 +36,14 @@ class MeshBuilder {
         };
         this.verts.push(v);
         const idx = this.verts.length - 1;
-        if (window.VERBOSITY_LEVEL >= 3) window.logger.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
+        window.logger?.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
         return idx;
     }
 
     edge(a, b, type = -1, type2 = 0) {
         this.edges.push({ x: a, y: b, z: type, w: type2 });
         const idx = this.edges.length - 1;
-        if (window.VERBOSITY_LEVEL >= 3) window.logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
+        window.logger?.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
         return idx;
     }
 
@@ -173,9 +169,7 @@ class MeshBuilder {
             }
             // Map ivs1[i] to the vertex that was originally at ivs2[jbest]
             ivs2[i] = originalIvs2[jbest];
-            if (window.VERBOSITY_LEVEL >= 2) {
-                window.logger.debug(`alling_polygons: Map ${i} -> ${jbest} (d=${dmin})`);
-            }
+            window.logger?.debug(`alling_polygons: Map ${i} -> ${jbest} (d=${dmin})`);
         }
     }
 
@@ -193,9 +187,7 @@ class MeshBuilder {
      * @param {boolean} bAlling - Whether to align quads rotationally
      */
     bridge_quads(q1, q2, nseg, stickTypes = { x: -1, y: -1, z: -1, w: -1 }, mask = { x: 1, y: 1, z: 1, w: 1 }, bAlling = true) {
-        if (window.VERBOSITY_LEVEL >= 2) {
-            window.logger.info(`bridge_quads: nseg=${nseg}, q1=[${q1.x},${q1.y},${q1.z},${q1.w}], q2=[${q2.x},${q2.y},${q2.z},${q2.w}]`);
-        }
+        window.logger?.debug(`bridge_quads: nseg=${nseg}, q1=[${q1.x},${q1.y},${q1.z},${q1.w}], q2=[${q2.x},${q2.y},${q2.z},${q2.w}]`);
 
         // Align polygons if requested
         if (bAlling) {
@@ -292,12 +284,16 @@ class MeshBuilder {
         let cmax = -1.0;
         const bDist = Math.abs(distWeight) > 1e-100;
 
+        window.logger?.debug(`findMostFacingNormal: hray=${hray.toString()}, nch=${nch}, range=[${chrange.x}, ${chrange.y}]`);
+
         for (let i = 0; i < nch; i++) {
             const ich = chrange.x + i;
             const nr = this.polygonNormal(ich);
             let c = hray.dot(nr);
 
             if (bTwoSide) c = Math.abs(c);
+
+            window.logger?.debug(`  Chunk ${ich}: nr=${nr.toString()}, c=${c}`);
 
             if (c > cosMin) {
                 if (bDist) {
@@ -308,48 +304,7 @@ class MeshBuilder {
                 if (c > cmax) {
                     ibest = ich;
                     cmax = c;
-                }
-            }
-        }
-        return ibest;
-    }
-
-    findMostFacingNormal(hray, chrange, cosMin = 0.0, bTwoSide = false, distWeight = 0.0, ray0 = new Vec3(0, 0, 0)) {
-        // chrange is {x: start, y: end} (exclusive end)
-        const nch = chrange.y - chrange.x;
-        // const chs = []; for(let i=0; i<nch; i++) chs.push(chrange.x + i);
-
-        let ibest = -1;
-        let cmax = -1.0;
-        const bDist = Math.abs(distWeight) > 1e-100;
-
-        if (window.VERBOSITY_LEVEL >= 2) {
-            window.logger.debug(`findMostFacingNormal: hray=${hray.toString()}, nch=${nch}, range=[${chrange.x}, ${chrange.y}]`);
-        }
-
-        for (let i = 0; i < nch; i++) {
-            const ich = chrange.x + i;
-            const nr = this.polygonNormal(ich);
-            let c = hray.dot(nr);
-
-            if (bTwoSide) c = Math.abs(c);
-
-            if (window.VERBOSITY_LEVEL >= 3) {
-                window.logger.debug(`  Chunk ${ich}: nr=${nr.toString()}, c=${c}`);
-            }
-
-            if (c > cosMin) {
-                if (bDist) {
-                    const p = this.getChunkCOG(ich);
-                    const r = new Vec3().setSub(p, ray0).norm();
-                    c -= distWeight * r;
-                }
-                if (c > cmax) {
-                    ibest = ich;
-                    cmax = c;
-                    if (window.VERBOSITY_LEVEL >= 3) {
-                        window.logger.debug(`  New best: ${ibest} (c=${cmax})`);
-                    }
+                    window.logger?.debug(`  New best: ${ibest} (c=${cmax})`);
                 }
             }
         }
@@ -365,9 +320,7 @@ class MeshBuilder {
         const ich1 = this.findMostFacingNormal(hray, chr1, 0.0, true, 1e-6, p2);
         const ich2 = this.findMostFacingNormal(hray, chr2, 0.0, true, 1e-6, p1);
 
-        if (window.VERBOSITY_LEVEL >= 1) {
-            window.logger.info(`bridgeFacingPolygons: ich1=${ich1}, ich2=${ich2}`);
-        }
+        window.logger?.info(`bridgeFacingPolygons: ich1=${ich1}, ich2=${ich2}`);
 
         if (ich1 < 0 || ich2 < 0) {
             window.logger.error(`bridgeFacingPolygons: Could not find facing polygons. ich1=${ich1}, ich2=${ich2}`);
@@ -424,15 +377,12 @@ class MeshBuilder {
      */
     snapPrismFace(p0, rot, La, Lb, h, Lbh) {
         const ha = La * 0.5;
-
         const v0 = this.vert(new Vec3().setAddMul(p0, rot.a, ha).addMul(rot.b, -Lb));
         const v1 = this.vert(new Vec3().setAddMul(p0, rot.c, h).addMul(rot.b, -(Lb - Lbh)));
         const v2 = this.vert(new Vec3().setAddMul(p0, rot.a, -ha).addMul(rot.b, -Lb));
-
         const stripStart = this.strips.length;
         this.strips.push(v0, v1, v2);
         this.chunk({ x: stripStart, y: 0, z: 3, w: 1 });
-
         return { x: v0, y: v1, z: v2, w: v2 }; // Degenerate quad
     }
 
@@ -445,11 +395,9 @@ class MeshBuilder {
         const v1 = this.vert(new Vec3().setAddMul(p0, rot.a, (La - Lah)).addMul(rot.b, -(Lb - Lbh)).addMul(rot.c, h));
         const v2 = this.vert(new Vec3().setAddMul(p0, rot.a, -(La - Lah)).addMul(rot.b, -(Lb - Lbh)).addMul(rot.c, h));
         const v3 = this.vert(new Vec3().setAddMul(p0, rot.a, -La).addMul(rot.b, -Lb));
-
         const stripStart = this.strips.length;
         this.strips.push(v0, v1, v2, v3);
         this.chunk({ x: stripStart, y: 0, z: 4, w: 1 });
-
         return { x: v0, y: v1, z: v2, w: v3 };
     }
 
@@ -466,7 +414,6 @@ class MeshBuilder {
         const x = pos.x !== undefined ? pos.x : pos[0];
         const y = pos.y !== undefined ? pos.y : pos[1];
         const z = pos.z !== undefined ? pos.z : pos[2];
-
         // 8 vertices
         const v0 = this.vert(new Vec3(x - s, y - s, z - s));
         const v1 = this.vert(new Vec3(x + s, y - s, z - s));
@@ -476,27 +423,18 @@ class MeshBuilder {
         const v5 = this.vert(new Vec3(x + s, y - s, z + s));
         const v6 = this.vert(new Vec3(x + s, y + s, z + s));
         const v7 = this.vert(new Vec3(x - s, y + s, z + s));
-
         // 12 edges
         this.edge(v0, v1); this.edge(v1, v2); this.edge(v2, v3); this.edge(v3, v0);
         this.edge(v4, v5); this.edge(v5, v6); this.edge(v6, v7); this.edge(v7, v4);
         this.edge(v0, v4); this.edge(v1, v5); this.edge(v2, v6); this.edge(v3, v7);
-
         if (bFaces) {
             const ichStart = this.chunks.length;
-            // Front (z+)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v4, v5, v6, v7);
-            // Back (z-)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v1, v0, v3, v2); // Winding order?
-            // Right (x+)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v5, v1, v2, v6);
-            // Left (x-)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v4, v7, v3);
-            // Top (y+)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v3, v7, v6, v2);
-            // Bottom (y-)
-            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v1, v5, v4);
-
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v4, v5, v6, v7);  // Front (z+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v1, v0, v3, v2); // Back (z-)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v5, v1, v2, v6); // Right (x+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v4, v7, v3); // Left (x-)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v3, v7, v6, v2); // Top (y+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v1, v5, v4); // Bottom (y-)
             return { x: ichStart, y: this.chunks.length };
         }
         return { x: -1, y: -1 };

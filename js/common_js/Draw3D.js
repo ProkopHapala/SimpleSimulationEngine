@@ -274,7 +274,9 @@ class Draw3D {
             uFontTex: { value: fontTexture },
             uFontGrid: { value: new THREE.Vector2(16, 16) },
             uScale: { value: 0.5 },
-            uColor: { value: new THREE.Color(0xffffff) }
+            uColor: { value: new THREE.Color(0xffffff) },
+            uScreenSpace: { value: false },
+            uAspect: { value: 1.0 }
         };
 
         const material = new THREE.ShaderMaterial({

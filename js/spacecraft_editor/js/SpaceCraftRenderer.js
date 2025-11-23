@@ -12,8 +12,11 @@ class SpaceCraftRenderer extends MeshRenderer {
 
         // Camera
         const aspect = container.clientWidth / container.clientHeight;
-        this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+        const height = 20;
+        const width = height * aspect;
+        this.camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, 0.1, 1000);
         this.camera.position.set(0, 0, 20);
+        this.cameraMode = 'ortho';
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -109,8 +112,54 @@ class SpaceCraftRenderer extends MeshRenderer {
         }
     }
 
+    setLabelScreenSpace(enabled) {
+        this.setLabelStyle(null, null, enabled);
+        // If switching to screen space, we might want to adjust default scale?
+        // User controls scale via GUI, so let them adjust.
+    }
+
+    setCameraMode(mode) {
+        if (this.cameraMode === mode) return;
+        this.cameraMode = mode;
+
+        const oldCam = this.camera;
+        const aspect = oldCam.aspect;
+        const fov = 60;
+        const near = 0.1;
+        const far = 1000;
+
+        // Save state
+        const pos = oldCam.position.clone();
+        const target = this.controls.target.clone();
+        const zoom = this.controls.object.zoom; // For ortho
+
+        if (mode === 'ortho') {
+            // Estimate frustum size based on distance to target
+            const dist = pos.distanceTo(target);
+            const height = 2 * Math.tan((fov * Math.PI / 180) / 2) * dist;
+            const width = height * aspect;
+
+            this.camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, near, far);
+            this.camera.zoom = 1; // Reset zoom for ortho, as width/height already capture view
+        } else {
+            this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+        }
+
+        this.camera.position.copy(pos);
+        this.camera.up.copy(oldCam.up);
+        this.camera.lookAt(target);
+
+        // Update controls
+        this.controls.object = this.camera;
+        this.controls.update();
+
+        // Update aspect uniform
+        this.updateLabelUniforms(aspect);
+    }
+
     update() {
         if (this.controls) this.controls.update();
+        // Ensure aspect is up to date if needed? No, onWindowResize handles it.
     }
 
     render() {
@@ -120,9 +169,28 @@ class SpaceCraftRenderer extends MeshRenderer {
     onWindowResize() {
         if (this.camera && this.renderer && this.renderer.domElement.parentElement) {
             const container = this.renderer.domElement.parentElement;
-            this.camera.aspect = container.clientWidth / container.clientHeight;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const aspect = width / height;
+
+            if (this.camera.isPerspectiveCamera) {
+                this.camera.aspect = aspect;
+            } else {
+                // Ortho: Maintain vertical size, adjust horizontal
+                // Or maintain scale?
+                // Let's keep the height constant in world units, adjust width
+                const camH = (this.camera.top - this.camera.bottom) / this.camera.zoom;
+                const camW = camH * aspect;
+                this.camera.left = -camW / 2;
+                this.camera.right = camW / 2;
+                this.camera.top = camH / 2;
+                this.camera.bottom = -camH / 2;
+            }
+
             this.camera.updateProjectionMatrix();
-            this.renderer.setSize(container.clientWidth, container.clientHeight);
+            this.renderer.setSize(width, height);
+
+            this.updateLabelUniforms(aspect);
         }
     }
 }

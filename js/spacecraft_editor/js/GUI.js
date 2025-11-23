@@ -109,13 +109,12 @@ class GUI {
         }
 
         // --- View Controls ---
-        const zoomSlider = document.getElementById('zoomSlider');
-        if (zoomSlider) {
-            zoomSlider.addEventListener('input', (e) => {
+        const zoomInput = document.getElementById('zoomInput');
+        if (zoomInput) {
+            zoomInput.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
-                const zoom = Math.pow(10, val);
-                if (this.renderer && this.renderer.camera) {
-                    this.renderer.camera.zoom = zoom;
+                if (!isNaN(val) && this.renderer && this.renderer.camera) {
+                    this.renderer.camera.zoom = val;
                     this.renderer.camera.updateProjectionMatrix();
                 }
             });
@@ -140,6 +139,7 @@ class GUI {
         const selMode = document.getElementById('selLabelMode');
         const colLabel = document.getElementById('colLabel');
         const numSize = document.getElementById('numLabelSize');
+        const chkFixed = document.getElementById('chkLabelFixed');
 
         if (selMode && colLabel && numSize) {
             selMode.addEventListener('change', () => {
@@ -155,11 +155,26 @@ class GUI {
             colLabel.addEventListener('input', updateStyle);
             numSize.addEventListener('input', updateStyle);
 
+            if (chkFixed) {
+                chkFixed.addEventListener('change', () => {
+                    if (this.renderer) this.renderer.setLabelScreenSpace(chkFixed.checked);
+                });
+            }
+
             // Set initial state
             if (this.renderer) {
                 this.renderer.setLabelMode(selMode.value);
                 updateStyle();
+                if (chkFixed) this.renderer.setLabelScreenSpace(chkFixed.checked);
             }
+        }
+
+        // --- Camera Controls ---
+        const selCam = document.getElementById('selCameraMode');
+        if (selCam) {
+            selCam.addEventListener('change', () => {
+                if (this.renderer) this.renderer.setCameraMode(selCam.value);
+            });
         }
 
         // --- Tests ---
@@ -253,14 +268,27 @@ class GUI {
 
 
         // --- Verbosity ---
-        const numVerbosity = document.getElementById('numVerbosity');
-        if (numVerbosity) {
-            numVerbosity.value = window.VERBOSITY_LEVEL;
-            numVerbosity.addEventListener('change', () => {
-                const val = parseInt(numVerbosity.value);
+        const numVerbosityUI = document.getElementById('numVerbosityUI');
+        const numVerbosityCon = document.getElementById('numVerbosityCon');
+
+        if (numVerbosityUI && window.logger) {
+            numVerbosityUI.value = window.logger.uiVerbosity;
+            numVerbosityUI.addEventListener('change', () => {
+                const val = parseInt(numVerbosityUI.value);
                 if (!isNaN(val)) {
-                    window.VERBOSITY_LEVEL = val;
-                    window.logger.info(`Verbosity set to ${val}`);
+                    window.logger.setUIVerbosity(val);
+                    window.logger.info(`UI Verbosity set to ${val}`);
+                }
+            });
+        }
+
+        if (numVerbosityCon && window.logger) {
+            numVerbosityCon.value = window.logger.consoleVerbosity;
+            numVerbosityCon.addEventListener('change', () => {
+                const val = parseInt(numVerbosityCon.value);
+                if (!isNaN(val)) {
+                    window.logger.setConsoleVerbosity(val);
+                    window.logger.info(`Console Verbosity set to ${val}`);
                 }
             });
         }

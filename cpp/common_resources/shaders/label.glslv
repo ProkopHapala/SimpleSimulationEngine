@@ -11,6 +11,8 @@ uniform sampler2D uPosTex;
 uniform vec2 uTexSize; // (width, height) of pos texture
 uniform vec2 uFontGrid; // e.g. (16, 8)
 uniform float uScale;
+uniform bool uScreenSpace;
+uniform float uAspect;
 
 void main() {
     // 1. Determine Character Index
@@ -54,37 +56,32 @@ void main() {
 
     // 4. View-Space Billboarding
     vec4 mvPosition = viewMatrix * vec4(atomPos, 1.0);
-    
-    // Calculate offset in View Space
-    // Center the string based on its length
-    // aStrLen is the number of characters
-    // We want to center the block of characters around 0
-    
-    float charWidth = 0.6; // Width of one character relative to height (aspect ratio)
+    vec4 projectedPos = projectionMatrix * mvPosition;
+
+    // Calculate offset
+    float charWidth = 0.6; 
     float centerOffset = (aStrLen - 1.0) * 0.5;
     float charOffset = (aCharPos - centerOffset) * charWidth; 
     
-    // Apply scale
-    vec2 offset = vec2(charOffset + (position.x - 0.5) * charWidth, position.y - 0.5) * uScale;
-    // Note: position.x is 0..1 or -0.5..0.5? PlaneBufferGeometry(1,1) is centered at 0, so -0.5 to 0.5.
-    // So (position.x) is enough if we want char center at charOffset.
-    // But let's be precise:
-    // We want the quad for char `i` to be at `charOffset`.
-    // The quad itself spans -0.5 to 0.5.
-    // So we just add position.x (which is the local quad coord).
-    
-    // Re-eval:
-    // charOffset is the center of the character slot `i`.
-    // position.x is the offset within that slot.
-    // So `charOffset + position.x` is correct if charWidth is 1.0.
-    // If charWidth is 0.6, we should scale position.x too? 
-    // No, the texture is mapped to the quad. If we squish the quad, we squish the texture.
-    // Font texture letters are usually not square. They are taller than wide.
-    // Aspect ratio ~0.6.
-    
-    vec2 finalOffset = vec2(charOffset + position.x * charWidth, position.y) * uScale;
-    
-    mvPosition.xy += finalOffset;
+    vec2 baseOffset = vec2(charOffset + position.x * charWidth, position.y);
 
-    gl_Position = projectionMatrix * mvPosition;
+    if (uScreenSpace) {
+        // Screen Space Scaling (Constant size on screen)
+        // uScale is interpreted as size relative to screen height
+        
+        vec2 screenOffset = baseOffset * uScale;
+        screenOffset.x /= uAspect; // Correct for aspect ratio
+        
+        // Apply to projected position (Clip Space)
+        // We multiply by w because gl_Position will be divided by w
+        projectedPos.xy += screenOffset * projectedPos.w;
+
+    } else {
+        // World Space Scaling (Standard 3D)
+        vec2 viewOffset = baseOffset * uScale;
+        mvPosition.xy += viewOffset;
+        projectedPos = projectionMatrix * mvPosition;
+    }
+
+    gl_Position = projectedPos;
 }

@@ -135,3 +135,47 @@ button:hover {
 #run-script-btn:hover {
     background: #3b7;
 }
+
+/* Compact UI Helpers */
+.compact-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+}
+
+.compact-label {
+    white-space: nowrap;
+    color: #ccc;
+}
+
+.compact-input {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+.compact-select {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 1px;
+    border-radius: 2px;
+    flex-grow: 1;
+}
+
+.color-input {
+    width: 20px;
+    height: 16px;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.small-btn {
+    padding: 1px 4px;
+    font-size: 9px;
+}

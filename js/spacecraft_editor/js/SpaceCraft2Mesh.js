@@ -26,12 +26,15 @@ function BuildCraft_truss(mesh, craft) {
 
         // For simple visualization, just connect them with an edge
         // In the future, use mesh.girder1() to generate sub-segments
-        mesh.edge(ivA, ivB, girder.type);
+        // mesh.edge(ivA, ivB, girder.type);
 
-        // Example of using sub-segments (commented out for now until we want high-res)
-        // const pA = girder.nodeA.pos;
-        // const pB = girder.nodeB.pos;
-        // mesh.girder1(pA, pB, [0,1,0], girder.nseg, 0.1, girder.type);
+        // Use girder1 for visible truss structure
+        const pA = new Vec3(girder.nodeA.pos[0], girder.nodeA.pos[1], girder.nodeA.pos[2]);
+        const pB = new Vec3(girder.nodeB.pos[0], girder.nodeB.pos[1], girder.nodeB.pos[2]);
+        const up = new Vec3(0, 1, 0);
+        const stickTypes = { x: 1, y: 1, z: 1, w: 1 }; // Default stick types
+
+        mesh.girder1(pA, pB, up, girder.nseg, 0.1, stickTypes, true);
     }
 
     // 3. Ropes
