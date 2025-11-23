@@ -30,8 +30,11 @@ class MeshBuilder {
     // --- Basic Primitives ---
 
     vert(pos) {
+        const x = pos.x !== undefined ? pos.x : pos[0];
+        const y = pos.y !== undefined ? pos.y : pos[1];
+        const z = pos.z !== undefined ? pos.z : pos[2];
         const v = {
-            pos: new Vec3(pos.x || pos[0], pos.y || pos[1], pos.z || pos[2]),
+            pos: new Vec3(x, y, z),
             nor: new Vec3(0, 0, 1),
             uv: { x: 0, y: 0 }
         };
@@ -75,6 +78,47 @@ class MeshBuilder {
         return cog;
     }
 
+    getChunkCOG(ichunk) {
+        const ch = this.chunks[ichunk];
+        const n = ch.z;
+        const i0 = ch.x;
+        const ivs = [];
+        for (let i = 0; i < n; i++) {
+            ivs.push(this.strips[i0 + i]);
+        }
+        return this.getCOG(n, ivs);
+    }
+
+    polygonNormal(ichunk) {
+        const ch = this.chunks[ichunk];
+        const n = ch.z;
+        const i0 = ch.x;
+        const ivs = [];
+        for (let i = 0; i < n; i++) {
+            ivs.push(this.strips[i0 + i]);
+        }
+
+        const nrm = new Vec3(0, 0, 0);
+        let a = this.verts[ivs[0]].pos;
+        let b = this.verts[ivs[1]].pos;
+        const tmp1 = new Vec3();
+        const tmp2 = new Vec3();
+        const tmpCross = new Vec3();
+
+        for (let j = 1; j < n - 1; j++) {
+            const c = this.verts[ivs[j + 1]].pos;
+            // cross(b-a, c-a)
+            tmp1.setSub(b, a);
+            tmp2.setSub(c, a);
+            tmpCross.setCross(tmp1, tmp2);
+            nrm.add(tmpCross);
+            a = b;
+            b = c;
+        }
+        nrm.normalize();
+        return nrm;
+    }
+
     // --- Alignment Function ---
 
     /**
@@ -86,14 +130,16 @@ class MeshBuilder {
         const cog2 = this.getCOG(n, ivs2);
 
         // Compute axis
-        const ax = this._tmp1.setSub(cog2, cog1).normalize();
+        const ax = this._tmp1.setSub(cog2, cog1);
+        ax.normalize();
 
         // Compute orthogonal basis
         const u = this._tmp2.setSub(this.verts[ivs1[ipiv]].pos, cog1);
         u.makeOrthoU(ax);
         u.normalize();
 
-        const v = this._tmp3.setCross(ax, u).normalize();
+        const v = this._tmp3.setCross(ax, u);
+        v.normalize();
 
         // Project points to UV plane
         const uv1 = new Array(n);
@@ -102,8 +148,12 @@ class MeshBuilder {
         for (let i = 0; i < n; i++) {
             const d1 = new Vec3().setSub(this.verts[ivs1[i]].pos, cog1);
             const d2 = new Vec3().setSub(this.verts[ivs2[i]].pos, cog2);
-            uv1[i] = new Vec3(d1.dot(u), d1.dot(v), 0).normalize();
-            uv2[i] = new Vec3(d2.dot(u), d2.dot(v), 0).normalize();
+
+            uv1[i] = new Vec3(d1.dot(u), d1.dot(v), 0);
+            uv1[i].normalize();
+
+            uv2[i] = new Vec3(d2.dot(u), d2.dot(v), 0);
+            uv2[i].normalize();
         }
 
         // Match points by nearest UV projection
@@ -111,7 +161,7 @@ class MeshBuilder {
         const originalIvs2 = ivs2.slice();
 
         for (let i = 0; i < n; i++) {
-            let dmin = -1.0;
+            let dmin = -Infinity; // FIX: Initialize to -Infinity, not -1.0
             let jbest = 0;
             const uvi = uv1[i];
             for (let j = 0; j < n; j++) {
@@ -123,6 +173,9 @@ class MeshBuilder {
             }
             // Map ivs1[i] to the vertex that was originally at ivs2[jbest]
             ivs2[i] = originalIvs2[jbest];
+            if (window.VERBOSITY_LEVEL >= 2) {
+                window.logger.debug(`alling_polygons: Map ${i} -> ${jbest} (d=${dmin})`);
+            }
         }
     }
 
@@ -230,6 +283,117 @@ class MeshBuilder {
         return i00start;
     }
 
+    findMostFacingNormal(hray, chrange, cosMin = 0.0, bTwoSide = false, distWeight = 0.0, ray0 = new Vec3(0, 0, 0)) {
+        // chrange is {x: start, y: end} (exclusive end)
+        const nch = chrange.y - chrange.x;
+        // const chs = []; for(let i=0; i<nch; i++) chs.push(chrange.x + i);
+
+        let ibest = -1;
+        let cmax = -1.0;
+        const bDist = Math.abs(distWeight) > 1e-100;
+
+        for (let i = 0; i < nch; i++) {
+            const ich = chrange.x + i;
+            const nr = this.polygonNormal(ich);
+            let c = hray.dot(nr);
+
+            if (bTwoSide) c = Math.abs(c);
+
+            if (c > cosMin) {
+                if (bDist) {
+                    const p = this.getChunkCOG(ich);
+                    const r = new Vec3().setSub(p, ray0).norm();
+                    c -= distWeight * r;
+                }
+                if (c > cmax) {
+                    ibest = ich;
+                    cmax = c;
+                }
+            }
+        }
+        return ibest;
+    }
+
+    findMostFacingNormal(hray, chrange, cosMin = 0.0, bTwoSide = false, distWeight = 0.0, ray0 = new Vec3(0, 0, 0)) {
+        // chrange is {x: start, y: end} (exclusive end)
+        const nch = chrange.y - chrange.x;
+        // const chs = []; for(let i=0; i<nch; i++) chs.push(chrange.x + i);
+
+        let ibest = -1;
+        let cmax = -1.0;
+        const bDist = Math.abs(distWeight) > 1e-100;
+
+        if (window.VERBOSITY_LEVEL >= 2) {
+            window.logger.debug(`findMostFacingNormal: hray=${hray.toString()}, nch=${nch}, range=[${chrange.x}, ${chrange.y}]`);
+        }
+
+        for (let i = 0; i < nch; i++) {
+            const ich = chrange.x + i;
+            const nr = this.polygonNormal(ich);
+            let c = hray.dot(nr);
+
+            if (bTwoSide) c = Math.abs(c);
+
+            if (window.VERBOSITY_LEVEL >= 3) {
+                window.logger.debug(`  Chunk ${ich}: nr=${nr.toString()}, c=${c}`);
+            }
+
+            if (c > cosMin) {
+                if (bDist) {
+                    const p = this.getChunkCOG(ich);
+                    const r = new Vec3().setSub(p, ray0).norm();
+                    c -= distWeight * r;
+                }
+                if (c > cmax) {
+                    ibest = ich;
+                    cmax = c;
+                    if (window.VERBOSITY_LEVEL >= 3) {
+                        window.logger.debug(`  New best: ${ibest} (c=${cmax})`);
+                    }
+                }
+            }
+        }
+        return ibest;
+    }
+
+    bridgeFacingPolygons(p1, p2, chr1, chr2, nseg, stickTypes = { x: -1, y: -1, z: -1, w: -1 }, mask = { x: 1, y: 1, z: 1, w: 1 }) {
+        const hray = new Vec3().setSub(p2, p1);
+        hray.normalize(); // normalize() returns length, but modifies in place. We ignore return value.
+
+        // Find best facing chunks
+        // Note: In C++, findMostFacingNormal takes ray0 as the *other* point to minimize distance
+        const ich1 = this.findMostFacingNormal(hray, chr1, 0.0, true, 1e-6, p2);
+        const ich2 = this.findMostFacingNormal(hray, chr2, 0.0, true, 1e-6, p1);
+
+        if (window.VERBOSITY_LEVEL >= 1) {
+            window.logger.info(`bridgeFacingPolygons: ich1=${ich1}, ich2=${ich2}`);
+        }
+
+        if (ich1 < 0 || ich2 < 0) {
+            window.logger.error(`bridgeFacingPolygons: Could not find facing polygons. ich1=${ich1}, ich2=${ich2}`);
+            return;
+        }
+
+        // Get vertices for the chunks
+        const getChunkVerts = (ich) => {
+            const ch = this.chunks[ich];
+            const ivs = [];
+            for (let i = 0; i < ch.z; i++) {
+                ivs.push(this.strips[ch.x + i]);
+            }
+            // Assuming quads for now as per bridge_quads requirement
+            if (ivs.length !== 4) {
+                window.logger.warn(`bridgeFacingPolygons: Chunk ${ich} has ${ivs.length} vertices, expected 4.`);
+            }
+            return { x: ivs[0], y: ivs[1], z: ivs[2], w: ivs[3] };
+        };
+
+        const q1 = getChunkVerts(ich1);
+        const q2 = getChunkVerts(ich2);
+
+        this.bridge_quads(q1, q2, nseg, stickTypes, mask, true);
+    }
+
     // --- Face Generation Methods ---
 
     /**
@@ -297,11 +461,11 @@ class MeshBuilder {
         this.edge(ia, ib, type);
     }
 
-    addCube(pos, size) {
+    addCube(pos, size, bFaces = true) {
         const s = size * 0.5;
-        const x = pos.x || pos[0];
-        const y = pos.y || pos[1];
-        const z = pos.z || pos[2];
+        const x = pos.x !== undefined ? pos.x : pos[0];
+        const y = pos.y !== undefined ? pos.y : pos[1];
+        const z = pos.z !== undefined ? pos.z : pos[2];
 
         // 8 vertices
         const v0 = this.vert(new Vec3(x - s, y - s, z - s));
@@ -317,19 +481,124 @@ class MeshBuilder {
         this.edge(v0, v1); this.edge(v1, v2); this.edge(v2, v3); this.edge(v3, v0);
         this.edge(v4, v5); this.edge(v5, v6); this.edge(v6, v7); this.edge(v7, v4);
         this.edge(v0, v4); this.edge(v1, v5); this.edge(v2, v6); this.edge(v3, v7);
+
+        if (bFaces) {
+            const ichStart = this.chunks.length;
+            // Front (z+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v4, v5, v6, v7);
+            // Back (z-)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v1, v0, v3, v2); // Winding order?
+            // Right (x+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v5, v1, v2, v6);
+            // Left (x-)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v4, v7, v3);
+            // Top (y+)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v3, v7, v6, v2);
+            // Bottom (y-)
+            this.chunk({ x: this.strips.length, y: 0, z: 4, w: 1 }); this.strips.push(v0, v1, v5, v4);
+
+            return { x: ichStart, y: this.chunks.length };
+        }
+        return { x: -1, y: -1 };
     }
 
-    girder1(p0, p1, up, n, width, type = -1) {
+    /**
+     * Creates a girder in the truss structure.
+     * Ported from MeshBuilder2.cpp::girder1
+     */
+    girder1(p0, p1, up, n, width, stickTypes = { x: 1, y: 1, z: 1, w: 1 }, bCaps = false) {
         const dir = new Vec3().setSub(p1, p0);
-        let prevI = this.vert(p0);
+        const length = dir.normalize(); // Returns length, normalizes in place
 
-        for (let i = 1; i <= n; i++) {
-            const t = i / n;
-            const pos = new Vec3().setAddMul(p0, dir, t);
-            const currI = this.vert(pos);
-            this.edge(prevI, currI, type);
-            prevI = currI;
+        const side = new Vec3();
+
+        // up.makeOrthoU(dir); // C++: up.makeOrthoU(dir);
+        // In JS Vec3.js: makeOrthoU(a) -> this -= a * (this . a)
+        // But we need to make sure 'up' is not modified in place if it's passed by reference?
+        // In JS objects are passed by reference. So we should clone 'up' if we don't want to modify it.
+        // However, the C++ code modifies 'up' in place (passed by value? No, Vec3d is usually by value in C++ unless &).
+        // In C++ signature: Vec3d up (by value). So we should clone it.
+
+        const upVec = up.clone();
+        upVec.makeOrthoU(dir);
+        upVec.normalize(); // Ensure it's unit length after orthogonalization
+
+        side.setCross(dir, upVec);
+        side.normalize();
+
+        const dl = length / (2 * n + 1);
+        const dnp = 4;
+        const i00start = this.verts.length;
+        let i00 = i00start;
+
+        // Pre-calculate offsets
+        // side*-width
+        const wSideNeg = new Vec3().setMul(side, new Vec3(-width, -width, -width));
+        const wSidePos = new Vec3().setMul(side, new Vec3(width, width, width));
+        const wUpNeg = new Vec3().setMul(upVec, new Vec3(-width, -width, -width));
+        const wUpPos = new Vec3().setMul(upVec, new Vec3(width, width, width));
+
+        for (let i = 0; i < n; i++) {
+            const i01 = i00 + 1;
+            const i10 = i00 + 2;
+            const i11 = i00 + 3;
+
+            // Vertices
+            // vert( p0 + side*-width + dir*(dl*(1+2*i  )) );
+            let d = dl * (1 + 2 * i);
+            let pBase = new Vec3().setAddMul(p0, dir, d);
+            this.vert(new Vec3().setAdd(pBase, wSideNeg));
+
+            // vert( p0 + side*+width + dir*(dl*(1+2*i  )) );
+            this.vert(new Vec3().setAdd(pBase, wSidePos));
+
+            // vert( p0 + up  *-width + dir*(dl*(1+2*i+1)) );
+            d = dl * (1 + 2 * i + 1);
+            pBase.setAddMul(p0, dir, d);
+            this.vert(new Vec3().setAdd(pBase, wUpNeg));
+
+            // vert( p0 + up  *+width + dir*(dl*(1+2*i+1)) );
+            this.vert(new Vec3().setAdd(pBase, wUpPos));
+
+            // Edges
+            this.edge(i00, i01, stickTypes.y);
+            this.edge(i10, i11, stickTypes.y);
+            this.edge(i00, i10, stickTypes.z);
+            this.edge(i00, i11, stickTypes.z);
+            this.edge(i01, i10, stickTypes.z);
+            this.edge(i01, i11, stickTypes.z);
+
+            if (i < (n - 1)) {
+                this.edge(i10, i00 + dnp, stickTypes.w);
+                this.edge(i10, i01 + dnp, stickTypes.w);
+                this.edge(i11, i00 + dnp, stickTypes.w);
+                this.edge(i11, i01 + dnp, stickTypes.w);
+
+                this.edge(i00, i00 + dnp, stickTypes.x);
+                this.edge(i01, i01 + dnp, stickTypes.x);
+                this.edge(i10, i10 + dnp, stickTypes.x);
+                this.edge(i11, i11 + dnp, stickTypes.x);
+            }
+            i00 += dnp;
         }
+
+        if (bCaps) {
+            const ip0 = this.vert(p0);
+            const ip1 = this.vert(p1);
+
+            this.edge(i00start + 0, ip0, stickTypes.x);
+            this.edge(i00start + 1, ip0, stickTypes.x);
+            this.edge(i00start + 2, ip0, stickTypes.x);
+            this.edge(i00start + 3, ip0, stickTypes.x);
+
+            const i00end = i00 - dnp;
+            this.edge(i00end + 0, ip1, stickTypes.x);
+            this.edge(i00end + 1, ip1, stickTypes.x);
+            this.edge(i00end + 2, ip1, stickTypes.x);
+            this.edge(i00end + 3, ip1, stickTypes.x);
+        }
+
+        return i00;
     }
 
     // --- Export Functions ---

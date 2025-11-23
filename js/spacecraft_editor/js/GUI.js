@@ -61,7 +61,37 @@ class GUI {
             runBtn.addEventListener('click', () => {
                 const code = scriptInput.value;
                 window.logger.info("Running script...");
-                this.engine.runScript(code);
+
+                // Heuristic: Check if script uses 'mesh' or 'ConstructionBlockTests'
+                if (code.includes('mesh.') || code.includes('ConstructionBlockTests')) {
+                    try {
+                        // Check if 'mesh' is declared in the code to avoid "Identifier 'mesh' has already been declared"
+                        const declaresMesh = /^\s*(const|let|var)\s+mesh\b/m.test(code);
+                        const meshArgName = declaresMesh ? '_mesh_ignored' : 'mesh';
+
+                        // Run on Main Thread
+                        const func = new Function('engine', meshArgName, 'Vec3', 'ConstructionBlockTests', 'window',
+                            `"use strict";\n${code}`
+                        );
+
+                        // Clear mesh before running if it's a mesh test (usually desired)
+                        // But maybe the script wants to add to it? 
+                        // The tests usually call setup() which clears it.
+
+                        func(this.engine, this.engine.mesh, Vec3, ConstructionBlockTests, window);
+
+                        if (this.renderer) {
+                            this.renderer.updateGeometry(this.engine.mesh);
+                        }
+                        window.logger.info("Script executed on Main Thread.");
+                    } catch (e) {
+                        window.logger.error(`Script Error: ${e.message}`);
+                        console.error(e);
+                    }
+                } else {
+                    // Run in Worker (Simulation Script)
+                    this.engine.runScript(code);
+                }
             });
         }
 
@@ -107,44 +137,11 @@ class GUI {
         document.getElementById('btnViewYZ')?.addEventListener('click', () => setView([20, 0, 0], [0, 1, 0]));
 
         // --- Label Controls ---
-        // Inject into the View section (panel-section)
-        // We need to find the View section. It contains "View" h3.
-        const sections = document.querySelectorAll('.panel-section');
-        let viewSection = null;
-        for (const sec of sections) {
-            if (sec.querySelector('h3')?.textContent === 'View') {
-                viewSection = sec;
-                break;
-            }
-        }
+        const selMode = document.getElementById('selLabelMode');
+        const colLabel = document.getElementById('colLabel');
+        const numSize = document.getElementById('numLabelSize');
 
-        if (viewSection) {
-            const labelDiv = document.createElement('div');
-            labelDiv.className = 'control-group';
-            labelDiv.style.marginTop = '10px';
-            labelDiv.style.borderTop = '1px solid #444';
-            labelDiv.style.paddingTop = '5px';
-
-            labelDiv.innerHTML = `
-                <label style="display:block; margin-bottom:5px;">Labels:</label>
-                <select id="selLabelMode" style="width:100%; margin-bottom:5px; background:#333; color:#fff; border:1px solid #555;">
-                    <option value="none">None</option>
-                    <option value="id" selected>Node ID</option>
-                </select>
-                <div style="display:flex; gap:5px; align-items: center;">
-                    <span style="font-size:0.9em;">Color:</span>
-                    <input type="color" id="colLabel" value="#ffffff" style="width:30px; height:20px; border:none; padding:0;">
-                    <span style="font-size:0.9em; margin-left:5px;">Size:</span>
-                    <input type="number" id="numLabelSize" value="1.0" step="0.1" style="width:50px; background:#333; color:#fff; border:1px solid #555;">
-                </div>
-            `;
-            viewSection.appendChild(labelDiv);
-
-            // Bind Events
-            const selMode = labelDiv.querySelector('#selLabelMode');
-            const colLabel = labelDiv.querySelector('#colLabel');
-            const numSize = labelDiv.querySelector('#numLabelSize');
-
+        if (selMode && colLabel && numSize) {
             selMode.addEventListener('change', () => {
                 if (this.renderer) this.renderer.setLabelMode(selMode.value);
             });
@@ -172,24 +169,88 @@ class GUI {
         if (selTest && window.ConstructionBlockTests) {
             // Clear existing options first if any
             selTest.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = "";
+            defaultOpt.textContent = "-- Select Test --";
+            selTest.appendChild(defaultOpt);
+
+            window.logger.info(`Loaded ${Object.keys(ConstructionBlockTests.tests).length} tests: ${Object.keys(ConstructionBlockTests.tests).join(', ')}`);
+
             for (const testName in ConstructionBlockTests.tests) {
                 const opt = document.createElement('option');
                 opt.value = testName;
                 opt.textContent = testName;
                 selTest.appendChild(opt);
             }
-        }
 
-        if (btnRunTest) {
-            btnRunTest.addEventListener('click', () => {
+            selTest.addEventListener('change', () => {
                 const testName = selTest.value;
+                window.logger.info(`Selected test: ${testName}`);
+                if (!testName) return;
+
                 const testFunc = ConstructionBlockTests.tests[testName];
                 if (testFunc) {
-                    window.logger.info(`Running test: ${testName}`);
-                    testFunc(this.engine);
+                    try {
+                        // Extract function body
+                        let code = testFunc.toString();
+                        // Remove function signature "function (engine) {" or "(engine) => {"
+                        const bodyStart = code.indexOf('{');
+                        const bodyEnd = code.lastIndexOf('}');
+
+                        if (bodyStart !== -1 && bodyEnd !== -1) {
+                            code = code.substring(bodyStart + 1, bodyEnd);
+
+                            // Normalize indentation
+                            const lines = code.split('\n');
+                            // Find minimum indentation (ignoring empty lines)
+                            let minIndent = Infinity;
+                            for (const line of lines) {
+                                if (line.trim().length > 0) {
+                                    const indent = line.match(/^\s*/)[0].length;
+                                    if (indent < minIndent) minIndent = indent;
+                                }
+                            }
+
+                            if (minIndent !== Infinity && minIndent > 0) {
+                                code = lines.map(line => {
+                                    if (line.trim().length > 0) {
+                                        return line.substring(minIndent);
+                                    }
+                                    return line;
+                                }).join('\n');
+                            }
+
+                            // Trim and clean up
+                            code = code.trim();
+                            // Add standard header
+                            code = `// Test: ${testName}\n// Context: engine, mesh, Vec3, ConstructionBlockTests\n\n${code}`;
+
+                            scriptInput.value = code;
+                            window.logger.info(`Populated script area for ${testName}`);
+                        } else {
+                            window.logger.error(`Could not parse function body for ${testName}`);
+                        }
+                    } catch (e) {
+                        window.logger.error(`Error populating script: ${e.message}`);
+                    }
+                } else {
+                    window.logger.error(`Test function not found for ${testName}`);
                 }
             });
         }
+
+        if (btnRunTest) {
+            // btnRunTest is now redundant if we run from script, but let's keep it as a shortcut
+            // Or better, make it run the CURRENT script in the box? 
+            // The user request implies "put it into the SCRIPTING test area, and from there we can run it".
+            // So the primary run button is 'run-script-btn'. 
+            // We can hide btnRunTest or make it just populate and run.
+            // Let's keep it simple: selecting populates. 'Run Script' runs.
+            // We can remove btnRunTest listener or make it trigger the run-script logic.
+            btnRunTest.style.display = 'none'; // Hide it as requested workflow is via Scripting area
+        }
+
+
 
         // --- Verbosity ---
         const numVerbosity = document.getElementById('numVerbosity');

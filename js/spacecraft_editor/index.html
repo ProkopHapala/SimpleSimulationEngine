@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spacecraft Editor WebGL</title>
     <link rel="stylesheet" href="css/style.css">
-
     <!-- Three.js (r128) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -16,10 +15,7 @@
 <body>
     <div id="canvas-container"></div>
     <div id="gui-resizer"></div>
-
     <div id="side-panel">
-
-
         <div class="panel-section">
             <h3>Scripting</h3>
             <div class="control-row">
@@ -46,8 +42,7 @@ api.Girder(n3, n4, "Steel");
             <div class="panel-section">
                 <h3>View</h3>
                 <div class="control-group">
-                    <label>Zoom: <input type="range" id="zoomSlider" min="-2.0" max="3.0" step="0.1" value="1.0"
-                            style="width: 100%;"></label>
+                    <label>Zoom: <input type="range" id="zoomSlider" min="-2.0" max="3.0" step="0.1" value="1.0" style="width: 100%;"></label>
                 </div>
                 <div class="control-group" style="margin-top: 5px;">
                     <button id="btnViewXY" class="small-btn">XY</button>
@@ -60,8 +55,7 @@ api.Girder(n3, n4, "Steel");
             <div class="panel-section">
                 <h3>Tests</h3>
                 <div class="control-group">
-                    <label>Verbosity: <input type="number" id="numVerbosity" value="4" min="0" max="5"
-                            style="width: 40px;"></label>
+                    <label>Verbosity: <input type="number" id="numVerbosity" value="4" min="0" max="5" style="width: 40px;"></label>
                 </div>
                 <div class="control-group">
                     <label><input type="checkbox" id="chkAutoClear" checked> Auto Clear</label>
@@ -72,6 +66,19 @@ api.Girder(n3, n4, "Steel");
                     </select>
                     <button id="btnRunTest">Run Test</button>
                 </div>
+            </div>
+
+            <!-- Labels -->
+            <label style="display:block; margin-bottom:5px;">Labels:</label>
+            <select id="selLabelMode" style="width:100%; margin-bottom:5px; background:#333; color:#fff; border:1px solid #555;">
+                <option value="none">None</option>
+                <option value="id" selected>Node ID</option>
+            </select>
+            <div style="display:flex; gap:5px; align-items: center;">
+                <span style="font-size:0.9em;">Color:</span>
+                <input type="color" id="colLabel" value="#00ff00" style="width:30px; height:20px; border:none; padding:0;">
+                <span style="font-size:0.9em; margin-left:5px;">Size:</span>
+                <input type="number" id="numLabelSize" value="0.4" step="0.1" style="width:50px; background:#333; color:#fff; border:1px solid #555;">
             </div>
 
             <!-- Log -->
@@ -93,14 +100,14 @@ api.Girder(n3, n4, "Steel");
         <script src="../common_js/Vec3.js"></script>
 
         <!-- Editor JS -->
-        <script src="js/MeshBuilder.js"></script>
-        <script src="js/SpaceCraft.js"></script>
-        <script src="js/SpaceCraft2Mesh.js"></script>
-        <script src="js/constructionBlockTests.js"></script>
-        <script src="js/SpaceCraftEngine.js"></script>
-        <script src="js/SpaceCraftRenderer.js"></script>
-        <script src="js/GUI.js"></script>
-        <script src="js/main.js"></script>
+        <script src="js/MeshBuilder.js?v=2"></script>
+        <script src="js/SpaceCraft.js?v=2"></script>
+        <script src="js/SpaceCraft2Mesh.js?v=2"></script>
+        <script src="js/constructionBlockTests.js?v=2"></script>
+        <script src="js/SpaceCraftEngine.js?v=2"></script>
+        <script src="js/SpaceCraftRenderer.js?v=2"></script>
+        <script src="js/GUI.js?v=2"></script>
+        <script src="js/main.js?v=2"></script>
 </body>
 
 </html>

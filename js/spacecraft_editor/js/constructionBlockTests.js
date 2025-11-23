@@ -21,8 +21,8 @@ window.ConstructionBlockTests = {
             const p1 = new Vec3(0, 10, 0);
             const p2 = new Vec3(10, 10, 0);
 
-            mesh.girder1(p0, p1, new Vec3(1, 0, 0), 5, 0.5);
-            mesh.girder1(p1, p2, new Vec3(0, 1, 0), 5, 0.5);
+            mesh.girder1(p0, p1, new Vec3(1, 0, 0), 5, 0.5, { x: 1, y: 1, z: 1, w: 1 }, true);
+            mesh.girder1(p1, p2, new Vec3(0, 1, 0), 5, 0.5, { x: 1, y: 1, z: 1, w: 1 }, true);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
             window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
@@ -107,51 +107,25 @@ window.ConstructionBlockTests = {
             window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         },
 
-        "Cube Nodes with Bridges": (engine) => {
+
+
+        "Bridge Cubes": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Cube Nodes with Bridges Test...");
+            window.logger.info("Running Bridge Cubes Test...");
 
             // Create two cubes
             const p1 = new Vec3(0, 0, 0);
             const p2 = new Vec3(0, 0, 15);
             const size = 2.0;
-            const s = size * 0.5;
 
             // Cube 1
-            const c1v0 = mesh.vert(new Vec3(p1.x - s, p1.y - s, p1.z - s));
-            const c1v1 = mesh.vert(new Vec3(p1.x + s, p1.y - s, p1.z - s));
-            const c1v2 = mesh.vert(new Vec3(p1.x + s, p1.y + s, p1.z - s));
-            const c1v3 = mesh.vert(new Vec3(p1.x - s, p1.y + s, p1.z - s));
-            const c1v4 = mesh.vert(new Vec3(p1.x - s, p1.y - s, p1.z + s));
-            const c1v5 = mesh.vert(new Vec3(p1.x + s, p1.y - s, p1.z + s));
-            const c1v6 = mesh.vert(new Vec3(p1.x + s, p1.y + s, p1.z + s));
-            const c1v7 = mesh.vert(new Vec3(p1.x - s, p1.y + s, p1.z + s));
-
-            // Cube 1 edges
-            mesh.edge(c1v0, c1v1); mesh.edge(c1v1, c1v2); mesh.edge(c1v2, c1v3); mesh.edge(c1v3, c1v0);
-            mesh.edge(c1v4, c1v5); mesh.edge(c1v5, c1v6); mesh.edge(c1v6, c1v7); mesh.edge(c1v7, c1v4);
-            mesh.edge(c1v0, c1v4); mesh.edge(c1v1, c1v5); mesh.edge(c1v2, c1v6); mesh.edge(c1v3, c1v7);
-
+            const chRange1 = mesh.addCube(p1, size, true);
             // Cube 2
-            const c2v0 = mesh.vert(new Vec3(p2.x - s, p2.y - s, p2.z - s));
-            const c2v1 = mesh.vert(new Vec3(p2.x + s, p2.y - s, p2.z - s));
-            const c2v2 = mesh.vert(new Vec3(p2.x + s, p2.y + s, p2.z - s));
-            const c2v3 = mesh.vert(new Vec3(p2.x - s, p2.y + s, p2.z - s));
-            const c2v4 = mesh.vert(new Vec3(p2.x - s, p2.y - s, p2.z + s));
-            const c2v5 = mesh.vert(new Vec3(p2.x + s, p2.y - s, p2.z + s));
-            const c2v6 = mesh.vert(new Vec3(p2.x + s, p2.y + s, p2.z + s));
-            const c2v7 = mesh.vert(new Vec3(p2.x - s, p2.y + s, p2.z + s));
+            const chRange2 = mesh.addCube(p2, size, true);
 
-            // Cube 2 edges
-            mesh.edge(c2v0, c2v1); mesh.edge(c2v1, c2v2); mesh.edge(c2v2, c2v3); mesh.edge(c2v3, c2v0);
-            mesh.edge(c2v4, c2v5); mesh.edge(c2v5, c2v6); mesh.edge(c2v6, c2v7); mesh.edge(c2v7, c2v4);
-            mesh.edge(c2v0, c2v4); mesh.edge(c2v1, c2v5); mesh.edge(c2v2, c2v6); mesh.edge(c2v3, c2v7);
-
-            // Bridge top face of cube 1 to bottom face of cube 2
-            const q1 = { x: c1v4, y: c1v5, z: c1v6, w: c1v7 }; // top face of cube 1
-            const q2 = { x: c2v0, y: c2v1, z: c2v2, w: c2v3 }; // bottom face of cube 2
-
-            mesh.bridge_quads(q1, q2, 5, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 }, true);
+            // Bridge them using automatic face detection
+            // stickTypes: {x: longitudinal, y: ring, z: spiral, w: internal}
+            mesh.bridgeFacingPolygons(p1, p2, chRange1, chRange2, 5, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 });
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
             window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
