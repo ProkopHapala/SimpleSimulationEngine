@@ -15,7 +15,7 @@ window.ConstructionBlockTests = {
     tests: {
         "Girder Simple": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Girder Simple Test...");
+            logger.info("Running Girder Simple Test...");
 
             const p0 = new Vec3(0, 0, 0);
             const p1 = new Vec3(0, 10, 0);
@@ -25,12 +25,12 @@ window.ConstructionBlockTests = {
             mesh.girder1(p1, p2, new Vec3(0, 1, 0), 5, 0.5, { x: 1, y: 1, z: 1, w: 1 }, true);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
-            window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         },
 
         "Cube Nodes (Manual)": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Cube Nodes Test...");
+            logger.info("Running Cube Nodes Test...");
 
             const nodes = [
                 new Vec3(0, 0, 0),
@@ -39,17 +39,17 @@ window.ConstructionBlockTests = {
             ];
 
             nodes.forEach(p => {
-                window.logger.info(`Adding Cube at ${p.toString()}`);
+                logger.info(`Adding Cube at ${p.toString()}`);
                 mesh.addCube(p, 1.0);
             });
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
-            window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         },
 
         "Bridge Quads Simple": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Bridge Quads Simple Test...");
+            logger.info("Running Bridge Quads Simple Test...");
 
             // Create two quads facing each other
             const s = 2.0; // half-size
@@ -73,12 +73,12 @@ window.ConstructionBlockTests = {
             mesh.bridge_quads(q1, q2, 4, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 }, true);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
-            window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         },
 
         "Bridge Quads Twisted": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Bridge Quads Twisted Test...");
+            logger.info("Running Bridge Quads Twisted Test...");
 
             const s = 2.0;
 
@@ -104,14 +104,14 @@ window.ConstructionBlockTests = {
             mesh.bridge_quads(q1, q2, 6, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 0, w: 0 }, true);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
-            window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         },
 
 
 
         "Bridge Cubes": (engine) => {
             const mesh = ConstructionBlockTests.setup(engine);
-            window.logger.info("Running Bridge Cubes Test...");
+            logger.info("Running Bridge Cubes Test...");
 
             // Create two cubes
             const p1 = new Vec3(0, 0, 0);
@@ -128,7 +128,7 @@ window.ConstructionBlockTests = {
             mesh.bridgeFacingPolygons(p1, p2, chRange1, chRange2, 5, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 });
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
-            window.logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         }
     }
 };

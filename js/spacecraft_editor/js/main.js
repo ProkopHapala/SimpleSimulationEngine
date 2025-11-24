@@ -6,6 +6,10 @@ window.renderer = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Initializing Spacecraft Editor...");
 
+    // NOTE: Global logger is initialized in js/common_js/Logger.js which should be loaded before this script.
+    // We ensure it is properly set up with the UI container below.
+
+
     // Shader Loading Helper
     const loadShader = async (url) => {
         const response = await fetch(url);

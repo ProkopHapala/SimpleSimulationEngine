@@ -60,7 +60,7 @@ class GUI {
         if (runBtn) {
             runBtn.addEventListener('click', () => {
                 const code = scriptInput.value;
-                window.logger.info("Running script...");
+                logger.info("Running script...");
 
                 // Heuristic: Check if script uses 'mesh' or 'ConstructionBlockTests'
                 if (code.includes('mesh.') || code.includes('ConstructionBlockTests')) {
@@ -83,10 +83,10 @@ class GUI {
                         if (this.renderer) {
                             this.renderer.updateGeometry(this.engine.mesh);
                         }
-                        window.logger.info("Script executed on Main Thread.");
+                        logger.info("Script executed on Main Thread.");
                     } catch (e) {
-                        window.logger.error(`Script Error: ${e.message}`);
-                        console.error(e);
+                        logger.error(`Script Error: ${e.message}`);
+                        logger.error(e);
                     }
                 } else {
                     // Run in Worker (Simulation Script)
@@ -189,7 +189,7 @@ class GUI {
             defaultOpt.textContent = "-- Select Test --";
             selTest.appendChild(defaultOpt);
 
-            window.logger.info(`Loaded ${Object.keys(ConstructionBlockTests.tests).length} tests: ${Object.keys(ConstructionBlockTests.tests).join(', ')}`);
+            logger.info(`Loaded ${Object.keys(ConstructionBlockTests.tests).length} tests: ${Object.keys(ConstructionBlockTests.tests).join(', ')}`);
 
             for (const testName in ConstructionBlockTests.tests) {
                 const opt = document.createElement('option');
@@ -200,7 +200,7 @@ class GUI {
 
             selTest.addEventListener('change', () => {
                 const testName = selTest.value;
-                window.logger.info(`Selected test: ${testName}`);
+                logger.info(`Selected test: ${testName}`);
                 if (!testName) return;
 
                 const testFunc = ConstructionBlockTests.tests[testName];
@@ -241,15 +241,15 @@ class GUI {
                             code = `// Test: ${testName}\n// Context: engine, mesh, Vec3, ConstructionBlockTests\n\n${code}`;
 
                             scriptInput.value = code;
-                            window.logger.info(`Populated script area for ${testName}`);
+                            logger.info(`Populated script area for ${testName}`);
                         } else {
-                            window.logger.error(`Could not parse function body for ${testName}`);
+                            logger.error(`Could not parse function body for ${testName}`);
                         }
                     } catch (e) {
-                        window.logger.error(`Error populating script: ${e.message}`);
+                        logger.error(`Error populating script: ${e.message}`);
                     }
                 } else {
-                    window.logger.error(`Test function not found for ${testName}`);
+                    logger.error(`Test function not found for ${testName}`);
                 }
             });
         }
@@ -271,24 +271,24 @@ class GUI {
         const numVerbosityUI = document.getElementById('numVerbosityUI');
         const numVerbosityCon = document.getElementById('numVerbosityCon');
 
-        if (numVerbosityUI && window.logger) {
-            numVerbosityUI.value = window.logger.uiVerbosity;
+        if (numVerbosityUI && logger) {
+            numVerbosityUI.value = logger.uiVerbosity;
             numVerbosityUI.addEventListener('change', () => {
                 const val = parseInt(numVerbosityUI.value);
                 if (!isNaN(val)) {
-                    window.logger.setUIVerbosity(val);
-                    window.logger.info(`UI Verbosity set to ${val}`);
+                    logger.setUIVerbosity(val);
+                    logger.info(`UI Verbosity set to ${val}`);
                 }
             });
         }
 
-        if (numVerbosityCon && window.logger) {
-            numVerbosityCon.value = window.logger.consoleVerbosity;
+        if (numVerbosityCon && logger) {
+            numVerbosityCon.value = logger.consoleVerbosity;
             numVerbosityCon.addEventListener('change', () => {
                 const val = parseInt(numVerbosityCon.value);
                 if (!isNaN(val)) {
-                    window.logger.setConsoleVerbosity(val);
-                    window.logger.info(`Console Verbosity set to ${val}`);
+                    logger.setConsoleVerbosity(val);
+                    logger.info(`Console Verbosity set to ${val}`);
                 }
             });
         }
@@ -297,7 +297,7 @@ class GUI {
         const btnClearLog = document.getElementById('btnClearLog');
         if (btnClearLog) {
             btnClearLog.addEventListener('click', () => {
-                if (window.logger) window.logger.clear();
+                if (logger) logger.clear();
             });
         }
     }

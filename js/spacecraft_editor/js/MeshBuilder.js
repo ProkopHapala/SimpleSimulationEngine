@@ -1,5 +1,8 @@
 
 class MeshBuilder {
+    // DEPENDENCY: This class assumes a global 'logger' object exists.
+    // In browser: window.logger
+    // In Node.js: global.logger
     constructor() {
 
         this.verts = [];   // Vertices: Array of {pos: Vec3, nor: Vec3, uv: {x, y}}
@@ -20,7 +23,7 @@ class MeshBuilder {
         this.chunks = [];
         this.strips = [];
         this.blocks = [];
-        window.logger?.info("MeshBuilder cleared.");
+        logger.info("MeshBuilder cleared.");
     }
 
     // --- Basic Primitives ---
@@ -36,14 +39,14 @@ class MeshBuilder {
         };
         this.verts.push(v);
         const idx = this.verts.length - 1;
-        window.logger?.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
+        logger.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
         return idx;
     }
 
     edge(a, b, type = -1, type2 = 0) {
         this.edges.push({ x: a, y: b, z: type, w: type2 });
         const idx = this.edges.length - 1;
-        window.logger?.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
+        logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
         return idx;
     }
 
@@ -169,7 +172,7 @@ class MeshBuilder {
             }
             // Map ivs1[i] to the vertex that was originally at ivs2[jbest]
             ivs2[i] = originalIvs2[jbest];
-            window.logger?.debug(`alling_polygons: Map ${i} -> ${jbest} (d=${dmin})`);
+            logger.debug(`alling_polygons: Map ${i} -> ${jbest} (d=${dmin})`);
         }
     }
 
@@ -187,7 +190,7 @@ class MeshBuilder {
      * @param {boolean} bAlling - Whether to align quads rotationally
      */
     bridge_quads(q1, q2, nseg, stickTypes = { x: -1, y: -1, z: -1, w: -1 }, mask = { x: 1, y: 1, z: 1, w: 1 }, bAlling = true) {
-        window.logger?.debug(`bridge_quads: nseg=${nseg}, q1=[${q1.x},${q1.y},${q1.z},${q1.w}], q2=[${q2.x},${q2.y},${q2.z},${q2.w}]`);
+        logger.debug(`bridge_quads: nseg=${nseg}, q1=[${q1.x},${q1.y},${q1.z},${q1.w}], q2=[${q2.x},${q2.y},${q2.z},${q2.w}]`);
 
         // Align polygons if requested
         if (bAlling) {
@@ -284,7 +287,7 @@ class MeshBuilder {
         let cmax = -1.0;
         const bDist = Math.abs(distWeight) > 1e-100;
 
-        window.logger?.debug(`findMostFacingNormal: hray=${hray.toString()}, nch=${nch}, range=[${chrange.x}, ${chrange.y}]`);
+        logger.debug(`findMostFacingNormal: hray=${hray.toString()}, nch=${nch}, range=[${chrange.x}, ${chrange.y}]`);
 
         for (let i = 0; i < nch; i++) {
             const ich = chrange.x + i;
@@ -293,7 +296,7 @@ class MeshBuilder {
 
             if (bTwoSide) c = Math.abs(c);
 
-            window.logger?.debug(`  Chunk ${ich}: nr=${nr.toString()}, c=${c}`);
+            logger.debug(`  Chunk ${ich}: nr=${nr.toString()}, c=${c}`);
 
             if (c > cosMin) {
                 if (bDist) {
@@ -304,7 +307,7 @@ class MeshBuilder {
                 if (c > cmax) {
                     ibest = ich;
                     cmax = c;
-                    window.logger?.debug(`  New best: ${ibest} (c=${cmax})`);
+                    logger.debug(`  New best: ${ibest} (c=${cmax})`);
                 }
             }
         }
@@ -320,10 +323,10 @@ class MeshBuilder {
         const ich1 = this.findMostFacingNormal(hray, chr1, 0.0, true, 1e-6, p2);
         const ich2 = this.findMostFacingNormal(hray, chr2, 0.0, true, 1e-6, p1);
 
-        window.logger?.info(`bridgeFacingPolygons: ich1=${ich1}, ich2=${ich2}`);
+        logger.info(`bridgeFacingPolygons: ich1=${ich1}, ich2=${ich2}`);
 
         if (ich1 < 0 || ich2 < 0) {
-            window.logger.error(`bridgeFacingPolygons: Could not find facing polygons. ich1=${ich1}, ich2=${ich2}`);
+            logger.error(`bridgeFacingPolygons: Could not find facing polygons. ich1=${ich1}, ich2=${ich2}`);
             return;
         }
 
@@ -336,7 +339,7 @@ class MeshBuilder {
             }
             // Assuming quads for now as per bridge_quads requirement
             if (ivs.length !== 4) {
-                window.logger.warn(`bridgeFacingPolygons: Chunk ${ich} has ${ivs.length} vertices, expected 4.`);
+                logger.warn(`bridgeFacingPolygons: Chunk ${ich} has ${ivs.length} vertices, expected 4.`);
             }
             return { x: ivs[0], y: ivs[1], z: ivs[2], w: ivs[3] };
         };
@@ -564,4 +567,85 @@ class MeshBuilder {
         const ch = this.chunks[ichunk];
         return this.strips.slice(ch.x, ch.x + ch.z);
     }
+
+    // --- Logging ---
+
+    logOperation(name, args) {
+        // Simple logging for now, can be expanded to JSON or other formats
+        const argsStr = JSON.stringify(args);
+        logger.info(`OP: ${name} ${argsStr}`);
+    }
+
+    // --- OBJ Export ---
+
+    toObjString() {
+        let str = "# SimpleSimulationEngine MeshBuilder JS OBJ export\n";
+
+        // Vertices
+        str += `# Vertices: ${this.verts.length}\n`;
+        for (const v of this.verts) {
+            str += `v ${v.pos.x} ${v.pos.y} ${v.pos.z}\n`;
+        }
+
+        // Normals (optional, but good to have)
+        str += `# Normals: ${this.verts.length}\n`;
+        for (const v of this.verts) {
+            str += `vn ${v.nor.x} ${v.nor.y} ${v.nor.z}\n`;
+        }
+
+        // UVs
+        str += `# UVs: ${this.verts.length}\n`;
+        for (const v of this.verts) {
+            str += `vt ${v.uv.x} ${v.uv.y}\n`;
+        }
+
+        // Faces (from chunks)
+        // We iterate over chunks to reconstruct faces
+        // Assuming chunks are faces (type 1)
+        str += `# Faces\n`;
+        for (const ch of this.chunks) {
+            // ch.w is type. 1 = face.
+            // if (ch.w === 1) { 
+            // For now, let's assume all chunks that look like faces are faces.
+            // Or just dump all strips as faces if they form valid polygons.
+
+            const ivs = this.strips.slice(ch.x, ch.x + ch.z);
+            if (ivs.length >= 3) {
+                str += "f";
+                for (const idx of ivs) {
+                    // OBJ indices are 1-based
+                    const i = idx + 1;
+                    // f v/vt/vn
+                    str += ` ${i}/${i}/${i}`;
+                }
+                str += "\n";
+            }
+            // }
+        }
+
+        // Edges (as lines)
+        str += `# Edges: ${this.edges.length}\n`;
+        for (const e of this.edges) {
+            // l v1 v2
+            str += `l ${e.x + 1} ${e.y + 1}\n`;
+        }
+
+        return str;
+    }
+}
+
+// Export for both module and non-module usage
+if (typeof module !== 'undefined' && module.exports) {
+    // Node.js
+    // We need to ensure Vec3 is available. 
+    // If Vec3 is not global, we might need to require it, but for this specific setup
+    // where we might concat files or load them globally, we'll assume Vec3 is present 
+    // or passed in some way. 
+    // However, standard Node require pattern:
+    // const { Vec3 } = require('./Vec3.js'); 
+    // But we don't want to break browser compatibility with require calls if not bundled.
+    // So we'll leave imports up to the consumer or test runner.
+    module.exports = { MeshBuilder };
+} else if (typeof window !== 'undefined') {
+    window.MeshBuilder = MeshBuilder;
 }

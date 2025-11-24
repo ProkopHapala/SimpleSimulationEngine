@@ -1,6 +1,19 @@
 // Global Verbosity Level
-// Global Verbosity Level
 // window.VERBOSITY_LEVEL removed in favor of Logger instance properties
+
+/**
+ * Global Logger
+ * 
+ * Usage:
+ *   logger.info("Message");
+ *   logger.debug("Debug message");
+ *   logger.warn("Warning");
+ *   logger.error("Error");
+ * 
+ * Initialization:
+ *   - Browser: window.logger is initialized automatically at the end of this file.
+ *   - Node.js: You must set global.logger manually (see test_utils.js).
+ */
 
 class Logger {
     static NONE = 0;

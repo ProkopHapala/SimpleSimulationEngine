@@ -54,7 +54,8 @@ class SpaceCraftRenderer extends MeshRenderer {
         const numVerts = verts.length;
 
         if (numVerts > this.capacity) {
-            console.warn("Mesh exceeds max vertices capacity!");
+            if (typeof logger !== 'undefined') logger.warn("Mesh exceeds max vertices capacity!");
+            else console.warn("Mesh exceeds max vertices capacity!");
             return;
         }
 

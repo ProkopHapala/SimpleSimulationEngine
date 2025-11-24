@@ -25,10 +25,10 @@ class SpaceCraftEngine {
                     this.processCommands(msg.cmds);
                     break;
                 case 'LOG':
-                    window.logToUI(msg.payload);
+                    logger.info(msg.payload);
                     break;
                 case 'ERROR':
-                    window.logToUI(`ERROR: ${msg.payload}`);
+                    logger.error(msg.payload);
                     break;
             }
         };
@@ -43,11 +43,11 @@ class SpaceCraftEngine {
     reset() {
         this.craft.clear();
         this.mesh.clear();
-        window.logger.info("Engine reset.");
+        logger.info("Engine reset.");
     }
 
     processCommands(cmds) {
-        console.log(`Processing ${cmds.length} commands...`);
+        logger.info(`Processing ${cmds.length} commands...`);
 
         // 1. Populate Abstract SpaceCraft
         // We need a temporary map to resolve Shadow IDs from worker to real objects
@@ -72,7 +72,7 @@ class SpaceCraftEngine {
                     if (n1 && n2) {
                         this.craft.addGirder(n1, n2, cmd.args[2]);
                     } else {
-                        console.warn("Invalid node IDs in Girder command", cmd.args);
+                        logger.warn(`Invalid node IDs in Girder command: ${JSON.stringify(cmd.args)}`);
                     }
                     break;
                 }
@@ -85,7 +85,7 @@ class SpaceCraftEngine {
         // 2. Generate Concrete Mesh
         BuildCraft_truss(this.mesh, this.craft);
 
-        window.logger?.info(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
+        logger.info(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
 
         // 3. Notify Renderer to update
         if (window.renderer) {
