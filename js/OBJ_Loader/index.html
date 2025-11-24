@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern OBJ Loader</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: #eee; font-family: sans-serif; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; }
+        #controls { position: absolute; top: 40px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; pointer-events: auto; }
+        .control-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="file"] { color: #eee; }
+    </style>
+    
+    <!-- Three.js (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+
+    <!-- Common JS -->
+    <script src="../common_js/Logger.js"></script>
+    <script src="../common_js/Draw3D.js"></script>
+    <script src="../common_js/MeshRenderer.js"></script>
+    <script src="../common_js/Vec3.js"></script>
+</head>
+<body>
+    <div id="info">Modern OBJ Loader</div>
+    <div id="controls">
+        <div class="control-group">
+            <label>Load OBJ:</label>
+            <input type="file" id="fileInput" accept=".obj">
+        </div>
+        
+        <!-- Visibility Toggles -->
+        <div class="control-group">
+            <label><input type="checkbox" id="chkNodes" checked> Show Nodes</label>
+            <label><input type="checkbox" id="chkEdges" checked> Show Edges</label>
+            <label><input type="checkbox" id="chkFaces" checked> Show Faces</label>
+            <label><input type="checkbox" id="chkLabels" checked> Show Labels</label>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="control-group">
+            <label>Camera:</label>
+            <select id="selCameraMode" style="width: 100%; margin-bottom: 5px;">
+                <option value="persp" selected>Perspective</option>
+                <option value="ortho">Orthographic</option>
+            </select>
+            <div style="display: flex; gap: 5px;">
+                <button id="btnViewXY">XY</button>
+                <button id="btnViewXZ">XZ</button>
+                <button id="btnViewYZ">YZ</button>
+            </div>
+            <div style="margin-top: 5px;">
+                Zoom: <input type="number" id="zoomInput" value="1.0" step="0.1" style="width: 50px;">
+            </div>
+            <div style="margin-top: 5px;">
+                <label><input type="checkbox" id="chkDamping"> Mouse Smoothing</label>
+            </div>
+        </div>
+
+        <!-- Label Controls -->
+        <div class="control-group">
+            <label>Labels:</label>
+            <div style="margin-bottom: 5px;">
+                Color: <input type="color" id="colLabel" value="#00ff00">
+            </div>
+            <div style="margin-bottom: 5px;">
+                Size: <input type="number" id="numLabelSize" value="0.05" step="0.1" style="width: 50px;">
+            </div>
+            <label><input type="checkbox" id="chkLabelFixed" checked> Fix Scale</label>
+        </div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <!-- Error Log Window -->
+    <div id="error-log" style="display: none; position: absolute; bottom: 10px; left: 10px; right: 10px; height: 150px; background: rgba(50, 0, 0, 0.9); color: #ffaaaa; border: 1px solid #ff0000; padding: 10px; font-family: monospace; overflow-y: auto; z-index: 1000;">
+        <div style="position: sticky; top: 0; background: rgba(50, 0, 0, 0.9); border-bottom: 1px solid #ff0000; margin-bottom: 5px; padding-bottom: 5px; display: flex; justify-content: space-between;">
+            <strong>Error Log</strong>
+            <button onclick="document.getElementById('error-log').style.display='none'" style="background: #ff0000; color: white; border: none; cursor: pointer;">Close</button>
+        </div>
+        <pre id="error-content" style="margin: 0; white-space: pre-wrap;"></pre>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

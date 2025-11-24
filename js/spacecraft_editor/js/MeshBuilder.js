@@ -576,6 +576,95 @@ class MeshBuilder {
         logger.info(`OP: ${name} ${argsStr}`);
     }
 
+    // --- Validation ---
+
+    /**
+     * Validate mesh for NaN, Inf, and coordinate ranges
+     * Returns object with validation results and statistics
+     */
+    validateMesh() {
+        const stats = {
+            valid: true,
+            vertCount: this.verts.length,
+            edgeCount: this.edges.length,
+            nanCount: 0,
+            infCount: 0,
+            min: { x: Infinity, y: Infinity, z: Infinity },
+            max: { x: -Infinity, y: -Infinity, z: -Infinity },
+            errors: []
+        };
+
+        if (this.verts.length === 0) {
+            stats.valid = false;
+            stats.errors.push("Mesh has no vertices");
+            return stats;
+        }
+
+        // Check each vertex for NaN/Inf and calculate bounds
+        for (let i = 0; i < this.verts.length; i++) {
+            const v = this.verts[i].pos;
+
+            // Check for NaN
+            if (isNaN(v.x) || isNaN(v.y) || isNaN(v.z)) {
+                stats.nanCount++;
+                stats.valid = false;
+                if (stats.errors.length < 10) { // Limit error reporting
+                    stats.errors.push(`Vertex ${i} has NaN: (${v.x}, ${v.y}, ${v.z})`);
+                }
+                continue; // Skip bounds calculation for NaN vertices
+            }
+
+            // Check for Inf
+            if (!isFinite(v.x) || !isFinite(v.y) || !isFinite(v.z)) {
+                stats.infCount++;
+                stats.valid = false;
+                if (stats.errors.length < 10) {
+                    stats.errors.push(`Vertex ${i} has Inf: (${v.x}, ${v.y}, ${v.z})`);
+                }
+                continue;
+            }
+
+            // Update bounds
+            stats.min.x = Math.min(stats.min.x, v.x);
+            stats.min.y = Math.min(stats.min.y, v.y);
+            stats.min.z = Math.min(stats.min.z, v.z);
+            stats.max.x = Math.max(stats.max.x, v.x);
+            stats.max.y = Math.max(stats.max.y, v.y);
+            stats.max.z = Math.max(stats.max.z, v.z);
+        }
+
+        // Calculate spans
+        if (stats.valid || (stats.nanCount + stats.infCount < this.verts.length)) {
+            stats.span = {
+                x: stats.max.x - stats.min.x,
+                y: stats.max.y - stats.min.y,
+                z: stats.max.z - stats.min.z
+            };
+
+            // Check for zero span (all vertices in a plane or line)
+            const epsilon = 1e-10;
+            if (Math.abs(stats.span.x) < epsilon && Math.abs(stats.span.y) < epsilon && Math.abs(stats.span.z) < epsilon) {
+                stats.errors.push(`All vertices are at the same point: (${stats.min.x}, ${stats.min.y}, ${stats.min.z})`);
+                logger.warn(`All vertices collapsed to a point`);
+            } else if (Math.abs(stats.span.x) < epsilon || Math.abs(stats.span.y) < epsilon || Math.abs(stats.span.z) < epsilon) {
+                logger.warn(`Mesh is degenerate (collapsed in one dimension): span=(${stats.span.x}, ${stats.span.y}, ${stats.span.z})`);
+            }
+        }
+
+        // Log summary
+        if (stats.nanCount > 0) {
+            logger.error(`Mesh validation failed: ${stats.nanCount} vertices with NaN`);
+        }
+        if (stats.infCount > 0) {
+            logger.error(`Mesh validation failed: ${stats.infCount} vertices with Inf`);
+        }
+        if (stats.valid) {
+            logger.info(`Mesh validation passed: ${stats.vertCount} verts, bounds: [${stats.min.x.toFixed(2)},${stats.max.x.toFixed(2)}] x [${stats.min.y.toFixed(2)},${stats.max.y.toFixed(2)}] x [${stats.min.z.toFixed(2)},${stats.max.z.toFixed(2)}]`);
+        }
+
+        return stats;
+    }
+
     // --- OBJ Export ---
 
     toObjString() {
@@ -637,14 +726,6 @@ class MeshBuilder {
 // Export for both module and non-module usage
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js
-    // We need to ensure Vec3 is available. 
-    // If Vec3 is not global, we might need to require it, but for this specific setup
-    // where we might concat files or load them globally, we'll assume Vec3 is present 
-    // or passed in some way. 
-    // However, standard Node require pattern:
-    // const { Vec3 } = require('./Vec3.js'); 
-    // But we don't want to break browser compatibility with require calls if not bundled.
-    // So we'll leave imports up to the consumer or test runner.
     module.exports = { MeshBuilder };
 } else if (typeof window !== 'undefined') {
     window.MeshBuilder = MeshBuilder;
