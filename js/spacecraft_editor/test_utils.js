@@ -22,8 +22,12 @@ global.Vec3 = Vec3;
 const { MeshBuilder } = require('./js/MeshBuilder.js');
 const { WireFlags, extendMeshBuilder } = require('./js/MeshesUV.js');
 
-// Extend MeshBuilder with UV functions
+// Extend MeshBuilder with MeshesUV functions
 extendMeshBuilder(MeshBuilder);
+
+// Extend MeshBuilder with block/skeleton generators
+const { extendMeshBuilderWithGenerators } = require('./js/MeshGenerators.js');
+extendMeshBuilderWithGenerators(MeshBuilder);
 
 global.MeshBuilder = MeshBuilder;
 global.WireFlags = WireFlags;

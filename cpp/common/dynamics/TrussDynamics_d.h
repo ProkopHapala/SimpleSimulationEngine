@@ -22,6 +22,7 @@
 
 #include "SparseMatrix.h"
 #include "SparseMatrix2.h"
+#include <unordered_set>
 
 // ========== Free Functions ==========
 
@@ -438,5 +439,9 @@ int run_omp(int niter_max, bool bDynamic, double dt_, double damp_ );
 bool checkMasses(double mass_tolerance=1e-9, bool bExit=true);
 
 };   // TrussDynamics_d
+
+// --- standalone functions using TrussDynamics_d
+
+void loadSimFromFile( const char* fname, TrussDynamics_d& sim );
 
 #endif

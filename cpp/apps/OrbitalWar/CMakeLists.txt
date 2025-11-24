@@ -91,6 +91,18 @@ add_executable( spaceCraftDynamics
 )
 target_link_libraries( spaceCraftDynamics  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
+add_executable( spaceCraftMeshExport
+	spaceCraftMeshExport.cpp
+	$<TARGET_OBJECTS:MeshBuilder2>
+)
+target_link_libraries( spaceCraftMeshExport ${LUA_LIBRARY} )
+
+add_executable( trussSimBatch
+	trussSimBatch.cpp
+	$<TARGET_OBJECTS:TrussDynamics_d>
+)
+target_link_libraries( trussSimBatch )
+
 if(  WITH_OPENCL )
     include_directories( ${COMMON_SRCS}/OCL )
     add_executable( spaceCraftDynamicsOCL

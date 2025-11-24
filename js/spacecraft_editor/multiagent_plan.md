@@ -32,12 +32,54 @@ Port various mesh generation functions from `constructionBlockApp.cpp` (and othe
 | `TubeSheet` | [x] | Agent | ✅ Ported to `MeshesUV.js` |
 | `TorusSheet` | [x] | Agent | ✅ Ported to `MeshesUV.js` |
 | **Validation** | [x] | Agent | ✅ Added `validateMesh()` with NaN/Inf/range checking |
-| `bevel` | [ ] | | Beveling edges - requires adjacency data |
-| `skelet` | [ ] | | Skeleton to truss conversion |
-| `blocks` | [ ] | | Block network generation |
-| `extrude_octahedron` | [ ] | | Octahedron extrusion |
-| `oct_nodes` | [ ] | | Octahedron nodes |
-| `cube_nodes` | [ ] | | Cube nodes |
+| **Edge Adjacency** | [x] | Agent | ✅ Added `edgesOfVerts` system for bevel support |
+| `bevel` | [~] | Agent | ⚠️ **Implemented but needs debugging** - geometry not symmetric |
+| `skelet` | [~] | Agent | ⚠️ **Implemented but needs verification** - simplified `skeleton()` generates girder meshes |
+| `blocks` | [~] | Agent | ⚠️ **Implemented but needs verification** - simplified `block()` generates subdivided boxes |
+| `extrude_octahedron` | [ ] | | **PRIORITY 2**: Standalone platonic solid extrusion |
+| `oct_nodes` | [ ] | | **DEFERRED**: Requires full SpaceCraft system (high-level assembly) |
+| `cube_nodes` | [ ] | | **DEFERRED**: Requires full SpaceCraft system (high-level assembly) |
+
+## Implementation Priorities
+
+### Priority 1: Simplified Block/Skeleton Functions (CURRENT)
+These are more approachable as we can implement simplified versions focused on mesh generation:
+- **`blocks`** - Basic block mesh without full BlockBuilder topology
+- **`skelet`** - Simplified skeleton-to-truss conversion
+
+### Priority 2: Standalone Extrusion
+- **`extrude_octahedron`** - Self-contained platonic solid extrusion
+
+### Deferred: High-Level SpaceCraft Assembly  
+These require the complete SpaceCraft class system and are beyond basic mesh generation:
+- **`oct_nodes`**, **`cube_nodes`** - Defer until SpaceCraft system is ported
+
+## Known Issues
+
+### Mesh Geometry Verification Needed (⚠️ Pending Gemini 3)
+
+The following implementations generate meshes but produce unexpected geometry that needs verification against C++ reference:
+
+1. **Bevel (`bevel_vert`)**
+   - **Issue**: Beveled meshes not symmetric as expected
+   - **Possible Cause**: `sortVertEdgesByNormal()` or corner position calculation
+   
+2. **Skeleton (`skeleton`)**  
+   - **Issue**: Generated girder network geometry looks incorrect
+   - **Possible Cause**: Up vector calculation or girder positioning
+
+3. **Blocks (`block`)**
+   - **Issue**: Subdivided box mesh geometry appears incorrect  
+   - **Possible Cause**: Face grid generation or vertex positioning
+
+**Debug Strategy**: 
+- Wait for Gemini 3 availability
+- Generate detailed C++ execution logs
+- Generate detailed JS execution logs  
+- Compare logs line-by-line to find discrepancies
+- Focus on vertex positions, edge connections, and geometric calculations
+
+**Status**: Implementations functional but geometry needs validation before production use.
 
 ## Test Environment Setup
 

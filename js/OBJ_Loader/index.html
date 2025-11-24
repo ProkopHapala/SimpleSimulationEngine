@@ -6,8 +6,10 @@
     <title>Modern OBJ Loader</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: #eee; font-family: sans-serif; }
-        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; }
-        #controls { position: absolute; top: 40px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; pointer-events: auto; }
+        /* Full-screen canvas sits behind all UI elements */
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; z-index: 10; }
+        #controls { position: absolute; top: 40px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; pointer-events: auto; z-index: 10; }
         .control-group { margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; }
         input[type="file"] { color: #eee; }
@@ -57,6 +59,16 @@
             </div>
             <div style="margin-top: 5px;">
                 <label><input type="checkbox" id="chkDamping"> Mouse Smoothing</label>
+            </div>
+            <div style="margin-top: 5px;">
+                <label><input type="checkbox" id="chkAA" checked> Antialiasing (MSAA)</label>
+            </div>
+            <div class="control-group" style="margin-top: 10px;">
+                <label>Centering:</label>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button id="btnCenterCamera">Center Camera on OBJ</button>
+                    <button id="btnCenterCOG">Move OBJ COG to Origin & Fit</button>
+                </div>
             </div>
         </div>
 

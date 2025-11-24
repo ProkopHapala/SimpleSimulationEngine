@@ -54,6 +54,128 @@ double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb, double tol
     return err;
 }
 
+// === File I/O helper for TrussDynamics_d ======================================
+
+// Text format (whitespace-separated, '#' starts comment):
+//   # TrussSim v1
+//   meta <npoint> <nbond>
+//   p <id>  <x> <y> <z>  <mass> <nneigh>
+//   ... (npoint lines)
+//   s <id>  <i> <j>  <kpull> <kpush> <l0> <damping>
+//   ... (nbond lines)
+
+void loadSimFromFile( const char* fname, TrussDynamics_d& sim ){
+    if(!fname){ printf("loadSimFromFile(): fname is null\n"); return; }
+    FILE* f = fopen(fname, "r");
+    if(!f){ printf("loadSimFromFile(): cannot open '%s' for reading\n", fname); return; }
+
+    int np = 0, nb = 0;
+    char line[1024];
+
+    // --- Pass 0: read meta (npoint, nbond)
+    while(fgets(line, sizeof(line), f)){
+        if(line[0]=='#' || line[0]=='\n' || line[0]=='\0') continue;
+        char tag[16];
+        if(sscanf(line, "%15s", tag) != 1) continue;
+        if(strcmp(tag, "meta") == 0){
+            sscanf(line, "%*s %d %d", &np, &nb);
+            break;
+        }
+    }
+
+    if(np<=0 || nb<=0){
+        printf("loadSimFromFile(): invalid meta np=%d nb=%d in '%s'\n", np, nb, fname);
+        fclose(f);
+        return;
+    }
+
+    // --- Pass 1: determine nneighmax from bonds only
+    std::vector<int> nneigh(np, 0);
+    rewind(f);
+    while(fgets(line, sizeof(line), f)){
+        if(line[0]=='#' || line[0]=='\n' || line[0]=='\0') continue;
+        char tag[16];
+        if(sscanf(line, "%15s", tag) != 1) continue;
+        if(strcmp(tag, "s") == 0){
+            int id, ia, ib;
+            double kpull,kpush,l0,damp;
+            if(sscanf(line, "%*s %d %d %d %lf %lf %lf %lf", &id, &ia, &ib, &kpull, &kpush, &l0, &damp) == 7){
+                if(ia>=0 && ia<np) nneigh[ia]++;
+                if(ib>=0 && ib<np) nneigh[ib]++;
+            }
+        }
+    }
+
+    int nneighmax = 0;
+    for(int i=0; i<np; i++){ if(nneigh[i] > nneighmax) nneighmax = nneigh[i]; }
+
+    sim.recalloc( np, nneighmax, nb );
+
+    // --- Pass 2: populate points, bonds, params, and neighbor lists directly into sim
+    // reuse nneigh[] as per-point neighbor counter
+    for(int i=0; i<np; i++) nneigh[i] = 0;
+    for(int i=0; i<sim.nNeighTot; i++) sim.neighs[i] = -1;
+    if(sim.neighBs ){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighBs [i]=(int2){-1,-1}; } }
+    if(sim.neighB2s){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighB2s[i]=0;             } }
+
+    rewind(f);
+    while(fgets(line, sizeof(line), f)){
+        if(line[0]=='#' || line[0]=='\n' || line[0]=='\0') continue;
+        char tag[16];
+        if(sscanf(line, "%15s", tag) != 1) continue;
+        if(strcmp(tag, "p") == 0){
+            int id, nni;
+            double x,y,z,m;
+            if(sscanf(line, "%*s %d %lf %lf %lf %lf %d", &id, &x, &y, &z, &m, &nni) == 6){
+                if(id>=0 && id<np){
+                    sim.points[id].f = {x,y,z};
+                    sim.points[id].w = m;
+                    sim.points[id].e = 0.0;
+                }
+            }
+        }else if(strcmp(tag, "s") == 0){
+            int id, ia, ib;
+            double kpull,kpush,l0,damp;
+            if(sscanf(line, "%*s %d %d %d %lf %lf %lf %lf", &id, &ia, &ib, &kpull, &kpush, &l0, &damp) == 7){
+                if(id<0 || id>=nb) continue;
+                if(ia<0 || ia>=np || ib<0 || ib>=np){
+                    printf("loadSimFromFile(): bond[%d] has invalid verts (%d,%d) for np=%d\n", id, ia, ib, np);
+                    continue;
+                }
+                // bonds + parameters
+                if(sim.bonds){
+                    sim.bonds[id]   = (int2){ia,ib};
+                    sim.bparams[id] = (Quat4d){l0, kpush, kpull, damp};
+                    sim.strain[id]  = 0.0;
+                    if(sim.maxStrain){ sim.maxStrain[id] = (Vec2d){1e+9,1e+9}; }
+                }
+
+                // neighbor lists
+                int iaSlot = ia*sim.nNeighMax + nneigh[ia];
+                int ibSlot = ib*sim.nNeighMax + nneigh[ib];
+                sim.neighs[ iaSlot ] = ib;
+                sim.neighs[ ibSlot ] = ia;
+                if(sim.neighBs){
+                    sim.neighBs[ iaSlot ] = (int2){ib,id};
+                    sim.neighBs[ ibSlot ] = (int2){ia,id};
+                }
+                if(sim.neighB2s){
+                    sim.neighB2s[ iaSlot ] =  (id+1);
+                    sim.neighB2s[ ibSlot ] = -(id+1);
+                }
+                nneigh[ia]++;
+                nneigh[ib]++;
+            }
+        }
+    }
+
+    fclose(f);
+
+    sim.cleanForce();
+    sim.cleanVel();
+    printf("loadSimFromFile(): loaded np=%d nb=%d from '%s'\n", np, nb, fname);
+}
+
 void fitAABB( Quat8d& bb, int n, int* c2o, Quat4d * ps ){
     //Quat8d bb;
     //bb.lo = bb.lo = ps[c2o[0]];
@@ -906,6 +1028,7 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     }
 
     void TrussDynamics_d::linsolve( Vec3d* ps_pred, Vec3d* ps_cor ){
+        const int m = 3;
         long t0 = getCPUticks();
         switch( (LinSolveMethod)linSolveMethod ){
             case LinSolveMethod::Jacobi:{

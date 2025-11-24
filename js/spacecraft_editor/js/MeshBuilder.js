@@ -11,6 +11,9 @@ class MeshBuilder {
         this.strips = [];  // Strips:   Flat array of vertex/edge indices for faces        
         this.blocks = [];  // Blocks:   [ivert_start, iedge_start, ichunk_start]
 
+        // Edge adjacency tracking for bevel and other operations
+        this.edgesOfVerts = null;  // Map from vertex index to edge indices
+
         // Temporary vectors (reused to avoid GC)
         this._tmp1 = new Vec3();
         this._tmp2 = new Vec3();
@@ -540,6 +543,254 @@ class MeshBuilder {
         }
 
         return i00;
+    }
+
+    // --- Edge Adjacency ---
+
+    /**
+     * Build edge-to-vertex adjacency map
+     * This creates a mapping from each vertex to the edges connected to it
+     */
+    build_edgesOfVerts() {
+        const nv = this.verts.length;
+        const ne = this.edges.length;
+
+        // Initialize adjacency map
+        this.edgesOfVerts = new Array(nv);
+        for (let i = 0; i < nv; i++) {
+            this.edgesOfVerts[i] = [];
+        }
+
+        // Build adjacency list
+        for (let ie = 0; ie < ne; ie++) {
+            const e = this.edges[ie];
+            this.edgesOfVerts[e.x].push(ie);
+            this.edgesOfVerts[e.y].push(ie);
+        }
+
+        logger.debug(`build_edgesOfVerts: ${nv} vertices, ${ne} edges`);
+    }
+
+    /**
+     * Get the other vertex of an edge
+     * @param {number} ie - Edge index
+     * @param {number} iv - Known vertex index  
+     * @returns {number} The other vertex index
+     */
+    getOtherEdgeVert(ie, iv) {
+        const e = this.edges[ie];
+        return (e.x === iv) ? e.y : e.x;
+    }
+
+    /**
+     * Load neighbor vertices and edges for a vertex
+     * @param {number} iv - Vertex index
+     * @param {Array} ivs - Output array for neighbor vertex indices (can be null)
+     * @param {Array} ies - Output array for edge indices (can be null)
+     * @param {number} n - Max number to load (-1 for all)
+     * @returns {number} Number of neighbors loaded
+     */
+    loadNeighbours(iv, ivs, ies, n = -1) {
+        if (!this.edgesOfVerts) {
+            logger.error("loadNeighbours: edgesOfVerts not built. Call build_edgesOfVerts() first.");
+            return 0;
+        }
+
+        const edgeList = this.edgesOfVerts[iv];
+        const total = edgeList.length;
+        if (n === -1 || n > total) n = total;
+
+        for (let i = 0; i < n; i++) {
+            const ie = edgeList[i];
+            if (ies) ies[i] = ie;
+            if (ivs) ivs[i] = this.getOtherEdgeVert(ie, iv);
+        }
+
+        return n;
+    }
+
+    /**
+     * Sort vertex edges by angle around a normal vector
+     * @param {Vec3} p - Center point
+     * @param {Vec3} nor - Normal vector
+     * @param {number} n - Number of edges
+     * @param {Array} ies - Edge indices (will be sorted in place)
+     */
+    sortVertEdgesByNormal(p, nor, n, ies) {
+        if (n <= 1) return;
+
+        const angles = new Array(n);
+        let u = null, v = null;
+
+        // Calculate angles for each edge
+        for (let i = 0; i < n; i++) {
+            const ie = ies[i];
+            const e = this.edges[ie];
+            const iv = (e.x !== e.x) ? e.y : ((e.x === e.x) ? this.getOtherEdgeVert(ie, e.x) : e.y);
+            const di = new Vec3().setSub(this.verts[iv].pos, p);
+
+            if (i === 0) {
+                // First edge defines the basis
+                di.makeOrtho(nor);
+                u = di.clone();
+                u.normalize();
+                v = new Vec3().setCross(nor, u);
+                v.normalize();
+                angles[i] = 0;
+            } else {
+                // Calculate angle using atan2
+                const x = di.dot(u);
+                const y = di.dot(v);
+                angles[i] = Math.atan2(y, x);
+            }
+        }
+
+        // Sort indices by angles
+        const indices = Array.from({ length: n }, (_, i) => i);
+        indices.sort((a, b) => angles[a] - angles[b]);
+
+        // Reorder ies array
+        const tempIes = [...ies];
+        for (let i = 0; i < n; i++) {
+            ies[i] = tempIes[indices[i]];
+        }
+    }
+
+    /**
+     * Bevel a single vertex
+     * @param {number} iv - Vertex index to bevel
+     * @param {number} L - Bevel distance (polygon radius)
+     * @param {number} h - Height offset along normal
+     * @param {boolean} bPoly - Whether to create polygon face
+     * @param {boolean} bEdgeWedge - Whether to connect original vertex to new vertices
+     * @param {Vec3} nor - Normal vector (optional, uses vertex normal if not provided)
+     * @returns {number} Number of edges around beveled vertex
+     */
+    bevel_vert(iv, L, h, bPoly = false, bEdgeWedge = false, nor = null) {
+        // Bounds check
+        if (iv < 0 || iv >= this.verts.length) {
+            logger.error(`bevel_vert: vertex index ${iv} out of bounds [0, ${this.verts.length})`);
+            return -1;
+        }
+
+        if (!this.edgesOfVerts) {
+            logger.error("bevel_vert: edgesOfVerts not built. Call build_edgesOfVerts() first.");
+            return -1;
+        }
+
+        // Get edges connected to this vertex
+        const edgeList = this.edgesOfVerts[iv];
+        const ne = edgeList.length;
+
+        logger.debug(`bevel_vert: iv=${iv}, ne=${ne}, L=${L}, h=${h}`);
+
+        if (ne < 1) return 0;
+
+        const ivs = new Array(ne);
+        const ies = new Array(ne);
+        this.loadNeighbours(iv, ivs, ies, ne);
+
+        const p = this.verts[iv].pos.clone(); // Copy to avoid invalidation
+
+        // Use provided normal or vertex normal
+        if (!nor || nor.norm2() < 1e-9) {
+            nor = this.verts[iv].nor.clone();
+        } else {
+            nor = nor.clone();
+        }
+
+        // Special case: fewer than 3 edges - create edge instead of polygon
+        if (ne < 3) {
+            let u = new Vec3();
+            if (ne === 1) {
+                const d1 = new Vec3().setSub(this.verts[ivs[0]].pos, p);
+                d1.normalize();
+                u.setCross(d1, nor);
+            } else { // ne === 2
+                const d1 = new Vec3().setSub(this.verts[ivs[0]].pos, p);
+                d1.normalize();
+                const d2 = new Vec3().setSub(this.verts[ivs[1]].pos, p);
+                d2.normalize();
+                const d = new Vec3().setSub(d1, d2);
+                u.setCross(d, nor);
+                u.normalize();
+            }
+
+            const iv1 = this.vert(new Vec3().setAdd(p, new Vec3().setMul(u, new Vec3(L, L, L))).addMul(nor, h));
+            const iv2 = this.vert(new Vec3().setAdd(p, new Vec3().setMul(u, new Vec3(-L, -L, -L))).addMul(nor, h));
+            this.edge(iv1, iv2);
+            if (bEdgeWedge) {
+                this.edge(iv, iv1);
+                this.edge(iv, iv2);
+            }
+            return ne;
+        }
+
+        // Sort edges by angle around normal
+        this.sortVertEdgesByNormal(p, nor, ne, ies);
+        // Re-sort vertex indices to match
+        for (let i = 0; i < ne; i++) {
+            ivs[i] = this.getOtherEdgeVert(ies[i], iv);
+        }
+
+        const centralPoint = new Vec3().setAddMul(p, nor, h);
+        const newVerts = new Array(ne);
+
+        // Create vertices of the n-gon
+        for (let i = 0; i < ne; i++) {
+            // Get direction from central vertex to neighbor
+            const dir = new Vec3().setSub(this.verts[ivs[i]].pos, p);
+            dir.normalize();
+            dir.makeOrtho(nor);
+            dir.normalize();
+
+            // Previous and next directions (for averaging to get corner directions)
+            const prevDir = new Vec3().setSub(this.verts[ivs[(i - 1 + ne) % ne]].pos, p);
+            prevDir.makeOrtho(nor);
+            prevDir.normalize();
+
+            // Average direction for corner
+            const cornerDir = new Vec3().setAdd(prevDir, dir);
+            cornerDir.normalize();
+
+            // Position of new vertex
+            const newPos = new Vec3().setAddMul(centralPoint, cornerDir, L);
+            newVerts[i] = this.vert(newPos);
+        }
+
+        // Connect the new vertices to form the n-gon
+        const newEdges = new Array(ne);
+        for (let i = 0; i < ne; i++) {
+            const next = (i + 1) % ne;
+            newEdges[i] = this.edge(newVerts[i], newVerts[next]);
+        }
+
+        // Create polygon face if requested
+        if (bPoly) {
+            this.polygon(ne, newVerts);
+        }
+
+        // Connect original vertex to new vertices if requested
+        if (bEdgeWedge) {
+            for (let i = 0; i < ne; i++) {
+                this.edge(iv, newVerts[i]);
+            }
+        }
+
+        return ne;
+    }
+
+    /**
+     * Create a polygon chunk from vertex indices
+     * @param {number} n - Number of vertices
+     * @param {Array} ivs - Vertex indices
+     */
+    polygon(n, ivs) {
+        const stripStart = this.strips.length;
+        for (let i = 0; i < n; i++) {
+            this.strips.push(ivs[i]);
+        }
+        this.chunk({ x: stripStart, y: 0, z: n, w: 1 }); // type 1 = polygon face
     }
 
     // --- Export Functions ---

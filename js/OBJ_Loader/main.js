@@ -30,23 +30,22 @@ function init() {
 
     // Cameras
     const aspect = window.innerWidth / window.innerHeight;
-    cameraPersp = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+    cameraPersp = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000000.0);
     cameraPersp.position.set(5, 5, 5);
 
     const frustumSize = 10;
     cameraOrtho = new THREE.OrthographicCamera(
         frustumSize * aspect / -2, frustumSize * aspect / 2,
         frustumSize / 2, frustumSize / -2,
-        0.1, 1000
+        0.1, 1000000.0
     );
     cameraOrtho.position.set(5, 5, 5);
 
     camera = cameraPersp; // Default
 
-    // Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+    // Renderer is always created to match full browser viewport size.
+    // We expose antialiasing as a runtime toggle, see recreateRenderer().
+    recreateRenderer(true);
 
     // Controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -75,6 +74,36 @@ function init() {
 
     // Animation Loop
     animate();
+}
+
+// (Re)create the WebGL renderer with the requested antialias setting.
+// The canvas drawing buffer is sized to match the visible viewport (canvas-container)
+// with a 1:1 mapping between framebuffer pixels and CSS pixels (no extra resampling).
+function recreateRenderer(useAntialias) {
+    const container = document.getElementById('canvas-container');
+    if (!container) return;
+
+    if (renderer && renderer.domElement && renderer.domElement.parentNode === container) {
+        container.removeChild(renderer.domElement);
+    }
+
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
+
+    renderer = new THREE.WebGLRenderer({ antialias: !!useAntialias });
+    // Use physical display resolution for crisp, thin lines on high-DPI screens.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(width, height);
+    container.appendChild(renderer.domElement);
+
+    // Re-bind controls if they already exist
+    if (controls) {
+        controls.dispose();
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = document.getElementById('chkDamping')?.checked || false;
+        controls.dampingFactor = 0.05;
+    }
 }
 
 function showError(msg) {
@@ -157,7 +186,24 @@ function setupUI() {
     });
 
     document.getElementById('chkDamping').addEventListener('change', (e) => {
-        controls.enableDamping = e.target.checked;
+        if (controls) controls.enableDamping = e.target.checked;
+    });
+
+    // Antialiasing toggle: recreates renderer with or without MSAA.
+    const chkAA = document.getElementById('chkAA');
+    if (chkAA) {
+        chkAA.addEventListener('change', (e) => {
+            recreateRenderer(e.target.checked);
+        });
+    }
+
+    // Centering actions
+    document.getElementById('btnCenterCamera').addEventListener('click', () => {
+        centerCameraOnObject();
+    });
+
+    document.getElementById('btnCenterCOG').addEventListener('click', () => {
+        centerObjectCOGToOrigin();
     });
 
     // Labels
@@ -239,6 +285,12 @@ function parseOBJ(text) {
         return;
     }
 
+    // Debug information about display and scaling for this OBJ load.
+    console.log('DPR:', window.devicePixelRatio);
+    console.log('CSS viewport:', window.innerWidth + 'x' + window.innerHeight);
+    console.log('Physical screen approx:', screen.width + 'x' + screen.height);
+    console.log('Scaling factor:', screen.width / window.innerWidth);
+
     if (loadedObject) {
         scene.remove(loadedObject);
         loadedObject = null;
@@ -251,19 +303,106 @@ function parseOBJ(text) {
     scene.add(loadedObject);
 
     processGeometry(object);
+    updateVisibility();
+}
 
-    // Center camera
-    const box = new THREE.Box3().setFromObject(object);
+// --- Camera and object centering helpers (invoked from UI buttons) ---
+
+function computeObjectBounds() {
+    if (!loadedObject) {
+        console.warn("No OBJ loaded yet.");
+        return null;
+    }
+
+    const box = new THREE.Box3().setFromObject(loadedObject);
+    if (box.isEmpty()) {
+        console.warn("Loaded OBJ has empty bounds.");
+        return null;
+    }
+    return box;
+}
+
+function fitCameraToBounds(box) {
+    if (!box) return;
+
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1.0;
 
+    // Always orbit around the object center
     controls.target.copy(center);
-    camera.position.copy(center);
-    camera.position.z += maxDim * 2;
-    camera.updateProjectionMatrix();
 
-    updateVisibility();
+    if (camera.isPerspectiveCamera) {
+        const direction = new THREE.Vector3()
+            .subVectors(camera.position, controls.target)
+            .normalize();
+
+        if (!isFinite(direction.lengthSq()) || direction.lengthSq() === 0) {
+            direction.set(0, 0, 1);
+        }
+
+        const fov = camera.fov * Math.PI / 180.0;
+        let distance = maxDim / (2 * Math.tan(fov / 2));
+        distance *= 2.0; // add a safety factor so the whole object is visible
+
+        camera.position.copy(center).addScaledVector(direction, distance);
+
+        // Set clipping planes relative to object size to avoid far/near clipping.
+        camera.near = Math.max(maxDim * 1e-4, 0.01);
+        camera.far = Math.max(distance + maxDim * 4.0, maxDim * 10.0);
+
+    } else if (camera.isOrthographicCamera) {
+        const aspect = window.innerWidth / window.innerHeight;
+        const frustumSize = 10;
+
+        camera.left = -frustumSize * aspect / 2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+
+        const zoomX = frustumSize * aspect / (size.x || 1.0);
+        const zoomY = frustumSize / (size.y || 1.0);
+        const zoom = Math.min(zoomX, zoomY) * 0.9; // margin
+
+        if (zoom > 0 && isFinite(zoom)) {
+            camera.zoom = zoom;
+            const zoomInput = document.getElementById('zoomInput');
+            if (zoomInput) zoomInput.value = camera.zoom.toFixed(2);
+        }
+
+        // For ortho camera, keep generous clipping planes based on object span.
+        camera.near = Math.max(maxDim * 1e-3, 0.01);
+        camera.far = Math.max(maxDim * 10.0, 100.0);
+    }
+
+    camera.updateProjectionMatrix();
+    controls.update();
+}
+
+// Center only the camera on the current object without modifying geometry
+function centerCameraOnObject() {
+    const box = computeObjectBounds();
+    if (!box) return;
+    fitCameraToBounds(box);
+}
+
+// Move the object so that its COG (approximated by bounding-box center)
+// is at the world origin and then fit the camera.
+function centerObjectCOGToOrigin() {
+    const box = computeObjectBounds();
+    if (!box || !loadedObject) return;
+
+    const center = box.getCenter(new THREE.Vector3());
+
+    // Shift the whole loaded object so that COG ~ (0,0,0)
+    loadedObject.position.sub(center);
+
+    // After moving, recompute bounds (size is unchanged, but center moved)
+    const newBox = new THREE.Box3().setFromObject(loadedObject);
+
+    // Target origin and fit camera to new bounds
+    controls.target.set(0, 0, 0);
+    fitCameraToBounds(newBox);
 }
 
 function processGeometry(object) {
@@ -369,7 +508,15 @@ function onWindowResize() {
     cameraOrtho.bottom = -frustumSize / 2;
     cameraOrtho.updateProjectionMatrix();
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    const container = document.getElementById('canvas-container');
+    const width = (container && container.clientWidth) ? container.clientWidth : window.innerWidth;
+    const height = (container && container.clientHeight) ? container.clientHeight : window.innerHeight;
+
+    if (renderer) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(width, height);
+    }
 
     if (meshRenderer) meshRenderer.updateLabelUniforms(aspect);
 }
