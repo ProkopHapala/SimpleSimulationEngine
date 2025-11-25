@@ -84,6 +84,7 @@ public:
     renderer.setModelPos(modelPos);
     renderer.draw(cam);
 
+    text.setModelPos(modelPos);
     text.draw(cam);
     checkGLError("TextRendererOGL3::draw");
   }

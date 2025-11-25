@@ -36,11 +36,20 @@ public:
   std::vector<GlyphInstance> instances;
   bool dirty = false;
 
+  Vec3f modelPos;
+  Mat3f modelMat;
+
+  void setModelPos(const Vec3f &pos) { modelPos = pos; }
+  void setModelMat(const Mat3f &mat) { modelMat = mat; }
+
   // --- 1. Initialization (The "Setup Once" phase) ---
   void init(GLuint fontTex_, float charW_, float charH_) {
     fontTex = fontTex_;
     charW = charW_;
     charH = charH_;
+
+    modelPos.set(0.0f, 0.0f, 0.0f);
+    modelMat.setOne();
 
     initShader();
 
@@ -165,6 +174,7 @@ private:
         layout(location = 3) in int aAscii;
 
         uniform mat4 uVP; uniform vec3 uCamRight; uniform vec3 uCamUp;
+        uniform vec3 uCamPos; uniform vec3 uModelPos; uniform mat3 uModelMat;
         uniform float uCharW; uniform float uCharH; uniform float uAtlasStep;
         uniform int uGlyphOffset;
 
@@ -172,8 +182,10 @@ private:
 
         void main() {
           // World Space Calculation
+          vec3 worldAnchor = uModelMat * aBasePos + uModelPos;
+
           float xOffset = float(aCharIndex) * uCharW;
-          vec3 center = aBasePos + (uCamRight * xOffset);
+          vec3 center = worldAnchor + (uCamRight * xOffset);
 
           // Billboard expansion
           vec3 vertexPos = center +
@@ -186,7 +198,7 @@ private:
           float uStart = glyphIndex * uAtlasStep;
           vUV = vec2(uStart + (aQuadPos.x * uAtlasStep), aQuadPos.y);
 
-          gl_Position = uVP * vec4(vertexPos, 1.0);
+          gl_Position = uVP * vec4(vertexPos - uCamPos, 1.0);
         });
 
     const char *fragSrc = GLSL(
@@ -220,13 +232,25 @@ private:
     }
 
     // Extract camera basis from rotation
-    Vec3f camRight =
-        cam.rot.b; // depending on convention in Camera/Quat; adjust if needed
-    Vec3f camUp = cam.rot.c;
+    // Assuming Mat3T stores columns a,b,c as Right, Up, Forward/Back
+    // However, Mat3.h aliases 'a' to 'lf' (Left?), so we might need to invert
+    // it to get Right. User reported opposite rotation, suggesting Right vector
+    // is inverted.
+    Vec3f camRight = cam.rot.a * -1.0f;
+    Vec3f camUp = cam.rot.b;
 
     shader.setUniformMat4f("uVP", camMat);
     shader.setUniformVec3f("uCamRight", camRight);
     shader.setUniformVec3f("uCamUp", camUp);
+    shader.setUniformVec3f("uCamPos", cam.pos);
+
+    // Default Model Transform (Identity) if not set externally,
+    // but better to add setModelPos/Mat methods.
+    // For now, we use the member variables if we add them, or just Identity.
+    // Let's add member variables to be safe and consistent.
+    shader.setUniformVec3f("uModelPos", modelPos);
+    shader.setUniformMat3f("uModelMat", modelMat);
+
     shader.setUniformf("uCharW", charW);
     shader.setUniformf("uCharH", charH);
     shader.setUniformf("uAtlasStep", 1.0f / (float)numGlyphs);
