@@ -29,7 +29,7 @@ public:
   // Config
   float charW = 0.1f;
   float charH = 0.1f;
-  int numGlyphs = 128;
+  int numGlyphs = 95;
   int glyphOffset = 0;
 
   // CPU Data Store
@@ -195,8 +195,10 @@ private:
 
           // Texture Space Calculation
           float glyphIndex = float(aAscii - uGlyphOffset);
-          float uStart = glyphIndex * uAtlasStep;
-          vUV = vec2(uStart + (aQuadPos.x * uAtlasStep), aQuadPos.y);
+          // 0.57 is a magic offset from legacy Draw.cpp to center the character
+          // in the grid cell
+          float uStart = (glyphIndex + 0.57) * uAtlasStep;
+          vUV = vec2( uStart + (aQuadPos.x * uAtlasStep), 1.0 - aQuadPos.y); // Why it is inverted? is it to compensate wrong orietnation of vectors somewhere else?
 
           gl_Position = uVP * vec4(vertexPos - uCamPos, 1.0);
         });
@@ -221,7 +223,7 @@ private:
     // MeshRenderOGL3)
     Mat4f camMat, mRot, mPersp;
     if (cam.persp) {
-      mPersp.setPerspective(cam.aspect * cam.zoom, cam.zoom, cam.zmin,
+      mPersp.setPerspective(cam.zoom / cam.aspect, cam.zoom, cam.zmin,
                             cam.zmax);
       mRot.setOne();
       mRot.setRot(cam.rot);
@@ -233,10 +235,10 @@ private:
 
     // Extract camera basis from rotation
     // Assuming Mat3T stores columns a,b,c as Right, Up, Forward/Back
-    // However, Mat3.h aliases 'a' to 'lf' (Left?), so we might need to invert
-    // it to get Right. User reported opposite rotation, suggesting Right vector
-    // is inverted.
-    Vec3f camRight = cam.rot.a * -1.0f;
+    // Mat3.h aliases 'a' to 'lf', but Identity has a=(1,0,0).
+    // Debugging showed camRight=(-1,0,0) caused inverted X.
+    // So we revert to using 'a' directly.
+    Vec3f camRight = cam.rot.a;
     Vec3f camUp = cam.rot.b;
 
     shader.setUniformMat4f("uVP", camMat);

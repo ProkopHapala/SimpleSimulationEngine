@@ -90,7 +90,7 @@ void MeshRenderOGL3::draw(const Camera &cam) {
   // SceneOGL3.h)
   Mat4f camMat, mRot, mPersp;
   if (cam.persp) {
-    mPersp.setPerspective(cam.aspect * cam.zoom, cam.zoom, cam.zmin, cam.zmax);
+    mPersp.setPerspective(cam.zoom / cam.aspect, cam.zoom, cam.zmin, cam.zmax);
     mRot.setOne();
     mRot.setRot(cam.rot);
     camMat.set_mmul_TN(mRot, mPersp);
@@ -108,6 +108,13 @@ void MeshRenderOGL3::draw(const Camera &cam) {
     sh_solid.set_camPos((GLfloat *)&cam.pos);
     sh_solid.set_camMat((GLfloat *)&camMat);
 
+    // Lighting setup (hardcoded defaults for now)
+    glUniform3fv(sh_solid.getUloc((char*)"light_pos"),     1, (const float[]){ 1.0f,  1.0f, -1.0f });
+    glUniform3fv(sh_solid.getUloc((char*)"lightColor"),    1, (const float[]){ 1.0f,  0.9f,  0.8f });
+    glUniform3fv(sh_solid.getUloc((char*)"diffuseColor"),  1, (const float[]){ 1.0f,  1.0f,  1.0f });
+    glUniform3fv(sh_solid.getUloc((char*)"ambientColor"),  1, (const float[]){ 0.2f,  0.2f,  0.3f });
+    glUniform3fv(sh_solid.getUloc((char*)"specularColor"), 1, (const float[]){ 0.0f,  0.0f,  0.0f });
+
     glBindVertexArray(vaoTri);
     glDrawElements(GL_TRIANGLES, mesh_tri->nInds, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
@@ -121,7 +128,7 @@ void MeshRenderOGL3::draw(const Camera &cam) {
     const float colRed[4] = {1.0f, 0.0f, 0.0f, 1.0f};
     const float colGreen[4] = {0.0f, 1.0f, 0.0f, 1.0f};
     sh_const.set_baseColor(colGreen);
-    glLineWidth(3.0f);
+    glLineWidth(lineWidth);
 
     glBindVertexArray(vaoLine);
     glDrawElements(GL_LINES, mesh_lines->nInds, GL_UNSIGNED_INT, nullptr);

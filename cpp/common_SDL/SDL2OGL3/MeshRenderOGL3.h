@@ -18,6 +18,9 @@ public:
   GLMesh *mesh_tri = nullptr;
   GLMesh *mesh_lines = nullptr;
 
+  float lineWidth = 1.0f;
+  void setLineWidth(float w){ lineWidth = w; }
+
   Shader sh_solid;
   Shader sh_const;
 
