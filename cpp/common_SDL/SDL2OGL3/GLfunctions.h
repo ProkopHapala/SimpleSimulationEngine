@@ -5,7 +5,7 @@
 #include <GL/glew.h>
 //#include <SDL2/SDL.h>
 
-bool checkFramebufferStatus(){
+inline bool checkFramebufferStatus(){
     // check FBO status
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     switch(status){
@@ -19,7 +19,7 @@ bool checkFramebufferStatus(){
     }
 }
 
-bool checkOpenGLError(){
+inline bool checkOpenGLError(){
     GLenum status = glGetError();
     switch(status){
         case GL_NO_ERROR:        return true;

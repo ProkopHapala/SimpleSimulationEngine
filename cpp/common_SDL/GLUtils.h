@@ -46,7 +46,7 @@ inline void hardFace( int n, int * ngons, int * faces, Vec3d * points, GLfloat* 
 }
 
 static constexpr GLuint  QUAD_nVert = 4;
-GLfloat QUAD_vertexes[4][2] = {
+inline GLfloat QUAD_vertexes[4][2] = {
 	{  -0.9f,  -0.9f  },
 	{  -0.9f,   0.9f  },
 	{   0.9f,  -0.9f  },

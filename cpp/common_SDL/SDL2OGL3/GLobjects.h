@@ -10,7 +10,7 @@
 #include "GLUtils.h"
 
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
-void double2float( int n, const double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
+inline void double2float( int n, const double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
 
 // ==============================
 // ========== GLMesh
@@ -119,7 +119,7 @@ class GLMesh{ public:
 };
 
 
-void makeBilboard( GLMesh*& mesh ){
+inline void makeBilboard( GLMesh*& mesh ){
     //mesh = new GLMesh();
     //mesh->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
     mesh = new GLMesh( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
