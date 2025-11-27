@@ -1,3 +1,5 @@
+
+
 class GUI {
     constructor(engine, renderer) {
         this.engine = engine;
@@ -9,6 +11,13 @@ class GUI {
 
         this.initResize();
         this.initControls();
+        // this.initMeshGenControls(); // Refactored to MeshGenTestGUI
+        if (window.MeshGenTestGUI) {
+            console.log("GUI: Instantiating MeshGenTestGUI...");
+            this.meshGenGUI = new MeshGenTestGUI(this.engine, this.renderer);
+        } else {
+            console.error("GUI: MeshGenTestGUI not found in window!");
+        }
     }
 
     initResize() {
@@ -134,6 +143,34 @@ class GUI {
         document.getElementById('btnViewXY')?.addEventListener('click', () => setView([0, 0, 20], [0, 1, 0]));
         document.getElementById('btnViewXZ')?.addEventListener('click', () => setView([0, 20, 0], [0, 0, -1]));
         document.getElementById('btnViewYZ')?.addEventListener('click', () => setView([20, 0, 0], [0, 1, 0]));
+
+        // View Controls
+        const btnCamOrtho = document.getElementById('btnCamOrtho');
+        const btnCamPersp = document.getElementById('btnCamPersp');
+        const btnViewXY = document.getElementById('btnViewXY');
+        const btnViewXZ = document.getElementById('btnViewXZ');
+        const btnViewYZ = document.getElementById('btnViewYZ');
+        
+        const chkShowGrid = document.getElementById('chkShowGrid');
+        const chkShowAxis = document.getElementById('chkShowAxis');
+
+        if (chkShowGrid) {
+            // Apply initial state
+            if (this.renderer) this.renderer.setGridVisible(chkShowGrid.checked);
+            chkShowGrid.addEventListener('change', () => this.renderer?.setGridVisible(chkShowGrid.checked));
+        }
+        if (chkShowAxis) {
+            // Apply initial state
+            if (this.renderer) this.renderer.setAxisVisible(chkShowAxis.checked);
+            chkShowAxis.addEventListener('change', () => this.renderer?.setAxisVisible(chkShowAxis.checked));
+        }
+
+        if (btnCamOrtho) btnCamOrtho.addEventListener('click', () => {
+            if (this.renderer) this.renderer.setCameraMode('ortho');
+        });
+        if (btnCamPersp) btnCamPersp.addEventListener('click', () => {
+            if (this.renderer) this.renderer.setCameraMode('perspective');
+        });
 
         // --- Label Controls ---
         const selMode = document.getElementById('selLabelMode');
@@ -272,7 +309,14 @@ class GUI {
         const numVerbosityCon = document.getElementById('numVerbosityCon');
 
         if (numVerbosityUI && logger) {
-            numVerbosityUI.value = logger.uiVerbosity;
+            // Initialize Logger from HTML value
+            const initialVal = parseInt(numVerbosityUI.value);
+            if (!isNaN(initialVal)) {
+                logger.setUIVerbosity(initialVal);
+            } else {
+                numVerbosityUI.value = logger.uiVerbosity;
+            }
+
             numVerbosityUI.addEventListener('change', () => {
                 const val = parseInt(numVerbosityUI.value);
                 if (!isNaN(val)) {
@@ -283,7 +327,14 @@ class GUI {
         }
 
         if (numVerbosityCon && logger) {
-            numVerbosityCon.value = logger.consoleVerbosity;
+            // Initialize Logger from HTML value
+            const initialVal = parseInt(numVerbosityCon.value);
+            if (!isNaN(initialVal)) {
+                logger.setConsoleVerbosity(initialVal);
+            } else {
+                numVerbosityCon.value = logger.consoleVerbosity;
+            }
+
             numVerbosityCon.addEventListener('change', () => {
                 const val = parseInt(numVerbosityCon.value);
                 if (!isNaN(val)) {
@@ -300,5 +351,10 @@ class GUI {
                 if (logger) logger.clear();
             });
         }
+
+
+
+
     }
 }
+

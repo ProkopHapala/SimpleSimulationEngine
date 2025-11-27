@@ -40,11 +40,22 @@ class SpaceCraftRenderer extends MeshRenderer {
         MeshRenderer.prototype.init.call(this);
 
         // 3. Grid & Axes (from original SpaceCraftRenderer)
-        this.scene.add(new THREE.GridHelper(20, 20));
-        this.scene.add(new THREE.AxesHelper(2));
+        this.gridHelper = new THREE.GridHelper(20, 20);
+        this.scene.add(this.gridHelper);
+        
+        this.axesHelper = new THREE.AxesHelper(2);
+        this.scene.add(this.axesHelper);
 
         // Handle Resize
         window.addEventListener('resize', () => this.onWindowResize());
+    }
+
+    setGridVisible(visible) {
+        if (this.gridHelper) this.gridHelper.visible = visible;
+    }
+
+    setAxisVisible(visible) {
+        if (this.axesHelper) this.axesHelper.visible = visible;
     }
 
     updateGeometry(meshBuilder) {

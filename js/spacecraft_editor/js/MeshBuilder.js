@@ -42,14 +42,14 @@ class MeshBuilder {
         };
         this.verts.push(v);
         const idx = this.verts.length - 1;
-        logger.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
+        if (logger.verb(4)) logger.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
         return idx;
     }
 
     edge(a, b, type = -1, type2 = 0) {
         this.edges.push({ x: a, y: b, z: type, w: type2 });
         const idx = this.edges.length - 1;
-        logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
+        if (logger.verb(4)) logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
         return idx;
     }
 

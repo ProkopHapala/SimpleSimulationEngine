@@ -407,8 +407,8 @@ const MeshesUV = {
         return iv0;
     },
 
-    SlabTube(n, UVmin, UVmax, Rs, L, up, dirMask, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
-        const dudv = 0.5 * (n.x - 1.0) / (n.y - 1.0);
+    SlabTube(n, UVmin, UVmax, Rs, L, up, dirMask, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
+        const dudv = twist * (n.x - 1.0) / (n.y - 1.0);
 
         const uvfunc1 = (uv) => {
             const uv_y = (uv.y + uv.x * dudv) * 2 * Math.PI;

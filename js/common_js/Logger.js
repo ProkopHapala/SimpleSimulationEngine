@@ -24,8 +24,9 @@ class Logger {
 
     constructor() {
         this.domElement = null; // Will be set by GUI
-        this.consoleVerbosity = 4; // Default: DEBUG
-        this.uiVerbosity = 4;      // Default: DEBUG
+        this.consoleVerbosity = 3; // Default: INFO
+        this.uiVerbosity = 3;      // Default: INFO
+        this.maxVerbosity = 3;     // Cache for performance
     }
 
     setContainer(element) {
@@ -34,14 +35,20 @@ class Logger {
 
     setConsoleVerbosity(level) {
         this.consoleVerbosity = level;
+        this.maxVerbosity = Math.max(this.consoleVerbosity, this.uiVerbosity);
     }
 
     setUIVerbosity(level) {
         this.uiVerbosity = level;
+        this.maxVerbosity = Math.max(this.consoleVerbosity, this.uiVerbosity);
     }
 
     shouldLog(level) {
-        return level <= Math.max(this.consoleVerbosity, this.uiVerbosity);
+        return level <= this.maxVerbosity;
+    }
+    
+    verb(level) {
+        return level <= this.maxVerbosity;
     }
 
     clear() {

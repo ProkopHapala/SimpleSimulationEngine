@@ -27,7 +27,10 @@
                     <option value="ortho" selected>Orthographic</option>
                 </select>
             </div>
-
+            <div class="control-group">
+                <label><input type="checkbox" id="chkShowGrid"        > Show Grid</label>
+                <label><input type="checkbox" id="chkShowAxis" checked> Show Axis</label>
+            </div>
             <!-- Zoom & Presets -->
             <div class="compact-row">
                 <span class="compact-label">Zoom:</span>
@@ -54,26 +57,32 @@
             </div>
         </div>
 
-        <!-- Test Panel -->
+        <!-- Mesh Generator Panel -->
         <div class="panel-section">
+            <h3>Mesh Generator</h3>
+            <div id="mesh-gen-panel"></div>
+        </div>
+
+        <!-- Test Panel -->
+
             <h3>Tests</h3>
+            
             <div class="compact-row">
-                <span class="compact-label">Verbosity:</span>
+                 <span class="compact-label">Verbosity:</span>
                 <span class="compact-label">Log</span>
-                <input type="number" id="numVerbosityUI" value="4" min="0" max="5" class="compact-input" style="width: 30px;">
+                <input type="number" id="numVerbosityUI" value="3" min="0" max="5" class="compact-input" style="width: 30px;">
                 <span class="compact-label">Con</span>
-                <input type="number" id="numVerbosityCon" value="4" min="0" max="5" class="compact-input" style="width: 30px;">
+                <input type="number" id="numVerbosityCon" value="3" min="0" max="5" class="compact-input" style="width: 30px;">  
             </div>
             <div class="control-group">
                 <label><input type="checkbox" id="chkAutoClear" checked> Auto Clear</label>
             </div>
             <div class="control-group">
                 <select id="selTest">
-                    <!-- Populated by JS -->
                 </select>
                 <button id="btnRunTest">Run Test</button>
             </div>
-        </div>
+
 
         <div class="panel-section">
             <h3>Scripting</h3>
@@ -111,11 +120,14 @@ api.Girder(n1, n2, "Steel");
 
         <!-- Editor JS -->
         <script src="js/MeshBuilder.js?v=2"></script>
+        <script src="js/MeshesUV.js?v=2"></script>
         <script src="js/SpaceCraft.js?v=2"></script>
         <script src="js/SpaceCraft2Mesh.js?v=2"></script>
         <script src="js/constructionBlockTests.js?v=2"></script>
         <script src="js/SpaceCraftEngine.js?v=2"></script>
         <script src="js/SpaceCraftRenderer.js?v=2"></script>
+        <script src="../common_js/GUIutils.js"></script>
+        <script src="js/MeshGenTestGUI.js"></script>
         <script src="js/GUI.js?v=2"></script>
         <script src="js/main.js?v=2"></script>
 </body>
