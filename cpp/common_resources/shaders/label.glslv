@@ -1,8 +1,16 @@
+// Per-instance attributes (instanced on JS side via createLabelInstancedMesh):
+// - aAtomID : which atom this label is anchored to
+// - aLabel1 : packed ASCII codes for characters 0-3
+// - aLabel2 : packed ASCII codes for characters 4-7
+// - aStrLen : actual string length (<= 8), used for centering
 attribute float aAtomID;
-attribute vec4 aLabel1; // Chars 0-3
-attribute vec4 aLabel2; // Chars 4-7
+attribute vec4 aLabel1; // Chars 0-3 (per-instance)
+attribute vec4 aLabel2; // Chars 4-7 (per-instance)
+attribute float aStrLen; // Length of the string for this instance (per-instance)
+
+// Per-vertex attribute (varies across the 8 character quads of an instance):
+// - aCharPos: 0..7, selects which of the packed characters this quad should render
 attribute float aCharPos; // 0..7, per-vertex
-attribute float aStrLen; // Length of the string for this instance
 
 varying vec2 vUv;
 varying float vAlpha;
@@ -14,20 +22,20 @@ uniform float uScale;
 uniform bool uScreenSpace;
 uniform float uAspect;
 
+// Helper: select component from vec4 by small float index in [0,3].
+// This encodes the mapping 0->x, 1->y, 2->z, 3->w in a readable way.
+float indexToVec4(vec4 v, float idx) {
+    if   (idx < 1.5){ return (idx<0.5) ? v.x: v.y; }
+    else            { return (idx<2.5) ? v.z: v.w; }
+}
+
 void main() {
-    // 1. Determine Character Index
+    // 1. Determine Character Index (ASCII code) for this quad.
+    // aCharPos is 0..7 across the 8 character quads of an instance.
     float charIndex = 0.0;
-    if (aCharPos < 3.5) {
-        if (aCharPos < 0.5) charIndex = aLabel1.x;
-        else if (aCharPos < 1.5) charIndex = aLabel1.y;
-        else if (aCharPos < 2.5) charIndex = aLabel1.z;
-        else charIndex = aLabel1.w;
-    } else {
-        if (aCharPos < 4.5) charIndex = aLabel2.x;
-        else if (aCharPos < 5.5) charIndex = aLabel2.y;
-        else if (aCharPos < 6.5) charIndex = aLabel2.z;
-        else charIndex = aLabel2.w;
-    }
+    float idx = floor(aCharPos + 0.5); // round to nearest int in [0,7]
+    if (idx < 4.0) { charIndex = indexToVec4(aLabel1, idx      ); } // Characters 0..3 packed in aLabel1
+    else           { charIndex = indexToVec4(aLabel2, idx - 4.0); } // Characters 4..7 packed in aLabel2
 
     // If charIndex is 0, hide
     if (charIndex < 1.0) {
@@ -49,8 +57,14 @@ void main() {
     float row = floor(charIndex / cols);
     float cellW = 1.0 / cols;
     float cellH = 1.0 / rows;
-    
-    float u = (col + uv.x) * cellW;
+
+    // Shrink glyph horizontally inside the atlas cell to eliminate side padding.
+    // uv.x is originally in [0,1]; remap to [0.25, 0.75] (centered), so the visible
+    // glyph uses only the middle part of the cell.
+    float glyphFill = 0.7;           // fraction of cell width used for glyph
+    float localX = 0.5 + (uv.x - 0.5) * glyphFill;
+
+    float u = (col + localX) * cellW;
     float v = (rows - 1.0 - row + uv.y) * cellH;
     vUv = vec2(u, v);
 
@@ -58,12 +72,15 @@ void main() {
     vec4 mvPosition = viewMatrix * vec4(atomPos, 1.0);
     vec4 projectedPos = projectionMatrix * mvPosition;
 
-    // Calculate offset
-    float charWidth = 0.6; 
+    // Character layout:
+    // - Quad size stays 1.0 in X (position.x in [-0.5,0.5]) to avoid distorting glyphs.
+    // - charAdvance controls spacing between character centers (< 1.0 to move them closer).
+    float charAdvance = 0.6;   // horizontal spacing between character centers
+
     float centerOffset = (aStrLen - 1.0) * 0.5;
-    float charOffset = (aCharPos - centerOffset) * charWidth; 
-    
-    vec2 baseOffset = vec2(charOffset + position.x * charWidth, position.y);
+    float charOffset   = (aCharPos - centerOffset) * charAdvance;
+
+    vec2 baseOffset = vec2(charOffset + position.x, position.y);
 
     if (uScreenSpace) {
         // Screen Space Scaling (Constant size on screen)

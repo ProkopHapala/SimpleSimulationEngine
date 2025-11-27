@@ -440,6 +440,58 @@ const MeshesUV = {
         this.UV_sheet(n, UVmin, duv, dirMask, stickTypes, uvfunc, false, true);
     },
 
+    // Variant of TubeSheet where n.x is treated as azimuthal (ring) direction.
+    // Consecutive ix indices (0,1,2,...) run around the ring; iy runs along axis.
+    TubeSheet_swapped(n, UVmin, UVmax, Rs, L, dirMask = 0b1011, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
+        const nx = n.x | 0;
+        const ny = n.y | 0;
+        if (nx <= 0 || ny <= 0) return;
+        // Interpret: uv.x ~ angle, uv.y ~ axial parameter u (0..1)
+        const dudv = (twist * (ny - 1.0)) / nx;
+        const uvfunc = (uv) => {
+            // Map uv.y (0..1) to axial u, uv.x (0..1) to angle.
+            const u  = (UVmax.y === UVmin.y) ? uv.y : (uv.y - UVmin.y) / (UVmax.y - UVmin.y);
+            const ang = (uv.x + u * dudv) * 2.0 * Math.PI;
+            return this.ConeUVfunc({ x: u, y: ang }, Rs.x, Rs.y, L);
+        };
+        const duv = {
+            x: (UVmax.x - UVmin.x) / nx,      // step around ring
+            y: (UVmax.y - UVmin.y) / (ny - 1) // step along axis
+        };
+        // Periodic in X (around ring), non-periodic in Y (axis).
+        this.UV_sheet(n, UVmin, duv, dirMask, stickTypes, uvfunc, true, false);
+    },
+
+    // Post-process a regular grid (e.g. TubeSheet) to add "skip" edges.
+    // - n: {x: nAlongX, y: nAlongY}
+    // - iv0: starting vertex index of this grid in this.verts
+    // - xskip: stride along X between connected vertices (can be negative)
+    // - yskip: stride along Y between connected vertices, wrapped modulo n.y (can be negative)
+    // - matID: edge type / material ID to store in edge.z
+    addSkipEdges(n, iv0, xskip, yskip, matID = 0) {
+        const nx = n.x | 0;
+        const ny = n.y | 0;
+        if (nx <= 0 || ny <= 0) return;
+        const wrap = (k, m) => {
+            const r = k % m;
+            return r < 0 ? r + m : r;
+        };
+        if (xskip === 0) return;
+        // For a given (ix, iy), connect to (ix + xskip, iy + yskip mod ny)
+        for (let ix = 0; ix < nx; ix++) {
+            const jx = wrap(ix + xskip, nx);
+            if (jx < 0 || jx >= nx) continue; // stay within axial range
+            for (let iy = 0; iy < ny; iy++) {
+                //const jy = wrap(iy + yskip, ny);
+                const jy = iy + yskip;
+                if (jy < 0 || jy >= ny) continue; // stay within axial range
+                const a = iv0 + iy * nx + ix;
+                const b = iv0 + jy * nx + jx;
+                this.edge(a, b, matID);
+            }
+        }
+    },
+
     TorusSheet(n, UVmin, UVmax, Rs, dirMask = 0b1011, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
         const dudv = (twist * n.y) / n.x;
         const uvfunc = (uv) => {

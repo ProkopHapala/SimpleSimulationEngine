@@ -38,9 +38,9 @@ Pending JS‑first tasks:
 
 - [ ] **[J1] SlabTube / TubeSheet parameter playground panel**  (see §1.8–1.9)
 - [ ] **[J2] Visualizers for index / angle / SDF rail selection strategies**  (see §1.7–1.8)
-- [ ] **[J3] TubeSheet post‑processor for second‑neighbor longitudinal rails**  (see §4.1)
+- [x] **[J3] TubeSheet post‑processor for second‑neighbor longitudinal rails**  (see §4.1)
 - [ ] **[J4] JS selection manager for named vertex/edge/face sets**  (see §4.2)
-- [ ] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
+- [x] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
 
 ---
 
@@ -475,9 +475,10 @@ This section lists JS‑first features that are useful for prototyping telescopi
 - This post‑processor should operate purely on the mesh graph (vertices + edges) so it can be reused for both **circular** and **polygonal** tubes as long as the indexing convention is known.
 - Long term, these second‑neighbor edges form the **primary slider rails** (stiffer material) while the original `TubeSheet` edges remain lighter supporting structure.
 
-**TODO:**
+**TODO / status:**
 
-- [ ] **[J3] Implement a JS TubeSheet post‑processor that adds second‑neighbor longitudinal edges for polygonal tubes** (parameterized by `dSeg` and azimuthal offset, operating on the editor’s mesh representation).
+- [x] **[J3] Implement a JS TubeSheet post‑processor that adds second‑neighbor longitudinal edges for polygonal tubes** (parameterized by `dSeg` and azimuthal offset, operating on the editor’s mesh representation).
+  - JS prototype implemented via `addSkipEdges` in `MeshesUV.js` and `TubeSheetPost` wiring in `MeshGenTestGUI.js`, with per-edge material IDs carried through the renderer.
 
 ### 4.2 Selection manager in the JS editor
 
@@ -529,6 +530,7 @@ This section lists JS‑first features that are useful for prototyping telescopi
   - Modify the editor’s renderer to draw edges using the color associated with their material.
   - Optionally add a **legend** in the GUI that shows material names and colors.
 
-**TODO:**
+**TODO / status:**
 
-- [ ] **[J5] Implement JS stick‑material support and color edges by material/type in the editor, mirroring the `SpaceCraftWorkshop` concept.**
+- [x] **[J5] Implement JS stick‑material support and color edges by material/type in the editor, mirroring the `SpaceCraftWorkshop` concept.**
+  - JS prototype implemented by adding per-edge material IDs (`aMatID`) and a palette uniform to the bond shaders and renderers (`bond.glslv`, `bond_color.glslf`, `Draw3D.js`, `MeshRenderer.js`, `SpaceCraftRenderer.js`), enabling edge coloring by material in the editor.

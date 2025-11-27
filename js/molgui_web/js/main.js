@@ -12,23 +12,24 @@ class MolGUIApp {
 
         // Load Shaders first
         try {
-            const vPromise = fetch('../common_resources/shaders/atom.glslv').then(r => r.text());
-            const fPromise = fetch('../common_resources/shaders/atom.glslf').then(r => r.text());
+            const vPromise  = fetch('../common_resources/shaders/atom.glslv').then(r => r.text());
+            const fPromise  = fetch('../common_resources/shaders/atom.glslf').then(r => r.text());
             const bvPromise = fetch('../common_resources/shaders/bond.glslv').then(r => r.text());
             const svPromise = fetch('../common_resources/shaders/selection.glslv').then(r => r.text());
+            const bfPromise = fetch('../common_resources/shaders/bond_color.glslf').then(r => r.text());
             const cfPromise = fetch('../common_resources/shaders/color.glslf').then(r => r.text());
             const lvPromise = fetch('../common_resources/shaders/label.glslv').then(r => r.text());
             const lfPromise = fetch('../common_resources/shaders/label.glslf').then(r => r.text());
 
-            const [vertex, fragment, bVertex, sVertex, colorFrag, lVertex, lFragment] = await Promise.all([
-                vPromise, fPromise, bvPromise, svPromise, cfPromise, lvPromise, lfPromise
+            const [vertex, fragment, bVertex, sVertex, bondFrag, colorFrag, lVertex, lFragment] = await Promise.all([
+                vPromise, fPromise, bvPromise, svPromise, bfPromise, cfPromise, lvPromise, lfPromise
             ]);
 
             this.shaders = {
-                atom: { vertex, fragment },
-                bond: { vertex: bVertex, fragment: colorFrag },
-                selection: { vertex: sVertex, fragment: colorFrag },
-                label: { vertex: lVertex, fragment: lFragment }
+                atom:      { vertex,      fragment },
+                bond:      { vertex: bVertex, fragment: bondFrag },   // bond_color.glslf (uses vColor)
+                selection: { vertex: sVertex, fragment: colorFrag },  // color.glslf (uses uColor)
+                label:     { vertex: lVertex, fragment: lFragment }
             };
             window.logger.info("Shaders loaded.");
         } catch (e) {

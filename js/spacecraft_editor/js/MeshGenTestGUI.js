@@ -5,7 +5,6 @@ class MeshGenTestGUI {
         this.engine = engine;
         this.renderer = renderer;
         this.containerId = containerId;
-        
         console.log("MeshGenTestGUI: Constructor called");
         this.init();
     }
@@ -25,12 +24,8 @@ class MeshGenTestGUI {
             const UVmin = { x: 0, y: 0 };
             const UVmax = { x: 1, y: 1 };
             const mask  = parseInt(vals.dirMask, 2);
-
             const args = { n, UVmin, UVmax, mask };
-
-            if ('R' in vals) {
-                args.Rs = { x: vals.R, y: vals.R };
-            }
+            if ('R' in vals) { args.Rs = { x: vals.R, y: vals.R }; }
             if ('thick' in vals || 'offsetX' in vals || 'offsetY' in vals) {
                 args.up = {
                     x: vals.offsetX || 0,
@@ -38,14 +33,19 @@ class MeshGenTestGUI {
                     z: vals.thick   || 0
                 };
             }
-            if ('scale' in vals) {
-                args.scale = vals.scale;
-            }
-            if ('R_major' in vals && 'R_minor' in vals) {
-                args.RsTorus = { x: vals.R_minor, y: vals.R_major };
-            }
+            if ('scale' in vals) { args.scale = vals.scale; }
+            if ('R_major' in vals && 'R_minor' in vals) { args.RsTorus = { x: vals.R_minor, y: vals.R_major }; }
             return args;
         };
+
+        const square = (s) => {
+            const p00 = { x: -s, y: -s, z: 0 };
+            const p01 = { x: -s, y: s, z: 0 };
+            const p10 = { x: s, y: -s, z: 0 };
+            const p11 = { x: s, y: s, z: 1 }; // twisted
+            return [p00, p01, p10, p11];
+        };
+
 
         // Shared default params (can be extended inline per shape using spread)
         const defaultParams = {
@@ -72,63 +72,55 @@ class MeshGenTestGUI {
         // --- Mesh Function Definitions ---
         const meshFuncs = {
             'TubeSheet': {
-                params: {
-                    ...defaultParams,
-                    ...params_tube,
-                    'offset': { group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0], step: 0.1 },
-                },
+                params: { ...defaultParams, ...params_tube, 'offset': { group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0], step: 0.1 }, },
                 run: (vals) => {
                     const { n, UVmin, UVmax, Rs, mask } = buildCommonArgs(vals);
                     this.engine.mesh.TubeSheet(n, UVmin, UVmax, Rs, vals.L, mask, vals.twist);
                 }
             },
-            'SlabTube': {
-                params: {
-                    ...defaultParams,
-                    ...params_tube,
-                    ...params_slab,
+            'TubeSheetPost': {
+                params: {  ...defaultParams, ...params_tube,
+                    'xskip': { group: 'Post', widget: 'int', value: -1, range: [-10, 10], step: 1 },
+                    'yskip': { group: 'Post', widget: 'int', value:  2, range: [-10, 10], step: 1 },
                 },
+                run: (vals) => {
+                    const { n, UVmin, UVmax, Rs, mask } = buildCommonArgs(vals);
+                    const mesh = this.engine.mesh;
+                    const iv0 = mesh.verts.length;
+                    //mesh.TubeSheet(n, UVmin, UVmax, Rs, vals.L, mask, vals.twist);
+                    mesh.TubeSheet_swapped(n, UVmin, UVmax, Rs, vals.L, mask, vals.twist);
+                    const xskip = vals.xskip | 0;
+                    const yskip = vals.yskip | 0;
+                    // Use matID=1 for post-processed rails so they can be colored differently.
+                    mesh.addSkipEdges(n, iv0, xskip, yskip, 1);
+                }
+            },
+            'SlabTube': {
+                params: { ...defaultParams, ...params_tube, ...params_slab },
                 run: (vals) => {
                     const { n, UVmin, UVmax, Rs, up, mask } = buildCommonArgs(vals);
                     this.engine.mesh.SlabTube(n, UVmin, UVmax, Rs, vals.L, up, mask, vals.twist);
                 }
             },
             'QuadSheet': {
-                params: {
-                    ...defaultParams,
-                    'offset': { group: 'Geometry', widget: 'double', value: 0.0,  range: [-1.0, 1.0], step: 0.1 },
-                },
+                params: { ...defaultParams,  'offset': { group: 'Geometry', widget: 'double', value: 0.0,  range: [-1.0, 1.0], step: 0.1 }, },
                 run: (vals) => {
                     const { n, UVmin, UVmax, mask } = buildCommonArgs(vals);
                     const s = vals.L;
-                    const p00 = { x: -s, y: -s, z: 0 };
-                    const p01 = { x: -s, y: s, z: 0 };
-                    const p10 = { x: s, y: -s, z: 0 };
-                    const p11 = { x: s, y: s, z: 1 }; // twisted
+                    const [p00, p01, p10, p11] = square(s);
                     this.engine.mesh.QuadSheet(n, UVmin, UVmax, p00, p01, p10, p11, mask);
                 }
             },
             'QuadSlab': {
-                params: {
-                    ...defaultParams,
-                    ...params_slab,
-                },
+                params: { ...defaultParams, ...params_slab },
                 run: (vals) => {
                     const { n, UVmin, UVmax, up, mask } = buildCommonArgs(vals);
-                    const s = vals.L;
-                    const p00 = { x: -s, y: -s, z: 0 };
-                    const p01 = { x: -s, y: s, z: 0 };
-                    const p10 = { x: s, y: -s, z: 0 };
-                    const p11 = { x: s, y: s, z: 0.5 };
+                    const [p00, p01, p10, p11] = square(vals.L);
                     this.engine.mesh.QuadSlab(n, UVmin, UVmax, p00, p01, p10, p11, up, mask);
                 }
             },
             'TorusSheet': {
-                params: {
-                    ...defaultParams,
-                    ...params_tube,
-                    'thick':   { group: 'Geometry', widget: 'double', value: 2.0, range: [0.0, 20.0], step: 0.1 },
-                },
+                params: { ...defaultParams, ...params_tube,  'thick':{ group: 'Geometry', widget: 'double', value: 2.0, range: [0.0, 20.0], step: 0.1 },},
                 run: (vals) => {
                     const { n, UVmin, UVmax, Rs, mask } = buildCommonArgs(vals);
                     const RsTorus = { x: Rs.x, y: Rs.x + vals.thick };
@@ -179,12 +171,8 @@ class MeshGenTestGUI {
             paramContainer.innerHTML = ''; // Clear
             const funcData = meshFuncs[funcName];
             if (!funcData) return;
-
             currentFunc = funcData;
-            
-            currentGui = GUIutils.create_gui(paramContainer, funcData.params, (name, val) => {
-                if (chkAuto.checked) runMeshGen();
-            });
+            currentGui = GUIutils.create_gui(paramContainer, funcData.params, (name, val) => { if (chkAuto.checked) runMeshGen(); });
         };
 
         // Initialize

@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadShader('../common_resources/shaders/atom.glslv'),
         loadShader('../common_resources/shaders/atom.glslf'),
         loadShader('../common_resources/shaders/bond.glslv'),
-        loadShader('../common_resources/shaders/color.glslf'), // bond fragment is just color
+        loadShader('../common_resources/shaders/bond_color.glslf'), // bond fragment uses palette-based colors
         loadShader('../common_resources/shaders/label.glslv'),
         loadShader('../common_resources/shaders/label.glslf')
     ]).then(([atomVert, atomFrag, bondVert, bondFrag, labelVert, labelFrag]) => {

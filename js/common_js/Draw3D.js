@@ -143,9 +143,13 @@ class Draw3D {
         // Dummy position buffer (needed for frustum culling or just ignore)
         geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSegments * 2 * 3), 3));
 
-        // ID Attribute
+        // Atom ID attribute (index into position texture)
         const ids = new Float32Array(maxSegments * 2);
         geometry.setAttribute('aAtomID', new THREE.BufferAttribute(ids, 1));
+
+        // Material ID attribute (index into uMatColors palette)
+        const matIDs = new Float32Array(maxSegments * 2);
+        geometry.setAttribute('aMatID', new THREE.BufferAttribute(matIDs, 1));
 
         const lines = new THREE.LineSegments(geometry, material);
         lines.frustumCulled = false;
@@ -219,7 +223,11 @@ class Draw3D {
     }
 
     static createLabelInstancedMesh(capacity, shaders, fontTexture, uniforms) {
-        // Geometry: 8 quads (max 8 chars per label)
+        // Geometry: 8 quads (max 8 chars per label instance).
+        // We build a base geometry with 8 copies of a unit quad and use instancing
+        // to draw one label per atom. The actual characters are provided via
+        // instanced attributes (aLabel1/aLabel2/aStrLen). Per-vertex attribute
+        // aCharPos (0..7) selects which packed character this quad should show.
         const maxChars = 8;
         const baseGeo = new THREE.PlaneBufferGeometry(1, 1);
         const basePos = baseGeo.attributes.position.array;
@@ -254,7 +262,11 @@ class Draw3D {
         geometry.setAttribute('aCharPos', new THREE.Float32BufferAttribute(charPosAttr, 1));
         geometry.setIndex(indices);
 
-        // Instanced Attributes
+        // Instanced Attributes (per-label / per-atom):
+        //  - aAtomID  : which atom this label is anchored to
+        //  - aLabel1  : ASCII codes for characters [0..3]
+        //  - aLabel2  : ASCII codes for characters [4..7]
+        //  - aStrLen  : actual length of string (<= 8), used for centering
         const instID = new Float32Array(capacity);
         for (let i = 0; i < capacity; i++) instID[i] = i;
 
@@ -299,6 +311,13 @@ class Draw3D {
     static updateLabelBuffers(mesh, stringGetter, count) {
         mesh.count = count;
 
+        // This function fills the per-instance label attributes used by the
+        // label shaders. For each instance i we take a short string and:
+        //  - write its length into aStrLen[i]
+        //  - pack up to 8 ASCII codes into two vec4s:
+        //      aLabel1 = chars 0..3, aLabel2 = chars 4..7
+        // The vertex shader receives aCharPos=0..7 per quad and picks the
+        // corresponding character code from aLabel1/aLabel2.
         const attr1 = mesh.geometry.getAttribute('aLabel1');
         const attr2 = mesh.geometry.getAttribute('aLabel2');
         const attrLen = mesh.geometry.getAttribute('aStrLen');

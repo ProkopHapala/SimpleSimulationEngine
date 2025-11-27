@@ -74,7 +74,18 @@ class MeshRenderer {
                 this.shaders.bond,
                 {
                     ...this.commonUniforms,
-                    uColor: { value: new THREE.Vector4(1.0, 1.0, 1.0, 1.0) } // White default
+                    // Palette of up to 8 material colors for bonds/edges.
+                    // Higher-level code should fill this with desired colors.
+                    uMatColors: { value: [
+                        new THREE.Vector4(1.0, 1.0, 1.0, 1.0), // 0: default white
+                        new THREE.Vector4(1.0, 0.0, 0.0, 1.0), // 1: example (rail)
+                        new THREE.Vector4(0.0, 1.0, 0.0, 1.0), // 2: example (radial)
+                        new THREE.Vector4(0.0, 0.0, 1.0, 1.0), // 3: example (diagonal)
+                        new THREE.Vector4(1.0, 1.0, 0.0, 1.0), // 4
+                        new THREE.Vector4(0.0, 1.0, 1.0, 1.0), // 5
+                        new THREE.Vector4(1.0, 0.0, 1.0, 1.0), // 6
+                        new THREE.Vector4(0.5, 0.5, 0.5, 1.0)  // 7
+                    ] }
                 }
             );
             this.scene.add(this.bondLines);
@@ -129,12 +140,27 @@ class MeshRenderer {
         if (!this.bondLines) return;
 
         const bondIDAttr = this.bondLines.geometry.getAttribute('aAtomID');
+        const matIDAttr  = this.bondLines.geometry.getAttribute('aMatID');
+
         let ptr = 0;
         for (let i = 0; i < pairs.length; i++) {
-            bondIDAttr.setX(ptr++, pairs[i][0]);
-            bondIDAttr.setX(ptr++, pairs[i][1]);
+            const entry = pairs[i];
+            const i0 = entry[0];
+            const i1 = entry[1];
+            const matID = (entry.length >= 3) ? entry[2] : 0;
+            //const matID = (entry.length >= 3) ? entry[2] : (i % 8); // If caller does not provide a material ID, cycle through palette by edge index.
+
+            bondIDAttr.setX(ptr, i0);
+            matIDAttr.setX(ptr, matID);
+            ptr++;
+
+            bondIDAttr.setX(ptr, i1);
+            matIDAttr.setX(ptr, matID);
+            ptr++;
         }
+
         bondIDAttr.needsUpdate = true;
+        matIDAttr.needsUpdate = true;
         this.bondLines.geometry.setDrawRange(0, pairs.length * 2);
     }
 

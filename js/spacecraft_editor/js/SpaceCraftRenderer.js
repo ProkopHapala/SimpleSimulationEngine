@@ -91,7 +91,10 @@ class SpaceCraftRenderer extends MeshRenderer {
         const edges = meshBuilder.edges;
         const pairs = [];
         for (let i = 0; i < edges.length; i++) {
-            pairs.push([edges[i].x, edges[i].y]);
+            const e = edges[i];
+            // Pass edge.z as material ID so post-processed rails (e.g. from addSkipEdges)
+            // can be colored differently by MeshRenderer.
+            pairs.push([e.x, e.y, e.z]);
         }
         this.updateBonds(pairs);
 
