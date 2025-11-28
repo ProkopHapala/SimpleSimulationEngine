@@ -10,29 +10,35 @@ uniform sampler2D uPosTex;
 uniform vec2 uTexSize; // (width, height)
 attribute float aAtomID;
 
+// Global point size scale (set separately for normal and selected vertices
+// via material uniforms, without touching textures or instance attributes).
+uniform float uPointScale;
+
 void main() {
     vColor = instanceColor;
     vUv = uv;
-    vRadius = instanceScale * 0.5;
 
-    // Fetch position from texture
-    // Calculate UV coordinate for the atom ID
-    // Assuming texture is N x 1 or N x M
-    // Let's assume 1D texture for simplicity first, or simple row-major mapping
-    // But DataTexture is usually 2D. Let's assume width is set by renderer.
-    
+    // Fetch position (xyz) and base radius (w) from texture
     float tx = (mod(aAtomID, uTexSize.x) + 0.5) / uTexSize.x;
     float ty = (floor(aAtomID / uTexSize.x) + 0.5) / uTexSize.y;
-    
-    vec3 atomPos = texture2D(uPosTex, vec2(tx, ty)).xyz;
+    vec4 posTexel = texture2D(uPosTex, vec2(tx, ty));
+    vec3 atomPos = posTexel.xyz;
+    float baseRadius = posTexel.w; // default set from JS, typically 1.0
+
+    // Effective scale combines:
+    //   - per-instance scale (instanceScale)
+    //   - per-vertex base radius from texture (baseRadius)
+    //   - global uniform scale (uPointScale)
+    float effScale = instanceScale * baseRadius * uPointScale;
+    vRadius = effScale * 0.5;
 
     // Billboard technique:
     vec4 mvPosition = modelViewMatrix * vec4(atomPos, 1.0);
-    
+
     // Offset by vertex position (scaled)
-    mvPosition.xy += position.xy * instanceScale;
-    
+    mvPosition.xy += position.xy * effScale;
+
     vViewPosition = -mvPosition.xyz;
-    
+
     gl_Position = projectionMatrix * mvPosition;
 }

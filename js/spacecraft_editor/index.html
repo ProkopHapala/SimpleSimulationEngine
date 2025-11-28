@@ -55,12 +55,60 @@
                 <input type="number" id="numLabelSize" value="0.04" step="0.01" class="compact-input" style="width: 40px;">
                 <label class="compact-label" style="margin-left: 2px;"><input type="checkbox" checked id="chkLabelFixed">FixScale</label>
             </div>
+
+            <!-- Render Layers & Sizes (compact) -->
+            <div class="compact-row" style="margin-top: 2px;">
+                <span class="compact-label">Layers:</span>
+                <label class="compact-label"><input type="checkbox" id="chkRenderVerts" checked>V</label>
+                <label class="compact-label"><input type="checkbox" id="chkRenderEdges" checked>E</label>
+                <label class="compact-label"><input type="checkbox" id="chkRenderLabels" checked>L</label>
+                <label class="compact-label"><input type="checkbox" id="chkRenderSelection" checked>S</label>
+            </div>
+            <div class="compact-row">
+                <span class="compact-label">PtSize:</span>
+                <input type="number" id="numVertSize" value="0.20" step="0.02" class="compact-input" style="width: 40px;">
+                <span class="compact-label">Sel:</span>
+                <input type="number" id="numSelSize" value="0.30" step="0.02" class="compact-input" style="width: 40px;">
+            </div>
         </div>
 
         <!-- Mesh Generator Panel -->
         <div class="panel-section">
             <h3>Mesh Generator</h3>
             <div id="mesh-gen-panel"></div>
+        </div>
+
+        <!-- Selection Panel -->
+        <div class="panel-section">
+            <h3>Selection</h3>
+            <div class="compact-row">
+                <span class="compact-label">Bank:</span>
+                <select id="selSelectionBank" class="compact-select">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                </select>
+                <button id="btnSelSave" class="small-btn">Save</button>
+                <button id="btnSelDelete" class="small-btn">Clear</button>
+            </div>
+            <div class="compact-row">
+                <span class="compact-label">Mode:</span>
+                <select id="selSelectionKind" class="compact-select">
+                    <option value="vert">Verts</option>
+                    <option value="edge">Edges</option>
+                </select>
+                <label class="compact-label" style="margin-left: 4px;"><input type="checkbox" id="chkSelectionAdditive">Add</label>
+                <span class="compact-label" style="margin-left: 4px;">N:</span>
+                <span id="lblSelectionCount" class="compact-label">0</span>
+            </div>
+            <div class="compact-row">
+                <input type="text" id="txtSelectionIndices" class="compact-input" style="width: 100%;" placeholder="Selected IDs (e.g. 0,1,5)">
+            </div>
         </div>
 
         <!-- Test Panel -->
@@ -117,8 +165,10 @@ api.Girder(n1, n2, "Steel");
         <script src="../common_js/Draw3D.js"></script>
         <script src="../common_js/MeshRenderer.js"></script>
         <script src="../common_js/Vec3.js"></script>
+        <script src="../common_js/SDfuncs.js"></script>
 
         <!-- Editor JS -->
+        <script src="js/Selection.js?v=2"></script>
         <script src="js/MeshBuilder.js?v=2"></script>
         <script src="js/MeshesUV.js?v=2"></script>
         <script src="js/SpaceCraft.js?v=2"></script>

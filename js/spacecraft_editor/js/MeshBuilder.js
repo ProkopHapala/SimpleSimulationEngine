@@ -18,6 +18,14 @@ class MeshBuilder {
         this._tmp1 = new Vec3();
         this._tmp2 = new Vec3();
         this._tmp3 = new Vec3();
+
+        // --- Selection state (JS analogue of Selection + SelectionBanks) ---
+        // Use SelectionBanks from Selection.js to manage multiple banks.
+        const nBanks = 8; // UI currently exposes 8 banks (0..7)
+        this.selectionBanks = new SelectionBanks(nBanks);
+        this.selection = this.selectionBanks.curSelection;
+        this.selection.kind = 'vert';
+        this.currentSelectionBank = this.selectionBanks.icurSelection;
     }
 
     clear() {
@@ -27,6 +35,188 @@ class MeshBuilder {
         this.strips = [];
         this.blocks = [];
         logger.info("MeshBuilder cleared.");
+        // Clearing mesh also clears working selection
+        this.clearSelection();
+    }
+
+    // --- Selection helpers ---
+
+    clearSelection() {
+        if (this.selection) {
+            this.selection.clear();
+        }
+    }
+
+    setSelectionKind(kind) {
+        if (kind === 'vert' || kind === 'edge') {
+            if (this.selection) {
+                this.selection.kind = kind;
+            }
+        }
+    }
+
+    /**
+     * Replace or augment current selection with given indices.
+     * @param {Array<number>} indices
+     * @param {string} kind 'vert' or 'edge'
+     * @param {boolean} additive if true, keep existing selection and add; otherwise replace
+     */
+    applySelection(indices, kind = null, additive = false) {
+        if (!this.selection) return;
+        if (!additive) {
+            this.selection.clear();
+        }
+        if (kind) {
+            this.setSelectionKind(kind);
+        }
+        for (const i of indices) {
+            if (Number.isInteger(i) && i >= 0) {
+                this.selection.add(i);
+            }
+        }
+    }
+
+    /**
+     * Subtract given indices from current selection.
+     * @param {Array<number>} indices
+     */
+    subtractSelection(indices) {
+        if (!this.selection) return;
+        for (const i of indices) {
+            if (Number.isInteger(i) && i >= 0) {
+                this.selection.remove(i);
+            }
+        }
+    }
+
+    /**
+     * Get current selection as a sorted array of indices.
+     */
+    getSelectionArray() {
+        if (!this.selection) return [];
+        return this.selection.toSortedArray();
+    }
+
+    /**
+     * JS analogue of Mesh::Builder2::selectVertsBySDF.
+     *
+     * Select vertices for which the provided signed-distance-like function
+     * `sdf(pos)` is below the given threshold. Stores the result into the
+     * current Selection bank.
+     *
+     * @param {(pos: Vec3) => number} sdf       Distance / SDF function on vertex positions.
+     * @param {number} threshold               Inclusive threshold (default 0.0).
+     * @param {boolean} clear                  If true, clear existing selection first.
+     * @returns {number}                       Number of selected vertices.
+     */
+    selectVertsBySDF(sdf, threshold = 0.0, clear = true) {
+        if (!this.selection || typeof sdf !== 'function') return 0;
+        if (clear) {
+            this.selection.clear();
+        }
+        this.selection.kind = 'vert';
+
+        // Mirror C++: Selection::selectByPredicate over the verts container.
+        return this.selection.selectByPredicate(this.verts, (vert) => {
+            return sdf(vert.pos) < threshold;
+        });
+    }
+
+    /**
+     * Subtract vertices that satisfy an SDF from the current selection.
+     *
+     * This is the complement of selectVertsBySDF: instead of replacing or
+     * extending the selection, it removes all vertex indices i for which
+     * sdf(verts[i].pos) < threshold.
+     *
+     * Internally this builds a temporary Set of indices and uses the
+     * Selection.subtract method from Selection.js to do the actual removal.
+     *
+     * @param {(pos: Vec3) => number} sdf       Distance / SDF function on vertex positions.
+     * @param {number} threshold               Inclusive threshold (default 0.0).
+     * @returns {number}                       Number of vertices removed from selection.
+     */
+    subtractVertsBySDF(sdf, threshold = 0.0) {
+        if (!this.selection || typeof sdf !== 'function') return 0;
+
+        const toRemove = new Set();
+        const n = this.verts.length;
+        for (let i = 0; i < n; i++) {
+            const v = this.verts[i];
+            if (!v || !v.pos) continue;
+            if (sdf(v.pos) < threshold) {
+                toRemove.add(i);
+            }
+        }
+
+        return this.selection.subtract(toRemove);
+    }
+
+    /**
+     * JS analogue of Mesh::Builder2::selectEdgesBySDF.
+     *
+     * Select edges whose *both endpoints* satisfy sdf(pos) < threshold.
+     * Writes into the current Selection bank with kind = 'edge'.
+     *
+     * @param {(pos: Vec3) => number} sdf       Distance / SDF function on vertex positions.
+     * @param {number} threshold                Inclusive threshold (default 0.0).
+     * @param {boolean} clear                   If true, clear existing selection first.
+     * @returns {number}                        Number of selected edges.
+     */
+    selectEdgesBySDF(sdf, threshold = 0.0, clear = true) {
+        if (!this.selection || typeof sdf !== 'function') return 0;
+        if (clear) {
+            this.selection.clear();
+        }
+        this.selection.kind = 'edge';
+
+        return this.selection.selectByPredicate(this.edges, (edge) => {
+            const pA = this.verts[edge.x].pos;
+            const pB = this.verts[edge.y].pos;
+            return (sdf(pA) < threshold) && (sdf(pB) < threshold);
+        });
+    }
+
+    /**
+     * Save current working selection into a bank index.
+     */
+    saveSelectionToBank(bankIndex) {
+        if (!this.selectionBanks || !this.selection) return;
+        const n = this.selectionBanks.selections.length;
+        const i = Math.max(0, Math.min(n - 1, bankIndex | 0));
+        const bank = this.selectionBanks.selections[i];
+        bank.kind = this.selection.kind;
+        bank.clear();
+        // Copy current selection items into bank
+        for (const id of this.selection.vec) {
+            if (id >= 0) bank.add(id);
+        }
+        this.currentSelectionBank = i;
+    }
+
+    /**
+     * Load selection from bank index into working selection.
+     */
+    loadSelectionFromBank(bankIndex) {
+        if (!this.selectionBanks) return;
+        const n = this.selectionBanks.selections.length;
+        const i = Math.max(0, Math.min(n - 1, bankIndex | 0));
+        const bank = this.selectionBanks.selections[i];
+        this.selectionBanks.icurSelection = i;
+        this.selectionBanks.curSelection = bank;
+        this.selection = bank;
+        this.currentSelectionBank = i;
+    }
+
+    /**
+     * Clear a specific selection bank.
+     */
+    clearSelectionBank(bankIndex) {
+        if (!this.selectionBanks) return;
+        const n = this.selectionBanks.selections.length;
+        const i = Math.max(0, Math.min(n - 1, bankIndex | 0));
+        const bank = this.selectionBanks.selections[i];
+        bank.clear();
     }
 
     // --- Basic Primitives ---

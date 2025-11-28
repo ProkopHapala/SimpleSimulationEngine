@@ -179,3 +179,16 @@ button:hover {
     padding: 1px 4px;
     font-size: 9px;
 }
+
+/* Selection rectangle overlay (copied from molgui_web) */
+.selection-box {
+    position: fixed;
+    border: 1px solid rgba(255, 255, 0, 0.8);
+    background-color: rgba(255, 255, 0, 0.2);
+    display: none;
+    pointer-events: none;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    will-change: transform, width, height;
+}

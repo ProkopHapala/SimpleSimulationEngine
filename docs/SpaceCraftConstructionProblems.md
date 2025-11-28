@@ -33,16 +33,19 @@ Implemented items (JS / editor only):
 - [x] **[J0d] Length unification and torus radii (`L`, `R + thick`)**  (see §1.9)
 - [x] **[J0e] Grid / axis visibility wiring in JS editor**  (see §1.9)
 - [x] **[J0f] `SlabTube` twist control wired from GUI**  (see §1.9)
+- [x] **[J1] SlabTube / TubeSheet parameter playground panel**  (MeshGenTestGUI + MeshesUV; see §1.8–1.9)
+- [x] **[J3] TubeSheet post‑processor for second‑neighbor longitudinal rails**  (see §4.1)
+- [x] **[J4] Selection manager + SDF-based selection and rendering**  (SelectionBanks + GUI panel, `selectVertsBySDF` / `subtractVertsBySDF` in MeshBuilder, SDF helpers in `SDfuncs.js`, and selection rendering in MoleculeRenderer / SpaceCraftRenderer; see §4.2)
+- [x] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
 
 Pending JS‑first tasks:
 
-- [ ] **[J1] SlabTube / TubeSheet parameter playground panel**  (see §1.8–1.9)
 - [ ] **[J2] Visualizers for index / angle / SDF rail selection strategies**  (see §1.7–1.8)
-- [x] **[J3] TubeSheet post‑processor for second‑neighbor longitudinal rails**  (see §4.1)
-- [ ] **[J4] JS selection manager for named vertex/edge/face sets**  (see §4.2)
-- [x] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
+
 
 ---
+
+
 
 ## 1. Telescopic Truss Recoil Damper for a Nozzle / Pusher Plate
 
@@ -399,11 +402,10 @@ The result should be a **practical toolkit** in JS to debug and tune:
   - `chkShowGrid` / `chkShowAxis` checkboxes now correctly control the Three.js helpers and apply their initial state on startup.
 - [x] **[J0f] `SlabTube` twist control**
   - JS `SlabTube` accepts a `twist` parameter (defaulting to the old hardcoded value) and the GUI passes its `twist` slider into the generator, making twist behavior consistent with `TubeSheet`.
+  - Together with the MeshGenTestGUI panel this effectively provides a **SlabTube / TubeSheet playground** where `n`, `Rs`, `L`, `up`, `dirMask`, `twist` and materials can be tuned interactively and the resulting mesh inspected.
 
 **Pending JS prototyping tasks (before C++ hardening):**
 
-- [ ] **[J1] SlabTube / TubeSheet playground panel**
-  - Implement the parameter playground from [D1] directly in the editor, with live regeneration and optional index/edge labels for tubes.
 - [ ] **[J2] Visualizers for Strategies A/B/C**
   - Implement JS versions of [D2]–[D4] (index‑based rails, angle‑based edge walks, SDF line selections) and integrate them into the editor UI for side‑by‑side comparison.
 
@@ -504,9 +506,50 @@ This section lists JS‑first features that are useful for prototyping telescopi
 - Rendering:
   - Draw active selections with highlight colors or thicker lines to make debugging intuitive.
 
-**TODO:**
 
-- [ ] **[J4] Implement a JS selection manager that can store, name, and visualize multiple vertex/edge selections and feed them into algorithms (e.g. welds, rail extraction).**
+#### 5 Recent JS editor work (selection + GUI)
+
+- **Render layers + size controls (SpaceCraft editor)**
+  - Added compact **Layers** row in the View panel (`index.html`) with checkboxes `V/E/L/S` wired to `MeshRenderer` visibility toggles via `GUI.js`.
+  - Added numeric inputs **PtSize / Sel** controlling **vertex sprite radius purely via shader uniforms** (`uPointScale`) for atoms and selection, avoiding any buffer re‑uploads.
+
+- **Independent instanced passes for atoms vs. selection**
+  - `MeshRenderer` now creates **two InstancedMesh passes** for vertex sprites:
+    - `atomMesh` (all vertices) with its own uniform block `{ uPosTex, uTexSize, uPointScale }`.
+    - `selectionMesh` (only selected vertices) with a **cloned quad geometry** and its own uniforms.
+  - Key decision: **clone the quad geometry for `selectionMesh`** (`atomGeo.clone()`), because Three.js attaches instanced attributes (`instanceScale`, `aAtomID`) to the geometry object. Sharing the same `BufferGeometry` caused selection attributes (most scales = 0) to overwrite atom attributes, making normal vertices disappear when selection was active.
+  - `uPointScale` is initialized to **1.0** in `commonUniforms` to keep spheres visible even before GUI overrides it; GUI then updates `uPointScale` on the relevant material via `setNodeScale` / `setSelectionScale`.
+
+- **Selection rectangle overlay (box‑select)**
+  - Implemented a DOM overlay `div.selection-box` for the yellow selection rectangle, mirroring `molgui_web`:
+    - CSS: `position: fixed`, yellow border/background, `pointer-events: none`, high `z-index`.
+    - JS: `GUI` constructor creates the element **before** calling `initControls()` so pointer event handlers capture a valid element.
+  - Mouse wiring in `GUI.initWidgetCallbacks`:
+    - `pointerdown` on canvas records `dragStart` and resets box.
+    - `pointermove` on `window` shows the box after a small threshold and updates `transform/width/height` from `clientX/clientY` each frame.
+    - `pointerup` hides the box and performs vertex/edge selection in screen space.
+
+- **Pitfalls / lessons learned**
+  - **Geometry sharing in InstancedMesh:** Reusing the same `PlaneBufferGeometry` for atoms and selection caused subtle bugs because **instanced attributes live on the geometry**, not per‑mesh. Always clone geometry when two instanced passes need independent `instanceScale`/`aAtomID` data.
+  - **Uniform defaults matter:** Forgetting a default for `uPointScale` made all sprites vanish even though buffers were correct. For shared uniforms that control visibility, always pick a sane non‑zero default.
+  - **Constructor order vs. event closures:** Creating the `selectionBox` **after** wiring pointer handlers meant the closure captured `undefined`, so the rectangle never updated even though events fired. For DOM‑driven overlays, ensure elements exist *before* `addEventListener` so closures point at real nodes.
+  - **Debugging strategy:** When a UI element “does not exist”, first force a **static test version** (fixed size/position) to prove rendering, then gradually reintroduce dynamic wiring (events, transforms), with logging of key state (`x,y,w,h`, visibility flags) at each step.
+
+---
+
+**TODO / status:**
+
+- [x] **[J4] Implement a JS selection manager that can store, name, and visualize multiple vertex/edge selections and feed them into algorithms (e.g. welds, rail extraction).**
+  - Implemented via `Selection` / `SelectionBanks` in `js/spacecraft_editor/js/Selection.js` plus the **Selection panel** in `GUI.js`:
+    - Multiple selection banks (0–7) with save/load/clear.
+    - `selSelectionKind` (`vert`/`edge`) synchronized with the active selection.
+    - Text box reflecting the current indices for quick inspection / manual edits.
+  - **Selection rendering** is wired into both editors:
+    - MolGUI uses `MoleculeRenderer` (`js/molgui_web/js/MoleculeRenderer.js`) to draw a dedicated instanced selection pass around selected atoms.
+    - The spacecraft editor uses a cloned instanced mesh (`selectionMesh`) in `MeshRenderer` / `SpaceCraftRenderer` along with GUI toggles and size controls.
+  - **SDF-based selection** is implemented in JS mirroring the C++ architecture:
+    - `MeshBuilder` (`js/spacecraft_editor/js/MeshBuilder.js`) exposes `selectVertsBySDF`, `selectEdgesBySDF`, and `subtractVertsBySDF`, which operate on the current `Selection` bank.
+    - `SDfuncs.js` (`js/common_js/SDfuncs.js`) provides JS counterparts of C++ `SDfuncs.h` (spheres, AABB, cylinders, and a screen-rect SDF) used by the editor to implement box-selection and future geometric tools.
 
 ### 4.3 Edge coloring by stick material (JS `SpaceCraftWorkshop`)
 

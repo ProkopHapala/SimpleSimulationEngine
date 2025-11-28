@@ -57,23 +57,23 @@ class GUI {
             row.className = 'gui-row';
 
             const lbl = document.createElement('span');
-            lbl.textContent = 'Count: ';
-            lbl.style.fontSize = '0.9em';
+            lbl.textContent       = 'Count: ';
+            lbl.style.fontSize    = '0.9em';
             lbl.style.marginRight = '5px';
             row.appendChild(lbl);
 
             this.lblCount = document.createElement('span');
-            this.lblCount.textContent = '0';
+            this.lblCount.textContent      = '0';
             this.lblCount.style.fontWeight = 'bold';
             row.appendChild(this.lblCount);
 
             container.appendChild(row);
 
             this.inpSelection = document.createElement('input');
-            this.inpSelection.type = 'text';
-            this.inpSelection.className = 'gui-input';
+            this.inpSelection.type        = 'text';
+            this.inpSelection.className   = 'gui-input';
             this.inpSelection.placeholder = 'IDs (e.g. 1,5)';
-            this.inpSelection.onchange = (e) => this.onSelectionInputChange(e.target.value);
+            this.inpSelection.onchange    = (e) => this.onSelectionInputChange(e.target.value);
             container.appendChild(this.inpSelection);
         });
 
@@ -81,20 +81,20 @@ class GUI {
         this.createSection(sidebar, 'View', (container) => {
             // Zoom Slider
             const zoomRow = document.createElement('div');
-            zoomRow.className = 'gui-row';
+            zoomRow.className           = 'gui-row';
             zoomRow.style.flexDirection = 'column';
-            zoomRow.style.alignItems = 'flex-start';
+            zoomRow.style.alignItems    = 'flex-start';
 
             const zoomLabel = document.createElement('label');
-            zoomLabel.textContent = 'Zoom Level (Log10)';
-            zoomLabel.style.fontSize = '0.9em';
+            zoomLabel.textContent   = 'Zoom Level (Log10)';
+            zoomLabel.style.fontSize  = '0.9em';
             zoomRow.appendChild(zoomLabel);
 
             const zoomSlider = document.createElement('input');
-            zoomSlider.type = 'range';
-            zoomSlider.min = '-2.0';
-            zoomSlider.max = '3.0';
-            zoomSlider.step = '0.1';
+            zoomSlider.type  = 'range';
+            zoomSlider.min   = '-2.0';
+            zoomSlider.max   = '3.0';
+            zoomSlider.step  = '0.1';
             zoomSlider.value = '1.0'; // Default
             zoomSlider.style.width = '100%';
             zoomSlider.oninput = (e) => {
@@ -105,8 +105,8 @@ class GUI {
             container.appendChild(zoomRow);
 
             // View Buttons
-            const viewRow = document.createElement('div');
-            viewRow.className = 'gui-row';
+            const viewRow           = document.createElement('div');
+            viewRow.className       = 'gui-row';
             viewRow.style.marginTop = '10px';
 
             const views = [
@@ -117,10 +117,10 @@ class GUI {
 
             views.forEach(v => {
                 const btn = document.createElement('button');
-                btn.textContent = v.name;
-                btn.className = 'gui-btn';
+                btn.textContent       = v.name;
+                btn.className         = 'gui-btn';
                 btn.style.marginRight = '2px';
-                btn.onclick = () => this.setView(v.pos, v.up);
+                btn.onclick           = () => this.setView(v.pos, v.up);
                 viewRow.appendChild(btn);
             });
             container.appendChild(viewRow);
@@ -132,10 +132,10 @@ class GUI {
 
             const axisLabel = document.createElement('label');
             axisLabel.className = 'gui-checkbox-label';
-            const axisChk = document.createElement('input');
-            axisChk.type = 'checkbox';
-            axisChk.checked = false;
-            axisChk.onchange = (e) => {
+            const axisChk       = document.createElement('input');
+            axisChk.type        = 'checkbox';
+            axisChk.checked     = false;
+            axisChk.onchange    = (e) => {
                 if (window.app && window.app.molRenderer) {
                     window.app.molRenderer.toggleAxes(e.target.checked);
                 }
@@ -159,10 +159,10 @@ class GUI {
             labelSel.style.flexGrow = '1';
 
             const modes = [
-                { value: 'none', text: 'None' },
-                { value: 'id', text: 'Atom ID' },
-                { value: 'element', text: 'Element' },
-                { value: 'type', text: 'Atom Type' }
+                { value: 'none',    text: 'None'      },
+                { value: 'id',      text: 'Atom ID'   },
+                { value: 'element', text: 'Element'   },
+                { value: 'type',    text: 'Atom Type' }
             ];
 
             modes.forEach(m => {

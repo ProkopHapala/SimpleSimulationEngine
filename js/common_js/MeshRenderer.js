@@ -12,6 +12,7 @@ class MeshRenderer {
         this.atomMesh = null;
         this.bondLines = null;
         this.labelMesh = null;
+        this.selectionMesh = null; // Highlight selected vertices
         this.fontTexture = null;
 
         if (this.scene && this.shaders) {
@@ -38,18 +39,28 @@ class MeshRenderer {
         this.posTexture.needsUpdate = true;
 
         this.commonUniforms = {
-            uPosTex: { value: this.posTexture },
-            uTexSize: { value: new THREE.Vector2(this.texSize, this.texHeight) }
+            uPosTex:   { value: this.posTexture },
+            uTexSize:  { value: new THREE.Vector2(this.texSize, this.texHeight) },
+            // Global point-size scale baseline; specific meshes may override
+            // this with their own uniform objects so they can scale
+            // independently (atoms vs selection).
+            uPointScale: { value: 1.0 }
         };
 
         // --- 2. Atoms (InstancedMesh) ---
         if (this.shaders.atom) {
             const atomGeo = new THREE.PlaneBufferGeometry(1, 1);
+
+            // Per-mesh uniform blocks so we can scale atoms and selection
+            // independently while still sharing common texture uniforms.
+            const atomUniforms = { ...this.commonUniforms, uPointScale: { value: 1.0 } };
+
+            // Main atom mesh: uses atomGeo
             this.atomMesh = Draw3D.createTextureBasedInstancedMesh(
                 this.capacity,
                 atomGeo,
                 this.shaders.atom,
-                this.commonUniforms
+                atomUniforms
             );
 
             // Initialize instance colors and scales
@@ -63,6 +74,33 @@ class MeshRenderer {
             this.atomMesh.geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(scales, 1));
 
             this.scene.add(this.atomMesh);
+
+            // Selection mesh: reuse same shaders but its OWN cloned quad geometry
+            // and its own uniform block, so its uPointScale and instance
+            // attributes are fully independent from the main atom mesh.
+            const selUniforms = { ...this.commonUniforms, uPointScale: { value: 1.2 } };
+            const selGeo = atomGeo.clone();
+            this.selectionMesh = Draw3D.createTextureBasedInstancedMesh(
+                this.capacity,
+                selGeo,
+                this.shaders.atom,
+                selUniforms
+            );
+
+            const selColors = new Float32Array(this.capacity * 3);
+            const selScales = new Float32Array(this.capacity);
+            for (let i = 0; i < this.capacity; i++) {
+                // Bright yellow for selection
+                selColors[i * 3] = 1.0;
+                selColors[i * 3 + 1] = 1.0;
+                selColors[i * 3 + 2] = 0.0;
+                selScales[i] = 0.0; // Hidden until selected
+            }
+            this.selectionMesh.geometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(selColors, 3));
+            this.selectionMesh.geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(selScales, 1));
+            this.selectionMesh.renderOrder = 998; // Draw above atoms but below labels
+            this.selectionMesh.visible = true;
+            this.scene.add(this.selectionMesh);
         }
 
         // --- 3. Bonds (LineSegments) ---
@@ -136,6 +174,40 @@ class MeshRenderer {
         scaleAttr.needsUpdate = true;
     }
 
+    /**
+     * Update selection highlight based on an array of vertex indices.
+     * Renders a small yellow marker per selected vertex on top of atoms.
+     * @param {Array<number>} indices
+     */
+    updateSelection(indices) {
+        if (!this.selectionMesh) return;
+
+        const maxCount = Math.min(indices.length, this.capacity);
+        const idAttr = this.selectionMesh.geometry.getAttribute('aAtomID');
+        const scaleAttr = this.selectionMesh.geometry.getAttribute('instanceScale');
+        if (!idAttr || !scaleAttr) return;
+
+        const idArray = idAttr.array;
+        const scaleArray = scaleAttr.array;
+
+        // Reset all scales to 0 (hidden)
+        for (let i = 0; i < this.capacity; i++) {
+            scaleArray[i] = 0.0;
+        }
+
+        for (let i = 0; i < maxCount; i++) {
+            const idx = indices[i];
+            idArray[i] = idx;
+            // Slightly larger than default sphere; actual visual size controlled by shader scale
+            scaleArray[i] = 1.2;
+        }
+
+        idAttr.needsUpdate = true;
+        scaleAttr.needsUpdate = true;
+        this.selectionMesh.count = maxCount;
+        this.selectionMesh.visible = maxCount > 0;
+    }
+
     updateBonds(pairs) {
         if (!this.bondLines) return;
 
@@ -186,6 +258,51 @@ class MeshRenderer {
     updateLabelUniforms(aspect) {
         if (this.labelMesh && aspect) {
             this.labelMesh.material.uniforms.uAspect.value = aspect;
+        }
+    }
+
+    // --- Visibility Toggles ---
+
+    setAtomsVisible(flag) {
+        if (this.atomMesh) this.atomMesh.visible = !!flag;
+    }
+
+    setBondsVisible(flag) {
+        if (this.bondLines) this.bondLines.visible = !!flag;
+    }
+
+    setLabelsVisible(flag) {
+        if (this.labelMesh) this.labelMesh.visible = !!flag;
+    }
+
+    setSelectionVisible(flag) {
+        if (this.selectionMesh) this.selectionMesh.visible = !!flag;
+    }
+
+    // --- Size Controls via shader uniforms ---
+
+    /**
+     * Set global size multiplier for atom sprites (vertices).
+     * Implemented purely as a shader uniform (uPointScale) so it does not
+     * re-upload textures or instance buffers.
+     */
+    setNodeScale(scale) {
+        if (!this.atomMesh || !this.atomMesh.material || !this.atomMesh.material.uniforms) return;
+        if (this.atomMesh.material.uniforms.uPointScale) {
+            this.atomMesh.material.uniforms.uPointScale.value = scale;
+        }
+    }
+
+    /**
+     * Set global size multiplier for selection markers (selected vertices).
+     * Uses the same shader uniform name (uPointScale) but on the separate
+     * selection mesh material, so selection and normal vertices can have
+     * independent scales.
+     */
+    setSelectionScale(scale) {
+        if (!this.selectionMesh || !this.selectionMesh.material || !this.selectionMesh.material.uniforms) return;
+        if (this.selectionMesh.material.uniforms.uPointScale) {
+            this.selectionMesh.material.uniforms.uPointScale.value = scale;
         }
     }
 }

@@ -23,7 +23,7 @@ class SpaceCraftRenderer extends MeshRenderer {
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
 
-        // Controls
+        // Controls (basic OrbitControls; detailed mouse/key bindings are configured by GUI)
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
 
         // Lights
