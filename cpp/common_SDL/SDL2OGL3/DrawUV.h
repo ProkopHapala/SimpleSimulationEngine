@@ -330,6 +330,135 @@ void QuadSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, 
     //UV_sheet_clip(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,imin,imax);
 }
 
+// Parametric strip triangulation between two consecutive rows A,B stored in a
+// flat index array. This mirrors triangulate_strip(..., mode='parametric') in
+// doc/python/interpolated_vertex_count.py, but works purely in index space.
+inline void triangulateStrip_parametric(
+    Builder2&           builder,
+    const std::vector<int>& rowStart,
+    const std::vector<int>& rowCounts,
+    const std::vector<int>& rowsFlat,
+    int                 r
+){
+    int offA   = rowStart[r    ];
+    int offB   = rowStart[r + 1];
+    int countA = rowCounts[r    ];
+    int countB = rowCounts[r + 1];
+
+    const double invA = 1.0 / (double)(countA - 1);
+    const double invB = 1.0 / (double)(countB - 1);
+
+    int ia = 0;
+    int ib = 0;
+
+    while( ia < countA-1 || ib < countB-1 ){
+        char choice;
+
+        if( ia == countA-1 ){
+            choice = 'B';
+        }else if( ib == countB-1 ){
+            choice = 'A';
+        }else{
+            double uNextA = (double)(ia+1) * invA;
+            double uNextB = (double)(ib+1) * invB;
+            choice = (uNextA <= uNextB) ? 'A' : 'B';
+        }
+
+        if(choice=='A'){
+            // Triangle (A_curr, B_curr, A_next) -> add edges
+            int aCurr = rowsFlat[offA + ia    ];
+            int aNext = rowsFlat[offA + ia + 1];
+            int bCurr = rowsFlat[offB + ib    ];
+
+            builder.edge(aCurr,bCurr);
+            builder.edge(bCurr,aNext);
+            builder.edge(aCurr,aNext);
+
+            ++ia;
+        }else{
+            // Triangle (A_curr, B_curr, B_next) -> add edges
+            int aCurr = rowsFlat[offA + ia    ];
+            int bCurr = rowsFlat[offB + ib    ];
+            int bNext = rowsFlat[offB + ib + 1];
+
+            builder.edge(aCurr,bCurr);
+            builder.edge(bCurr,bNext);
+            builder.edge(aCurr,bNext);
+
+            ++ib;
+        }
+    }
+}
+
+// World-space parametric quad patch with varying vertex counts per row, following
+// the Python generate_mesh_variations() + triangulate_strip(..., mode='parametric')
+// logic and the JS MeshesUV::ParametricQuadPatch implementation.
+// - nTop   : vertex count on the first row (between p00 and p10)
+// - nBottom: vertex count on the last row  (between p01 and p11)
+// - nRows  : number of rows (>=2)
+inline void ParametricQuadPatch(
+    Builder2& builder,
+    int       nTop,
+    int       nBottom,
+    int       nRows,
+    const Vec3d& p00,
+    const Vec3d& p01,
+    const Vec3d& p10,
+    const Vec3d& p11
+){
+    nTop    = _max(1, nTop   );
+    nBottom = _max(1, nBottom);
+    nRows   = _max(2, nRows  );
+
+    // Interpolate vertex counts per row
+    std::vector<int> rowCounts(nRows);
+    for(int i=0; i<nRows; ++i){
+        double t = (nRows==1) ? 0.0 : (double)i/(double)(nRows-1);
+        double cnt = nTop + (nBottom - nTop)*t;
+        rowCounts[i] = _max(1, (int)round(cnt));
+    }
+    std::vector<int> rowStart(nRows);
+    rowStart[0] = 0;
+    for(int i=1; i<nRows; ++i) rowStart[i] = rowStart[i-1] + rowCounts[i-1];
+
+    const int totalVerts = rowStart[nRows-1] + rowCounts[nRows-1];
+    std::vector<int> rowsFlat(totalVerts);
+
+    for(int i=0; i<nRows; ++i){
+        double v = (nRows==1) ? 0.0 : (double)i/(double)(nRows-1);
+        double mv = 1.0-v;
+        Vec3d left  = p00*mv + p01*v;
+        Vec3d right = p10*mv + p11*v;
+        int   cnt   = rowCounts[i];
+        int   off   = rowStart[i];
+
+        if(cnt==1){
+            rowsFlat[off] = builder.vert(left);
+        }else{
+            const double invCntM1 = 1.0 / (double)(cnt-1);
+            for(int j=0; j<cnt; ++j){
+                double u  = (double)j * invCntM1;
+                Vec3d pos = left*(1.0-u) + right*u;
+                rowsFlat[off + j] = builder.vert(pos);
+            }
+        }
+    }
+
+    // Edges along each row
+    for(int i=0; i<nRows; ++i){
+        int off = rowStart[i];
+        int m   = rowCounts[i];
+        for(int j=0; j<m-1; ++j){
+            builder.edge(rowsFlat[off + j], rowsFlat[off + j + 1]);
+        }
+    }
+
+    // Parametric triangulation between successive rows (index-space only)
+    for(int r=0; r<nRows-1; ++r){
+        triangulateStrip_parametric(builder, rowStart, rowCounts, rowsFlat, r);
+    }
+}
+
 void TubeSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, float L, int dirMask=0b1011, float twist=0.5, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
     float dudv = (twist*(n.x-1.))/n.y;
     auto uvfunc = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a,Rs.b,L); };

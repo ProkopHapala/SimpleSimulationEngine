@@ -37,6 +37,7 @@ Implemented items (JS / editor only):
 - [x] **[J3] TubeSheet post‑processor for second‑neighbor longitudinal rails**  (see §4.1)
 - [x] **[J4] Selection manager + SDF-based selection and rendering**  (SelectionBanks + GUI panel, `selectVertsBySDF` / `subtractVertsBySDF` in MeshBuilder, SDF helpers in `SDfuncs.js`, and selection rendering in MoleculeRenderer / SpaceCraftRenderer; see §4.2)
 - [x] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
+- [x] **[J6] P2 parametric plate generators and angled-rope playground**  (see §2.1)
 
 Pending JS‑first tasks:
 
@@ -411,7 +412,7 @@ The result should be a **practical toolkit** in JS to debug and tune:
 
 ---
 
-## 2. Plates on Girders and Ropes (radiators, sails, shields) – outline only
+## 2. Plates on Girders and Ropes (radiators, sails, shields) – outline + JS prototypes
 
 **Problem statement (sketch):**
 
@@ -424,12 +425,50 @@ The result should be a **practical toolkit** in JS to debug and tune:
   - Generate triangular / quad grids (thin sheets or slabs) between them using `QuadSheet`, `QuadSlab`, etc.
   - Keep tessellation compatible with underlying truss for load transfer and damage.
 
-**Relevant tools:**
+### 2.1 Current JS prototypes (MeshBuilder / MeshesUV / editor)
 
-- `QuadSheet`, `QuadSlab`, `UV_panel`, `UV_slab`, `slabEdges` in `DrawUV.h`.
-- `plateBetweenEdges` GUI function in `constructionBlockApp.cpp`.
+In the JS spacecraft editor we now have a first set of **P2-focused prototypes**:
 
-(*Detailed design to be filled in later.*)
+- **Core helpers (MeshBuilder.js / MeshesUV.js)**
+  - `MeshBuilder.triangulateBetweenVertStrips(strip1, strip2)` – JS port of Python `triangulate_strip(..., mode='parametric')` for mismatched strips.
+  - `MeshBuilder.triPlateBetweenEdges(corners, r, maxPerStrip)` – high-level helper that extracts two vertex strips along selected edges and then calls the parametric strip triangulator.
+  - `MeshesUV.ParametricQuadPatch(nTop, nBottom, nRows, p00, p01, p10, p11)` – parametric quad / trapezoid patch generator that mirrors Python `generate_mesh_variations` in **parametric** mode (with a C++ sibling `Mesh::ParametricQuadPatch` in `DrawUV.h`).
+  - `MeshBuilder.rope(pStart, dir, length, nSeg)` – simple rope/girder generator used to define the limiting polylines for P2 tests.
+
+- **Editor tests for P2 (constructionBlockTests.js)**
+  - `"Ropes V-Shape + Plate"` – two ropes forming a V around a shared vertex, filled by `triPlateBetweenEdges` using the parametric strip triangulator.
+  - `"Ropes Parallel + Plate"` – two roughly parallel ropes bridged by `MeshesUV.ParametricQuadPatch` mapped into the quad spanned by the rope endpoints.
+  - `"Triangulated Variations"` – direct visualization of `ParametricQuadPatch` on a square, showing how `nxTop`, `nxBottom`, `nyRows` affect the triangulation.
+
+- **GUI playground (MeshGenTestGUI.js)**
+  - `QuadParametric` – interactive parametric quad patch over a twisted square (`square(L)`), with sliders for `nx`, `nx2`, `ny`, and `L` to inspect pure parametric strip triangulation.
+  - `QuadParametricRopes` – parametric patch **between two symmetric angled ropes**:
+    - Ropes are generated via `mesh.rope` with independent segment counts and lengths.
+    - The quad is stretched between rope endpoints and **inset** between them by a controllable gap.
+    - Short "sticks" are added from rope vertices to nearby patch vertices using a distance threshold (`attachR`), so plate resolution and rope tessellation do not have to match.
+
+These JS prototypes cover the basic P2 use cases for:
+
+- Mismatched strip triangulation (V-shape and `| |` cases).
+- Parametric multi-row plates between ropes/girders.
+- Interactive exploration of how `nxTop`, `nxBottom`, `nyRows` and rope geometry affect the resulting tessellation.
+
+**Relevant tools (C++ side, conceptual roles):**
+
+- `triangle_strip` – builds a **single zig‑zag strip of equal triangles** along a line. Useful as a stiffened beam or local rib, but by itself it does not solve the full plate‑between‑polylines problem.
+- `plateOnGriders` – connects **two existing vertex strips** (e.g. two girders / ropes) by a set of cross‑links, choosing which vertices to connect by interpolating along each strip. Conceptually this is an **index‑space sampler** for mismatched segment counts: it turns two different tessellations into a common ladder of cross‑edges.
+- `panel` – generates a **stand‑alone truss panel** over a quadrilateral area, creating a regular internal grid and diagonal bracing. It shows what a “good” plate lattice looks like once we already know four corners and subdivision counts, but it does not attach itself to arbitrary existing polylines.
+- `plate_quad` – experimental attempt to build a panel between four existing corners by reusing rope‑like edge generators. Intended to reuse girder logic around a quad, but currently too ad‑hoc and not a good canonical solution.
+- `bondsBetweenVertRanges` – creates **weld‑like connections** between two vertex ranges wherever points are closer than a given distance. It is a generic proximity‑based connector, useful for attaching pre‑built panels or components to a support structure, but not itself a structured plate generator.
+- `plateBetweenVertStrips` – low‑level helper that conceptually takes **two ordered vertex strips** and builds connections between corresponding points. At the moment it only creates a ladder of edges, but it is the natural place to grow a more complete “strip‑to‑strip plate” (quads or triangles) once we have good sampling on both sides.
+- `plateBetweenEdges` – higher‑level helper that starts from **a small set of boundary vertices** (triangle or quad corner cases), extracts vertex strips along the chosen edges using geometric selection, and then hands those strips to `plateBetweenVertStrips`. Conceptually this is the **main bridge from interactive selection to a plate**, and is the most general sketch for the P2 workflow.
+- `bridgeTriPatch` – builds a **triangular patch** between two converging strips that share a root vertex, filling the area with a triangle lattice. This is effectively the “triangular plate” case once strips are matched, and complements the more quad‑like patterns suggested by `panel`.
+
+Together these helpers suggest a **three‑layer design** for P2:
+
+- Extract or define **ordered vertex strips** along supporting polylines (by indices, SDF selection along a line, or other strategies).
+- Use a core **strip‑to‑strip plate builder** (conceptually `plateBetweenVertStrips`) that knows how to connect two strips into a triangular or quad lattice, possibly with extra bracing.
+- Provide **user‑facing tools** (conceptually `plateBetweenEdges`) that turn a small set of selected vertices into strips and then call the core plate builder. This is what the JS editor should expose for prototyping P2.
 
 ---
 

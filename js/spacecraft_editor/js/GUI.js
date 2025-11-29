@@ -149,11 +149,11 @@ export class GUI {
         // with explicit access to engine + mesh. We do NOT try to hide errors if the user
         // redeclares 'mesh' locally; that should fail loudly.
         if (code.includes('mesh.') || code.includes('ConstructionBlockTests')) {
-            const func = new Function('engine', 'mesh', 'Vec3', 'ConstructionBlockTests', 'window',
+            const func = new Function('engine', 'Vec3', 'ConstructionBlockTests', 'window',
                 `"use strict";\n${code}`
             );
 
-            func(this.engine, this.engine.mesh, Vec3, ConstructionBlockTests, window);
+            func(this.engine, Vec3, ConstructionBlockTests, window);
 
             if (this.renderer) {
                 this.renderer.updateGeometry(this.engine.mesh);
@@ -330,7 +330,7 @@ export class GUI {
         // --- Tests ---
         const selTest = document.getElementById('selTest');
         const btnRunTest = document.getElementById('btnRunTest');
-        if (selTest && window.ConstructionBlockTests) {
+        if (selTest) {
             this.initTestDropdown(selTest, btnRunTest);
             selTest.addEventListener('change', () => {
                 this.onTestSelected(selTest, scriptInput);

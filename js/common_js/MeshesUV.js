@@ -429,6 +429,110 @@ export const MeshesUV = {
         this.UV_sheet(n, UVmin, duv, dirMask, stickTypes, uvfunc, false, false);
     },
 
+    // Parametric quad patch with varying vertex counts per row, following the
+    // Python generate_mesh_variations() + triangulate_strip(..., mode='parametric')
+    // logic. This works directly in world space, not UV space.
+    // - nTop:    vertex count on the first row (between p00 and p10)
+    // - nBottom: vertex count on the last row  (between p01 and p11)
+    // - nRows:   number of rows (>=2)
+    ParametricQuadPatch(nTop, nBottom, nRows, p00, p01, p10, p11) {
+        nTop = Math.max(1, nTop | 0);
+        nBottom = Math.max(1, nBottom | 0);
+        nRows = Math.max(2, nRows | 0);
+
+        const rowCounts = [];
+        for (let i = 0; i < nRows; i++) {
+            const t = (nRows === 1) ? 0 : i / (nRows - 1);
+            const cnt = Math.round(nTop + (nBottom - nTop) * t);
+            rowCounts.push(Math.max(1, cnt));
+        }
+
+        const allRows = [];
+
+        const lerp = (a, b, t) => ({
+            x: a.x * (1 - t) + b.x * t,
+            y: a.y * (1 - t) + b.y * t,
+            z: a.z * (1 - t) + b.z * t
+        });
+
+        // Build rows of vertices between the two edges p00-p01 and p10-p11
+        for (let i = 0; i < nRows; i++) {
+            const v = (nRows === 1) ? 0 : i / (nRows - 1);
+            const left = lerp(p00, p01, v);
+            const right = lerp(p10, p11, v);
+            const count = rowCounts[i];
+            const row = [];
+
+            if (count === 1) {
+                row.push(this.vert(left));
+            } else {
+                for (let j = 0; j < count; j++) {
+                    const u = j / (count - 1);
+                    const pos = lerp(left, right, u);
+                    row.push(this.vert(pos));
+                }
+            }
+            allRows.push(row);
+        }
+
+        // Edges along each row
+        for (let i = 0; i < nRows; i++) {
+            const row = allRows[i];
+            for (let j = 0; j < row.length - 1; j++) {
+                this.edge(row[j], row[j + 1]);
+            }
+        }
+
+        // Parametric triangulation between successive rows
+        for (let r = 0; r < nRows - 1; r++) {
+            const rowA = allRows[r];
+            const rowB = allRows[r + 1];
+            const countA = rowA.length;
+            const countB = rowB.length;
+
+            let ia = 0;
+            let ib = 0;
+
+            while (ia < countA - 1 || ib < countB - 1) {
+                let choice;
+
+                if (ia === countA - 1) {
+                    choice = 'B';
+                } else if (ib === countB - 1) {
+                    choice = 'A';
+                } else {
+                    const uNextA = (ia + 1) / (countA - 1);
+                    const uNextB = (ib + 1) / (countB - 1);
+                    choice = (uNextA <= uNextB) ? 'A' : 'B';
+                }
+
+                if (choice === 'A') {
+                    // Triangle (A_curr, B_curr, A_next)
+                    const aCurr = rowA[ia];
+                    const aNext = rowA[ia + 1];
+                    const bCurr = rowB[ib];
+
+                    this.edge(aCurr, bCurr);
+                    this.edge(bCurr, aNext);
+                    this.edge(aCurr, aNext);
+
+                    ia += 1;
+                } else {
+                    // Triangle (A_curr, B_curr, B_next)
+                    const aCurr = rowA[ia];
+                    const bCurr = rowB[ib];
+                    const bNext = rowB[ib + 1];
+
+                    this.edge(aCurr, bCurr);
+                    this.edge(bCurr, bNext);
+                    this.edge(aCurr, bNext);
+
+                    ib += 1;
+                }
+            }
+        }
+    },
+
     TubeSheet(n, UVmin, UVmax, Rs, L, dirMask = 0b1011, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
         const dudv = (twist * (n.x - 1.0)) / n.y;
         const uvfunc = (uv) => {

@@ -1,8 +1,6 @@
 import { Vec3 } from '../../common_js/Vec3.js';
 import { logger } from '../../common_js/Logger.js';
 
-// constructionBlockTests.js
-
 export const ConstructionBlockTests = {
 
     // Helper to clear and setup
@@ -25,6 +23,162 @@ export const ConstructionBlockTests = {
 
             mesh.girder1(p0, p1, new Vec3(1, 0, 0), 5, 0.5, { x: 1, y: 1, z: 1, w: 1 }, true);
             mesh.girder1(p1, p2, new Vec3(0, 1, 0), 5, 0.5, { x: 1, y: 1, z: 1, w: 1 }, true);
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "Ropes V-Shape": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running Ropes V-Shape Test (shared endpoint)...");
+
+            const nseg = 10;
+
+            // Shared root
+            const A = new Vec3(0, 0, 0);
+            const B = new Vec3(0, 10, 0);
+            const C = new Vec3(10, 10, 0);
+
+            // First polyline A->B
+            const vertsAB = [];
+            for (let i = 0; i <= nseg; i++) {
+                const t = i / nseg;
+                const p = new Vec3(
+                    A.x * (1 - t) + B.x * t,
+                    A.y * (1 - t) + B.y * t,
+                    A.z * (1 - t) + B.z * t
+                );
+                vertsAB.push(mesh.vert(p));
+            }
+            for (let i = 0; i < nseg; i++) {
+                mesh.edge(vertsAB[i], vertsAB[i + 1]);
+            }
+
+            // Second polyline A->C (shares vertex 0 with first polyline)
+            const vertsAC = [vertsAB[0]];
+            for (let i = 1; i <= nseg; i++) {
+                const t = i / nseg;
+                const p = new Vec3(
+                    A.x * (1 - t) + C.x * t,
+                    A.y * (1 - t) + C.y * t,
+                    A.z * (1 - t) + C.z * t
+                );
+                vertsAC.push(mesh.vert(p));
+            }
+            for (let i = 0; i < nseg; i++) {
+                mesh.edge(vertsAC[i], vertsAC[i + 1]);
+            }
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "Ropes Parallel": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running Ropes Parallel Test (||)...");
+
+            const nseg = 10;
+
+            const A1 = new Vec3(-5, 0, 0);
+            const B1 = new Vec3(-5, 10, 0);
+            const A2 = new Vec3(5, 0, 0);
+            const B2 = new Vec3(5, 10, 0);
+
+            const buildPolyline = (P0, P1) => {
+                const verts = [];
+                for (let i = 0; i <= nseg; i++) {
+                    const t = i / nseg;
+                    const p = new Vec3(
+                        P0.x * (1 - t) + P1.x * t,
+                        P0.y * (1 - t) + P1.y * t,
+                        P0.z * (1 - t) + P1.z * t
+                    );
+                    verts.push(mesh.vert(p));
+                }
+                for (let i = 0; i < nseg; i++) {
+                    mesh.edge(verts[i], verts[i + 1]);
+                }
+                return verts;
+            };
+
+            buildPolyline(A1, B1);
+            buildPolyline(A2, B2);
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "Ropes V-Shape + Plate": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running Ropes V-Shape + Plate Test (mismatched segments)...");
+
+            const nsegAB = 12; // more segments on AB
+            const nsegAC = 6;  // fewer segments on AC
+
+            // Shared root
+            const A = new Vec3(0, 0, 0);
+            const B = new Vec3(0, 10, 0);
+            const C = new Vec3(10, 10, 0);
+
+            // First polyline A->B (fine sampling)
+            const vertsAB = [];
+            for (let i = 0; i <= nsegAB; i++) {
+                const t = i / nsegAB;
+                const p = new Vec3(
+                    A.x * (1 - t) + B.x * t,
+                    A.y * (1 - t) + B.y * t,
+                    A.z * (1 - t) + B.z * t
+                );
+                vertsAB.push(mesh.vert(p));
+            }
+            for (let i = 0; i < nsegAB; i++) {
+                mesh.edge(vertsAB[i], vertsAB[i + 1]);
+            }
+
+            // Second polyline A->C (coarser sampling, shares vertex 0 with first polyline)
+            const vertsAC = [vertsAB[0]];
+            for (let i = 1; i <= nsegAC; i++) {
+                const t = i / nsegAC;
+                const p = new Vec3(
+                    A.x * (1 - t) + C.x * t,
+                    A.y * (1 - t) + C.y * t,
+                    A.z * (1 - t) + C.z * t
+                );
+                vertsAC.push(mesh.vert(p));
+            }
+            for (let i = 0; i < nsegAC; i++) {
+                mesh.edge(vertsAC[i], vertsAC[i + 1]);
+            }
+
+            // Corners: [tipA, shared, tipB]
+            const tipA = vertsAB[nsegAB];
+            const shared = vertsAB[0];
+            const tipB = vertsAC[nsegAC];
+
+            // Radius and sampling parameters for strip extraction
+            const r = 0.3;
+            const maxPerStrip = Math.max(nsegAB, nsegAC) + 1;
+
+            mesh.triPlateBetweenEdges([tipA, shared, tipB], r, maxPerStrip);
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "Ropes Parallel + Plate": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running Ropes Parallel + Plate Test (ParametricQuadPatch)...");
+
+            const A1 = new Vec3(-5, 0, 0);   // bottom-left
+            const B1 = new Vec3(-5, 10, 0);  // top-left
+            const A2 = new Vec3(5, 0, 0);    // bottom-right
+            const B2 = new Vec3(5, 10, 0);   // top-right
+
+            const nTop = 10;    // along bottom edge A1-A2
+            const nBottom = 6;  // along top edge B1-B2
+            const nRows = 8;    // between bottom and top
+
+            mesh.ParametricQuadPatch(nTop, nBottom, nRows, A1, B1, A2, B2);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
             logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
@@ -129,6 +283,26 @@ export const ConstructionBlockTests = {
             // Bridge them using automatic face detection
             // stickTypes: {x: longitudinal, y: ring, z: spiral, w: internal}
             mesh.bridgeFacingPolygons(p1, p2, chRange1, chRange2, 5, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 });
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "Triangulated Variations": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running Triangulated Variations Test (ParametricQuadPatch on square)...");
+
+            const s = 5.0;
+            const p00 = new Vec3(-s, 0, -s);
+            const p01 = new Vec3(-s, 0, s);
+            const p10 = new Vec3(s, 0, -s);
+            const p11 = new Vec3(s, 0, s);
+
+            const nTop = 8;
+            const nBottom = 20;
+            const nRows = 8;
+
+            mesh.ParametricQuadPatch(nTop, nBottom, nRows, p00, p01, p10, p11);
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
             logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);

@@ -608,6 +608,43 @@ export class MeshBuilder {
         this.edge(ia, ib, type);
     }
 
+    /**
+     * Generate a polyline ("rope") with nSeg points starting from pStart
+     * and going along the given direction for the given length.
+     * Returns an array of newly created vertex indices in order.
+     */
+    rope(pStart, dir, length, nSeg, type = -1) {
+        nSeg = nSeg | 0;
+        if (nSeg <= 0 || length === 0) return [];
+
+        const d = new Vec3(dir.x, dir.y, dir.z);
+        const L = d.norm();
+        if (L <= 0) return [];
+        d.mulScalar(length / L);
+
+        const p0 = new Vec3(pStart.x, pStart.y, pStart.z);
+        const verts = [];
+        if (nSeg === 1) {
+            const iv = this.vert(p0);
+            verts.push(iv);
+            return verts;
+        }
+
+        const step = 1.0 / (nSeg - 1);
+        let prev = -1;
+        for (let i = 0; i < nSeg; i++) {
+            const t = i * step;
+            const p = new Vec3().setAddMul(p0, d, t);
+            const iv = this.vert(p);
+            verts.push(iv);
+            if (prev >= 0) {
+                this.edge(prev, iv, type);
+            }
+            prev = iv;
+        }
+        return verts;
+    }
+
     addCube(pos, size, bFaces = true) {
         const s = size * 0.5;
         const x = pos.x !== undefined ? pos.x : pos[0];
@@ -637,6 +674,248 @@ export class MeshBuilder {
             return { x: ichStart, y: this.chunks.length };
         }
         return { x: -1, y: -1 };
+    }
+
+    // --- Plates Between Ropes / Girders (JS P2 helpers) ---
+
+    /**
+     * Extract an ordered strip of vertex indices along a geometric line segment.
+     * Vertices within distance r from the infinite line p0-p1 are collected and
+     * sorted by projection onto the line direction.
+     */
+    extractStripAlongLine(p0, p1, r, maxCount = -1) {
+        const dir = new Vec3().setSub(p1, p0);
+        const len = dir.norm();
+        if (len <= 0) return [];
+        dir.mulScalar(1.0 / len);
+
+        const r2 = r * r;
+        const candidates = [];
+        for (let i = 0; i < this.verts.length; i++) {
+            const pos = this.verts[i].pos;
+            const d = new Vec3().setSub(pos, p0);
+            const t = d.dot(dir);
+            const proj = new Vec3().setAddMul(p0, dir, t);
+            const off = new Vec3().setSub(pos, proj);
+            const dist2 = off.dot(off);
+            if (dist2 <= r2) {
+                candidates.push({ i, t });
+            }
+        }
+
+        candidates.sort((a, b) => a.t - b.t);
+        if (maxCount > 0 && candidates.length > maxCount) {
+            // Keep roughly evenly spaced subset
+            const out = [];
+            const step = (candidates.length - 1) / (maxCount - 1);
+            for (let k = 0; k < maxCount; k++) {
+                const idx = Math.round(k * step);
+                out.push(candidates[idx].i);
+            }
+            return out;
+        }
+
+        return candidates.map(c => c.i);
+    }
+
+    /**
+     * Connect two ordered vertex strips with cross edges.
+     * For now this only builds a ladder of edges between corresponding
+     * vertices; it can be extended later to generate full plates.
+     */
+    plateBetweenVertStrips(strip1, strip2) {
+        const n = Math.min(strip1.length, strip2.length);
+        if (n < 2) return 0;
+        let cnt = 0;
+        for (let i = 0; i < n; i++) {
+            this.edge(strip1[i], strip2[i]);
+            cnt++;
+        }
+        return cnt;
+    }
+
+    /**
+     * Triangulate the strip between two ordered vertex strips using the
+     * parametric algorithm from doc/python/interpolated_vertex_count.py
+     * (mode='parametric' only).
+     *
+     * We assume that:
+     * - strip1 and strip2 are ordered along their respective polylines.
+     * - Axial rope edges (along each strip) are already present.
+     * - Optional cross edges (from plateBetweenVertStrips) may also exist.
+     *
+     * This method only adds the **diagonal edges** that choose, for each
+     * quad cell, which way to split it, using index-based parametric sync
+     * rather than geometric distances.
+     */
+    triangulateBetweenVertStrips(strip1, strip2) {
+        const na = strip1.length;
+        const nb = strip2.length;
+        if (na < 2 || nb < 2) return 0;
+
+        let ia = 0;
+        let ib = 0;
+        let added = 0;
+
+        while (ia < na - 1 || ib < nb - 1) {
+            let choice = null;
+
+            if (ia === na - 1) {
+                // A finished, must advance B
+                choice = 'B';
+            } else if (ib === nb - 1) {
+                // B finished, must advance A
+                choice = 'A';
+            } else {
+                // Both available: advance the side that is "behind" in param space
+                const uNextA = (ia + 1) / (na - 1);
+                const uNextB = (ib + 1) / (nb - 1);
+                choice = (uNextA <= uNextB) ? 'A' : 'B';
+            }
+
+            if (choice === 'A') {
+                // Triangle (A_curr, B_curr, A_next) -> add diagonal (A_next, B_curr)
+                const iaNext = strip1[ia + 1];
+                const ibCurr = strip2[ib];
+                this.edge(iaNext, ibCurr);
+                added++;
+                ia++;
+            } else {
+                // Triangle (A_curr, B_curr, B_next) -> add diagonal (A_curr, B_next)
+                const iaCurr = strip1[ia];
+                const ibNext = strip2[ib + 1];
+                this.edge(iaCurr, ibNext);
+                added++;
+                ib++;
+            }
+        }
+
+        return added;
+    }
+
+    /**
+     * High-level helper for P2: build cross connections between two
+     * polylines defined by 3 or 4 corner vertices.
+     *
+     * - 3 vertices: treat as V/L case (shared corner + two tips).
+     * - 4 vertices: treat as quad case (two opposite edges).
+     */
+    plateBetweenEdges(corners, r, maxPerStrip = -1) {
+        if (!Array.isArray(corners)) return 0;
+        const n = corners.length;
+        if (n !== 3 && n !== 4) {
+            logger.error(`plateBetweenEdges: expected 3 or 4 corners, got ${n}`);
+            return 0;
+        }
+
+        const getPos = (iv) => this.verts[iv]?.pos;
+
+        let strip1 = [];
+        let strip2 = [];
+
+        if (n === 3) {
+            const iCenter = corners[1];
+            const iA = corners[0];
+            const iB = corners[2];
+            const pC = getPos(iCenter);
+            const pA = getPos(iA);
+            const pB = getPos(iB);
+            if (!pC || !pA || !pB) return 0;
+
+            strip1 = this.extractStripAlongLine(pC, pA, r, maxPerStrip);
+            strip2 = this.extractStripAlongLine(pC, pB, r, maxPerStrip);
+
+            // In the triangle case we skip the shared corner so we get
+            // two strips that can be treated like a quad strip.
+            if (strip1.length > 0 && strip2.length > 0) {
+                strip1 = strip1.slice(1);
+                strip2 = strip2.slice(1);
+            }
+        } else if (n === 4) {
+            const i0 = corners[0];
+            const i1 = corners[1];
+            const i2 = corners[2];
+            const i3 = corners[3];
+            const p0 = getPos(i0);
+            const p1 = getPos(i1);
+            const p2 = getPos(i2);
+            const p3 = getPos(i3);
+            if (!p0 || !p1 || !p2 || !p3) return 0;
+
+            strip1 = this.extractStripAlongLine(p0, p1, r, maxPerStrip);
+            strip2 = this.extractStripAlongLine(p3, p2, r, maxPerStrip);
+        }
+
+        if (!strip1.length || !strip2.length) {
+            logger.warn('plateBetweenEdges: one or both strips are empty');
+            return 0;
+        }
+
+        const used = this.plateBetweenVertStrips(strip1, strip2);
+        logger.info(`plateBetweenEdges: connected ${used} pairs between strips (len1=${strip1.length}, len2=${strip2.length})`);
+        return used;
+    }
+
+    /**
+     * Triangulated variant of plateBetweenEdges: builds strips from corners
+     * as in plateBetweenEdges, then adds diagonal edges following
+     * triangulateBetweenVertStrips.
+     */
+    triPlateBetweenEdges(corners, r, maxPerStrip = -1) {
+        if (!Array.isArray(corners)) return 0;
+        const n = corners.length;
+        if (n !== 3 && n !== 4) {
+            logger.error(`triPlateBetweenEdges: expected 3 or 4 corners, got ${n}`);
+            return 0;
+        }
+
+        const getPos = (iv) => this.verts[iv]?.pos;
+
+        let strip1 = [];
+        let strip2 = [];
+
+        if (n === 3) {
+            const iCenter = corners[1];
+            const iA = corners[0];
+            const iB = corners[2];
+            const pC = getPos(iCenter);
+            const pA = getPos(iA);
+            const pB = getPos(iB);
+            if (!pC || !pA || !pB) return 0;
+
+            strip1 = this.extractStripAlongLine(pC, pA, r, maxPerStrip);
+            strip2 = this.extractStripAlongLine(pC, pB, r, maxPerStrip);
+
+            if (strip1.length > 0 && strip2.length > 0) {
+                strip1 = strip1.slice(1);
+                strip2 = strip2.slice(1);
+            }
+        } else if (n === 4) {
+            const i0 = corners[0];
+            const i1 = corners[1];
+            const i2 = corners[2];
+            const i3 = corners[3];
+            const p0 = getPos(i0);
+            const p1 = getPos(i1);
+            const p2 = getPos(i2);
+            const p3 = getPos(i3);
+            if (!p0 || !p1 || !p2 || !p3) return 0;
+
+            strip1 = this.extractStripAlongLine(p0, p1, r, maxPerStrip);
+            strip2 = this.extractStripAlongLine(p3, p2, r, maxPerStrip);
+        }
+
+        if (!strip1.length || !strip2.length) {
+            logger.warn('triPlateBetweenEdges: one or both strips are empty');
+            return 0;
+        }
+
+        // First ensure we have a basic ladder of cross edges
+        this.plateBetweenVertStrips(strip1, strip2);
+
+        const added = this.triangulateBetweenVertStrips(strip1, strip2);
+        logger.info(`triPlateBetweenEdges: added ${added} diagonals between strips (len1=${strip1.length}, len2=${strip2.length})`);
+        return added;
     }
 
     /**
