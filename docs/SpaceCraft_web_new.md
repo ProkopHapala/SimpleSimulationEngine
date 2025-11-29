@@ -106,9 +106,9 @@ class MeshBuilder {
 *   (We will refactor the existing Engine to support the new pipeline)
 
 ### Phase 2: Mesh Generation (New Focus)
-1.  **Implement [MeshBuilder](file:///home/prokophapala/git/SimpleSimulationEngine/js/spacecraft_editor/js/MeshBuilder.js#2-114)**: A class to manage vertices and edges, with methods like [line](file:///home/prokophapala/git/SimpleSimulationEngine/js/spacecraft_editor/js/MeshBuilder.js#49-55), [ngon](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/geometry/MeshBuilder2.cpp#2376-2395), [girder](file:///home/prokophapala/git/SimpleSimulationEngine/js/spacecraft_editor/js/MeshBuilder.js#79-104).
+1.  **Implement [MeshBuilder](file:///home/prokophapala/git/SimpleSimulationEngine/js/common_js/MeshBuilder.js#2-114)**: A class to manage vertices and edges, with methods like [line](file:///home/prokophapala/git/SimpleSimulationEngine/js/common_js/MeshBuilder.js#49-55), [ngon](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/geometry/MeshBuilder2.cpp#2376-2395), [girder](file:///home/prokophapala/git/SimpleSimulationEngine/js/common_js/MeshBuilder.js#79-104).
 2.  **Implement [SpaceCraft](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/Orbital/SpaceCraft.h#23-571)**: A class to hold the abstract components.
-3.  **Implement `SpaceCraft2Mesh`**: The logic to convert [SpaceCraft](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/Orbital/SpaceCraft.h#23-571) -> [MeshBuilder](file:///home/prokophapala/git/SimpleSimulationEngine/js/spacecraft_editor/js/MeshBuilder.js#2-114).
+3.  **Implement `SpaceCraft2Mesh`**: The logic to convert [SpaceCraft](file:///home/prokophapala/git/SimpleSimulationEngine/cpp/common/Orbital/SpaceCraft.h#23-571) -> [MeshBuilder](file:///home/prokophapala/git/SimpleSimulationEngine/js/common_js/MeshBuilder.js#2-114).
 4.  **Update Renderer**: Render the *generated mesh* instead of the abstract nodes.
 
 ### Phase 3: Interaction
