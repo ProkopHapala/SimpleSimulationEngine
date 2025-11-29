@@ -1,7 +1,9 @@
+import { Vec3 } from '../../common_js/Vec3.js';
+import { logger } from '../../common_js/Logger.js';
 
 // constructionBlockTests.js
 
-window.ConstructionBlockTests = {
+export const ConstructionBlockTests = {
 
     // Helper to clear and setup
     setup: (engine) => {
@@ -68,6 +70,7 @@ window.ConstructionBlockTests = {
 
             // Bridge them
             const q1 = { x: v0, y: v1, z: v2, w: v3 };
+
             const q2 = { x: v4, y: v5, z: v6, w: v7 };
 
             mesh.bridge_quads(q1, q2, 4, { x: 0, y: 1, z: 2, w: 3 }, { x: 1, y: 1, z: 1, w: 1 }, true);

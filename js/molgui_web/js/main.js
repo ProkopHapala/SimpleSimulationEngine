@@ -1,3 +1,12 @@
+import { logger } from '../../common_js/Logger.js';
+import { MoleculeSystem } from './MoleculeSystem.js';
+import { MMParams } from './MMParams.js';
+import { MoleculeRenderer } from './MoleculeRenderer.js';
+import { IO } from './IO.js';
+import { GUI } from './GUI.js';
+import { Editor } from './Editor.js';
+import { ShortcutManager } from './ShortcutManager.js';
+
 class MolGUIApp {
     constructor() {
         this.container = document.getElementById('canvas-container');
@@ -8,7 +17,7 @@ class MolGUIApp {
     }
 
     async init() {
-        window.logger.info("Initializing MolGUI...");
+        logger.info("Initializing MolGUI...");
 
         // Load Shaders first
         try {

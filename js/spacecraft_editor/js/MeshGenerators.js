@@ -131,14 +131,12 @@ const MeshGenerator = {
 };
 
 // Function to extend MeshBuilder with these methods
-function extendMeshBuilderWithGenerators(MeshBuilderClass) {
+export function extendMeshBuilderWithGenerators(MeshBuilderClass) {
     Object.assign(MeshBuilderClass.prototype, MeshGenerator);
 }
 
-// Export for both module and non-module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { extendMeshBuilderWithGenerators };
-} else if (typeof window !== 'undefined') {
+// Optional browser global for legacy usage
+if (typeof window !== 'undefined') {
     window.extendMeshBuilderWithGenerators = extendMeshBuilderWithGenerators;
 
     // Auto-extend if MeshBuilder is already present
@@ -146,3 +144,4 @@ if (typeof module !== 'undefined' && module.exports) {
         extendMeshBuilderWithGenerators(window.MeshBuilder);
     }
 }
+

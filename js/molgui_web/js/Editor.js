@@ -1,4 +1,6 @@
-class Editor {
+import { Logger } from '../../common_js/Logger.js';
+
+export class Editor {
     constructor(scene, camera, renderer, system, molRenderer) {
         this.scene = scene;
         this.camera = camera;

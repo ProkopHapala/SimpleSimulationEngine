@@ -1,3 +1,4 @@
+import { MeshRenderer } from '../common_js/MeshRenderer.js';
 
 // Global variables
 let scene, renderer, controls;

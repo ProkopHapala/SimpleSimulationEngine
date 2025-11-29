@@ -1,7 +1,6 @@
-
 // Abstract Component Classes
 
-class Node {
+export class Node {
     constructor(pos, type = 0) {
         this.pos = pos; // [x, y, z]
         this.type = type;
@@ -9,7 +8,7 @@ class Node {
     }
 }
 
-class Girder {
+export class Girder {
     constructor(nodeA, nodeB, type = 0) {
         this.nodeA = nodeA; // Node object reference
         this.nodeB = nodeB; // Node object reference
@@ -19,7 +18,7 @@ class Girder {
     }
 }
 
-class Rope {
+export class Rope {
     constructor(nodeA, nodeB, thick, type = 0) {
         this.nodeA = nodeA;
         this.nodeB = nodeB;
@@ -29,7 +28,7 @@ class Rope {
     }
 }
 
-class SpaceCraft {
+export class SpaceCraft {
     constructor() {
         this.nodes = [];
         this.girders = [];

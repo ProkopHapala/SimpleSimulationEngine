@@ -1,6 +1,9 @@
 "use strict";
 
-class MeshGenTestGUI {
+import { GUIutils } from '../../common_js/GUIutils.js';
+import { logger } from '../../common_js/Logger.js';
+
+export class MeshGenTestGUI {
     constructor(engine, renderer, containerId = 'mesh-gen-panel') {
         this.engine = engine;
         this.renderer = renderer;

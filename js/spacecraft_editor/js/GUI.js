@@ -1,6 +1,11 @@
+import { logger } from '../../common_js/Logger.js';
+import { Vec3 } from '../../common_js/Vec3.js';
+import { SDfuncs } from '../../common_js/SDfuncs.js';
+import { GUIutils } from '../../common_js/GUIutils.js';
+import { ConstructionBlockTests } from './constructionBlockTests.js';
+import { MeshGenTestGUI } from './MeshGenTestGUI.js';
 
-
-class GUI {
+export class GUI {
     constructor(engine, renderer) {
         this.engine = engine;
         this.renderer = renderer;
@@ -331,7 +336,6 @@ class GUI {
                 this.onTestSelected(selTest, scriptInput);
             });
         }
-
 
 
         // --- Verbosity ---

@@ -56,7 +56,7 @@ class AtomType {
     }
 }
 
-class MMParams {
+export class MMParams {
     constructor() {
         this.elementTypes = {}; // name -> ElementType
         this.atomTypes = {};    // name -> AtomType

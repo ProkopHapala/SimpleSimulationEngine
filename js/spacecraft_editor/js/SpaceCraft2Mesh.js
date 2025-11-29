@@ -1,10 +1,9 @@
+import { Vec3 } from '../../common_js/Vec3.js';
 
 // SpaceCraft2Mesh.js
 
-function BuildCraft_truss(mesh, craft) {
+export function BuildCraft_truss(mesh, craft) {
     mesh.clear();
-    mesh.block(); // Start initial block
-
     // 1. Nodes
     // In the C++ version, nodes might generate mesh geometry (like a connector hub).
     // For now, we just ensure they exist as vertices if they aren't already.

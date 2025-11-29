@@ -1,4 +1,4 @@
-class MoleculeSystem {
+export class MoleculeSystem {
     constructor(capacity = 1000) {
         this.capacity = capacity;
         this.nAtoms = 0;

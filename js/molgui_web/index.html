@@ -7,10 +7,8 @@
     <title>MolGUI Web</title>
     <link rel="stylesheet" href="css/style.css">
 
-    <!-- Three.js (r128 to match reference) -->
+    <!-- Three.js (r128 to match reference) as classic scripts providing global THREE and controls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- OrbitControls (usually separate in older versions, but often included in min or via CDN examples) -->
-    <!-- For r128, OrbitControls is not in the main bundle. We need to fetch it from examples. -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 </head>
@@ -44,22 +42,8 @@
         </ul>
     </div>
 
-
-
-    <script src="../common_js/Logger.js?v=5"></script>
-    <script src="js/MMParams.js?v=5"></script>
-    <script src="js/MoleculeSystem.js?v=5"></script>
-    <!-- <script src="js/Shaders.js?v=5"></script> -->
-    <script src="../common_js/Draw3D.js"></script>
-    <script src="../common_js/MeshRenderer.js"></script>
-    <script src="js/LabelRenderer.js?v=5"></script>
-    <script src="js/MoleculeRenderer.js?v=5"></script>
-    <script src="js/IO.js?v=5"></script>
-    <script src="js/ShortcutManager.js?v=5"></script>
-    <script src="js/GUI.js?v=5"></script>
-    <script src="js/Editor.js?v=5"></script>
-
-    <script src="js/main.js?v=5"></script>
+    <!-- Single ES module entrypoint -->
+    <script type="module" src="js/main.js?v=5"></script>
 </body>
 
 </html>

@@ -3,29 +3,19 @@
 // returning a scalar distance / value, suitable for use with
 // MeshBuilder.selectVertsBySDF / selectEdgesBySDF.
 
-// DEPENDENCY: This module assumes Vec3 from '../common_js/Vec3.js' is loaded
-// before it in the browser (via script tags), or can be required in Node.
-let Vec3Ref;
-if (typeof Vec3 !== 'undefined') {
-    // Browser / global build: Vec3 attached to window by Vec3.js
-    Vec3Ref = Vec3;
-} else if (typeof require !== 'undefined') {
-    // Node / tests: import Vec3 from local module
-    // eslint-disable-next-line global-require, import/no-unresolved
-    Vec3Ref = require('./Vec3.js').Vec3;
-}
+import { Vec3 } from './Vec3.js';
 
-// Helper to ensure we always work with Vec3Ref instances
+// Helper to ensure we always work with Vec3 instances
 function toVec3(p) {
-    if (p instanceof Vec3Ref) return p;
-    if (Array.isArray(p)) return new Vec3Ref(p[0], p[1], p[2]);
-    if (p && typeof p.x === 'number') return new Vec3Ref(p.x, p.y, p.z);
-    return new Vec3Ref(0, 0, 0);
+    if (p instanceof Vec3) return p;
+    if (Array.isArray(p)) return new Vec3(p[0], p[1], p[2]);
+    if (p && typeof p.x === 'number') return new Vec3(p.x, p.y, p.z);
+    return new Vec3(0, 0, 0);
 }
 
 // --- SDF_point2 : squared distance to a point ---
 // C++: returns (p - center).norm2()
-function SDF_point2(center) {
+export function SDF_point2(center) {
     const c = toVec3(center);
     return function sdf_point2(p) {
         const v = toVec3(p);
@@ -38,7 +28,7 @@ function SDF_point2(center) {
 
 // --- SDF_Sphere ---
 // C++: (p - center).norm() - radius
-function SDF_Sphere(center, radius) {
+export function SDF_Sphere(center, radius) {
     const c = toVec3(center);
     const r = radius;
     return function sdf_sphere(p) {
@@ -56,7 +46,7 @@ function SDF_Sphere(center, radius) {
 //   Vec3d  q = (p-center).abs() - halfSpan;
 //   double l = q.maxComponent(); if(l< 0.0) return l;
 //   return q.max(Vec3dZero).norm() + l;
-function SDF_AABB(center, halfSpan) {
+export function SDF_AABB(center, halfSpan) {
     const c = toVec3(center);
     const h = toVec3(halfSpan);
     return function sdf_aabb(p) {
@@ -83,10 +73,10 @@ function SDF_AABB(center, halfSpan) {
 //   q = p - p0; h = q.dot(hdir);
 //   if (h<0) or (h>l) handle caps or infinite-cylinder distance;
 //   else distance to radial direction.
-function SDF_Cylinder(p0, p1, radius, capped = true) {
+export function SDF_Cylinder(p0, p1, radius, capped = true) {
     const base = toVec3(p0);
     const top = toVec3(p1);
-    const axis = new Vec3Ref().setSub(top, base);
+    const axis = new Vec3().setSub(top, base);
     const length = axis.normalize(); // axis becomes unit, length stored separately
     const r = radius;
     const bCapped = !!capped;
@@ -160,7 +150,7 @@ function SDF_Cylinder(p0, p1, radius, capped = true) {
 //   camera : THREE.Camera (must support .project on a THREE.Vector3)
 //   rect   : DOMRect of the canvas getBoundingClientRect()
 //   minX,maxX,minY,maxY : screen-space box in client coordinates
-function SDF_ScreenRectWorld(camera, rect, minX, maxX, minY, maxY) {
+export function SDF_ScreenRectWorld(camera, rect, minX, maxX, minY, maxY) {
     if (!camera || !rect) {
         // Degenerate SDF: everything is "far away" so nothing is selected
         return function sdf_disable() { return 1e9; };
@@ -206,8 +196,8 @@ function SDF_ScreenRectWorld(camera, rect, minX, maxX, minY, maxY) {
     };
 }
 
-// Export for both module and browser usage
-const SDfuncs = {
+// Aggregate export for convenience and legacy global wiring
+export const SDfuncs = {
     SDF_point2,
     SDF_Sphere,
     SDF_AABB,
@@ -215,8 +205,7 @@ const SDfuncs = {
     SDF_ScreenRectWorld,
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SDfuncs;
-} else if (typeof window !== 'undefined') {
+// Also expose on window for legacy global-script users
+if (typeof window !== 'undefined') {
     window.SDfuncs = SDfuncs;
 }

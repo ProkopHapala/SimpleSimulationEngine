@@ -1,4 +1,4 @@
-class ShortcutManager {
+export class ShortcutManager {
     constructor(editor) {
         console.log("[ShortcutManager] Constructor called");
         this.editor = editor;

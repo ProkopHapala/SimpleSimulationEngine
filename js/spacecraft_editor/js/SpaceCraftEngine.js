@@ -1,4 +1,20 @@
-class SpaceCraftEngine {
+import { SpaceCraft } from './SpaceCraft.js';
+import { MeshBuilder } from '../../common_js/MeshBuilder.js';
+import { logger } from '../../common_js/Logger.js';
+import { BuildCraft_truss } from './SpaceCraft2Mesh.js';
+import { extendMeshBuilder } from '../../common_js/MeshesUV.js';
+import { extendMeshBuilderWithGenerators } from './MeshGenerators.js';
+
+// Ensure MeshBuilder prototype is extended with UV and generator helpers
+// when used via ES modules (the old global auto-extend path relied on
+// window.MeshBuilder, which we no longer depend on here).
+if (!MeshBuilder.__extendedForSpacecraft) {
+    extendMeshBuilder(MeshBuilder);
+    extendMeshBuilderWithGenerators(MeshBuilder);
+    MeshBuilder.__extendedForSpacecraft = true;
+}
+
+export class SpaceCraftEngine {
     constructor() {
         // Configuration
         this.maxVerts = 10000;

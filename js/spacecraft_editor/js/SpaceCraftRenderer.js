@@ -1,5 +1,6 @@
+import { MeshRenderer } from '../../common_js/MeshRenderer.js';
 
-class SpaceCraftRenderer extends MeshRenderer {
+export class SpaceCraftRenderer extends MeshRenderer {
     constructor(engine) {
         super(null, null, 0);
         this.engine = engine;
@@ -209,3 +210,5 @@ class SpaceCraftRenderer extends MeshRenderer {
         }
     }
 }
+
+export default SpaceCraftRenderer;

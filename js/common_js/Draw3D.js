@@ -1,4 +1,4 @@
-class Draw3D {
+export class Draw3D {
     static drawSphereOctLines(n, R, pos, vertices) {
 
 
@@ -350,4 +350,7 @@ class Draw3D {
 
 }
 
-window.Draw3D = Draw3D;
+// Optional browser global for legacy code / debugging
+if (typeof window !== 'undefined') {
+    window.Draw3D = Draw3D;
+}

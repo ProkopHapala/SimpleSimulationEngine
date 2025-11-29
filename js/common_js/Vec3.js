@@ -1,5 +1,4 @@
-
-class Vec3 {
+export class Vec3 {
     constructor(x = 0.0, y = 0.0, z = 0.0) {
         this.x = x;
         this.y = y;
@@ -198,9 +197,7 @@ class Vec3 {
     }
 }
 
-// Export for both module and non-module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Vec3 };
-} else if (typeof window !== 'undefined') {
+// Also expose on window for legacy global-script users
+if (typeof window !== 'undefined') {
     window.Vec3 = Vec3;
 }

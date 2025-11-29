@@ -1,4 +1,4 @@
-class IO {
+export class IO {
     constructor(system, renderer) {
         this.system = system;
         this.renderer = renderer;

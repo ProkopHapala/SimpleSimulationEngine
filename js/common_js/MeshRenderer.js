@@ -1,4 +1,6 @@
-class MeshRenderer {
+import { Draw3D } from './Draw3D.js';
+
+export class MeshRenderer {
     constructor(scene, shaders, capacity) {
         this.scene = scene;
         this.shaders = shaders;
@@ -307,4 +309,7 @@ class MeshRenderer {
     }
 }
 
-window.MeshRenderer = MeshRenderer;
+// Optional browser global for legacy code / debugging
+if (typeof window !== 'undefined') {
+    window.MeshRenderer = MeshRenderer;
+}

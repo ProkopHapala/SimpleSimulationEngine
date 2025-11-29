@@ -15,16 +15,10 @@
         input[type="file"] { color: #eee; }
     </style>
     
-    <!-- Three.js (r128) -->
+    <!-- Three.js (r128) as classic scripts providing global THREE and helpers -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-
-    <!-- Common JS -->
-    <script src="../common_js/Logger.js"></script>
-    <script src="../common_js/Draw3D.js"></script>
-    <script src="../common_js/MeshRenderer.js"></script>
-    <script src="../common_js/Vec3.js"></script>
 </head>
 <body>
     <div id="info">Modern OBJ Loader</div>
@@ -95,6 +89,7 @@
         <pre id="error-content" style="margin: 0; white-space: pre-wrap;"></pre>
     </div>
 
-    <script src="main.js"></script>
+    <!-- ES module entrypoint -->
+    <script type="module" src="main.js"></script>
 </body>
 </html>

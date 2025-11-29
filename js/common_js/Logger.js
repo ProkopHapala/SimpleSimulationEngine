@@ -15,7 +15,7 @@
  *   - Node.js: You must set global.logger manually (see test_utils.js).
  */
 
-class Logger {
+export class Logger {
     static NONE = 0;
     static ERROR = 1;
     static WARN = 2;
@@ -109,5 +109,10 @@ class Logger {
     error(msg) { this.log(msg, Logger.ERROR); }
 }
 
-// Global instance
-window.logger = new Logger();
+// Shared logger instance (ES module export)
+export const logger = new Logger();
+
+// Optional browser global for convenience
+if (typeof window !== 'undefined') {
+    window.logger = logger;
+}

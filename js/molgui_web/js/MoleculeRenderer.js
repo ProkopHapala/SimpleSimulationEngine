@@ -1,4 +1,8 @@
-class MoleculeRenderer extends MeshRenderer {
+import { MeshRenderer } from '../../common_js/MeshRenderer.js';
+import { Draw3D } from '../../common_js/Draw3D.js';
+import { Logger } from '../../common_js/Logger.js';
+
+export class MoleculeRenderer extends MeshRenderer {
     constructor(scene, system, shaders, mmParams) {
         super(scene, shaders, system.capacity);
         this.system = system;

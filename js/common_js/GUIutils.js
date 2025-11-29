@@ -2,7 +2,7 @@
 
 
 
-const GUIutils = {
+export const GUIutils = {
 
     /**
      * Create a container div with flex layout
@@ -226,8 +226,7 @@ const GUIutils = {
     }
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = GUIutils;
-} else if (typeof window !== 'undefined') {
+// Optional browser global for legacy code / debugging
+if (typeof window !== 'undefined') {
     window.GUIutils = GUIutils;
 }

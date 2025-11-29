@@ -1,5 +1,8 @@
+import { SpaceCraftEngine } from './SpaceCraftEngine.js';
+import { SpaceCraftRenderer } from './SpaceCraftRenderer.js';
+import { GUI } from './GUI.js';
 
-// Global instances
+// Global instances (kept on window for debugging)
 window.engine = null;
 window.renderer = null;
 
