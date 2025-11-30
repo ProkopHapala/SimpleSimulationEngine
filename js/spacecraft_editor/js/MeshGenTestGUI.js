@@ -130,6 +130,68 @@ export class MeshGenTestGUI {
                     this.engine.mesh.SlabTube_wrap(n, UVmin, UVmax, Rs, vals.L, up, mask, vals.twist);
                 }
             },
+            'TubeSheetBond': {
+                params: {
+                    ...defaultParams,
+                    ...params_tube,
+                    'nx2':      { group: 'Grid B',     widget: 'int',    value: 2,    range: [2, 100],  step: 1   },
+                    'ny2':      { group: 'Grid B',     widget: 'int',    value: 6,    range: [2, 100],  step: 1   },
+                    'R2':       { group: 'Geom B',     widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+                    'L2':       { group: 'Geom B',     widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+                    'offX':     { group: 'Offset',     widget: 'double', value: 0.0, range: [-10.0, 10.0], step: 0.1 },
+                    'offY':     { group: 'Offset',     widget: 'double', value: 5.0, range: [-10.0, 10.0], step: 0.1 },
+                    'Rcut':     { group: 'Bonds',      widget: 'double', value: 2.0, range: [0.0, 100.0], step: 0.1 },
+                    'dR':       { group: 'Bonds',      widget: 'double', value: 0.01, range: [0.0, 1.0],  step: 0.001 },
+                    'iFamily':  { group: 'Bonds',      widget: 'int',    value: 0,   range: [0, 32],     step: 1   },
+                },
+                run: (vals) => {
+                    const mesh = this.engine.mesh;
+                    const n1  = { x: vals.nx | 0,  y: vals.ny  | 0 };
+                    const n2  = { x: vals.nx2 | 0, y: vals.ny2 | 0 };
+                    const UVmin = { x: 0, y: 0 };
+                    const UVmax = { x: 1, y: 1 };
+                    const UVmin2 = { x: 0+vals.offX, y: 0 };
+                    const UVmax2 = { x: 1+vals.offX, y: 1 };
+                    const Rs1 = { x: vals.R,  y: vals.R  };
+                    const Rs2 = { x: vals.R2, y: vals.R2 };
+                    const L1  = vals.L;
+                    const L2  = vals.L2;
+                    const dirMask = parseInt(vals.dirMask, 2);
+                    const Rcut    = vals.Rcut;
+                    const dR      = vals.dR;
+                    const iFamily = vals.iFamily | 0;
+                    const stickTypes = { x: 1, y: 0, z: 0, w: 0 };
+
+                    // --- First TubeSheet ---
+                    const iv0_1 = mesh.verts.length;
+                    mesh.TubeSheet(n1, UVmin, UVmax, Rs1, L1, dirMask, vals.twist+vals.offX, stickTypes);
+                    const nVerts1 = n1.x * n1.y;
+                    const sel1 = new Array(nVerts1);
+                    for (let i = 0; i < nVerts1; i++) sel1[i] = iv0_1 + i;
+
+                    // --- Second TubeSheet (offset in XY) ---
+                    const iv0_2 = mesh.verts.length;
+                    mesh.TubeSheet(n2, UVmin, UVmax, Rs2, L2, dirMask, vals.twist+vals.offX, stickTypes );
+                    const nVerts2 = n2.x * n2.y;
+                    const sel2 = new Array(nVerts2);
+                    for (let i = 0; i < nVerts2; i++) sel2[i] = iv0_2 + i;
+
+                    // --- Bond-length analysis and connections ---
+                    const groups = [];
+                    const uniqLs = mesh.mapBondLengthsFromVertexSelections(sel1, sel2, Rcut, dR, groups);
+                    if (!uniqLs || uniqLs.length === 0) return;
+
+                    const k = Math.max(0, Math.min(iFamily, uniqLs.length - 1));
+                    const fam = groups && groups[k];
+                    if (!fam || fam.length === 0) return;
+
+                    for (const pair of fam) {
+                        const ia = pair[0];
+                        const ib = pair[1];
+                        mesh.edge(ia, ib, stickTypes.x);
+                    }
+                }
+            },
             'QuadSheet': {
                 params: { ...defaultParams,  'offset': { group: 'Geometry', widget: 'double', value: 0.0,  range: [-1.0, 1.0], step: 0.1 }, },
                 run: (vals) => {

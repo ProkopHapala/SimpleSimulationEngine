@@ -27,13 +27,13 @@ args=""
 #name=test_Scatterer             # scattering of particles on thin surfaces using Scatterer2.h to calculate flux transport through a network of channels connecting scattering elements
 #name=test_SceneGraph            # showcase SceneGraph.h especially  Scene::Group
 #name=test_SphereGaussSeidel     # showcase SphereGaussSeidel.h to quickly pack boxes close to each other (respecting their bounding boxes)
-name=test_SphereSampling         # demonstrate generation of heightmap on planet or asteroided using SphereSampling.h Noise.h and DrawSphereMap.h
+#name=test_SphereSampling         # demonstrate generation of heightmap on planet or asteroided using SphereSampling.h Noise.h and DrawSphereMap.h
 #args="-testRand"
-args="-octmap"
+#args="-octmap"
 #name=test_SphereTree            # 3D Diffusion-limited aggregation (DLA) using CubicRuler.h and std::unordered_multimap<int_fast64_t,int>  grid;
 #name=test_Stick                 # dynamics of straight sticks hitting a sphere using MMFF.h
 #name=test_TrussBuilder          # Create Truss by keyboard input [KP_1-7] using TrussBuilder.h and export it to SoftBody.h by and run simulation [SPACE], [k,l] to save/load from file
-#name=test_VortexLattice         # PotentialFlow.h to calculate velocity field of vortex lattice for flow around wing (represented by lift-line), contains function for numerical integration of velocity field (to verify analytical formulas)
+name=test_VortexLattice         # PotentialFlow.h to calculate velocity field of vortex lattice for flow around wing (represented by lift-line), contains function for numerical integration of velocity field (to verify analytical formulas)
 
 
 

@@ -636,7 +636,8 @@ export const MeshesUV = {
         const dudv = (twist * (n.x - 1.0)) / n.y;
         const uvfunc = (uv) => {
             const uv_y = (uv.y + uv.x * dudv) * 2 * Math.PI;
-            return this.ConeUVfunc({ x: uv.x, y: uv_y }, Rs.x, Rs.y, L);
+            const p = this.ConeUVfunc({ x: uv.x, y: uv_y }, Rs.x, Rs.y, L);
+            return p;
         };
         // use n.x for periodic wrap and n.y-1 for length spacing?
         // C++: Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y) }; 

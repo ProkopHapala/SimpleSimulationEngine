@@ -321,6 +321,108 @@ export class MeshBuilder {
         return dupCount;
     }
 
+    getEdgeLength(e) {
+        const va = this.verts[e.x];
+        const vb = this.verts[e.y];
+        if (!va || !vb || !va.pos || !vb.pos) return -1;
+        const pa = va.pos;
+        const pb = vb.pos;
+        const dx = pa.x - pb.x;
+        const dy = pa.y - pb.y;
+        const dz = pa.z - pb.z;
+        return Math.hypot(dx, dy, dz);
+    }
+
+    /**
+     * Insert a bond length into a sorted unique-length list with tolerance.
+     *
+     * @param {number} L         Measured bond length.
+     * @param {*}      key       Identifier for the bond (edge index, pair, etc.).
+     * @param {number[]} uniqLs  Sorted array of representative lengths (will be mutated).
+     * @param {Array[]} groups   Optional parallel array of arrays; groups[i] collects keys
+     *                           for uniqLs[i]. If null/undefined, keys are ignored.
+     * @param {number} dR        Tolerance for merging lengths (default 1e-6).
+     * @returns {number}         Index in uniqLs where L was merged/inserted.
+     */
+    registerBondLength( L, key, uniqLs, groups = null, dR = 1e-6) {   
+        let lo = 0;
+        let hi = uniqLs.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            const v = uniqLs[mid];
+            const diff = L - v;
+            if (Math.abs(diff) <= dR) {
+                if (groups) {
+                    if (!groups[mid]) groups[mid] = [];
+                    groups[mid].push(key);
+                }
+                return mid;
+            }
+            if (diff < 0) { hi = mid; } else { lo = mid + 1; }
+        }
+        const idx = lo;
+        uniqLs.splice(idx, 0, L);
+        if (groups) { groups.splice(idx, 0, [key]);}
+        return idx;
+    }
+
+    /**
+     * Build a list of unique bond lengths from explicit edges.
+     * @param {Array|undefined|null} edgeList  Optional list of edges/bonds.
+     * @param {number}               dR        Length merging tolerance.
+     * @param {Array[]|null}         groups    Optional output groups parallel to uniqLs.
+     * @returns {number[]}                      Sorted unique bond lengths.
+     */
+    mapBondLengthsFromEdges(edgeList, dR = 1e-6, groups = null) {
+        const uniqLs = [];
+        for (const item of edgeList) {
+            const e = this.edges[item];
+            if (!e) continue;
+            const L = this.getEdgeLength(e);
+            if (L < 0) continue;
+            this.registerBondLength(L, item, uniqLs, groups, dR);
+        }
+        return uniqLs;
+    }
+
+    /**
+     * Build a list of unique bond lengths from two vertex selections.
+     *
+     * This does **not** create edges; it just treats all candidate pairs
+     * (ia in selA, ib in selB) whose distance is below Rmax as potential
+     * bonds and feeds them through insertBondLength.
+     *
+     * Keys stored into groups (if provided) are simple 2-element arrays
+     * [ia, ib].
+     *
+     * @param {number[]} selA   List of vertex indices (first set).
+     * @param {number[]} selB   List of vertex indices (second set).
+     * @param {number}   Rmax   Cutoff distance for candidates (Infinity = no cutoff).
+     * @param {number}   dR     Length merging tolerance.
+     * @param {Array[]|null} groups Optional output groups parallel to uniqLs.
+     * @returns {number[]}        Sorted unique bond lengths.
+     */
+    mapBondLengthsFromVertexSelections(selA, selB, Rmax = Infinity, dR = 1e-6, groups = null) {
+        const uniqLs = [];
+        if (!Array.isArray(selA) || !Array.isArray(selB) || selA.length === 0 || selB.length === 0) { return uniqLs;}
+        const useCutoff = Number.isFinite(Rmax) && Rmax > 0;
+        const R2 = useCutoff ? Rmax * Rmax : Infinity;
+        for (const ia of selA) {
+            const va = this.verts[ia];
+            if (!va || !va.pos) continue;
+            const pa = va.pos;
+            for (const ib of selB) {
+                const vb = this.verts[ib];
+                if (!vb || !vb.pos) continue;
+                const l2 = pa.dist2(vb.pos);
+                if (useCutoff && l2 > R2) continue;
+                const key = [ia, ib];
+                this.registerBondLength(Math.sqrt(l2), key, uniqLs, groups, dR);
+            }
+        }
+
+        return uniqLs;
+    }
 
     vert(pos) {
         const x = pos.x !== undefined ? pos.x : pos[0];
@@ -347,6 +449,7 @@ export class MeshBuilder {
     }
 
     edge(a, b, type = -1, type2 = 0) {
+        const idx = this.edges.length;
         if (this.bCheckEdgeExist) {
             const key = this._edgeKey(a, b);
             const existing = this._edgeMap.get(key);
@@ -358,7 +461,6 @@ export class MeshBuilder {
             this._edgeMap.set(key, idx); // Cache new  edge for de-duplication
         }
         this.edges.push({ x: a, y: b, z: type, w: type2 });
-        const idx = this.edges.length - 1;
         if (logger.verb(4)) logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
         return idx;
     }
