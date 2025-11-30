@@ -17,6 +17,24 @@ export class MeshBuilder {
         // Edge adjacency tracking for bevel and other operations
         this.edgesOfVerts = null;  // Map from vertex index to edge indices
 
+        // Topology / de-duplication controls (see SpaceCraftConstructionProblems.md §1.7).
+        // By default these checks are disabled to preserve legacy behavior and performance.
+        // They can be enabled by generators that care about topological uniqueness.
+        this.bCheckVertExist = false;      // If true, attempt to detect duplicate vertices within RvertCollapse.
+        this.bVertExistError = true;       // If true and duplicate is found, throw; otherwise reuse/skip.
+        this.bVertExistSkip  = true;       // In non-error mode, return existing vertex index instead of adding.
+        this.RvertCollapse   = 1e-3;       // Distance tolerance for detecting duplicate vertices.
+
+        this.bCheckEdgeExist = false;      // If true, attempt to detect duplicate edges (undirected).
+        this.bEdgeExistError = true;       // If true and duplicate is found, throw; otherwise reuse/skip.
+        this.bEdgeExistSkip  = true;       // In non-error mode, return existing edge index instead of adding.
+
+        // Internal map for edge de-duplication. Key is a packed integer based on (i0,i1).
+        // NOTE: For now we assume meshes are small enough that i0 * EDGE_KEY_STRIDE + i1
+        //       fits safely into JS Number without precision issues.
+        this._edgeMap = new Map();   // key:number -> edge index
+        this.EDGE_KEY_STRIDE = 65536; // 2^16; max supported vertex index ~2^16
+
         // Temporary vectors (reused to avoid GC)
         this._tmp1 = new Vec3();
         this._tmp2 = new Vec3();
@@ -37,6 +55,8 @@ export class MeshBuilder {
         this.chunks = [];
         this.strips = [];
         this.blocks = [];
+        // Also clear any cached de-duplication maps; topology will be rebuilt from scratch.
+        if (this._edgeMap) this._edgeMap.clear();
         logger.info("MeshBuilder cleared.");
         // Clearing mesh also clears working selection
         this.clearSelection();
@@ -224,10 +244,97 @@ export class MeshBuilder {
 
     // --- Basic Primitives ---
 
+    _edgeKey(a, b) {
+        const i0 = a < b ? a : b;
+        const i1 = a < b ? b : a;
+        // Pack into a single integer-like Number. This is safe as long as
+        // i0,i1 << EDGE_KEY_STRIDE and overall key < 2^53.
+        return i0 * this.EDGE_KEY_STRIDE + i1;
+    }
+
+    /**
+     * Find index of an existing vertex within distance Rmax of point p0.
+     * Returns -1 if none is found.
+     * This is a simple brute-force search over all verts, analogous in spirit to Mesh::Builder2::findVert, and isacceptable for current small meshes. 
+     * Later we can replace the internals with a spatial hash / BVH / sweep structure without changing callers.
+     */
+    findVert(p0, Rmax = this.RvertCollapse, iStart = 0) {
+        if (!this.verts || this.verts.length === 0) return -1;
+        const R2 = Rmax * Rmax;
+        let r2min = R2;
+        let imin = -1;
+        const n = this.verts.length;
+        for (let i = iStart; i < n; i++) {
+            const p = this.verts[i].pos;
+            if (!p) continue;
+            const dx = p.x - p0.x;
+            const dy = p.y - p0.y;
+            const dz = p.z - p0.z;
+            const r2 = dx * dx + dy * dy + dz * dz;
+            if (r2 < r2min) {
+                r2min = r2;
+                imin = i;
+            }
+        }
+        return imin;
+    }
+
+    scanDuplicateVerts(Rmax = this.RvertCollapse) {
+        const n = this.verts.length;
+        if (n === 0) { logger.info("scanDuplicateVerts: mesh has no vertices."); return 0; }
+        let dupCount = 0;
+        for (let i = 0; i < n; i++) {
+            const p0 = this.verts[i].pos;
+            if (!p0) continue;
+            let start = i + 1;
+            while (true) {
+                const j = this.findVert(p0, Rmax, start);
+                if (j < 0) break;
+                const p1 = this.verts[j].pos;
+                logger.info( `  dupVert i=${i} and j=${j} | v[${i}]{${p0.x},${p0.y},${p0.z}} v[${j}]{${p1.x},${p1.y},${p1.z}}` );
+                dupCount++;
+                start = j + 1;
+            }                     // just skip this i
+        }
+        logger.info(`scanDuplicateVerts: n=${n}, Rmax=${Rmax}, duplicates=${dupCount}`);
+        return dupCount;
+    }
+
+    scanDuplicateEdges() {
+        const n = this.edges.length;
+        if (n === 0) { logger.info("scanDuplicateEdges: mesh has no edges."); return 0; }
+        // Reuse the builder's edge map as a workspace to detect duplicates.
+        if (this._edgeMap) this._edgeMap.clear();
+        let dupCount = 0;
+        for (let i = 0; i < n; i++) {
+            const e   = this.edges[i];
+            const key = this._edgeKey(e.x,e.y);
+            if (this._edgeMap.has(key)) {
+                const first = this._edgeMap.get(key);
+                logger.info(`  dupEdge ie=${first} and ie=${i} between verts (${e.x}, ${e.y})`);
+                dupCount++;
+            } else {
+                this._edgeMap.set(key, i);
+            }
+        }
+        logger.info(`scanDuplicateEdges: n=${n}, duplicates=${dupCount}`);
+        return dupCount;
+    }
+
+
     vert(pos) {
         const x = pos.x !== undefined ? pos.x : pos[0];
         const y = pos.y !== undefined ? pos.y : pos[1];
         const z = pos.z !== undefined ? pos.z : pos[2];
+
+        if (this.bCheckVertExist) {
+            const iv = this.findVert(new Vec3(x, y, z), this.RvertCollapse);
+            if (iv >= 0) {
+                if (this.bVertExistError) { throw new Error(`MeshBuilder.vert: vertex already exists within RvertCollapse at iv=${iv}`); }
+                if (this.bVertExistSkip ) { return iv; }
+                // Otherwise fall through and create a near-duplicate explicitly.
+            }
+        }
         const v = {
             pos: new Vec3(x, y, z),
             nor: new Vec3(0, 0, 1),
@@ -240,11 +347,22 @@ export class MeshBuilder {
     }
 
     edge(a, b, type = -1, type2 = 0) {
+        if (this.bCheckEdgeExist) {
+            const key = this._edgeKey(a, b);
+            const existing = this._edgeMap.get(key);
+            if (existing !== undefined) {
+                if (this.bEdgeExistError) { throw new Error(`MeshBuilder.edge: edge already exists between ${a} and ${b} -> ie=${existing}`);  }
+                if (this.bEdgeExistSkip ) { return existing; }
+                // If neither error nor skip is desired, fall through and create a duplicate explicitly.
+            }
+            this._edgeMap.set(key, idx); // Cache new  edge for de-duplication
+        }
         this.edges.push({ x: a, y: b, z: type, w: type2 });
         const idx = this.edges.length - 1;
         if (logger.verb(4)) logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
         return idx;
     }
+
 
     chunk(data) {
         // data = {x: stripStart, y: edgeStart, z: count, w: type}

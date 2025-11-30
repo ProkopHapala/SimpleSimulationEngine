@@ -131,6 +131,29 @@
                 <button id="btnRunTest">Run Test</button>
             </div>
 
+            <div class="compact-row">
+                <button id="btnScanDupVerts" class="small-btn">Scan Dup Verts</button>
+                <button id="btnScanDupEdges" class="small-btn">Scan Dup Edges</button>
+            </div>
+
+            <h3>Topology</h3>
+            <div class="compact-row">
+                <span class="compact-label">Verts:</span>
+                <label class="compact-label"><input type="checkbox" id="chkTopoCheckVerts">Check</label>
+                <label class="compact-label"><input type="checkbox" id="chkTopoVertError" checked>Error</label>
+                <label class="compact-label"><input type="checkbox" id="chkTopoVertSkip" checked>Skip</label>
+            </div>
+            <div class="compact-row">
+                <span class="compact-label">Rcoll:</span>
+                <input type="number" id="numRvertCollapse" value="0.001" step="0.0001" class="compact-input" style="width: 70px;">
+            </div>
+            <div class="compact-row">
+                <span class="compact-label">Edges:</span>
+                <label class="compact-label"><input type="checkbox" id="chkTopoCheckEdges">Check</label>
+                <label class="compact-label"><input type="checkbox" id="chkTopoEdgeError" checked>Error</label>
+                <label class="compact-label"><input type="checkbox" id="chkTopoEdgeSkip" checked>Skip</label>
+            </div>
+
 
         <div class="panel-section">
             <h3>Scripting</h3>

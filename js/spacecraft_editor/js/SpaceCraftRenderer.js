@@ -15,7 +15,7 @@ export class SpaceCraftRenderer extends MeshRenderer {
         const aspect = container.clientWidth / container.clientHeight;
         const height = 20;
         const width = height * aspect;
-        this.camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, 0.1, 1000);
+        this.camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, -1000, 1000);
         this.camera.position.set(0, 0, 20);
         this.cameraMode = 'ortho';
 

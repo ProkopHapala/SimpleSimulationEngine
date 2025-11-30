@@ -228,6 +228,67 @@ export const MeshesUV = {
         return ie0;
     },
 
+    // Periodic-in-y variant of slabEdges for tubes: y index wraps modulo n.y,
+    // while x (axial) and z (layer) stay clamped. This removes duplicate seam
+    // vertices in the angular direction and matches TubeSheet's periodic
+    // topology when interpreting y as angle.
+    slabEdges_wrap(n, idx0, idx1, dirMask, stickTypes) {
+        const DIRS = [
+            // axial
+            { x: 1, y: 0, z: 0 }, // 0 x
+            { x: 0, y: 1, z: 0 }, // 1 y
+            { x: 0, y: 0, z: 1 }, // 2 z
+            // face diag
+            { x: 1, y: 1, z: 0 }, // 3 x+y
+            { x: 1, y: -1, z: 0 }, // 4 x-y
+            { x: 1, y: 0, z: 1 }, // 5 x+z
+            { x: -1, y: 0, z: 1 }, // 6 z-x
+            { x: 0, y: 1, z: 1 }, // 7 y+z
+            { x: 0, y: 1, z: -1 }, // 8 y-z
+            // space diag
+            { x: 1, y: 1, z: 1 }, // 9 x+y+z
+            { x: 1, y: 1, z: -1 }, // 10 x+y-z
+            { x: 1, y: -1, z: 1 }, // 11 x-y+z
+            { x: 1, y: -1, z: -1 }  // 12 x-y-z
+        ];
+        const nz = 2;
+        const wrapY = (iy) => {
+            const r = iy % n.y;
+            return r < 0 ? r + n.y : r;
+        };
+        const getVert = (ix, iy, iz) => {
+            const i = iy * n.x + ix;
+            return (iz === 0) ? idx0[i] : idx1[i];
+        };
+        const edgeTypeByDir = (d) => {
+            const comps = (d.x !== 0 ? 1 : 0) + (d.y !== 0 ? 1 : 0) + (d.z !== 0 ? 1 : 0);
+            if (comps === 1) { return d.z ? stickTypes.x : stickTypes.y; }
+            if (comps === 2) { return d.z ? stickTypes.w : stickTypes.z; }
+            return stickTypes.w;
+        };
+
+        const ie0 = this.edges.length;
+        for (let iz = 0; iz < nz; ++iz) {
+            for (let iy = 0; iy < n.y; ++iy) {
+                for (let ix = 0; ix < n.x; ++ix) {
+                    for (let id = 0; id < 13; ++id) {
+                        if (!(dirMask & (1 << id))) continue;
+                        const d = DIRS[id];
+                        const jx = ix + d.x;
+                        const jyRaw = iy + d.y;
+                        const jz = iz + d.z;
+                        if (jx < 0 || jx >= n.x || jz < 0 || jz >= nz) continue; // x,z clamped
+                        const jy = wrapY(jyRaw);
+                        const a = getVert(ix, iy, iz);
+                        const b = getVert(jx, jy, jz);
+                        this.edge(a, b, edgeTypeByDir(d));
+                    }
+                }
+            }
+        }
+        return ie0;
+    },
+
     UV_slab(n, UVmin, UVmax, up, dirMask, stickTypes, func1, func2) {
         const duv = {
             x: (UVmax.x - UVmin.x) / (n.x - 1),
@@ -248,6 +309,25 @@ export const MeshesUV = {
         this.slabEdges(n, idx0, idx1, dirMask, stickTypes);
     },
 
+    // Periodic variant of UV_slab for tubes: angular direction (y) is treated as
+    // periodic, so there are exactly n.y unique azimuthal samples and no
+    // duplicate seam vertices. Connectivity wraps in index space instead.
+    UV_slab_wrap(n, UVmin, UVmax, up, dirMask, stickTypes, func1, func2) {
+        const duv = {
+            x: (UVmax.x - UVmin.x) / (n.x - 1),
+            y: (UVmax.y - UVmin.y) / n.y
+        };
+        const idx0 = new Array(n.x * n.y);
+        const idx1 = new Array(n.x * n.y);
+
+        const uvOffset = { x: duv.x * up.x, y: duv.y * up.y };
+        const uvStart2 = { x: UVmin.x + uvOffset.x, y: UVmin.y + uvOffset.y };
+
+        this.UV_slab_verts(n, UVmin, duv, idx0, func1);
+        this.UV_slab_verts(n, uvStart2, duv, idx1, func2);
+        this.slabEdges_wrap(n, idx0, idx1, dirMask, stickTypes);
+    },
+
     QuadSlab(n, UVmin, UVmax, p00, p01, p10, p11, up, dirMask, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
         // Compute normal: cross(p10-p00, p01-p00)
         const d1 = new Vec3().setSub(p10, p00);
@@ -263,6 +343,25 @@ export const MeshesUV = {
         };
 
         this.UV_slab(n, UVmin, UVmax, up, dirMask, stickTypes, uvfunc1, uvfunc2);
+    },
+
+    // Periodic angular variant of SlabTube. Interprets n.y as the number of
+    // unique azimuthal directions (polygon sides). Uses UV_slab_wrap and
+    // slabEdges_wrap so there is a single seam in index space, without
+    // duplicated vertices at angles 0 and 2π.
+    SlabTube_wrap(n, UVmin, UVmax, Rs, L, up, dirMask, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
+        const dudv = twist * (n.x - 1.0) / n.y;
+
+        const uvfunc1 = (uv) => {
+            const uv_y = (uv.y + uv.x * dudv) * 2 * Math.PI;
+            return this.ConeUVfunc({ x: uv.x, y: uv_y }, Rs.x, Rs.y, L);
+        };
+        const uvfunc2 = (uv) => {
+            const uv_y = (uv.y + uv.x * dudv) * 2 * Math.PI;
+            return this.ConeUVfunc({ x: uv.x, y: uv_y }, Rs.x + up.z, Rs.y + up.z, L);
+        };
+
+        this.UV_slab_wrap(n, UVmin, UVmax, up, dirMask, stickTypes, uvfunc1, uvfunc2);
     },
 
     UV_panel(n, UVmin, UVmax, width, stickTypes, func) {

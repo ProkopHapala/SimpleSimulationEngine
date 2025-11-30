@@ -262,6 +262,38 @@ For the telescopic recoil damper this suggests a **“parameter‑specialized”
 
 **JS playground idea:** add a small GUI panel in `js/spacecraft_editor` to play with `SlabTube` parameters (`n`, `Rs`, `L`, `up`, `dirMask`) and regenerate the tube interactively, to build intuition before committing to fixed patterns in C++.
 
+### 1.7 Topology constraints for tubes and slabs
+
+For this project the tube/truss meshes are not just for visualization: they are **direct inputs to dynamic simulations** where:
+
+- Each **vertex is a mass node**.
+- Each **edge is a spring / constraint**.
+
+Therefore, we must treat **mesh topology as physically meaningful** and avoid accidental duplication except in very explicit, well‑documented cases.
+
+Key constraints and plans:
+
+- **No duplicate seam vertices / edges on periodic directions by default.**
+  - On circular / angular coordinates, we want a **single set of vertices** around the ring, with periodic edges, not two coincident columns at angle `0` and `2π`.
+  - `TubeSheet` already follows this: its angular direction is periodic (wrap in index space), and `n.y` directly equals the number of unique sides.
+- **Periodic `SlabTube` variant.**
+  - The legacy `SlabTube` (both C++ and JS) currently uses `UV_slab` with an **inclusive [0,1] UV range** in angle, which produces duplicate vertices at `0` and `2π`.
+  - To preserve compatibility but get clean periodic topology, we will introduce a **new variant** (name TBD, e.g. `SlabTube_wrap` / `SlabTube2`) that:
+    - Treats the angular direction as **periodic**, mirroring `TubeSheet`.
+    - Interprets `nSides` / `n.y` as the exact number of **unique azimuthal directions**.
+    - Avoids creating a second seam ring at `2π`; connectivity will wrap in index space instead.
+  - Existing code that depends on the current `SlabTube` layout can continue using it unchanged; new telescopic‑truss work should migrate to the periodic variant once stable.
+- **MeshBuilder‑level duplicate checks (C++ and JS).**
+  - Many mesh‑building algorithms are easier to express if we can freely generate candidate edges/verts and let the builder **deduplicate** them.
+  - C++ `Mesh::Builder2` already has asserts that prevent duplicate verts/edges (via `findVert`, `findEdgeByVerts_brute`).
+  - On both C++ and JS sides we want configurable options such as:
+    - `bCheckVertExist`, `bCheckEdgeExist` – enable/disable de‑duplication.
+    - `bVertExistError` / `bEdgeExistError` – fail hard (debug / safety mode).
+    - `bVertExistSkip` / `bEdgeExistSkip` – silently **reuse / skip** duplicates while building topology.
+  - These flags let high‑level generators (tubes, plates, welds, sliders) be written in a **simple, declarative style** without manually tracking whether a particular edge or vertex has already been emitted.
+
+This section should be treated as a **global design rule** for all tube/slab/truss generators used in telescopic recoil dampers and related components.
+
 ### 1.7 Strategies for selecting straight edge / vertex paths
 
 For sliders and telescopic motion we need **straight, smooth paths** along the edges of tubes/girders. There are three complementary strategies already supported or partially supported in the C++ infrastructure.

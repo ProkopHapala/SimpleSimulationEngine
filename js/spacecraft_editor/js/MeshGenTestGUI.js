@@ -52,22 +52,23 @@ export class MeshGenTestGUI {
 
         // Shared default params (can be extended inline per shape using spread)
         const defaultParams = {
-            'nx':     { group: 'Grid',     widget: 'int',    value: 8,    range: [2, 100],  step: 1   },
-            'ny':     { group: 'Grid',     widget: 'int',    value: 8,    range: [2, 100],  step: 1   },
-            'L':      { group: 'Geometry', widget: 'double', value: 10.0,range: [0.1, 50.0], step: 0.1 },
-            'dirMask': { group: 'Topology', widget: 'text', value: "1011" }
+            'nx':     { group: 'Grid',     widget: 'int',    value: 2,    range: [2, 100],  step: 1   },
+            'ny':     { group: 'Grid',     widget: 'int',    value: 6,    range: [2, 100],  step: 1   },
+            'L':      { group: 'Geometry', widget: 'double', value: 3.0,range: [0.1, 50.0], step: 0.1 },
+            //'dirMask': { group: 'Topology', widget: 'text', value: "1011" }
+            'dirMask': { group: 'Topology', widget: 'text', value: "0111" }
             // for slab dirMask should be : 10101000111   with offset (0.5,0.5)
         };
 
         // Tube-specific params (shared between TubeSheet and SlabTube)
         const params_tube = {
-            'R':     { group: 'Geometry', widget: 'double', value: 5.0, range: [0.1, 50.0], step: 0.1 },
-            'twist': { group: 'Geometry', widget: 'double', value: 0.5, range: [-5.0, 5.0], step: 0.1 },
+            'R':     { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+            'twist': { group: 'Geometry', widget: 'double', value: 0.0, range: [-5.0, 5.0], step: 0.1 },
         };
 
         // Slab-specific params (shared between SlabTube and QuadSlab)
         const params_slab = {
-            'thick':   { group: 'Geometry', widget: 'double', value: 1.0, range: [0.1, 10.0], step: 0.1 },
+            'thick':   { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 10.0], step: 0.1 },
             'offsetX': { group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0], step: 0.1 },
             'offsetY': { group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0], step: 0.1 },
         };
@@ -115,6 +116,18 @@ export class MeshGenTestGUI {
                 run: (vals) => {
                     const { n, UVmin, UVmax, Rs, up, mask } = buildCommonArgs(vals);
                     this.engine.mesh.SlabTube(n, UVmin, UVmax, Rs, vals.L, up, mask, vals.twist);
+                    // For SlabTube, UV_slab uses an inclusive [0,1] range in the angular (y) direction,
+                    // so n.y samples include both 0 and 2π. To make the GUI ny correspond to the
+                    // number of *unique* polygon sides (e.g. ny=6 -> hexagon), we internally add 1.
+                    //const nSlab = { x: n.x, y: n.y + 1 };
+                    //this.engine.mesh.SlabTube(nSlab, UVmin, UVmax, Rs, vals.L, up, mask, vals.twist);
+                }
+            },
+            'SlabTube_wrap': {
+                params: { ...defaultParams, ...params_tube, ...params_slab },
+                run: (vals) => {
+                    const { n, UVmin, UVmax, Rs, up, mask } = buildCommonArgs(vals);
+                    this.engine.mesh.SlabTube_wrap(n, UVmin, UVmax, Rs, vals.L, up, mask, vals.twist);
                 }
             },
             'QuadSheet': {
@@ -246,7 +259,9 @@ export class MeshGenTestGUI {
                 this.engine.mesh.clear();
                 currentFunc.run(vals);
                 if (this.renderer) this.renderer.updateGeometry(this.engine.mesh);
-                if (typeof logger !== 'undefined') logger.info(`Generated ${selFunc.value}`);
+                if (typeof logger !== 'undefined') {
+                    logger.info(`runMeshGen ${selFunc.value} with params: ${JSON.stringify(vals)}`);
+                }
             }
         };
 

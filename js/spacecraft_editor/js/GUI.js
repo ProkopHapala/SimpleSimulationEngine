@@ -393,6 +393,15 @@ export class GUI {
         const chkAdditive  = document.getElementById('chkSelectionAdditive');
         const lblCount     = document.getElementById('lblSelectionCount');
         const txtIndices   = document.getElementById('txtSelectionIndices');
+        const btnScanDupVerts   = document.getElementById('btnScanDupVerts');
+        const btnScanDupEdges   = document.getElementById('btnScanDupEdges');
+        const chkTopoCheckVerts = document.getElementById('chkTopoCheckVerts');
+        const chkTopoVertError  = document.getElementById('chkTopoVertError');
+        const chkTopoVertSkip   = document.getElementById('chkTopoVertSkip');
+        const numRvertCollapse  = document.getElementById('numRvertCollapse');
+        const chkTopoCheckEdges = document.getElementById('chkTopoCheckEdges');
+        const chkTopoEdgeError  = document.getElementById('chkTopoEdgeError');
+        const chkTopoEdgeSkip   = document.getElementById('chkTopoEdgeSkip');
 
         const mesh = this.engine ? this.engine.mesh : null;
 
@@ -411,8 +420,17 @@ export class GUI {
         };
 
         if (mesh) {
-            // Initialize UI from current selection state
             updateSelectionUI();
+
+            if (chkTopoCheckVerts)  chkTopoCheckVerts.checked  = !!mesh.bCheckVertExist;
+            if (chkTopoVertError)   chkTopoVertError.checked   = !!mesh.bVertExistError;
+            if (chkTopoVertSkip)    chkTopoVertSkip.checked    = !!mesh.bVertExistSkip;
+            if (numRvertCollapse && typeof mesh.RvertCollapse === 'number') {
+                numRvertCollapse.value = mesh.RvertCollapse;
+            }
+            if (chkTopoCheckEdges)  chkTopoCheckEdges.checked  = !!mesh.bCheckEdgeExist;
+            if (chkTopoEdgeError)   chkTopoEdgeError.checked   = !!mesh.bEdgeExistError;
+            if (chkTopoEdgeSkip)    chkTopoEdgeSkip.checked    = !!mesh.bEdgeExistSkip;
         }
 
         if (selKind && mesh) {
@@ -465,6 +483,59 @@ export class GUI {
                 const kind = selKind ? selKind.value : 'vert';
                 mesh.applySelection(indices, kind, additive);
                 updateSelectionUI();
+            });
+        }
+
+        if (btnScanDupVerts && mesh) {
+            btnScanDupVerts.addEventListener('click', () => {
+                const count = mesh.scanDuplicateVerts();
+                logger.info(`GUI: scanDuplicateVerts finished, count=${count}`);
+            });
+        }
+
+        if (btnScanDupEdges && mesh) {
+            btnScanDupEdges.addEventListener('click', () => {
+                const count = mesh.scanDuplicateEdges();
+                logger.info(`GUI: scanDuplicateEdges finished, count=${count}`);
+            });
+        }
+
+        if (mesh && chkTopoCheckVerts) {
+            chkTopoCheckVerts.addEventListener('change', () => {
+                mesh.bCheckVertExist = chkTopoCheckVerts.checked;
+            });
+        }
+        if (mesh && chkTopoVertError) {
+            chkTopoVertError.addEventListener('change', () => {
+                mesh.bVertExistError = chkTopoVertError.checked;
+            });
+        }
+        if (mesh && chkTopoVertSkip) {
+            chkTopoVertSkip.addEventListener('change', () => {
+                mesh.bVertExistSkip = chkTopoVertSkip.checked;
+            });
+        }
+        if (mesh && numRvertCollapse) {
+            numRvertCollapse.addEventListener('change', () => {
+                const v = parseFloat(numRvertCollapse.value);
+                if (!Number.isNaN(v) && v > 0) {
+                    mesh.RvertCollapse = v;
+                }
+            });
+        }
+        if (mesh && chkTopoCheckEdges) {
+            chkTopoCheckEdges.addEventListener('change', () => {
+                mesh.bCheckEdgeExist = chkTopoCheckEdges.checked;
+            });
+        }
+        if (mesh && chkTopoEdgeError) {
+            chkTopoEdgeError.addEventListener('change', () => {
+                mesh.bEdgeExistError = chkTopoEdgeError.checked;
+            });
+        }
+        if (mesh && chkTopoEdgeSkip) {
+            chkTopoEdgeSkip.addEventListener('change', () => {
+                mesh.bEdgeExistSkip = chkTopoEdgeSkip.checked;
             });
         }
 
