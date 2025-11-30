@@ -85,8 +85,77 @@ export class MeshGenTestGUI {
             'attachR': { group: 'Topology', widget: 'double', value: 1.0,  range: [0.01, 10.0], step: 0.05 },
         };
 
+        const params_parabola = {
+            'nx':     { group: 'Grid',     widget: 'int',    value: 5,    range: [2, 100],  step: 1   },
+            'ny':     { group: 'Grid',     widget: 'int',    value: 8,    range: [2, 100],  step: 1   },
+            'L':      { group: 'Geometry', widget: 'double', value: 3.0,range: [0.1, 50.0], step: 0.1 },
+            'dirMask': { group: 'Topology', widget: 'text', value: "0111" },
+            'R0':     { group: 'Geometry', widget: 'double', value: 0.1, range: [0.1, 50.0], step: 0.1 },
+            'R':     { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+            'twist': { group: 'Geometry', widget: 'double', value: -0.5, range: [-5.0, 5.0], step: 0.1 },
+        };
         // --- Mesh Function Definitions ---
         const meshFuncs = {
+            'ParabolaWire': {
+                params: { ...defaultParams, ...params_tube },
+                run: (vals) => {
+                    const mesh = this.engine.mesh;
+                    const n = { x: vals.nx | 0, y: vals.ny | 0 };
+                    const UVmin = { x: 0, y: 0 };
+                    const UVmax = { x: 1, y: 2 * Math.PI };
+                    const R = vals.R;
+                    const L = vals.L;
+                    // Wireframe paraboloid dish using existing Parabola_Wire_new mapping
+                    mesh.Parabola_Wire_new(n, UVmin, UVmax, R, L, 0.0);
+                }
+            },
+            'ParabolaSheet': {
+                //params: { ...defaultParams, ...params_tube },
+                params: {...params_parabola},
+                run: (vals) => {
+                    const mesh = this.engine.mesh;
+                    const n = { x: vals.nx | 0, y: vals.ny | 0 };
+                    const UVmin = { x: 0.2, y: 0 };
+                    const UVmax = { x: 1, y: 1 };
+                    const Rs = { x: vals.R, y: vals.R };
+                    const L = vals.L;
+                    const dirMask = parseInt(vals.dirMask, 2);
+                    const stickTypes = { x: 1, y: 1, z: 1, w: 0 };
+                    // TubeSheet-style truss mapped onto a paraboloid instead of a cone
+                    mesh.ParabolaSheet(n, UVmin, UVmax, Rs, L, dirMask, vals.twist, stickTypes);
+                }
+            },
+            'ParabolaSlab': {
+                params: { 
+                    'nx':     { group: 'Grid',     widget: 'int',    value: 6,  range: [2, 100],  step: 1 },
+                    'ny':     { group: 'Grid',     widget: 'int',    value: 8,  range: [2, 100],  step: 1 },
+                    'L':      { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+                    'dirMask':{ group: 'Topology', widget: 'text',   value: "10001001111" },
+                    'R0':     { group: 'Geometry', widget: 'double', value: 0.1, range: [0.1, 50.0], step: 0.1 },
+                    'R':      { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
+                    'twist':  { group: 'Geometry', widget: 'double', value: -0.5, range: [-5.0, 5.0], step: 0.1 },
+                    'thick':  { group: 'Geometry', widget: 'double', value: 1.2, range: [0.1, 10.0],  step: 0.1 },
+                    'offsetX':{ group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0],  step: 0.1 },
+                    'offsetY':{ group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0],  step: 0.1 },
+                },
+                run: (vals) => {
+                    const mesh = this.engine.mesh;
+                    const n = { x: vals.nx | 0, y: vals.ny | 0 };
+                    const UVmin = { x: 0.0, y: 0.0 };
+                    const UVmax = { x: 1.0, y: 1.0 };
+                    const Rs = { x: vals.R, y: vals.R };
+                    const L = vals.L;
+                    const up = {
+                        x: vals.offsetX || 0.0,
+                        y: vals.offsetY || 0.0,
+                        z: vals.thick   || 0.0
+                    };
+                    const dirMask = parseInt(vals.dirMask, 2);
+                    const stickTypes = { x: 1, y: 1, z: 1, w: 1 };
+                    // Double-layer parabolic slab with SlabTube-style connectivity
+                    mesh.ParabolaSlab_wrap(n, UVmin, UVmax, Rs, L, up, dirMask, vals.twist, stickTypes);
+                }
+            },
             'TubeSheet': {
                 params: { ...defaultParams, ...params_tube, 'offset': { group: 'Geometry', widget: 'double', value: 0.0, range: [-1.0, 1.0], step: 0.1 }, },
                 run: (vals) => {
@@ -132,26 +201,38 @@ export class MeshGenTestGUI {
             },
             'TubeSheetBond': {
                 params: {
-                    ...defaultParams,
-                    ...params_tube,
-                    'nx2':      { group: 'Grid B',     widget: 'int',    value: 2,    range: [2, 100],  step: 1   },
-                    'ny2':      { group: 'Grid B',     widget: 'int',    value: 6,    range: [2, 100],  step: 1   },
-                    'R2':       { group: 'Geom B',     widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
-                    'L2':       { group: 'Geom B',     widget: 'double', value: 3.0, range: [0.1, 50.0], step: 0.1 },
-                    'offX':     { group: 'Offset',     widget: 'double', value: 0.0, range: [-10.0, 10.0], step: 0.1 },
-                    'offY':     { group: 'Offset',     widget: 'double', value: 5.0, range: [-10.0, 10.0], step: 0.1 },
-                    'Rcut':     { group: 'Bonds',      widget: 'double', value: 2.0, range: [0.0, 100.0], step: 0.1 },
-                    'dR':       { group: 'Bonds',      widget: 'double', value: 0.01, range: [0.0, 1.0],  step: 0.001 },
-                    'iFamily':  { group: 'Bonds',      widget: 'int',    value: 0,   range: [0, 32],     step: 1   },
+                    //...defaultParams,
+                    //...params_tube,
+
+                    'dirMask':  { group: 'Topology',   widget: 'text',   value: "1111" },
+                    'twist':    { group: 'Geometry',   widget: 'double', value: 0.0,  range: [-5.0, 5.0],   step: 0.1 },
+
+                    'nx':       { group: 'Grid',       widget: 'int',    value: 2,    range: [2, 100],      step: 1   },
+                    'ny':       { group: 'Grid',       widget: 'int',    value: 6,    range: [2, 100],      step: 1   },
+                    'R':        { group: 'Geometry',   widget: 'double', value: 1.732,  range: [0.1, 50.0],   step: 0.1 },
+                    'L':        { group: 'Geometry',   widget: 'double', value: 1.0,  range: [0.1, 50.0],   step: 0.1 },
+                    
+                    'nx2':      { group: 'Grid B',     widget: 'int',    value: 3,    range: [2, 100],      step: 1   },
+                    'ny2':      { group: 'Grid B',     widget: 'int',    value: 6,    range: [2, 100],      step: 1   },
+                    'R2':       { group: 'Geom B',     widget: 'double', value: 1.0,  range: [0.1, 50.0],   step: 0.1 },
+                    'L2':       { group: 'Geom B',     widget: 'double', value: 2.0,  range: [0.1, 50.0],   step: 0.1 },
+
+                    'offX':     { group: 'Offset',     widget: 'double', value:-0.5,  range: [-10.0, 10.0], step: 0.1 },
+                    'offY':     { group: 'Offset',     widget: 'double', value: 0.5,  range: [-10.0, 10.0], step: 0.1 },
+                    'Rcut':     { group: 'Bonds',      widget: 'double', value: 2.0,  range: [0.0, 100.0],  step: 0.1 },
+                    'dR':       { group: 'Bonds',      widget: 'double', value: 0.01, range: [0.0, 1.0],    step: 0.001 },
+                    'iFamily':  { group: 'Bonds',      widget: 'int',    value: 0,    range: [0, 32],       step: 1   },
                 },
                 run: (vals) => {
                     const mesh = this.engine.mesh;
-                    const n1  = { x: vals.nx | 0,  y: vals.ny  | 0 };
-                    const n2  = { x: vals.nx2 | 0, y: vals.ny2 | 0 };
-                    const UVmin = { x: 0, y: 0 };
-                    const UVmax = { x: 1, y: 1 };
-                    const UVmin2 = { x: 0+vals.offX, y: 0 };
-                    const UVmax2 = { x: 1+vals.offX, y: 1 };
+                    const n1  = { x: vals.nx  | 0,  y: vals.ny  | 0 };
+                    const n2  = { x: vals.nx2 | 0,  y: vals.ny2 | 0 };
+                    const UVmin  = { x: 0, y: 0 };
+                    const UVmax  = { x: 1, y: 1 };
+                    const offX = (vals.offX /(n2.x-1.0)) || 0;
+                    const offY = (vals.offY /(n2.y)    ) || 0;
+                    const UVmin2 = { x:     offX,  y:      offY  };
+                    const UVmax2 = { x: 1 + offX, y: 1 + offY };
                     const Rs1 = { x: vals.R,  y: vals.R  };
                     const Rs2 = { x: vals.R2, y: vals.R2 };
                     const L1  = vals.L;
@@ -161,17 +242,15 @@ export class MeshGenTestGUI {
                     const dR      = vals.dR;
                     const iFamily = vals.iFamily | 0;
                     const stickTypes = { x: 1, y: 0, z: 0, w: 0 };
-
-                    // --- First TubeSheet ---
+                    // --- First TubeSheet (base UV window [0,1]x[0,1]) ---
                     const iv0_1 = mesh.verts.length;
-                    mesh.TubeSheet(n1, UVmin, UVmax, Rs1, L1, dirMask, vals.twist+vals.offX, stickTypes);
+                    mesh.TubeSheet(n1, UVmin, UVmax, Rs1, L1, dirMask, vals.twist, stickTypes);
                     const nVerts1 = n1.x * n1.y;
                     const sel1 = new Array(nVerts1);
                     for (let i = 0; i < nVerts1; i++) sel1[i] = iv0_1 + i;
-
-                    // --- Second TubeSheet (offset in XY) ---
+                    // --- Second TubeSheet (UV-window shifted by offX, offY in fractional du,dv) ---
                     const iv0_2 = mesh.verts.length;
-                    mesh.TubeSheet(n2, UVmin, UVmax, Rs2, L2, dirMask, vals.twist+vals.offX, stickTypes );
+                    mesh.TubeSheet(n2, UVmin2, UVmax2, Rs2, L2, dirMask, vals.twist, stickTypes);
                     const nVerts2 = n2.x * n2.y;
                     const sel2 = new Array(nVerts2);
                     for (let i = 0; i < nVerts2; i++) sel2[i] = iv0_2 + i;
@@ -185,11 +264,7 @@ export class MeshGenTestGUI {
                     const fam = groups && groups[k];
                     if (!fam || fam.length === 0) return;
 
-                    for (const pair of fam) {
-                        const ia = pair[0];
-                        const ib = pair[1];
-                        mesh.edge(ia, ib, stickTypes.x);
-                    }
+                    mesh.addEdgesFromPairs(fam, stickTypes.x);
                 }
             },
             'QuadSheet': {
@@ -219,6 +294,42 @@ export class MeshGenTestGUI {
                     const nBottom = vals.nx2 | 0;
                     const nRows = vals.ny | 0;
                     mesh.ParametricQuadPatch(nTop, nBottom, nRows, p00, p01, p10, p11);
+                }
+            },
+            'ParametricParabola': {
+                // params: {"ny":6,"nx":5,"nx2":25,"L":3,"R1":0.5,"R2":3,"dirMask":"0111"}
+                // params: {"ny":4,"nx":5,"nx2":17,"L":3,"R1":0.5,"R2":3,"dirMask":"0111"} 
+                // params: {"ny":4,"nx":7,"nx2":25,"L":3,"R1":0.5,"R2":3,"dirMask":"0111"}
+                params: {
+                    'ny':      { group: 'Grid',     widget: 'int',    value: 4,    range: [2, 100],  step: 1   },
+                    'nx':      { group: 'Grid',     widget: 'int',    value: 4,    range: [2, 100],  step: 1   },
+                    'nx2':     { group: 'Grid',     widget: 'int',    value: 13,  range: [1, 200],   step: 1 },
+                    'L':       { group: 'Geometry', widget: 'double', value: 3.0,range: [0.1, 50.0], step: 0.1 },
+                    'R1':      { group: 'Geometry', widget: 'double', value: 0.5, range: [0.0, 100], step: 0.1 },
+                    'R2':      { group: 'Geometry', widget: 'double', value: 3.0, range: [0.1, 100], step: 0.1 },
+                    'dirMask': { group: 'Topology', widget: 'text', value: "0111" },
+                },
+                run: (vals) => {
+                    const mesh    = this.engine.mesh;
+                    const nTop    = vals.nx2 | 0;   // outer ring segments
+                    const nBottom = vals.nx  | 0;   // inner ring segments
+                    const nRows   = vals.ny  | 0;
+                    const R1      = vals.R1;
+                    const R2      = vals.R2;
+                    const L       = vals.L;
+
+                    console.log("[GUI] ParametricParabola run", {
+                        nTop, nBottom, nRows, R1, R2, L,
+                        vertsBefore: mesh.verts.length,
+                        edgesBefore: mesh.edges.length
+                    });
+
+                    mesh.ParametricParabolaPatch(nTop, nBottom, nRows, R1, R2, L);
+
+                    console.log("[GUI] ParametricParabola after", {
+                        vertsAfter: mesh.verts.length,
+                        edgesAfter: mesh.edges.length
+                    });
                 }
             },
             'QuadParametricRopes': {

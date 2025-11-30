@@ -38,10 +38,15 @@ Implemented items (JS / editor only):
 - [x] **[J4] Selection manager + SDF-based selection and rendering**  (SelectionBanks + GUI panel, `selectVertsBySDF` / `subtractVertsBySDF` in MeshBuilder, SDF helpers in `SDfuncs.js`, and selection rendering in MoleculeRenderer / SpaceCraftRenderer; see §4.2)
 - [x] **[J5] JS stick‑material support and edge coloring by material**  (see §4.3)
 - [x] **[J6] P2 parametric plate generators and angled-rope playground**  (see §2.1)
+- [x] **[J8] Parabolic dish / pusher‑plate generators**  (see §1.4, §1.9)
+   - `ParabolaSheet` / `ParabolaSlab` in `MeshesUV.js` + `MeshGenTestGUI.js` for single and double‑layer parabolic dishes.
+   - `ParametricParabolaPatch` that wraps `ParametricQuadPatch` and remaps its (x,y) output as (u_rad, u_ang) into a paraboloid with **independent inner/outer segment counts**.
+   - Construction test `"TubeSheetBond Hex Ring"` extended to include a **parabolic pusher‑plate / plasma nozzle dish** mounted above the telescopic damper.
 
 Pending JS‑first tasks:
 
 - [ ] **[J2] Visualizers for index / angle / SDF rail selection strategies**  (see §1.7–1.8)
+- [ ] **[J7] Advanced SDF-based selection regions (n-fold angular quadrants, axial slabs)**  (see §4.4)
 
 
 ---
@@ -159,6 +164,33 @@ For use with existing `Slider` machinery (`SpaceCraftComponents.h`):
   - A `Path` built from a list of vertex indices on the counter‑part tube.
 - Dynamics glue (`sliders2edgeverts`, `applySliders2sim`) then keeps anchors constrained to those rails while allowing motion along the axis.
 
+#### 1.3.1 Planned slider layout for the hex–triangle damper (design sketch)
+
+For the concrete **hexagonal outer tube + triangular inner tube** configuration prototyped in JS (`TubeSheetBond Hex Ring` test in `constructionBlockTests.js`), the intended slider layout is:
+
+- **Three independent axial slider rails** on one of the tubes (likely the outer hex), each aligned with a straight axial edge strip.
+- **Two sliding vertices per rail** on the opposite tube (inner triangle), giving **six sliding vertices total** to prevent wobble.
+- Each `Slider` will:
+  - Inherit from `Node` (as in C++), with `Slider::ivert` anchored to a reinforced vertex on the sliding component.
+  - Own a `Path` (`ps`, `cur`, `closed`) describing the rail on the other component, filled similarly to how `Ring::sideToPath` populates wheel paths.
+  - Be updated through `StructuralComponent::updateSlidersPaths` so paths remain consistent when geometry or tessellation changes.
+
+**Candidate strategies for building slider paths in this damper:**
+
+- **Index/stride based (generator-aware, TubeSheet-specific):**
+  - Treat `TubeSheet` vertices as a 2D grid `(ix, iy)` with known packing.
+  - Choose three azimuthal indices (every second hex vertex) and build paths by simple strides, mirroring `Girder::sideToPath` in `SpaceCraftComponents.h`.
+- **n-fold SDF selector (geometric, as in §4.4):**
+  - Use an **n-fold angular SDF wedge** (with `n = 3` for the inner triangle or `n = 6` for the outer hex) to select vertices near three target azimuths around the damper axis.
+  - Intersect these SDF-selected sets with axial ordering to obtain ordered rail paths.
+- **Nearest-edge search between tubes:**
+  - For each planned rail, pick a representative vertex on one tube and search for the **closest nearly-axial edge strip** on the other tube.
+  - Use geometric criteria (distance to axis, angle with axis) to disambiguate between candidate edges.
+
+On the C++ side, `Mesh::Builder2` already offers **angle-based edge-walk helpers** (`selectVertEdgeAngle`, `selectEdgeStrip` in `MeshBuilder2.cpp`) that can trace “straightest” strips on a mesh graph. As part of the JS slider tooling, we should mirror these in `js/common_js/MeshBuilder.js` so the editor can interactively extract candidate axial rails on the TubeSheet/SlabTube meshes before committing to a particular index/SDF strategy.
+
+Implementation of these sliders (path extraction, JS editor tools, and C++ integration) is **deferred**. For now, the JS tests focus purely on generating the hex outer tube + triangular inner tube geometry with a clean clearance gap; slider logic will be added once a robust path-selection strategy is chosen.
+
 ### 1.4 How existing generators can help
 
 Relevant generators and where they live:
@@ -181,7 +213,12 @@ Relevant generators and where they live:
 
 - **`TorusSheet` / Parabola / etc.** – `DrawUV.h`
   - Dishes / toroidal structures for nozzles and pusher plates themselves.
-  - Out of immediate scope here, but relevant for attaching the telescopic damper to a plate.
+  - In JS, this is now mirrored by:
+    - `Parabola_Wire_new` (wireframe paraboloid).
+    - `ParabolaSheet` – parabolic analogue of `TubeSheet` with TubeSheet‑like connectivity mapped onto a paraboloid.
+    - `ParabolaSlab_wrap` – parabolic analogue of `SlabTube_wrap`, building a **double‑layer parabolic slab** for stiff dishes with internal bracing.
+    - `ParametricParabolaPatch` – uses `ParametricQuadPatch` as a strip generator in (u,v) and then remaps vertices via `ParabolaUVfunc` to build annular parabolic patches where **inner and outer rings can have different tessellation**.
+  - These are used in the JS editor both as standalone generators (`ParabolaSheet`, `ParabolaSlab`, `ParametricParabola`) and as a **pusher‑plate attached to the telescopic damper** in `constructionBlockTests.js`.
 
 In `constructionBlockApp.cpp` there are ready‑made **CLI test harnesses**:
 
@@ -436,6 +473,14 @@ The result should be a **practical toolkit** in JS to debug and tune:
 - [x] **[J0f] `SlabTube` twist control**
   - JS `SlabTube` accepts a `twist` parameter (defaulting to the old hardcoded value) and the GUI passes its `twist` slider into the generator, making twist behavior consistent with `TubeSheet`.
   - Together with the MeshGenTestGUI panel this effectively provides a **SlabTube / TubeSheet playground** where `n`, `Rs`, `L`, `up`, `dirMask`, `twist` and materials can be tuned interactively and the resulting mesh inspected.
+ - [x] **[J8] Parabolic dishes and telescopic‑damper pusher plate**
+   - Added `ParabolaSheet` and `ParabolaSlab_wrap` in `MeshesUV.js` as parabolic analogues of `TubeSheet` / `SlabTube_wrap`, exposed in `MeshGenTestGUI.js` as `ParabolaSheet` and `ParabolaSlab` mesh functions.
+   - Implemented `ParabolaUVfunc` as a shared paraboloid mapping (`z = (L/R^2) * r^2`) and a `ParametricParabolaPatch` wrapper around `ParametricQuadPatch` that:
+     - Builds a strip over `[0,1]×[0,1]` in (u,v) with independent `nTop`/`nBottom` (outer/inner ring segment counts).
+     - Reinterprets `(x,y)` as `(u_rad, u_ang)` and maps them to an annular paraboloid with **inner radius `R1`, outer radius `R2`**, and height `L` at `R2`.
+   - Exposed a `ParametricParabola` generator in `MeshGenTestGUI.js` and a corresponding construction test:
+     - Standalone `"ParametricParabola Dish"` test for visualizing the parametric parabolic patch.
+     - Extended `"TubeSheetBond Hex Ring"` test to add a **parabolic pusher‑plate / nozzle dish** above the telescopic damper, using tuned parameters (`ny=4, nx≈7, nx2≈25, R1≈0.5, R2≈3` in the GUI; scaled variants in the construction test).
 
 **Pending JS prototyping tasks (before C++ hardening):**
 
@@ -621,6 +666,39 @@ This section lists JS‑first features that are useful for prototyping telescopi
   - **SDF-based selection** is implemented in JS mirroring the C++ architecture:
     - `MeshBuilder` (`js/spacecraft_editor/js/MeshBuilder.js`) exposes `selectVertsBySDF`, `selectEdgesBySDF`, and `subtractVertsBySDF`, which operate on the current `Selection` bank.
     - `SDfuncs.js` (`js/common_js/SDfuncs.js`) provides JS counterparts of C++ `SDfuncs.h` (spheres, AABB, cylinders, and a screen-rect SDF) used by the editor to implement box-selection and future geometric tools.
+
+### 4.4 Planned advanced SDF selection shapes (n-fold angular quadrants)
+
+In addition to basic SDFs (spheres, AABBs, cylinders, screen-rect), we want to support more **procedural SDF-based selection regions** that can express complex patterns for editing and welding.
+
+**High-level goal:**
+
+- Implement an **n-fold angular quadrant selector** (radiation-symbol-like wedge pattern) that can be used to select vertices/edges in repeated angular sectors along an axis.
+
+**Core SDF parameters (concept):**
+
+- Radial window: `Rmin`, `Rmax` (operate only in an annulus around an axis).
+- Angular repetition: `n` (n-fold rotational symmetry around the axis).
+- Angular placement: base angle `angle0` (offset/rotation) and angular span `dAngle` (wedge width within each period).
+- Axial support:
+  - Either two points `p0`, `p1` defining the central axis segment (line or capsule).
+  - Or an axis direction vector plus scalar range parameters `c0`, `c1` to clip along the axis.
+
+**Intended implementation locations:**
+
+- Core SDF utilities in JS: `js/common_js/SDfuncs.js`.
+- Integration with editor selections: `js/common_js/Selection.js` and `MeshBuilder.selectVertsBySDF` / `selectEdgesBySDF`.
+
+**Visualization and design references:**
+
+- Reuse patterns and combinations from local ShaderToy-style examples under:
+  - `js/common_resources/shaders/ShaderToy/`
+  - especially `SDF_RayMarchingPrimitivesCommented.glslf` and related SDF combination / repetition shaders.
+- Long term, visualize these SDF selectors by:
+  - Drawing a quad perpendicular to the axis.
+  - Mapping a GLSL fragment shader implementing the same SDF to that quad (or precomputing to a texture) so the user can see the selection region before applying it.
+
+This section is **design-only for now**; actual JS/GLSL implementations will be done later when there is time, under task [J7].
 
 ### 4.3 Edge coloring by stick material (JS `SpaceCraftWorkshop`)
 

@@ -504,6 +504,21 @@ export class MeshBuilder {
         return this.getCOG(n, ivs);
     }
 
+    /**
+     * Add a sequence of edges from a list of index pairs.
+     * Each element of pairs is expected to be [i0, i1].
+     * This is a generic helper so GUI/tests do not need to inline edge loops.
+     */
+    addEdgesFromPairs(pairs, type = -1, type2 = 0) {
+        if (!pairs) return;
+        for (const pair of pairs) {
+            if (!pair || pair.length < 2) continue;
+            const a = pair[0];
+            const b = pair[1];
+            this.edge(a, b, type, type2);
+        }
+    }
+
     polygonNormal(ichunk) {
         const ch = this.chunks[ichunk];
         const n = ch.z;

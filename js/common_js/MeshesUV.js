@@ -127,6 +127,105 @@ export const MeshesUV = {
         }
     },
 
+    // Parabolic dish using ParametricQuadPatch as a UV generator. We first
+    // build a strip over [0,1]x[0,1] in (u,v) using ParametricQuadPatch, then
+    // reinterpret (x,y) as (u,v) and map to a paraboloid via ParabolaUVfunc.
+    // - nTop:    segment count on the OUTER ring (radius R2)
+    // - nBottom: segment count on the INNER ring (radius R1)
+    // - nRows:   number of radial rows from inner to outer radius
+    // - R1:      inner radius
+    // - R2:      outer radius of the paraboloid (used for curvature)
+    // - L:       axial height at radius R2
+ParametricParabolaPatch(nTop, nBottom, nRows, R1, R2, L) {
+    const iv0 = this.verts.length;
+
+    const p00 = { x: 0.0, y: 0.0, z: 0.0 };
+    const p01 = { x: 0.0, y: 1.0, z: 0.0 };
+    const p10 = { x: 1.0, y: 0.0, z: 0.0 };
+    const p11 = { x: 1.0, y: 1.0, z: 0.0 };
+    // NOTE: We want nBottom on the INNER ring and nTop on the OUTER ring.
+    // ParametricQuadPatch uses nTop for the FIRST row and nBottom for the LAST.
+    // Therefore we swap the order here so that row 0 (inner) gets nBottom and
+    // row nRows-1 (outer) gets nTop.
+    this.ParametricQuadPatch(nBottom, nTop, nRows, p00, p01, p10, p11);
+
+    const iv1 = this.verts.length;
+
+    // DEBUG: basic info
+    console.log("ParametricParabolaPatch: header", {
+        iv0, iv1,
+        nTop, nBottom, nRows,
+        R1, R2, L,
+        addedVerts: iv1 - iv0
+    });
+
+    if (iv1 <= iv0) {
+        console.warn("ParametricParabolaPatch: no verts added by ParametricQuadPatch");
+        return;
+    }
+
+    // DEBUG: show first vertex before remap
+    const v0_before = { ...this.verts[iv0] };
+    console.log("ParametricParabolaPatch: v0 before remap", v0_before);
+
+    // Remap (x,y) stored in vertex position -> (u_rad, u_ang) -> paraboloid using ParabolaUVfunc
+    for (let i = iv0; i < iv1; i++) {
+        const v = this.verts[i];
+        // ParametricQuadPatch stored the strip in v.pos.x (along row), v.pos.y (row index)
+        // We interpret v.pos.y as radial coordinate (0..1 inner->outer) and v.pos.x as
+        // angular fraction around the ring.
+        const u_rad = v.pos.y;              // 0..1 radial fraction (inner -> outer)
+        const u_ang = v.pos.x;              // 0..1 angular fraction (around ring)
+        const r     = R1 + (R2 - R1) * u_rad;
+        const ang   = u_ang * 2.0 * Math.PI;
+        const p     = this.ParabolaUVfunc({ x: r, y: ang }, R2, L);
+        v.pos.x = p.x;
+        v.pos.y = p.y;
+        v.pos.z = p.z;
+    }
+
+    // DEBUG: show first vertex after remap
+    const v0_after = { ...this.verts[iv0] };
+    console.log("ParametricParabolaPatch: v0 after remap", v0_after);
+},
+
+    // Wrap a ParametricQuadPatch (built over a unit square in x,y) into an
+    // annular / disk-like patch using cylindrical coordinates. We treat the
+    // generated x,y as (u_radial, u_angle) in [0,1]^2 and remap to:
+    //   r   = R_inner + u_radial * (R_outer - R_inner)
+    //   phi = phi0 + u_angle * dphi
+    //   p   = (r*cos(phi), r*sin(phi), z0)
+    // Connectivity (including variable nTop/nBottom) is entirely reused from
+    // ParametricQuadPatch; only vertex positions are updated afterwards.
+    ParametricAnnulusPatch(nTop, nBottom, nRows, R_inner, R_outer, phi0 = 0.0, dphi = 2.0 * Math.PI, z0 = 0.0) {
+        const Rin = R_inner;
+        const Rout = R_outer;
+        const dR = Rout - Rin;
+
+        // 1) Build a parametric strip over unit square [0,1]x[0,1] in x,y
+        const iv0 = this.verts.length;
+        const p00 = { x: 0.0, y: 0.0, z: 0.0 };
+        const p01 = { x: 0.0, y: 1.0, z: 0.0 };
+        const p10 = { x: 1.0, y: 0.0, z: 0.0 };
+        const p11 = { x: 1.0, y: 1.0, z: 0.0 };
+        this.ParametricQuadPatch(nTop, nBottom, nRows, p00, p01, p10, p11);
+        const iv1 = this.verts.length;
+
+        // 2) Remap positions to cylindrical annulus
+        for (let i = iv0; i < iv1; i++) {
+            const v = this.verts[i];
+            const u_rad = v.x;  // 0..1 across thickness (inner->outer)
+            const u_ang = v.y;  // 0..1 around the ring
+            const r   = Rin + dR * u_rad;
+            const phi = phi0 + dphi * u_ang;
+            const cs  = Math.cos(phi);
+            const sn  = Math.sin(phi);
+            v.x = cs * r;
+            v.y = sn * r;
+            v.z = z0;
+        }
+    },
+
     Parabola_Wire_new(n, UVmin, UVmax, R, L, voff, wire_flags = WireFlags.DEFAULT_WIRE) {
         const K = L / (R * R);
         // UVmin/max modification
@@ -364,6 +463,30 @@ export const MeshesUV = {
         this.UV_slab_wrap(n, UVmin, UVmax, up, dirMask, stickTypes, uvfunc1, uvfunc2);
     },
 
+    // Parabolic analogue of SlabTube_wrap: double-layer paraboloid with slab connectivity
+    // r in [0, Rs.x], angle in [0, 2π], z = (L / (Rs.x^2)) * r^2 for both layers,
+    // with the outer layer shifted by up.z along +z to give thickness.
+    ParabolaSlab_wrap(n, UVmin, UVmax, Rs, L, up, dirMask, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
+        const dudv = twist * (n.x - 1.0) / n.y;
+        const R = Rs.x;
+        const K = (R > 0) ? (L / (R * R)) : 0.0;
+
+        const baseParabola = (uv, zOffset) => {
+            // uv.x ~ radial parameter in [0,1], uv.y ~ angular parameter in [0,1]
+            const r = R * uv.x;
+            const ang = (uv.y + uv.x * dudv) * 2.0 * Math.PI;
+            const cs = Math.cos(ang);
+            const sn = Math.sin(ang);
+            const z = K * r * r + zOffset;
+            return new Vec3(cs * r, sn * r, z);
+        };
+
+        const uvfunc1 = (uv) => baseParabola(uv, 0.0);
+        const uvfunc2 = (uv) => baseParabola(uv, up.z);
+
+        this.UV_slab_wrap(n, UVmin, UVmax, up, dirMask, stickTypes, uvfunc1, uvfunc2);
+    },
+
     UV_panel(n, UVmin, UVmax, width, stickTypes, func) {
         const na = n.x;
         const nb = n.y;
@@ -460,6 +583,17 @@ export const MeshesUV = {
         const csb = { x: Math.cos(ang), y: Math.sin(ang) };
         const R = (1 - uv.x) * R1 + uv.x * R2;
         return new Vec3(csb.x * R, csb.y * R, L * uv.x);
+    },
+
+    // Parabolic analogue of ConeUVfunc used by parabolic generators.
+    // uv.x = r (radius), uv.y = angle; z = (L / R^2) * r^2
+    ParabolaUVfunc(uv, R, L) {
+        const ang = uv.y;
+        const csb = { x: Math.cos(ang), y: Math.sin(ang) };
+        const r   = uv.x;
+        const K   = (R > 0) ? (L / (R * R)) : 0.0;
+        const z   = K * r * r;
+        return new Vec3(csb.x * r, csb.y * r, z);
     },
 
     TorusUVfunc(uv, r, R) {
@@ -641,6 +775,25 @@ export const MeshesUV = {
         };
         // use n.x for periodic wrap and n.y-1 for length spacing?
         // C++: Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y) }; 
+        const duv = { x: (UVmax.x - UVmin.x) / (n.x - 1), y: (UVmax.y - UVmin.y) / n.y };
+        this.UV_sheet(n, UVmin, duv, dirMask, stickTypes, uvfunc, false, true);
+    },
+
+    // Parabolic analogue of TubeSheet: same connectivity/topology, but mapped to a paraboloid
+    // r in [0, Rs.x], angle in [0, 2π], z = (L / (Rs.x^2)) * r^2
+    ParabolaSheet(n, UVmin, UVmax, Rs, L, dirMask = 0b1011, twist = 0.5, stickTypes = { x: 0, y: 0, z: 0, w: 0 }) {
+        const dudv = (twist * (n.x - 1.0)) / n.y;
+        const R = Rs.x;
+        const K = (R > 0) ? (L / (R * R)) : 0.0;
+        const uvfunc = (uv) => {
+            // uv.x ∈ [0,1] -> radius r ∈ [0,R]
+            const r = R * uv.x;
+            const ang = (uv.y + uv.x * dudv) * 2.0 * Math.PI;
+            const cs = Math.cos(ang);
+            const sn = Math.sin(ang);
+            const z = K * r * r;
+            return new Vec3(cs * r, sn * r, z);
+        };
         const duv = { x: (UVmax.x - UVmin.x) / (n.x - 1), y: (UVmax.y - UVmin.y) / n.y };
         this.UV_sheet(n, UVmin, duv, dirMask, stickTypes, uvfunc, false, true);
     },

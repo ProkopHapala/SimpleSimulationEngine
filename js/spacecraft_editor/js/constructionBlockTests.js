@@ -306,6 +306,133 @@ export const ConstructionBlockTests = {
 
             if (window.renderer) window.renderer.updateGeometry(mesh);
             logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "ParametricParabola Dish": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running ParametricParabola Dish Test (parabolic pusher-plate)...");
+
+            // Tuned parameters taken from MeshGenTestGUI ParametricParabola
+            // params: {"ny":4,"nx":7,"nx2":25,"L":3,"R1":0.5,"R2":3,"dirMask":"0111"}
+            const nRows = 4;
+            const nInner = 7;   // inner ring segments
+            const nOuter = 25;  // outer ring segments
+            const R1 = 0.5;     // inner radius (hole)
+            const R2 = 3.0;     // outer radius
+            const L  = 3.0;     // axial height at R2
+
+            // Axial shift along +Z to place the dish above a tube; tweak as needed
+            const zShift = 2.0;
+
+            const iv0 = mesh.verts.length;
+            mesh.ParametricParabolaPatch(nOuter, nInner, nRows, R1, R2, L);
+            const iv1 = mesh.verts.length;
+
+            // Apply axial shift to all newly created vertices
+            for (let i = iv0; i < iv1; i++) {
+                mesh.verts[i].pos.z += zShift;
+            }
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
+        },
+
+        "TubeSheetBond Hex Ring": (engine) => {
+            const mesh = ConstructionBlockTests.setup(engine);
+            logger.info("Running TubeSheetBond Hex Ring Test (recoil damper outer tube)...");
+
+            // Parameters mirrored from MeshGenTestGUI TubeSheetBond defaults
+            const dirMaskStr = "1111";
+            const dirMask = parseInt(dirMaskStr, 2);
+            const twist = 0.0;
+
+            const clearance = 0.1; // radial gap between outer tube inner radius and inner triangular tube
+
+            const n1 = { x: 2, y: 6 };
+            const n2 = { x: 3, y: 6 };
+            const UVmin = { x: 0, y: 0 };
+            const UVmax = { x: 1, y: 1 };
+
+            const R1 = 1.732;
+            const L1 = 1.0;
+            const R2 = 1.0;
+            const L2 = 2.0;
+            const Rs1 = { x: R1, y: R1 };
+            const Rs2 = { x: R2, y: R2 };
+
+            const offX = -0.5;
+            const offY = 0.5;
+            const du = offX / (n2.x - 1.0);
+            const dv = offY / (n2.y);
+            const UVmin2 = { x: du,     y: dv };
+            const UVmax2 = { x: 1 + du, y: 1 + dv };
+
+            const Rcut = 2.0;
+            const dR = 0.01;
+            const iFamily = 0;
+            const stickTypes = { x: 1, y: 0, z: 0, w: 0 };
+
+            // First tube
+            const iv0_1 = mesh.verts.length;
+            mesh.TubeSheet(n1, UVmin, UVmax, Rs1, L1, dirMask, twist, stickTypes);
+            const nVerts1 = n1.x * n1.y;
+            const sel1 = new Array(nVerts1);
+            for (let i = 0; i < nVerts1; i++) sel1[i] = iv0_1 + i;
+
+            // Second tube with shifted UV window
+
+
+            const iv0_2 = mesh.verts.length;
+            mesh.TubeSheet(n2, UVmin2, UVmax2, Rs2, L2, dirMask, twist, stickTypes);
+            const nVerts2 = n2.x * n2.y;
+            const sel2 = new Array(nVerts2);
+            for (let i = 0; i < nVerts2; i++) sel2[i] = iv0_2 + i;
+
+            // Bond-length analysis and connections
+            const groups = [];
+            const uniqLs = mesh.mapBondLengthsFromVertexSelections(sel1, sel2, Rcut, dR, groups);
+            if (uniqLs && uniqLs.length > 0 && groups && groups.length > 0) {
+                const k = Math.max(0, Math.min(iFamily, uniqLs.length - 1));
+                const fam = groups[k];
+                if (fam && fam.length > 0) {
+                    mesh.addEdgesFromPairs(fam, stickTypes.x);
+                }
+            }
+
+            // Inner triangular tube (single TubeSheet with 3-sided cross-section) placed inside the outer hex ring
+            const nTri = { x: 10, y: 3 };
+            const Rtri = Math.max(0.0, R2 - clearance);
+            const RsTri = { x: Rtri, y: Rtri };
+            // Rotate inner triangle by half a hex segment (30deg) via UV shift: dv = 1/(2*3) = 1/6
+            const dvTri = 1.0 / (2.0 * nTri.y)*0.5;
+            const axshift = -0.9;
+            const UVminTri = { x: axshift, y: dvTri };
+            const UVmaxTri = { x: 1 + axshift, y: 1 + dvTri };
+            const dirMaskTri = parseInt("1111", 2);
+            const iv0_tri = mesh.verts.length;
+            mesh.TubeSheet(nTri, UVminTri, UVmaxTri, RsTri, 20.0, dirMaskTri, 0.0, stickTypes);
+
+            // --- Parabolic pusher-plate / plasma nozzle dish above the damper ---
+            // Tuned parameters taken from MeshGenTestGUI ParametricParabola
+            // params: {"ny":4,"nx":7,"nx2":25,"L":3,"R1":0.5,"R2":3,"dirMask":"0111"}
+            const nRows  = 4;
+            const nInner = 7;   // inner ring segments
+            const nOuter = 25;  // outer ring segments
+            const R1dish = 1.732; // inner radius (hole)
+            const R2dish = 1.732*6; // outer radius
+            const Ldish  = 3.0*6; // axial height at R2
+
+            // Place dish just above the end of the tubes along +Z
+            const zShiftDish = L2*0.5;
+            const iv0_dish = mesh.verts.length;
+            mesh.ParametricParabolaPatch(nOuter, nInner, nRows, R1dish, R2dish, Ldish);
+            const iv1_dish = mesh.verts.length;
+            for (let i = iv0_dish; i < iv1_dish; i++) {
+                mesh.verts[i].pos.z += zShiftDish;
+            }
+
+            if (window.renderer) window.renderer.updateGeometry(mesh);
+            logger.info(`Test Complete. Verts: ${mesh.verts.length}, Edges: ${mesh.edges.length}`);
         }
     }
 };
