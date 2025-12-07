@@ -90,6 +90,111 @@ function revolveVolume(points) {
     return Math.max(V, 1e-6);
 }
 
+// Geometry Generators
+function makeParabolicCage(f, zMin, zMax, count) {
+    const coils = [];
+    // User wants "deeper cone", "length bigger than radius".
+    // Parabola z = a * r^2.
+    // If we want r to be smaller for given z, 'a' should be large.
+    // Let's use simple z = k * r^2  => r = sqrt(z/k).
+    // Or just parameterized: linear in Z, calculate R.
+    // User mentioned: "set of point with increasing diameter (like parabola...)"
+    // Let's stick to z = r^2 / (4f) + vertexZ.
+    // If f is small, it's narrow. If f is large, it's wide.
+    // User said "too open", so make f smaller?
+    // r = 2*sqrt(f*z). If f=0.25, r = 2*sqrt(0.25*z) = sqrt(z). At z=4, r=2. Deep enough.
+    // Let's try f=0.25.
+
+    for (let i = 0; i < count; i++) {
+        const t = i / (count - 1);
+        const z = zMin + (zMax - zMin) * t;
+        const r = 2 * Math.sqrt(f * z);
+        coils.push({ r, z, I: 0 });
+    }
+    return coils;
+}
+
+function makeSphericalPlasma(centerZ, radius, count) {
+    const nodes = [];
+    const currents = [];
+    const restLen = [];
+    // User suggestion: r=sin(theta) z=cos(theta) with constant step dTheta.
+    // Range: We want "ball". In R-Z, this is a semi-circle from pole to pole.
+    // Theta is angle from Z-axis.
+    // Range: 0 (North Pole) to PI (South Pole).
+    // But r must be >= 0. sin(0)=0, sin(PI)=0. sin(theta) > 0 for 0..PI.
+    // So theta goes from 0 to PI.
+    // Z = centerZ + R * cos(theta).
+    // R_cyl = R * sin(theta). (Cylindrical radius).
+
+    // NOTE: Avoid theta=0 and theta=PI exactly to prevent r=0 singularity/NaNs in Solver.
+    const eps = 0.1; // modest padding from axis
+    const startTheta = eps;
+    const endTheta = Math.PI - eps;
+
+    for (let i = 0; i < count; i++) {
+        const t = i / (count - 1);
+        const theta = startTheta + (endTheta - startTheta) * t;
+
+        const r = radius * Math.sin(theta);
+        const z = centerZ + radius * Math.cos(theta);
+
+        nodes.push({ r, z, vr: 0, vz: 0, m: 1.0 });
+        currents.push(0);
+        restLen.push(0);
+    }
+
+    // Rest lengths (simple chain)
+    for (let i = 0; i < count - 1; i++) {
+        const n0 = nodes[i];
+        const n1 = nodes[i + 1];
+        const dist = Math.sqrt(Math.pow(n1.r - n0.r, 2) + Math.pow(n1.z - n0.z, 2));
+        restLen[i] = dist;
+    }
+
+    return { nodes, currents, restLen };
+}
+
+export function initParabolicNozzle(sim) {
+    // Reduced counts for testing
+    const countCage = 8;
+    const countPlasma = 8;
+
+    // 1. SC Coil: At z=-0.5 (near vertex).
+    // Vertex of parabola at z=0.
+    // User wants "outside ... shielded by the metallic cage".
+    // Cage starts at z=0.2 (below).
+    // SC at z=-0.5 is safe.
+    sim.scCoils = [{ r: 1.2, z: -0.5, I: sim.params.scCurrent }];
+
+    // 2. Cage: Parabola. Deep. f=0.25 (Focus at 0.25).
+    // Range z=0.1 to z=3.0.
+    // At z=3.0, r = 2*sqrt(0.25*3) = 2*0.866 = 1.73. 
+    // Length (3.0) > Radius (1.73). Matches criteria.
+    sim.cageCoils = makeParabolicCage(0.25, 0.1, 3.0, countCage);
+    sim.cageCurrents = sim.cageCoils.map(() => 0);
+
+    // 3. Plasma: Sphere at focus? 
+    // Parabola focus f=0.25.
+    // Let's put plasma slightly further out for visibility or exactly at focus.
+    // User: "initially we have plasma ball very small in the focus".
+    // Dynamic logic usually expands it. Preset starts it somewhere?
+    // Let's start it at z=0.8 (inside the cone) with radius 0.4.
+    const centerZ = 0.8;
+    const radius = 0.4;
+    const plasma = makeSphericalPlasma(centerZ, radius, countPlasma);
+    sim.plasmaNodes = plasma.nodes;
+    sim.plasmaCurrents = plasma.currents;
+    sim.restLen = plasma.restLen;
+
+    sim.V0 = revolveVolume(sim.plasmaNodes);
+    sim.P0 = sim.params.plasmaPressure0;
+
+    // Set view to static solver mode by default?
+    // User requested "Static Solver Logic".
+    // We update params/flags if needed.
+}
+
 export function initSimulationState() {
     const state = {
         params: {
@@ -97,7 +202,7 @@ export function initSimulationState() {
             coilRadius: 1.0,
             plasmaPressure0: 1e4,
             gamma: 5 / 3,
-            alphaI: 1e8, // Tuned for SI units (prev 1e10 was too high/unstable with singularity)
+            alphaI: 1e8,
             lambdaI: 1e-3,
             springK: 50,
             damping: 0.995,
@@ -107,6 +212,9 @@ export function initSimulationState() {
         paused: false,
         autoStep: false, // do not step unless user presses Solve (or toggles auto)
         runSolver: false,
+
+        staticSolver: true, // NEW Flag for simplified mode
+
         scCoils: [{ r: 1.0, z: 0.0, I: 1.0 }],
         cageCoils: [{ r: 1.2, z: -0.4, I: 0 }, { r: 1.2, z: 0.4, I: 0 }],
         plasmaNodes: [],
@@ -117,29 +225,9 @@ export function initSimulationState() {
         P0: 1e4,
     };
 
-    const N = 24;
-    const radius = 0.6;
-    for (let i = 0; i < N; i++) {
-        const t = (i / N) * Math.PI * 2;
-        const r = radius + 0.05 * Math.cos(t * 2);
-        const z = 0.5 * Math.sin(t);
-        state.plasmaNodes.push({ r, z, vr: 0, vz: 0, m: 1.0 });
-        state.restLen.push(0);
-        state.plasmaCurrents.push(0);
-    }
+    // Default load (can be overwritten by UI calling initParabolicNozzle)
+    initParabolicNozzle(state);
 
-    // rest lengths
-    for (let i = 0; i < N; i++) {
-        const n0 = state.plasmaNodes[i];
-        const n1 = state.plasmaNodes[(i + 1) % N];
-        const dr = n1.r - n0.r;
-        const dz = n1.z - n0.z;
-        state.restLen[i] = Math.sqrt(dr * dr + dz * dz);
-    }
-
-    state.cageCurrents = state.cageCoils.map(() => 0);
-    state.V0 = revolveVolume(state.plasmaNodes);
-    state.P0 = state.params.plasmaPressure0;
     return state;
 }
 
@@ -174,17 +262,20 @@ export function applyCoils(state, scList, cageList) {
 }
 
 export function sampleFieldAtPoint(r, z, state) {
+    // Sample the total magnetic field at point (r, z) in the r-z plane
+    // coilField expects z to be the distance from the coil plane (coil at z=0)
+    // So we must pass (z - c.z) to get the field relative to each coil's position
     let Br = 0, Bz = 0;
     for (const c of state.scCoils) {
-        const f = coilField(r, z, c.I, c.r);
+        const f = coilField(r, z - c.z, c.I, c.r);
         Br += f.Br; Bz += f.Bz;
     }
     state.cageCoils.forEach((c, i) => {
-        const f = coilField(r, z, state.cageCurrents[i], c.r);
+        const f = coilField(r, z - c.z, state.cageCurrents[i], c.r);
         Br += f.Br; Bz += f.Bz;
     });
     state.plasmaNodes.forEach((p, i) => {
-        const f = coilField(r, z, state.plasmaCurrents[i], p.r);
+        const f = coilField(r, z - p.z, state.plasmaCurrents[i], p.r);
         Br += f.Br; Bz += f.Bz;
     });
     return { Br, Bz };
@@ -192,7 +283,8 @@ export function sampleFieldAtPoint(r, z, state) {
 
 function precomputeUnitFields(points, coils) {
     // returns array fields[point][coil] = {Br,Bz}
-    return points.map((p) => coils.map((c) => coilField(p.r, p.z, 1.0, c.r)));
+    // coilField expects z to be distance from coil plane, so we use (p.z - c.z)
+    return points.map((p) => coils.map((c) => coilField(p.r, p.z - c.z, 1.0, c.r)));
 }
 
 export function stepSimulation(state) {
@@ -213,12 +305,52 @@ export function stepSimulation(state) {
     const controls = controlPlasma.concat(controlCage);
 
     const coilsDynamic = [
-        ...state.plasmaNodes.map((p, i) => ({ r: p.r, idx: i, type: 'plasma' })),
-        ...state.cageCoils.map((c, i) => ({ r: c.r, idx: i, type: 'cage' })),
+        ...state.plasmaNodes.map((p, i) => ({ r: p.r, z: p.z, idx: i, type: 'plasma' })),
+        ...state.cageCoils.map((c, i) => ({ r: c.r, z: c.z, idx: i, type: 'cage' })),
     ];
 
-    const unitFields = precomputeUnitFields(controls, coilsDynamic.map(c => ({ r: c.r })));
-    const fixedB = controls.map(cp => sampleFieldAtPoint(cp.r, cp.z, { ...state, cageCurrents: state.cageCurrents.map(_ => 0), plasmaCurrents: state.plasmaCurrents.map(_ => 0) }));
+    // Pass coils with z-coordinates so precomputeUnitFields can compute relative distances
+    const unitFields = precomputeUnitFields(controls, coilsDynamic);
+
+    // Static Solver Targets:
+    // 1. Cage Control Points: Preserve initial flux (from SC only).
+    //    Target B = B_sc_only.
+    // 2. Plasma Control Points: Expel field (Diamagnetic).
+    //    Target B = 0.
+
+    // First, compute B_sc at all control points
+    const B_sc_only = controls.map(cp => {
+        let Br = 0, Bz = 0;
+        state.scCoils.forEach(c => {
+            // coilField expects z to be distance from coil plane
+            const f = coilField(cp.r, cp.z - c.z, c.I, c.r);
+            Br += f.Br; Bz += f.Bz;
+        });
+        return { Br, Bz };
+    });
+
+    // Set targets based on type
+    controls.forEach((cp, i) => {
+        const isCage = i >= state.plasmaNodes.length; // Cage points appended after plasma
+        if (isCage) {
+            // Cage: Target = B_sc_only (Flux conservation: Total B stays what it was initially)
+            cp.targetBr = B_sc_only[i].Br;
+            cp.targetBz = B_sc_only[i].Bz;
+        } else {
+            // Plasma: Target = 0 (Diamagnetism)
+            cp.targetBr = 0;
+            cp.targetBz = 0;
+        }
+    });
+
+    // Precompute constant part of B (fixed fields from SC) needed for residual calc
+    // Residual = (A*x + B_fixed) - Target
+    // Here B_fixed IS B_sc_only (since cage/plasma are the variables 'x')
+    // So Residual = A*x + B_sc_only - Target
+    // For Cage: Target = B_sc_only => Residual = A*x
+    // For Plasma: Target = 0 => Residual = A*x + B_sc_only
+
+    const fixedB = B_sc_only; // The field from "fixed" sources (SC)
 
     // Iterative gradient descent for currents
     const nIter = 8;
@@ -293,6 +425,8 @@ export function stepSimulation(state) {
             logger.info(`Interaction Matrix |A|:\n${logger.formatMatrix(mat, rows, cols, 3)}`, Logger.INFO);
         }
     }
+
+    if (state.staticSolver) return;
 
     // Pressure
     const V = revolveVolume(state.plasmaNodes);

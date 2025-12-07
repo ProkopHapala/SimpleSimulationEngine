@@ -58,138 +58,165 @@ export class DemoRenderer {
 
     makeFieldPoints() {
         const n = 32;
-        const positions = new Float32Array(n * n * 3);
-        const colors = new Float32Array(n * n * 3);
+        // Use LineSegments for vector field
+        // Each vector is a small line. 
+        // 2 vertices per point.
+        const positions = new Float32Array(n * n * 2 * 3);
+        const colors = new Float32Array(n * n * 2 * 3);
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        const mat = new THREE.PointsMaterial({ size: 0.04, vertexColors: true, transparent: true, opacity: 0.9 });
-        return new THREE.Points(geo, mat);
+        const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 });
+        return new THREE.LineSegments(geo, mat);
     }
 
     updateField(sim) {
         const n = 32;
-        const sizeR = 1.8;
-        const sizeZ = 1.8;
+        const sizeR = 2.5; // Larger view
+        const sizeZ = 4.0;
         const pos = this.fieldPoints.geometry.getAttribute('position').array;
         const col = this.fieldPoints.geometry.getAttribute('color').array;
         let idx = 0;
-        let maxB = 1e-5; // sensible min
-        const mags = [];
+        let maxB = 1e-4; // Adapt auto-scale
+
+        // Pass 1: find maxB (magnitude) to normalize colors
+        // But we want vectors. 
+        // Let's define grid.
+
+        // Z range: -1 to +4 (to cover nozzle)
+        // R range: 0 to 2.5
+
+        const zMin = -1.0;
+        const zMax = 4.0;
+        const rMax = 2.5;
+
+        // Temp arrays to store B values to avoid re-sampling
+        const samples = [];
+
         for (let j = 0; j < n; j++) {
-            const z = -sizeZ + (2 * sizeZ * j) / (n - 1);
+            const z = zMin + (zMax - zMin) * (j / (n - 1));
             for (let i = 0; i < n; i++) {
-                const r = (2 * sizeR * i) / (n - 1);
-                pos[idx * 3 + 0] = z; // Map Z to X for viewing
-                pos[idx * 3 + 1] = r; // Map R to Y
-                pos[idx * 3 + 2] = 0;
+                const r = rMax * (i / (n - 1));
                 const B = sampleFieldAtPoint(Math.abs(r), z, sim);
-                let m = Math.sqrt(B.Br * B.Br + B.Bz * B.Bz);
-                if (!isFinite(m)) m = 0;
-                mags[idx] = m;
-                if (m > maxB) maxB = m;
-                idx++;
+                const m = Math.sqrt(B.Br * B.Br + B.Bz * B.Bz);
+                if (m > maxB && isFinite(m)) maxB = m;
+                samples.push({ r, z, Br: B.Br, Bz: B.Bz, m });
             }
         }
-        idx = 0;
-        for (let k = 0; k < mags.length; k++) {
-            const v = Math.min(1.0, mags[k] / (maxB + 1e-9));
+
+        // Pass 2: build lines
+        // Vector scale length
+        const segLen = 0.08;
+
+        for (let k = 0; k < samples.length; k++) {
+            const samp = samples[k];
+            // Normalize B for direction
+            let br = 0, bz = 1;
+            if (samp.m > 1e-12) {
+                br = samp.Br / samp.m;
+                bz = samp.Bz / samp.m;
+            }
+            // Center of the vector
+            const cz = samp.z; // X in view
+            const cr = samp.r; // Y in view
+
+            // Start and End
+            // Visual mapping: z->x, r->y
+            const x0 = cz - bz * segLen * 0.5;
+            const y0 = cr - br * segLen * 0.5;
+            const x1 = cz + bz * segLen * 0.5;
+            const y1 = cr + br * segLen * 0.5;
+
+            pos[idx * 3 + 0] = x0; pos[idx * 3 + 1] = y0; pos[idx * 3 + 2] = 0;
+            pos[idx * 3 + 3] = x1; pos[idx * 3 + 4] = y1; pos[idx * 3 + 5] = 0;
+
+            // Color based on magnitude (simple heatmap)
+            // Blue (weak) -> Red (strong)
+            const v = Math.min(1.0, samp.m / (maxB * 0.8 + 1e-9));
             const rcol = v;
-            const gcol = Math.max(0, 1.0 - Math.abs(v - 0.5) * 2.0);
+            const gcol = Math.max(0, 0.5 - Math.abs(v - 0.5));
             const bcol = 1.0 - v;
-            col[idx * 3 + 0] = rcol;
-            col[idx * 3 + 1] = gcol;
-            col[idx * 3 + 2] = bcol;
-            idx++;
+
+            // Gradient along line? Or solid. Solid for now.
+            col[idx * 3 + 0] = rcol; col[idx * 3 + 1] = gcol; col[idx * 3 + 2] = bcol;
+            col[idx * 3 + 3] = rcol; col[idx * 3 + 4] = gcol; col[idx * 3 + 5] = bcol;
+
+            idx += 2;
         }
+
         this.fieldPoints.geometry.attributes.position.needsUpdate = true;
         this.fieldPoints.geometry.attributes.color.needsUpdate = true;
     }
 
+    makeLine(color) {
+        const geo = new THREE.BufferGeometry();
+        // Initial buffer size
+        const maxVerts = 2000;
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxVerts * 3), 3));
+        const mat = new THREE.LineBasicMaterial({ color });
+        const mesh = new THREE.Line(geo, mat);
+        mesh.frustumCulled = false;
+        return mesh;
+    }
+
     updateLines(sim) {
         const updateMesh = (mesh, coilList, isPlasma) => {
+            // We want to visualize the "Shape".
+            // 1. Rings (Draw3D.drawCircleAxis) -> LineSegments
+            // 2. Profile (connecting centers) -> LineStrip (THREE.Line)
+            // But 'mesh' is currently LineSegments.
+            // Let's just draw the profile for the Cage and Plasma Surface to clearly show the Parabola/Sphere.
+            // And maybe small rings or ticks?
+            // User complained about "3D tubes" before. "Simple lines".
+
+            // To fix "Rugby ball" and "Cone" perception, we MUST draw the profile curve.
+            // But we only have a list of coils.
+            // Let's populate the buffer with segments connecting coil centers.
+
+            // If we use LineSegments, we need pairs.
+            // (p0, p1), (p1, p2)...
+
             const vertices = [];
-            const pos = { x: 0, y: 0, z: 0 }; // center of coil
-            const axis = { x: 1, y: 0, z: 0 }; // axis of coil (Z-axis in physics maps to X-axis in view?)
-            // Wait, coordinate mapping: R->Y, Z->X. 
-            // Physics: Z is symmetry axis. R is radial.
-            // Screen: X is Horizontal, Y is Vertical.
-            // Typical 2D plot: Z on X-axis, R on Y-axis.
-            // In 3D view: 
-            // We want to see the rings.
-            // If Z is X-axis, then the rings are in Y-Z plane (of screen coords)?
-            // No, the rings are around the Z-axis (physics).
-            // So they form circles in the X-Y plane (physics).
-            // But we display Z (physics) as X (screen).
-            // This is getting confusing.
-            // Let's stick to: Physics Z -> Screen X. Physics R -> Screen Y (radius).
-            // So the ring is "standing up" perpendicular to Screen X?
-            // Yes. The ring is in the plane Z_phys = constant.
-            // So it lives in (X_phys, Y_phys).
-            // We only see R_phys = sqrt(X^2 + Y^2).
-            // If we rotate the view in 3D, we want to see the actual 3D rings.
-            // Physics Z -> 3D World X.
-            // Physics R -> radial distance from 3D World X.
-            // Start vector can be (0, R, 0) (which is Y in 3D world).
-            // Axis of rotation is (1, 0, 0) (X in 3D world).
 
-            const nSegs = 32;
-
-            // Check mapping from updateField:
-            // pos[idx*3+0] = z; // X
-            // pos[idx*3+1] = r; // Y
-            // So Z_phys -> X_world.
-            // R_phys -> Y_world (at phi=0).
-
-            const uaxis = { x: 1, y: 0, z: 0 };
-
-            if (isPlasma) {
-                // Plasma is a list of nodes forming a loop in R-Z plane.
-                // It is actually a "Surface of Revolution".
-                // Detailed 3D view would be a mesh.
-                // But for "Simple Lines", maybe we just draw the R-Z profile?
-                // User asked to see "Expanding plasma coils".
-                // If we draw rings for every node, it might be cluttered.
-                // But let's try drawing rings for every node first.
-                coilList.forEach(p => {
-                    const startV = { x: 0, y: p.r, z: 0 };
-                    const center = { x: p.z, y: 0, z: 0 };
-                    Draw3D.drawCircleAxis(nSegs, center, startV, uaxis, p.r, vertices);
-                });
-                // Also draw the profile?
-                // Connect centers (p.z, p.r)
-                /*
-                for(let i=0; i<coilList.length; i++) {
+            // Draw Profile (Connectivity)
+            if (coilList.length > 1) {
+                for (let i = 0; i < coilList.length - 1; i++) {
                     const p0 = coilList[i];
-                    const p1 = coilList[(i+1)%coilList.length];
+                    const p1 = coilList[i + 1];
+                    // Top profile (+r)
                     vertices.push(p0.z, p0.r, 0);
                     vertices.push(p1.z, p1.r, 0);
-                    // mirror ?
+
+                    // Bottom profile (-r) - mirror for visualisation
                     vertices.push(p0.z, -p0.r, 0);
                     vertices.push(p1.z, -p1.r, 0);
                 }
-                */
-            } else {
-                coilList.forEach(c => {
-                    const startV = { x: 0, y: c.r, z: 0 };
-                    const center = { x: c.z, y: 0, z: 0 };
-                    Draw3D.drawCircleAxis(nSegs, center, startV, uaxis, c.r, vertices);
-                });
+                // Close loop for Plasma?
+                if (isPlasma) {
+                    // Plasma surface is not simple loop in Z-ordering usually?
+                    // makeSphericalPlasma orders them by angle.
+                    // It is an arc from pole to pole.
+                    // We don't close pLast to p0.
+                }
             }
 
-            // Expand buffer if needed
-            const needed = vertices.length;
-            const currentSize = mesh.geometry.attributes.position.array.length;
-            if (needed > currentSize) {
-                mesh.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(needed * 2), 3));
+            // Draw 3D rings at each coil position
+            // startV must be a UNIT vector - Draw3D multiplies it by the radius R
+            const uaxis = { x: 1, y: 0, z: 0 };
+            const nSegs = 32;
+            coilList.forEach(p => {
+                const center = { x: p.z, y: 0, z: 0 };
+                const startV = { x: 0, y: 1, z: 0 };  // Unit vector in Y direction
+                Draw3D.drawCircleAxis(nSegs, center, startV, uaxis, p.r, vertices);
+            });
+
+            const posAttr = mesh.geometry.attributes.position;
+            if (vertices.length > posAttr.array.length) {
+                mesh.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices.length + 1000), 3));
             }
-
-            const arr = mesh.geometry.attributes.position.array;
-            for (let i = 0; i < needed; i++) arr[i] = vertices[i];
-
-            mesh.geometry.setDrawRange(0, needed / 3);
+            mesh.geometry.attributes.position.array.set(vertices);
             mesh.geometry.attributes.position.needsUpdate = true;
-            mesh.geometry.computeBoundingSphere();
+            mesh.geometry.setDrawRange(0, vertices.length / 3);
         };
 
         updateMesh(this.plasmaLine, sim.plasmaNodes, true);

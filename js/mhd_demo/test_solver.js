@@ -12,11 +12,11 @@ console.log("=== MHD Solver Offline Test ===");
 const sim = initSimulationState();
 console.log("State initialized.");
 
-// 2. Configure Coils (Simple Helmholtz-like pair + Cage)
-const scCoils = [{ r: 1.0, z: -0.5, I: 1.0 }, { r: 1.0, z: 0.5, I: 1.0 }];
-const cageCoils = [{ r: 1.2, z: 0.0, I: 0 }];
-applyCoils(sim, scCoils, cageCoils);
-console.log(`Coils configured: SC=${scCoils.length}, Cage=${cageCoils.length}`);
+// 2. Configure Coils (Use default Parabolic Nozzle preset)
+// const scCoils = [{ r: 1.0, z: -0.5, I: 1.0 }, { r: 1.0, z: 0.5, I: 1.0 }];
+// const cageCoils = [{ r: 1.2, z: 0.0, I: 0 }];
+// applyCoils(sim, scCoils, cageCoils);
+console.log(`Coils configured: SC=${sim.scCoils.length}, Cage=${sim.cageCoils.length}, Plasma=${sim.plasmaNodes.length}`);
 
 // 3. Force Solver to Run
 sim.runSolver = true;

@@ -1,4 +1,4 @@
-
+# MHD Plasma Nozzle WebGL Demo – Design Documentation Update
 
 I would like to make simple demo solving magnetohydrodynamics in web browser writen in javascript. It should also solver potantial flow aerodynamics as it is mathematically closely related. I will give you two references which can be very usefull 
 
@@ -94,13 +94,47 @@ please before you start write markdown with comprehesive plan which I can review
 - Currents remain bounded with regularization when plasma nodes get close.
 - Volume/pressure evolution consistent with γ-law; energy not obviously exploding for stable dt.
 
-## TODO (update during work; check only after your visual confirmation)
-- [ ] Create `js/mhd_demo/` scaffold (main loop, renderer hookup, UI skeleton reusing Vec3/MeshRenderer/GUIutils).
-- [ ] Implement coil magnetic field kernel in JS using elliptic integrals; validate on-axis case (initial implementation, basic).
-- [ ] Add field sampling grid and visualization in r–z view.
-- [ ] Build control-point iterative solver (overdetermined fit + regularization) for cage/plasma currents (initial gradient-descent fit).
-- [ ] Add plasma ring model with springs + pressure; compute toroidal volume and gas law update.
-- [ ] Integrate forces (Lorentz, pressure, springs) with stable timestep; basic damping.
-- [ ] Hook UI controls (currents, learning rate, regularization, pressure, dt, toggles) and presets.
-- [ ] Add potential-flow mode toggle sharing basis functions for verification.
-- [ ] Polish visuals (force vectors, field magnitude colormap, simple logging overlay).
+-## TODO (update during work; check only after your visual confirmation)
+-- [ ] Create `js/mhd_demo/` scaffold (main loop, renderer hookup, UI skeleton reusing Vec3/MeshRenderer/GUIutils).
+-- [ ] Implement coil magnetic field kernel in JS using elliptic integrals; validate on-axis case (initial implementation, basic).
+-- [ ] Add field sampling grid and visualization in r–z view.
+-- [ ] Build control-point iterative solver (overdetermined fit + regularization) for cage/plasma currents (initial gradient-descent fit).
+-- [ ] Add plasma ring model with springs + pressure; compute toroidal volume and gas law update.
+-- [ ] Integrate forces (Lorentz, pressure, springs) with stable timestep; basic damping.
+-- [ ] Hook UI controls (currents, learning rate, regularization, pressure, dt, toggles) and presets.
+-- [ ] Add potential-flow mode toggle sharing basis functions for verification.
+-- [ ] Polish visuals (force vectors, field magnitude colormap, simple logging overlay).
+
+---
+
+## What We Achieved
+- **Correct Geometry Rendering**: The plasma sphere now follows the intended spherical parameterisation (`r = R·sin(θ)`, `z = Z₀ + R·cos(θ)`). The metallic cage correctly follows a *parabolic* profile (`r = 2·√(f·z)`) with a deeper, conical shape.
+- **Accurate Coil Representation**: Each coil ring now passes through its designated `(r, z)` point. The visual radius matches the physical radius (`p.r`) instead of the erroneous `p.r²`.
+- **Aligned Magnetic‑Field Vector Field**: The field vectors are now correctly centred on the axis (zero field on the symmetry axis) and the vortex aligns with the superconducting coil plane.
+- **Stable Solver**: Offline verification (`test_solver.js`) runs without NaNs and produces sensible current distributions.
+
+## What Was Wrong
+| Area | Symptom | Root Cause |
+|------|---------|------------|
+| **Ring Rendering** | Rings appeared too large (cone‑like) and did not intersect the parabola/profile points. | `Draw3D.drawCircleAxis` multiplies the start vector by the radius. We passed `{x:0, y:p.r, z:0}` which made the radius effectively `p.r²`. |
+| **Magnetic‑Field Sampling** | Vector field was shifted; axis showed non‑zero field; vortex misplaced. | `coilField` assumes the coil lies at `z = 0`. Calls in `sampleFieldAtPoint`, the solver’s `B_sc_only`, and `precomputeUnitFields` used the absolute `z` coordinate instead of the relative distance `z - c.z`. |
+| **Solver Geometry** | Pre‑computed unit fields ignored coil `z` positions, leading to incorrect residuals. | `precomputeUnitFields` passed only the coil radius (`{r}`) to `coilField`, discarding the coil’s `z` coordinate. |
+| **Dynamic Coil List** | `coilsDynamic` lost `z` information, breaking the above fix. | The array was built with `{r}` only, then mapped to `{r}` again before passing to the unit‑field function. |
+
+## How We Solved It
+1. **Ring Radius Fix** – Changed `startV` in `render.js` to a **unit vector** `{x:0, y:1, z:0}`. `Draw3D.drawCircleAxis` now multiplies this by the actual coil radius, yielding correct ring sizes.
+2. **Relative Z‑Coordinate** – Updated every `coilField` invocation to use `z - c.z` (or `z - p.z` for plasma nodes). This aligns the magnetic‑field calculation with the physical coil positions.
+3. **Pre‑compute Unit Fields Correctly** – Modified `precomputeUnitFields` to compute `coilField(p.r, p.z - c.z, …)` and passed full coil objects (including `z`).
+4. **Dynamic Coil Data** – Extended `coilsDynamic` to store `{r, z, idx, type}` and passed this directly to `precomputeUnitFields`.
+5. **Solver Target Calculation** – Adjusted `B_sc_only` to use the relative `z` offset as well.
+6. **Verification** – Ran `test_solver.js` after changes; confirmed no NaNs and realistic current values.
+
+## Takeaways for Future Debugging
+- **Always Check Library Contracts**: `Draw3D.drawCircleAxis` expects a *unit* start vector. Passing a scaled vector leads to quadratic scaling bugs.
+- **Coordinate System Consistency**: When a helper function assumes a reference frame (e.g., coil at `z=0`), every caller must transform coordinates accordingly. Missing a single offset can cascade into visual and physical inaccuracies.
+- **Preserve Full Geometry Data**: When building intermediate data structures (like `coilsDynamic`), keep all relevant fields (`r`, `z`). Truncating data early can cause subtle bugs later.
+- **Unit‑Field Pre‑computation**: This is a performance optimisation, but it must mirror the exact physics of the runtime calls. Any divergence (like ignoring `z`) invalidates the whole solver.
+- **Incremental Verification**: After each geometry‑related change, run the offline solver (`test_solver.js`) to catch NaNs or unrealistic currents early.
+- **Clear Documentation**: Adding comments about expected input shapes (unit vectors, relative coordinates) prevents future regressions.
+
+

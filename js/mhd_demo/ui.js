@@ -1,5 +1,6 @@
+
 // Minimal UI binding
-import { initSimulationState, applyCoils, rebuildPlasma } from './physics.js';
+import { initSimulationState, applyCoils, rebuildPlasma, initParabolicNozzle } from './physics.js';
 import { Logger } from '../common_js/Logger.js';
 
 export function initUI(sim, renderer) {
@@ -19,9 +20,54 @@ export function initUI(sim, renderer) {
     const cageText = document.getElementById('cage-coils');
     const logEl = document.getElementById('log');
 
+    // Add Legend
+    const legend = document.createElement('div');
+    legend.style.position = 'fixed';
+    legend.style.top = '10px';
+    legend.style.right = '10px';
+    legend.style.background = 'rgba(0,0,0,0.6)';
+    legend.style.padding = '8px';
+    legend.style.border = '1px solid #444';
+    legend.style.borderRadius = '4px';
+    legend.innerHTML = `
+        <div style="color:#66ff66">■ Superconductor</div>
+        <div style="color:#ffa500">■ Metallic Cage</div>
+        <div style="color:#00c2ff">■ Plasma Surface</div>
+    `;
+    document.body.appendChild(legend);
+
+    // Add Preset Button
+    const presetBtn = document.createElement('button');
+    presetBtn.textContent = "Load Parabolic Nozzle";
+    presetBtn.style.marginTop = "6px";
+    presetBtn.style.width = "100%";
+    applyBtn.parentElement.insertBefore(presetBtn, applyBtn);
+
+    presetBtn.addEventListener('click', () => {
+        // Reset state
+        const fresh = initSimulationState();
+        // Force parabolic (though initSimulationState already does it by default now, consistent to call explicitly)
+        initParabolicNozzle(fresh);
+
+        Object.keys(sim).forEach(k => delete sim[k]);
+        Object.assign(sim, fresh);
+
+        // Update UI Text areas
+        const formatCoils = (list) => list.map(c => `${c.r.toFixed(2)} ${c.z.toFixed(2)} ${c.I} `).join('\n');
+        scText.value = formatCoils(sim.scCoils);
+        cageText.value = formatCoils(sim.cageCoils);
+
+        updateLabels();
+        log('Loaded Parabolic Nozzle Preset');
+    });
+
     if (typeof window !== 'undefined') {
         window.logger = window.logger || new Logger();
         window.logger.setContainer(logEl);
+        // Sync text areas on load
+        const formatCoils = (list) => list.map(c => `${c.r.toFixed(2)} ${c.z.toFixed(2)} ${c.I} `).join('\n');
+        scText.value = formatCoils(sim.scCoils);
+        cageText.value = formatCoils(sim.cageCoils);
     }
 
     const updateLabels = () => {
@@ -82,7 +128,7 @@ export function initUI(sim, renderer) {
     });
     verbSel.addEventListener('change', () => {
         sim.params.solverVerb = parseInt(verbSel.value) || 0;
-        log(`Verbosity set to ${sim.params.solverVerb}`);
+        log(`Verbosity set to ${sim.params.solverVerb} `);
     });
 
     function log(msg) {
