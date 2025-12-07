@@ -57,6 +57,22 @@ export class Logger {
         }
     }
 
+    formatVector(vec, digits = 3) {
+        return '[' + vec.map(v => Number(v).toFixed(digits)).join(', ') + ']';
+    }
+
+    formatMatrix(mat, rows, cols, digits = 3) {
+        const lines = [];
+        for (let r = 0; r < rows; r++) {
+            const row = [];
+            for (let c = 0; c < cols; c++) {
+                row.push(Number(mat[r * cols + c]).toFixed(digits));
+            }
+            lines.push(row.join(' '));
+        }
+        return lines.join('\n');
+    }
+
     log(message, level = Logger.INFO) {
         // Caller info (simple stack trace parsing)
         let caller = "";

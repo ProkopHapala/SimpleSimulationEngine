@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>MHD Web Demo</title>
+  <style>
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0d0f12; color:#e0e0e0; font-family:Arial, sans-serif; }
+    #ui { position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.55); padding:10px 12px; border:1px solid #333; border-radius:6px; backdrop-filter:blur(6px); }
+    #ui label { display:block; margin:4px 0 2px; }
+    #ui input[type=range] { width:160px; }
+    #log { position:fixed; bottom:10px; left:10px; right:10px; max-height:120px; overflow:auto; font-size:12px; background:rgba(0,0,0,0.4); padding:6px; border:1px solid #222; }
+    #canvas-container { width:100%; height:100%; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="ui">
+    <label>Coil current <span id="coil-val"></span></label>
+    <input id="coil-slider" type="range" min="0" max="100" value="50" step="1">
+    <label>Plasma pressure <span id="p-val"></span></label>
+    <input id="p-slider" type="range" min="0" max="200" value="80" step="2">
+    <label>Time step</label>
+    <input id="dt" type="number" value="0.01" step="0.005" style="width:70px">
+    <label>Plasma radius / nodes</label>
+    <input id="plasma-radius" type="number" value="0.6" step="0.05" style="width:70px">
+    <input id="plasma-nodes" type="number" value="24" step="2" style="width:70px">
+    <label>Superconducting coils (r,I lines)</label>
+    <textarea id="sc-coils" rows="3" cols="22">1.0 1.0</textarea>
+    <label>Cage coils (r,I lines)</label>
+    <textarea id="cage-coils" rows="3" cols="22">1.2 0.0
+1.2 0.0</textarea>
+    <div style="margin-top:6px;">
+      <button id="apply-btn">Apply config</button>
+      <button id="solve-btn">Solve currents</button>
+      <button id="reset-btn">Reset</button>
+      <button id="pause-btn">Pause</button>
+    </div>
+    <label>Verbosity</label>
+    <select id="verb">
+      <option value="0">0</option>
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+  </div>
+  <div id="log"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

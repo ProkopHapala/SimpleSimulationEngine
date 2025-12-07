@@ -94,3 +94,13 @@ please before you start write markdown with comprehesive plan which I can review
 - Currents remain bounded with regularization when plasma nodes get close.
 - Volume/pressure evolution consistent with γ-law; energy not obviously exploding for stable dt.
 
+## TODO (update during work; check only after your visual confirmation)
+- [ ] Create `js/mhd_demo/` scaffold (main loop, renderer hookup, UI skeleton reusing Vec3/MeshRenderer/GUIutils).
+- [ ] Implement coil magnetic field kernel in JS using elliptic integrals; validate on-axis case (initial implementation, basic).
+- [ ] Add field sampling grid and visualization in r–z view.
+- [ ] Build control-point iterative solver (overdetermined fit + regularization) for cage/plasma currents (initial gradient-descent fit).
+- [ ] Add plasma ring model with springs + pressure; compute toroidal volume and gas law update.
+- [ ] Integrate forces (Lorentz, pressure, springs) with stable timestep; basic damping.
+- [ ] Hook UI controls (currents, learning rate, regularization, pressure, dt, toggles) and presets.
+- [ ] Add potential-flow mode toggle sharing basis functions for verification.
+- [ ] Polish visuals (force vectors, field magnitude colormap, simple logging overlay).
