@@ -1,58 +1,161 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>MHD Web Demo</title>
-  <style>
-    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0d0f12; color:#e0e0e0; font-family:Arial, sans-serif; }
-    #ui { position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.55); padding:10px 12px; border:1px solid #333; border-radius:6px; backdrop-filter:blur(6px); }
-    #ui label { display:block; margin:4px 0 2px; }
-    #ui input[type=range] { width:160px; }
-    #log { position:fixed; bottom:10px; left:10px; right:10px; max-height:120px; overflow:auto; font-size:12px; background:rgba(0,0,0,0.4); padding:6px; border:1px solid #222; }
-    #canvas-container { width:100%; height:100%; }
-  </style>
-  <script type="importmap">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>MHD Plasma Nozzle Demo</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .label {
+            color: #FFF;
+            font-family: monospace;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 4px;
+            border-radius: 4px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+    <script type="importmap">
     {
       "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+        "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js",
+        "three/examples/jsm/renderers/CSS2DRenderer.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS2DRenderer.js"
       }
     }
   </script>
 </head>
+
 <body>
-  <div id="canvas-container"></div>
-  <div id="ui">
-    <label>Coil current <span id="coil-val"></span></label>
-    <input id="coil-slider" type="range" min="0" max="100" value="50" step="1">
-    <label>Plasma pressure <span id="p-val"></span></label>
-    <input id="p-slider" type="range" min="0" max="200" value="80" step="2">
-    <label>Time step</label>
-    <input id="dt" type="number" value="0.01" step="0.005" style="width:70px">
-    <label>Plasma radius / nodes</label>
-    <input id="plasma-radius" type="number" value="0.6" step="0.05" style="width:70px">
-    <input id="plasma-nodes" type="number" value="24" step="2" style="width:70px">
-    <label>Superconducting coils (r,I lines)</label>
-    <textarea id="sc-coils" rows="3" cols="22">1.0 1.0</textarea>
-    <label>Cage coils (r,I lines)</label>
-    <textarea id="cage-coils" rows="3" cols="22">1.2 0.0
-1.2 0.0</textarea>
-    <div style="margin-top:6px;">
-      <button id="apply-btn">Apply config</button>
-      <button id="solve-btn">Solve currents</button>
-      <button id="reset-btn">Reset</button>
-      <button id="pause-btn">Pause</button>
+    <div id="canvas-container"></div>
+
+    <div id="side-panel">
+        <!-- State Selection -->
+        <div class="panel-section">
+            <h3>Simulation State</h3>
+            <div class="btn-group">
+                <button id="btn-state0" class="active">t=0 (Initial)</button>
+                <button id="btn-state1">t=1 (Expanded)</button>
+            </div>
+            <div class="control-row">
+                <label>Plasma radius t=0</label>
+                <input type="number" id="plasma-r0" value="0.1" step="0.02" min="0.01">
+            </div>
+            <div class="control-row">
+                <label>Plasma radius t=1</label>
+                <input type="number" id="plasma-r1" value="0.5" step="0.05" min="0.1">
+            </div>
+            <div class="control-row">
+                <label>Plasma center Z</label>
+                <input type="number" id="plasma-z0" value="0.25" step="0.05">
+            </div>
+        </div>
+
+        <!-- Coil Parameters -->
+        <div class="panel-section">
+            <h3>Superconductor Coil</h3>
+            <div class="control-row">
+                <label>Current (kA)</label>
+                <input type="number" id="sc-current" value="50" step="5" min="0">
+            </div>
+            <div class="control-row">
+                <label>Radius</label>
+                <input type="number" id="sc-radius" value="1.2" step="0.1" min="0.1">
+            </div>
+            <div class="control-row">
+                <label>Z position</label>
+                <input type="number" id="sc-z" value="-0.5" step="0.1">
+            </div>
+        </div>
+
+        <!-- Cage Parameters -->
+        <div class="panel-section">
+            <h3>Parabolic Cage</h3>
+            <div class="control-row">
+                <label>Focus (f)</label>
+                <input type="number" id="cage-f" value="0.25" step="0.05" min="0.05">
+            </div>
+            <div class="control-row">
+                <label>Z min</label>
+                <input type="number" id="cage-zmin" value="0.1" step="0.1" min="0">
+            </div>
+            <div class="control-row">
+                <label>Z max</label>
+                <input type="number" id="cage-zmax" value="3.0" step="0.2" min="0.5">
+            </div>
+            <div class="control-row">
+                <label>Coil count</label>
+                <input type="number" id="cage-count" value="8" step="1" min="3" max="30">
+            </div>
+        </div>
+
+        <!-- Solver -->
+        <div class="panel-section">
+            <h3>Solver</h3>
+            <div class="control-row">
+                <label>Method</label>
+                <select id="solver-method">
+                    <option value="control-points">Control Points</option>
+                    <option value="flux">Flux Conservation</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button id="btn-solve" class="primary">Solve Currents</button>
+                <button id="btn-reset">Reset</button>
+            </div>
+        </div>
+
+        <!-- Visualization -->
+        <div class="panel-section">
+            <h3>Visualization</h3>
+            <div class="checkbox-row">
+                <label><input type="checkbox" id="chk-field" checked> Show Field Vectors</label>
+                <label><input type="checkbox" id="chk-control-pts"> Show Control Points</label>
+            </div>
+            <div class="checkbox-row">
+                <label><input type="checkbox" id="chk-rings" checked> Show Coil Rings</label>
+                <label><input type="checkbox" id="chk-profile" checked> Show Profile Lines</label>
+            </div>
+            <div class="control-row">
+                <label>Field scale</label>
+                <input type="number" id="field-scale" value="1.0" step="0.1" min="0.1">
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="panel-section">
+            <h3>Legend</h3>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#66ff66"></div>
+                    <span>Superconductor</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#ffa500"></div>
+                    <span>Metallic Cage</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#00c2ff"></div>
+                    <span>Plasma Surface</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background:#ff66ff"></div>
+                    <span>Control Points</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="panel-section" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>Log</h3>
+            <div id="log"></div>
+        </div>
     </div>
-    <label>Verbosity</label>
-    <select id="verb">
-      <option value="0">0</option>
-      <option value="1" selected>1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-    </select>
-  </div>
-  <div id="log"></div>
-  <script type="module" src="./main.js"></script>
+
+    <script type="module" src="./main.js"></script>
 </body>
+
 </html>

@@ -70,7 +70,7 @@ export function coilField(r, z, I, a) {
     const Br = common * (zp * invR) * (-K + (a * a + rp * rp + zp * zp) / denom2 * E);
     const Bz = common * (K + (a * a - rp * rp - zp * zp) / denom2 * E);
     return {
-        Br: isFinite(Br) ? Br : 0,
+        Br: (isFinite(Br) && rp > 1e-6) ? Br : 0,
         Bz: isFinite(Bz) ? Bz : 0
     };
 }
@@ -93,22 +93,15 @@ function revolveVolume(points) {
 // Geometry Generators
 function makeParabolicCage(f, zMin, zMax, count) {
     const coils = [];
-    // User wants "deeper cone", "length bigger than radius".
-    // Parabola z = a * r^2.
-    // If we want r to be smaller for given z, 'a' should be large.
-    // Let's use simple z = k * r^2  => r = sqrt(z/k).
-    // Or just parameterized: linear in Z, calculate R.
-    // User mentioned: "set of point with increasing diameter (like parabola...)"
-    // Let's stick to z = r^2 / (4f) + vertexZ.
-    // If f is small, it's narrow. If f is large, it's wide.
-    // User said "too open", so make f smaller?
-    // r = 2*sqrt(f*z). If f=0.25, r = 2*sqrt(0.25*z) = sqrt(z). At z=4, r=2. Deep enough.
-    // Let's try f=0.25.
+    // User requested constant radial step for denser rings near vertex
+    // Parabola: r = 2 * sqrt(f * z)  => z = r^2 / (4f)
+    const rMin = 2 * Math.sqrt(f * zMin);
+    const rMax = 2 * Math.sqrt(f * zMax);
 
     for (let i = 0; i < count; i++) {
         const t = i / (count - 1);
-        const z = zMin + (zMax - zMin) * t;
-        const r = 2 * Math.sqrt(f * z);
+        const r = rMin + (rMax - rMin) * t;
+        const z = (r * r) / (4 * f);
         coils.push({ r, z, I: 0 });
     }
     return coils;
@@ -153,6 +146,148 @@ function makeSphericalPlasma(centerZ, radius, count) {
     }
 
     return { nodes, currents, restLen };
+}
+
+// Two-state initialization for visualization
+export function initTwoStates(sim, config) {
+    const {
+        plasmaR0 = 0.1,      // Small plasma at t=0
+        plasmaR1 = 0.5,      // Expanded plasma at t=1
+        plasmaZ0 = 0.25,     // Plasma center (at focus)
+        scCurrent = 50000,   // SC current in Amperes
+        scRadius = 1.2,
+        scZ = -0.5,
+        cageF = 0.25,        // Parabola focus parameter
+        cageZMin = 0.1,
+        cageZMax = 3.0,
+        cageCount = 8,
+        plasmaCount = 8,
+    } = config;
+
+    // Store configuration
+    sim.config = config;
+    sim.currentStateIndex = 0; // 0 = t=0, 1 = t=1
+
+    // SC Coil (fixed)
+    sim.scCoils = [{ r: scRadius, z: scZ, I: scCurrent }];
+    sim.params.scCurrent = scCurrent;
+
+    // Cage coils (parabolic profile)
+    sim.cageCoils = makeParabolicCage(cageF, cageZMin, cageZMax, cageCount);
+    sim.cageCurrents = sim.cageCoils.map(() => 0);
+
+    // State 0: Small plasma at focus
+    const plasma0 = makeSphericalPlasma(plasmaZ0, plasmaR0, plasmaCount);
+    sim.state0 = {
+        plasmaNodes: plasma0.nodes,
+        plasmaCurrents: plasma0.currents.map(() => 0),
+        label: 't=0 (Initial)',
+    };
+
+    // State 1: Expanded plasma
+    const plasma1 = makeSphericalPlasma(plasmaZ0, plasmaR1, plasmaCount);
+    sim.state1 = {
+        plasmaNodes: plasma1.nodes,
+        plasmaCurrents: plasma1.currents.map(() => 0),
+        label: 't=1 (Expanded)',
+    };
+
+    // Set current state to state0
+    sim.plasmaNodes = sim.state0.plasmaNodes;
+    sim.plasmaCurrents = sim.state0.plasmaCurrents;
+    sim.restLen = plasma0.restLen;
+
+    // Generate control points for the solver (using initial state plasma)
+    sim.controlPoints = makeControlPoints(sim, plasmaZ0, plasmaR1, cageF, sim.plasmaNodes);
+
+    // Compute initial field (from SC only) at control points
+    sim.initialField = computeInitialField(sim);
+
+    sim.V0 = revolveVolume(sim.plasmaNodes);
+    sim.P0 = sim.params.plasmaPressure0;
+}
+
+// Helper to compute initial field targets
+function computeInitialField(sim) {
+    return sim.controlPoints.map(cp => {
+        let Br = 0, Bz = 0;
+        for (const c of sim.scCoils) {
+            const f = coilField(cp.r, cp.z - c.z, c.I, c.r);
+            Br += f.Br; Bz += f.Bz;
+        }
+        return { Br, Bz };
+    });
+}
+
+// Switch between state 0 and state 1
+export function switchState(sim, stateIndex) {
+    sim.currentStateIndex = stateIndex;
+    if (stateIndex === 0) {
+        sim.plasmaNodes = sim.state0.plasmaNodes;
+        sim.plasmaCurrents = sim.state0.plasmaCurrents;
+    } else {
+        sim.plasmaNodes = sim.state1.plasmaNodes;
+        sim.plasmaCurrents = sim.state1.plasmaCurrents;
+    }
+
+    // Regenerate control points for the new state
+    const { plasmaZ0, plasmaR1, cageF } = sim.config;
+    // Note: makeControlPoints uses plasmaR1 logic only? 
+    // Actually, we want points to follow the *current* plasma.
+    // So we pass the current plasma nodes.
+    sim.controlPoints = makeControlPoints(sim, plasmaZ0, plasmaR1, cageF, sim.plasmaNodes);
+
+    // Recompute initial field targets since control point locations changed
+    sim.initialField = computeInitialField(sim);
+}
+
+// Generate control points for the solver
+function makeControlPoints(sim, plasmaZ0, plasmaR1, cageF, plasmaNodes) {
+    const points = [];
+    const eps = 0.02; // Offset from surfaces
+
+    // 1. Axis points (r ≈ 0) at several z positions
+    //    Symmetry constraint: Br should be 0 on axis
+    const axisZs = [0.0, 0.1, 0.25, 0.5, 1.0, 1.5, 2.0];
+    for (const z of axisZs) {
+        points.push({ r: 0.01, z, type: 'axis', targetBr: 0, targetBz: null });
+    }
+
+    // 2. Near parabola vertex (z ≈ 0)
+    points.push({ r: 0.05, z: 0.05, type: 'vertex', targetBr: 0, targetBz: null });
+
+    // 3. At the focus (center of plasma ball) - B should be 0 inside diamagnetic plasma
+    points.push({ r: 0.02, z: plasmaZ0, type: 'focus', targetBr: 0, targetBz: 0 });
+
+    // 4. Near each cage coil (just inside, preserve initial field)
+    for (const c of sim.cageCoils) {
+        points.push({
+            r: c.r - eps,
+            z: c.z,
+            type: 'cage',
+            targetBr: null, // Will be set to initial field
+            targetBz: null,
+        });
+    }
+
+    // 5. Behind each plasma coil (inside plasma, B = 0)
+    // Use the provided plasmaNodes (dynamic)
+    for (const p of plasmaNodes) {
+        // Offset toward center (smaller r). 
+        // User said: "when we have small ball the control point mus be inside the ball"
+        // "when we englarge it ... just a little below the surface"
+        // Simple heuristic: r_cp = max(0.01, p.r - eps).
+        const rInside = Math.max(0.01, p.r - eps);
+        points.push({
+            r: rInside,
+            z: p.z,
+            type: 'plasma-interior',
+            targetBr: 0,
+            targetBz: 0,
+        });
+    }
+
+    return points;
 }
 
 export function initParabolicNozzle(sim) {
@@ -485,5 +620,152 @@ export function stepSimulation(state) {
         p.z = p.z + dtSim * p.vz;
         if (!isFinite(p.r)) p.r = 0.1;
         if (!isFinite(p.z)) p.z = 0;
+    }
+}
+
+// ============================================================
+// Flux Conservation Solver (Method 1)
+// Solves: M * I = Φ₀ where M is the mutual inductance matrix
+// ============================================================
+
+// Calculate mutual inductance between two loops
+// M_ij = μ₀ * √(r_i * r_j) * [(2/k - k)*K(k²) - (2/k)*E(k²)]
+function mutualInductance(r1, z1, r2, z2) {
+    const eps = 1e-9;
+    const rp1 = Math.max(eps, r1);
+    const rp2 = Math.max(eps, r2);
+    const dz = z1 - z2;
+
+    // Calculate k² parameter for elliptic integrals
+    const num = 4 * rp1 * rp2;
+    const den = (rp1 + rp2) * (rp1 + rp2) + dz * dz + eps;
+    let k2 = num / den;
+    k2 = Math.min(1 - 1e-9, Math.max(0, k2));
+
+    const k = Math.sqrt(k2);
+    const K = ellipticK(k2);
+    const E = ellipticE(k2);
+
+    // Neumann formula for mutual inductance
+    // M = μ₀ * √(r1*r2) * [(2/k - k)*K - (2/k)*E]
+    if (k < eps) return 0;
+    const factor = MU0 * Math.sqrt(rp1 * rp2);
+    const M = factor * ((2.0 / k - k) * K - (2.0 / k) * E);
+
+    return isFinite(M) ? M : 0;
+}
+
+// Self inductance of a loop (with wire radius r_w)
+// L ≈ μ₀ * a * (ln(8a/r_w) - 2)
+function selfInductance(r, wireRadius = 0.01) {
+    const eps = 1e-9;
+    const rp = Math.max(eps, r);
+    const rw = Math.max(eps, wireRadius);
+    const L = MU0 * rp * (Math.log(8 * rp / rw) - 2);
+    return isFinite(L) ? L : MU0 * rp;
+}
+
+// Gaussian elimination with partial pivoting
+function gaussianSolve(A, b) {
+    const n = b.length;
+    // Create augmented matrix
+    const aug = A.map((row, i) => [...row, b[i]]);
+
+    // Forward elimination
+    for (let col = 0; col < n; col++) {
+        // Find pivot
+        let maxRow = col;
+        let maxVal = Math.abs(aug[col][col]);
+        for (let row = col + 1; row < n; row++) {
+            if (Math.abs(aug[row][col]) > maxVal) {
+                maxVal = Math.abs(aug[row][col]);
+                maxRow = row;
+            }
+        }
+        // Swap rows
+        [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+
+        // Eliminate
+        const pivot = aug[col][col];
+        if (Math.abs(pivot) < 1e-12) continue; // Skip singular column
+
+        for (let row = col + 1; row < n; row++) {
+            const factor = aug[row][col] / pivot;
+            for (let j = col; j <= n; j++) {
+                aug[row][j] -= factor * aug[col][j];
+            }
+        }
+    }
+
+    // Back substitution
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        let sum = aug[i][n];
+        for (let j = i + 1; j < n; j++) {
+            sum -= aug[i][j] * x[j];
+        }
+        if (Math.abs(aug[i][i]) > 1e-12) {
+            x[i] = sum / aug[i][i];
+        }
+    }
+    return x;
+}
+
+// Flux conservation solver
+export function solveFluxConservation(state) {
+    // Collect all conductive loops (cage + plasma)
+    const loops = [
+        ...state.cageCoils.map((c, i) => ({ r: c.r, z: c.z, idx: i, type: 'cage' })),
+        ...state.plasmaNodes.map((p, i) => ({ r: p.r, z: p.z, idx: i, type: 'plasma' })),
+    ];
+
+    const n = loops.length;
+    if (n === 0) return;
+
+    // Build mutual inductance matrix M
+    const M = [];
+    for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < n; j++) {
+            if (i === j) {
+                row.push(selfInductance(loops[i].r));
+            } else {
+                row.push(mutualInductance(loops[i].r, loops[i].z, loops[j].r, loops[j].z));
+            }
+        }
+        M.push(row);
+    }
+
+    // Compute initial flux Φ₀ from SC coils only (at t=0 positions)
+    // For now, we compute the flux through each loop from the SC coil
+    // Φ_i = Σ_sc M_i_sc * I_sc
+    const Phi0 = loops.map(loop => {
+        let phi = 0;
+        for (const sc of state.scCoils) {
+            phi += mutualInductance(loop.r, loop.z, sc.r, sc.z) * sc.I;
+        }
+        return phi;
+    });
+
+    // Solve M * I = Φ₀
+    const currents = gaussianSolve(M, Phi0);
+
+    // Apply currents to state
+    loops.forEach((loop, i) => {
+        const current = isFinite(currents[i]) ? currents[i] : 0;
+        if (loop.type === 'cage') {
+            state.cageCurrents[loop.idx] = current;
+        } else {
+            state.plasmaCurrents[loop.idx] = current;
+        }
+    });
+
+    // Log results
+    if (logger && logger.verb(state.params.solverVerb)) {
+        logger.info(`Flux Solver: ${n} loops, SC flux contribution computed`, Logger.INFO);
+        if (state.params.solverVerb >= 2) {
+            logger.info(`Flux Φ₀: ${logger.formatVector(Phi0, 6)}`, Logger.WARN);
+            logger.info(`Currents I: ${logger.formatVector(currents, 4)}`, Logger.WARN);
+        }
     }
 }

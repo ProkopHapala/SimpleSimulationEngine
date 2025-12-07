@@ -1,140 +1,109 @@
-# MHD Plasma Nozzle WebGL Demo – Design Documentation Update
-
-I would like to make simple demo solving magnetohydrodynamics in web browser writen in javascript. It should also solver potantial flow aerodynamics as it is mathematically closely related. I will give you two references which can be very usefull 
-
-1) for reference how to implement the web page and use WebGL look here:
-/home/prokop/git/SimpleSimulationEngine/js/spacecraft_editor
-it is rather complex project for 3D modeling meshes. Our project is simpler but should reuse main components. Notice that many shared components are here
-/home/prokop/git/SimpleSimulationEngine/js/common_js
-in particular
-@Vec3.js @MeshRenderer.js @GUIutils.js 
-
-2) We have rather comprehesive desing document about how to implement this from numerical and physical perspective, read it carefully
-@MHD_Plasma_Nozzle_Simulation.md 
-
-we also have as a reference some function for differnt basis function in potential flow, mainly the eliptical integral to compute field of circular curent-loop (coil) in any point in space
-@PotentialFlow.md 
-@PotentialFlow.h 
-@elliptic_integral.c 
-
-please before you start write markdown with comprehesive plan which I can review
-
----
+# MHD Plasma Nozzle WebGL Demo – Design & Implementation Document
 
 ## Goals & Scope
-- Axisymmetric (r–z) magnetohydrodynamics demo in WebGL (compute on CPU JS; render via WebGL).
-- Potential flow analogies for verification (vortex/coil fields, elliptic-integral reference).
-- Reuse shared components from `js/common_js` and patterns from `js/spacecraft_editor`.
+- **Axisymmetric (r–z) Magnetohydrodynamics**: Compute plasma equilibrium in a magnetic nozzle configuration using JS on CPU, visualized via WebGL.
+- **Verification Analogies**: Compare results with potential flow analogies (vortex/coil fields).
+- **Interactive Web Demo**: Real-time control of coil currents, geometry, and solver parameters.
 
 ## Architecture Overview
-1. **Data & Math Core (JS)**
-   - Vector math via `Vec3.js` (extend with minimal helpers if needed).
-   - Field evaluators: magnetic field of circular loop (use elliptic integral reference in `elliptic_integral.c`/`PotentialFlow.h`), potential-flow basis (sources/vortices).
-   - Particle/segment structs for plasma shell rings.
-2. **Simulation Layer**
-   - Axisymmetric ring model: plasma surface as ring nodes with springs (no remeshing), cage rings, superconducting rings.
-   - Control-point system (Method 2: overdetermined fit with regularization) to solve induced currents.
-   - Time stepping: explicit/semi-implicit Verlet or simple leapfrog; per-step iterative current relaxation (gradient descent) to avoid matrix inversion.
-   - Forces: Lorentz (I×B), gas pressure (uniform ideal gas, volume from ring polygon of revolution), springs for node spacing.
-3. **Rendering & UI**
-   - Use `MeshRenderer.js` for simple line/mesh rendering of rings, field samples.
-   - UI with `GUIutils.js`: sliders for coil currents, learning rate, regularization, pressure, time step; toggles for showing field lines/force vectors.
-   - 2D axisymmetric view (r–z) plus optional 3D revolve preview (low-poly torus bands).
-4. **Integration with `spacecraft_editor` patterns**
-   - Reuse shader setup, camera controls, render loop structure.
-   - Lightweight scene graph: arrays of drawable primitives (lines/points), updated each frame.
 
-## Physics Kernels (MVP)
-- **Magnetic field of a loop**: port compact JS version of coil field using elliptic integrals (K,E) parameterized by m=k²; validate on-axis case vs analytic.
-- **Superposition**: sum over SC coils (fixed I), cage coils (solved I), plasma rings (solved I).
-- **Control-point solve** (overdetermined):
-  - Build A (B at control points from unit currents).
-  - Targets: zero B inside plasma, flux-preserving or zero-penetration near cage.
-  - Iterative update: I ← I - α * (Aᵀ·error) - λ·I (regularization).
-- **Volume & pressure**: compute toroidal volume from ring polygon; P = P0*(V0/V)^γ.
-- **Forces**:
-  - Magnetic: F_r = I·2πr·B_z, F_z = I·2πr·(-B_r).
-  - Gas pressure: normal from adjacent segments; force ∝ pressure * ring area.
-  - Springs: keep arc-length near rest length.
-- **Integration**: per node v,p update; clamp dt, optional damping.
+### 1. Data & Math Core (JS)
+- **Vector Math**: `Vec3.js` from `common_js`.
+- **Field Evaluators**:
+  - `coilField(r, z, I, a)`: Computes magnetic field of a circular loop using elliptic integrals (Carlson symmetric form via AGM).
+  - Validated against analytic on-axis formulas.
+- **Simulation State**:
+  - Managed in `physics.js`.
+  - Supports two distinct states: `t=0` (Initial small plasma) and `t=1` (Expanded plasma).
 
-## Rendering Plan
-- Field preview: sample grid in r–z; map |B| to color; optional streamline seeds.
-- Geometry: draw rings (plasma, cage, SC), control points, force vectors (scaled).
-- UI panels: presets (Helmholtz pair, nozzle), play/pause, step, reset.
+### 2. Simulation Layer (Solvers)
+Two solver strategies were implemented to determine induced currents in the plasma and cage coils:
 
-## MVP Milestones
-1. **Setup & reuse**
-   - Bootstrap page with render loop using `MeshRenderer` + camera controls.
-   - UI scaffolding with `GUIutils`.
-2. **Field kernel**
-   - Implement coil B-field (elliptic integral) in JS; unit tests vs on-axis formula.
-   - Grid sampling + visualization.
-3. **Control-point solver**
-   - Hardcode simple cage + plasma ring positions; iterative current fit with regularization; visualize resulting B on grid.
-4. **Dynamics**
-   - Add plasma ring nodes with springs + pressure; Lorentz forces from solved currents; integrate motion.
-   - Basic stability tuning: α, λ, dt, spring k.
-5. **Potential-flow mode**
-   - Reuse basis functions to show analogy (vortex/sink sources), toggle mode for verification.
-6. **Polish**
-   - Presets, parameter UI, tooltips, simple logging overlay for convergence/error.
+#### **Method 1: Flux Conservation (Direct Matrix Solve)**
+- **Principle**: In a perfect conductor (or high-conductivity plasma), magnetic flux through any closed loop is conserved.
+- **Implementation**:
+  - `mutualInductance(r1, z1, r2, z2)`: Computes generic mutual inductance between loops.
+  - `selfInductance(r, a)`: Computes self-inductance of a loop.
+  - **System**: Moves flux conservation equation $\Phi_{total} = \Phi_{initial}$ to linear system $M \cdot I = \Phi_{initial} - \Phi_{external}$.
+    - $M$: Mutual/Self inductance matrix of unknown coils (Cage + Plasma).
+    - $\Phi_{initial}$: Flux at $t=0$ (usually 0 for plasma, or SC-only field for cage).
+    - $\Phi_{external}$: Flux from fixed Superconductor coils.
+  - **Solver**: Gaussian elimination with partial pivoting.
+- **Pros**: Fast, robust, physically grounded for "fast" expansions.
 
-## File/Code Organization
-- `js/mhd_demo/`
-  - `main.js` (init, loop, UI hooks)
-  - `physics.js` (fields, solver, forces, integration)
-  - `render.js` (meshes/lines, field textures)
-  - `ui.js` (GUI setup)
-  - Reuse/import from `js/common_js/Vec3.js`, `MeshRenderer.js`, `GUIutils.js`.
+#### **Method 2: Control Points (Iterative Regularized Fit)**
+- **Principle**: Find currents that satisfy specific magnetic field constraints at chosen spatial locations.
+- **Implementation**:
+  - **Control Points**: Generated strategically:
+    - **Axis**: $B_r = 0$ (symmetry).
+    - **Vertex**: $B_r = 0$, $B_z \approx 0$.
+    - **Plasma Focus**: $B = 0$ (diamagnetism).
+    - **Cage Surface**: $B \approx B_{initial}$.
+    - **Plasma Interior**: $B = 0$ (diamagnetism).
+  - **Algorithm**: Gradient descent to minimize error $E = \sum (B_{target} - B_{actual})^2 + \lambda |I|^2$.
+- **Pros**: Flexible, allows shaping field profile explicitly.
 
-## Validation Checklist
-- On-axis B matches analytic coil formula.
-- Field symmetry about axis holds numerically.
-- Currents remain bounded with regularization when plasma nodes get close.
-- Volume/pressure evolution consistent with γ-law; energy not obviously exploding for stable dt.
+### 3. Rendering & UI
+- **Renderer**: `DemoRenderer` class in `render.js`.
+  - **WebGL**: `THREE.WebGLRenderer` for 3D lines (coils) and field visualization.
+  - **CSS2D**: `THREE.CSS2DRenderer` for text labels (`I=50.0kA`) overlay.
+  - **Visualization**:
+    - **Asymmetric Vector Field**: Grid points (dots) with vectors extending along field lines. Length $\propto |B|$.
+    - **Coil Geometry**: Renders both 3D rings (for perspective) and Profile lines (for r-z shape).
+    - **Symmetric View**: Covers full $r \in [-2.5, 2.5]$ range.
+- **User Interface**: `ui.js`.
+  - Side-panel layout (non-overlapping).
+  - Controls: State toggle ($t=0/1$), currents, radii, solver method selection, verbosity.
 
--## TODO (update during work; check only after your visual confirmation)
--- [ ] Create `js/mhd_demo/` scaffold (main loop, renderer hookup, UI skeleton reusing Vec3/MeshRenderer/GUIutils).
--- [ ] Implement coil magnetic field kernel in JS using elliptic integrals; validate on-axis case (initial implementation, basic).
--- [ ] Add field sampling grid and visualization in r–z view.
--- [ ] Build control-point iterative solver (overdetermined fit + regularization) for cage/plasma currents (initial gradient-descent fit).
--- [ ] Add plasma ring model with springs + pressure; compute toroidal volume and gas law update.
--- [ ] Integrate forces (Lorentz, pressure, springs) with stable timestep; basic damping.
--- [ ] Hook UI controls (currents, learning rate, regularization, pressure, dt, toggles) and presets.
--- [ ] Add potential-flow mode toggle sharing basis functions for verification.
--- [ ] Polish visuals (force vectors, field magnitude colormap, simple logging overlay).
+## Implementation Details & Insights
 
----
+### Key Takeaways
+1.  **Coordinate Systems in Physics vs. Rendering**:
+    -   **Physics**: Axisymmetric $(r, z)$ where $z$ is the symmetry axis.
+    -   **Three.js**: $y$ is typically "up". We mapped Physics $z \to$ World $x$, Physics $r \to$ World $y$.
+    -   **Insight**: Consistent naming (`r`, `z`) in physics code is crucial. Converting only at the last mile (rendering) prevents confusion.
+    -   **Correction**: Initial field visualization was asymmetric/shifted because `coilField` assumed coils at $z=0$. FIX: Always pass relative $z$ ($z_{point} - z_{coil}$).
 
-## What We Achieved
-- **Correct Geometry Rendering**: The plasma sphere now follows the intended spherical parameterisation (`r = R·sin(θ)`, `z = Z₀ + R·cos(θ)`). The metallic cage correctly follows a *parabolic* profile (`r = 2·√(f·z)`) with a deeper, conical shape.
-- **Accurate Coil Representation**: Each coil ring now passes through its designated `(r, z)` point. The visual radius matches the physical radius (`p.r`) instead of the erroneous `p.r²`.
-- **Aligned Magnetic‑Field Vector Field**: The field vectors are now correctly centred on the axis (zero field on the symmetry axis) and the vortex aligns with the superconducting coil plane.
-- **Stable Solver**: Offline verification (`test_solver.js`) runs without NaNs and produces sensible current distributions.
+2.  **Library Assumptions (`Draw3D`)**:
+    -   `Draw3D.drawCircleAxis` expects a **unit vector** for the starting direction. Passing a vector of length $R$ resulted in $R^2$ scaling, making rings visible as "cones".
+    -   **Fix**: Normalized inputs to helper functions.
 
-## What Was Wrong
-| Area | Symptom | Root Cause |
-|------|---------|------------|
-| **Ring Rendering** | Rings appeared too large (cone‑like) and did not intersect the parabola/profile points. | `Draw3D.drawCircleAxis` multiplies the start vector by the radius. We passed `{x:0, y:p.r, z:0}` which made the radius effectively `p.r²`. |
-| **Magnetic‑Field Sampling** | Vector field was shifted; axis showed non‑zero field; vortex misplaced. | `coilField` assumes the coil lies at `z = 0`. Calls in `sampleFieldAtPoint`, the solver’s `B_sc_only`, and `precomputeUnitFields` used the absolute `z` coordinate instead of the relative distance `z - c.z`. |
-| **Solver Geometry** | Pre‑computed unit fields ignored coil `z` positions, leading to incorrect residuals. | `precomputeUnitFields` passed only the coil radius (`{r}`) to `coilField`, discarding the coil’s `z` coordinate. |
-| **Dynamic Coil List** | `coilsDynamic` lost `z` information, breaking the above fix. | The array was built with `{r}` only, then mapped to `{r}` again before passing to the unit‑field function. |
+3.  **Solver Stability**:
+    -   **Method 1 (Flux)** requires a non-singular M matrix. Overlapping nodes or $r \to 0$ can cause singularity. Added $\epsilon$ checks.
+    -   **Method 2 (Control Points)** requires careful placement of points. Placing points *exactly* on current loops causes singularities ($1/d$ distance).
+    -   **Strategy**: Place control points slightly offset from wire locations (e.g., `r - epsilon`).
 
-## How We Solved It
-1. **Ring Radius Fix** – Changed `startV` in `render.js` to a **unit vector** `{x:0, y:1, z:0}`. `Draw3D.drawCircleAxis` now multiplies this by the actual coil radius, yielding correct ring sizes.
-2. **Relative Z‑Coordinate** – Updated every `coilField` invocation to use `z - c.z` (or `z - p.z` for plasma nodes). This aligns the magnetic‑field calculation with the physical coil positions.
-3. **Pre‑compute Unit Fields Correctly** – Modified `precomputeUnitFields` to compute `coilField(p.r, p.z - c.z, …)` and passed full coil objects (including `z`).
-4. **Dynamic Coil Data** – Extended `coilsDynamic` to store `{r, z, idx, type}` and passed this directly to `precomputeUnitFields`.
-5. **Solver Target Calculation** – Adjusted `B_sc_only` to use the relative `z` offset as well.
-6. **Verification** – Ran `test_solver.js` after changes; confirmed no NaNs and realistic current values.
+4.  **Visualization as Debugging**:
+    -   Visualizing the **Grid Points** as dots and vectors starting from them immediately revealed symmetry issues that arrow helpers masked.
+    -   **Text Labels** on coils ($I=...$) were essential to verify if the solver was actually doing anything (e.g., distinguishing $0$ from $10^{-6}$).
 
-## Takeaways for Future Debugging
-- **Always Check Library Contracts**: `Draw3D.drawCircleAxis` expects a *unit* start vector. Passing a scaled vector leads to quadratic scaling bugs.
-- **Coordinate System Consistency**: When a helper function assumes a reference frame (e.g., coil at `z=0`), every caller must transform coordinates accordingly. Missing a single offset can cascade into visual and physical inaccuracies.
-- **Preserve Full Geometry Data**: When building intermediate data structures (like `coilsDynamic`), keep all relevant fields (`r`, `z`). Truncating data early can cause subtle bugs later.
-- **Unit‑Field Pre‑computation**: This is a performance optimisation, but it must mirror the exact physics of the runtime calls. Any divergence (like ignoring `z`) invalidates the whole solver.
-- **Incremental Verification**: After each geometry‑related change, run the offline solver (`test_solver.js`) to catch NaNs or unrealistic currents early.
-- **Clear Documentation**: Adding comments about expected input shapes (unit vectors, relative coordinates) prevents future regressions.
+## MVP Status Checklist
 
+### Core Features (Completed)
+- [x] **Project Structure**: Scaffolded `js/mhd_demo/` with separation of concerns (Physics, Render, Main, UI).
+- [x] **B-Field Kernel**: Implemented elliptic integral solver for circular loops.
+- [x] **Visualization**:
+    - [x] Symmetric r-z grid sampling.
+    - [x] Magnitude-scaled vector field.
+    - [x] CSS2D Text labels for coil currents.
+    - [x] Separate side-panel UI.
+- [x] **Solvers**:
+    - [x] **Flux Conservation**: Matrix inverse approach (Method 1).
+    - [x] **Control Points**: Iterative regularized fit (Method 2).
+- [x] **Geometry Modeling**:
+    - [x] Parabolic Cage (radially sampled for vertex density).
+    - [x] Spherical Plasma (nodes for $t=0$ and $t=1$).
+- [x] **Interaction**:
+    - [x] State switching ($t=0 \leftrightarrow t=1$).
+    - [x] Parametric input for geometry (radius, focus, etc.).
 
+### Next Phase (Planned)
+- [ ] **Full Dynamics**:
+    -   Implement forces: Lorentz ($J \times B$) and Gas Pressure ($P = P_0 (V_0/V)^\gamma$).
+    -   Time integration (Verlet/Leapfrog) for node motion.
+- [ ] **Potential Flow Mode**: Toggle to switch math kernel to fluid sources/sinks.
+- [ ] **Advanced Interaction**: Drag-to-move coils/nodes.
+
+## Reference Links
+- [Spacecraft Editor](file:///home/prokop/git/SimpleSimulationEngine/js/spacecraft_editor/js/SpaceCraftRenderer.js) (Reference for rendering patterns)
+- [Vector Math](file:///home/prokop/git/SimpleSimulationEngine/js/common_js/Vec3.js)

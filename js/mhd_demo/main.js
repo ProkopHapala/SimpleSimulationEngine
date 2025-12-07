@@ -1,4 +1,4 @@
-import { initSimulationState, stepSimulation } from './physics.js';
+import { initSimulationState, stepSimulation, initTwoStates } from './physics.js';
 import { DemoRenderer } from './render.js';
 import { initUI } from './ui.js';
 
@@ -13,8 +13,13 @@ function init() {
         return;
     }
 
+    // Initialize simulation state
     window.mhdSim = initSimulationState();
+
+    // Create renderer
     window.mhdRenderer = new DemoRenderer(container);
+
+    // Initialize UI (this will also call initTwoStates with default config)
     window.mhdUI = initUI(window.mhdSim, window.mhdRenderer);
 
     let lastT = performance.now();
@@ -22,13 +27,19 @@ function init() {
         requestAnimationFrame(animate);
         const dtVis = (now - lastT) * 0.001;
         lastT = now;
-        if (!window.mhdSim.paused && window.mhdSim.autoStep) {
-            const sub = 2;
-            for (let i = 0; i < sub; i++) stepSimulation(window.mhdSim);
+
+        // Run solver if requested
+        if (window.mhdSim.runSolver) {
+            stepSimulation(window.mhdSim);
+            window.mhdSim.runSolver = false;
         }
+
+        // Update controls
         if (window.mhdRenderer && window.mhdRenderer.controls) {
             window.mhdRenderer.controls.update();
         }
+
+        // Render
         window.mhdRenderer.render(window.mhdSim, dtVis);
     }
     requestAnimationFrame(animate);

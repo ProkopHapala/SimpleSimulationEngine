@@ -1,145 +1,195 @@
-
-// Minimal UI binding
-import { initSimulationState, applyCoils, rebuildPlasma, initParabolicNozzle } from './physics.js';
+// UI bindings for MHD demo with side panel
+import { initSimulationState, initTwoStates, switchState, sampleFieldAtPoint, stepSimulation, solveFluxConservation } from './physics.js';
 import { Logger } from '../common_js/Logger.js';
 
 export function initUI(sim, renderer) {
-    const coilSlider = document.getElementById('coil-slider');
-    const coilVal = document.getElementById('coil-val');
-    const pSlider = document.getElementById('p-slider');
-    const pVal = document.getElementById('p-val');
-    const dtInput = document.getElementById('dt');
-    const resetBtn = document.getElementById('reset-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const applyBtn = document.getElementById('apply-btn');
-    const solveBtn = document.getElementById('solve-btn');
-    const verbSel = document.getElementById('verb');
-    const plasmaRadius = document.getElementById('plasma-radius');
-    const plasmaNodes = document.getElementById('plasma-nodes');
-    const scText = document.getElementById('sc-coils');
-    const cageText = document.getElementById('cage-coils');
+    // State buttons
+    const btnState0 = document.getElementById('btn-state0');
+    const btnState1 = document.getElementById('btn-state1');
+
+    // Plasma parameters
+    const plasmaR0 = document.getElementById('plasma-r0');
+    const plasmaR1 = document.getElementById('plasma-r1');
+    const plasmaZ0 = document.getElementById('plasma-z0');
+
+    // SC parameters
+    const scCurrent = document.getElementById('sc-current');
+    const scRadius = document.getElementById('sc-radius');
+    const scZ = document.getElementById('sc-z');
+
+    // Cage parameters
+    const cageF = document.getElementById('cage-f');
+    const cageZMin = document.getElementById('cage-zmin');
+    const cageZMax = document.getElementById('cage-zmax');
+    const cageCount = document.getElementById('cage-count');
+
+    // Solver
+    const solverMethod = document.getElementById('solver-method');
+    const btnSolve = document.getElementById('btn-solve');
+    const btnReset = document.getElementById('btn-reset');
+
+    // Visualization
+    const chkField = document.getElementById('chk-field');
+    const chkControlPts = document.getElementById('chk-control-pts');
+    const chkRings = document.getElementById('chk-rings');
+    const chkProfile = document.getElementById('chk-profile');
+    const fieldScale = document.getElementById('field-scale');
+
     const logEl = document.getElementById('log');
 
-    // Add Legend
-    const legend = document.createElement('div');
-    legend.style.position = 'fixed';
-    legend.style.top = '10px';
-    legend.style.right = '10px';
-    legend.style.background = 'rgba(0,0,0,0.6)';
-    legend.style.padding = '8px';
-    legend.style.border = '1px solid #444';
-    legend.style.borderRadius = '4px';
-    legend.innerHTML = `
-        <div style="color:#66ff66">■ Superconductor</div>
-        <div style="color:#ffa500">■ Metallic Cage</div>
-        <div style="color:#00c2ff">■ Plasma Surface</div>
-    `;
-    document.body.appendChild(legend);
-
-    // Add Preset Button
-    const presetBtn = document.createElement('button');
-    presetBtn.textContent = "Load Parabolic Nozzle";
-    presetBtn.style.marginTop = "6px";
-    presetBtn.style.width = "100%";
-    applyBtn.parentElement.insertBefore(presetBtn, applyBtn);
-
-    presetBtn.addEventListener('click', () => {
-        // Reset state
-        const fresh = initSimulationState();
-        // Force parabolic (though initSimulationState already does it by default now, consistent to call explicitly)
-        initParabolicNozzle(fresh);
-
-        Object.keys(sim).forEach(k => delete sim[k]);
-        Object.assign(sim, fresh);
-
-        // Update UI Text areas
-        const formatCoils = (list) => list.map(c => `${c.r.toFixed(2)} ${c.z.toFixed(2)} ${c.I} `).join('\n');
-        scText.value = formatCoils(sim.scCoils);
-        cageText.value = formatCoils(sim.cageCoils);
-
-        updateLabels();
-        log('Loaded Parabolic Nozzle Preset');
-    });
-
+    // Setup logger
     if (typeof window !== 'undefined') {
         window.logger = window.logger || new Logger();
         window.logger.setContainer(logEl);
-        // Sync text areas on load
-        const formatCoils = (list) => list.map(c => `${c.r.toFixed(2)} ${c.z.toFixed(2)} ${c.I} `).join('\n');
-        scText.value = formatCoils(sim.scCoils);
-        cageText.value = formatCoils(sim.cageCoils);
     }
-
-    const updateLabels = () => {
-        // Display in kA
-        coilVal.textContent = (sim.params.scCurrent / 1000.0).toFixed(1) + ' kA';
-        pVal.textContent = sim.params.plasmaPressure0.toFixed(0);
-    };
-
-    coilSlider.addEventListener('input', () => {
-        // Slider value 0..100 maps to 0..100 kA
-        sim.params.scCurrent = parseFloat(coilSlider.value) * 1000.0;
-        updateLabels();
-    });
-    pSlider.addEventListener('input', () => {
-        sim.params.plasmaPressure0 = parseFloat(pSlider.value) * 100.0;
-        sim.P0 = sim.params.plasmaPressure0;
-        updateLabels();
-    });
-    dtInput.addEventListener('change', () => {
-        sim.params.dt = parseFloat(dtInput.value) || sim.params.dt;
-    });
-    const parseCoils = (text) => {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        return lines.map(l => {
-            const parts = l.split(/\s+/).map(Number).filter(v => !Number.isNaN(v));
-            if (parts.length >= 3) return { r: parts[0], z: parts[1], I: parts[2] };
-            if (parts.length >= 2) return { r: parts[0], z: 0, I: parts[1] };
-            return { r: 1, z: 0, I: 0 };
-        });
-    };
-
-    applyBtn.addEventListener('click', () => {
-        const radius = parseFloat(plasmaRadius.value) || 0.6;
-        const nNodes = parseInt(plasmaNodes.value) || 24;
-        rebuildPlasma(sim, radius, nNodes);
-        const scList = parseCoils(scText.value);
-        const cageList = parseCoils(cageText.value);
-        applyCoils(sim, scList, cageList);
-        sim.runSolver = true;
-        log('Applied config and queued solve.');
-    });
-
-    solveBtn.addEventListener('click', () => {
-        sim.runSolver = true;
-        log('Solve requested.');
-    });
-
-    resetBtn.addEventListener('click', () => {
-        const fresh = initSimulationState();
-        Object.keys(sim).forEach((k) => delete sim[k]);
-        Object.assign(sim, fresh);
-        updateLabels();
-        log('Reset simulation.');
-    });
-    pauseBtn.addEventListener('click', () => {
-        sim.paused = !sim.paused;
-        pauseBtn.textContent = sim.paused ? 'Resume' : 'Pause';
-    });
-    verbSel.addEventListener('change', () => {
-        sim.params.solverVerb = parseInt(verbSel.value) || 0;
-        log(`Verbosity set to ${sim.params.solverVerb} `);
-    });
 
     function log(msg) {
         if (!logEl) return;
         const line = document.createElement('div');
-        line.textContent = msg;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
         logEl.prepend(line);
         while (logEl.childElementCount > 50) logEl.removeChild(logEl.lastChild);
         if (window.logger) window.logger.info(msg);
     }
 
-    updateLabels();
-    return { log };
+    function getConfig() {
+        return {
+            plasmaR0: parseFloat(plasmaR0.value) || 0.1,
+            plasmaR1: parseFloat(plasmaR1.value) || 0.5,
+            plasmaZ0: parseFloat(plasmaZ0.value) || 0.25,
+            scCurrent: (parseFloat(scCurrent.value) || 50) * 1000, // kA to A
+            scRadius: parseFloat(scRadius.value) || 1.2,
+            scZ: parseFloat(scZ.value) || -0.5,
+            cageF: parseFloat(cageF.value) || 0.25,
+            cageZMin: parseFloat(cageZMin.value) || 0.1,
+            cageZMax: parseFloat(cageZMax.value) || 3.0,
+            cageCount: parseInt(cageCount.value) || 8,
+            plasmaCount: 8,
+        };
+    }
+
+    function applyConfig() {
+        const config = getConfig();
+        initTwoStates(sim, config);
+        updateStateButtons();
+        log(`Applied config: plasma r0=${config.plasmaR0}, r1=${config.plasmaR1}, SC=${config.scCurrent / 1000}kA`);
+    }
+
+    function updateStateButtons() {
+        btnState0.classList.toggle('active', sim.currentStateIndex === 0);
+        btnState1.classList.toggle('active', sim.currentStateIndex === 1);
+    }
+
+    function updateRenderOptions() {
+        if (renderer) {
+            renderer.showField = chkField.checked;
+            renderer.showControlPoints = chkControlPts.checked;
+            renderer.showRings = chkRings.checked;
+            renderer.showProfile = chkProfile.checked;
+            renderer.fieldScale = parseFloat(fieldScale.value) || 1.0;
+        }
+    }
+
+    const verbSel = document.createElement('select');
+    verbSel.innerHTML = `
+        <option value="0">0 (None)</option>
+        <option value="1" selected>1 (Basic)</option>
+        <option value="2">2 (Detailed)</option>
+        <option value="3">3 (Matrix)</option>
+    `;
+    // Add verbosity control
+    const verbRow = document.createElement('div');
+    verbRow.className = 'control-row';
+    const verbLabel = document.createElement('label');
+    verbLabel.textContent = 'Verbosity';
+    verbRow.appendChild(verbLabel);
+    verbRow.appendChild(verbSel);
+
+    // Append after Visualization section? Or to Log section.
+    // Let's put it in Solver section for now or Log.
+    logEl.parentElement.insertBefore(verbRow, logEl);
+
+    // ... existing initialization ...
+
+    verbSel.addEventListener('change', () => {
+        sim.params.solverVerb = parseInt(verbSel.value) || 0;
+        log(`Verbosity set to ${sim.params.solverVerb}`);
+    });
+
+    // Solve button
+    btnSolve.addEventListener('click', () => {
+        const method = solverMethod.value;
+        log(`Solving currents using ${method} method...`);
+
+        let solved = false;
+        if (method === 'flux') {
+            solveFluxConservation(sim);
+            log('Flux conservation solver completed');
+            solved = true;
+        } else {
+            // Control points method - use stepSimulation
+            sim.runSolver = true;
+            stepSimulation(sim);
+            log('Control point solver completed');
+            solved = true;
+        }
+
+        if (solved && renderer) {
+            // Force label update if renderer supports it
+            if (renderer.updateLabels) renderer.updateLabels(sim);
+        }
+    });
+
+    // Update labels when switching state if solution exists
+    function onStateSwitch() {
+        if (renderer && renderer.updateLabels) renderer.updateLabels(sim);
+        // Maybe log currents?
+    }
+
+    // State toggle buttons
+    btnState0.addEventListener('click', () => {
+        switchState(sim, 0);
+        updateStateButtons();
+        onStateSwitch();
+        log('Switched to t=0 (Initial state)');
+    });
+
+    btnState1.addEventListener('click', () => {
+        switchState(sim, 1);
+        updateStateButtons();
+        onStateSwitch();
+        log('Switched to t=1 (Expanded state)');
+    });
+
+    // Reset button
+    btnReset.addEventListener('click', () => {
+        applyConfig();
+        if (renderer && renderer.updateLabels) renderer.updateLabels(sim);
+        log('Reset simulation');
+    });
+
+    // Visualization checkboxes
+    chkField.addEventListener('change', updateRenderOptions);
+    chkControlPts.addEventListener('change', updateRenderOptions);
+    chkRings.addEventListener('change', updateRenderOptions);
+    chkProfile.addEventListener('change', updateRenderOptions);
+    fieldScale.addEventListener('change', updateRenderOptions);
+
+    // Parameter inputs - apply on change
+    const paramInputs = [plasmaR0, plasmaR1, plasmaZ0, scCurrent, scRadius, scZ,
+        cageF, cageZMin, cageZMax, cageCount];
+    paramInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            applyConfig();
+            if (renderer && renderer.updateLabels) renderer.updateLabels(sim);
+        });
+    });
+
+    // Initial setup
+    applyConfig();
+    updateRenderOptions();
+    if (renderer && renderer.updateLabels) renderer.updateLabels(sim);
+    log('MHD Demo initialized with two-state visualization');
+
+    return { log, applyConfig, updateRenderOptions };
 }
