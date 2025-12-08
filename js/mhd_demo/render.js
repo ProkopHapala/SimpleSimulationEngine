@@ -54,7 +54,13 @@ export class DemoRenderer {
         this.showControlPoints = false;
         this.showRings = true;
         this.showProfile = true;
+        this.showShader = false;
         this.fieldScale = 1.0;
+        this.bMax = 0.1;
+
+        // GLSL Shader for B-field background (like Python HSV visualization)
+        this.shaderMesh = this.createShaderMesh();
+        this.scene.add(this.shaderMesh);
 
         // Use LineSegments for coils to allow independent loops
         this.plasmaLine = this.makeSegments(0x00c2ff);
@@ -78,6 +84,183 @@ export class DemoRenderer {
         this.labels = []; // Store CSS2DObjects
 
         window.addEventListener('resize', () => this.onResize());
+    }
+
+    createShaderMesh() {
+        // Quad sized and positioned to match coordinate range: z in [-1,4], r in [-2.5,2.5]
+        // Width = 5 (z range), Height = 5 (r range), centered at (z=1.5, r=0)
+        const geo = new THREE.PlaneGeometry(5, 5); // Matches world coords
+
+        // Uniforms for coil positions and currents
+        const uniforms = {
+            uCoils: { value: new Float32Array(64 * 4) }, // Max 64 coils: [r, z, I, 0] per coil
+            uNumCoils: { value: 0 },
+            uFieldScale: { value: 0.01 },
+            uBgMode: { value: 0 } // 0 = HSV, 1 = magnitude only
+        };
+
+        const vertexShader = `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            precision highp float;
+            varying vec2 vUv;
+            
+            uniform float uCoils[256]; // 64 coils * 4 floats
+            uniform int uNumCoils;
+            uniform float uFieldScale;
+            uniform int uBgMode;
+            
+            const float PI = 3.14159265359;
+            const float MU0 = 1.2566370614e-6;
+            
+            // Approximate elliptic integrals
+            float ellipticK(float m) {
+                if (m > 0.99) m = 0.99;
+                float a = 1.0, b = sqrt(1.0 - m);
+                for (int i = 0; i < 10; i++) {
+                    float an = 0.5 * (a + b);
+                    b = sqrt(a * b);
+                    a = an;
+                }
+                return PI / (2.0 * a);
+            }
+            
+            float ellipticE(float m) {
+                if (m > 0.99) m = 0.99;
+                float a = 1.0, b = sqrt(1.0 - m), sum = 0.0, twoPow = 1.0;
+                for (int i = 0; i < 10; i++) {
+                    float an = 0.5 * (a + b);
+                    float cn = 0.5 * (a - b);
+                    sum += twoPow * cn * cn;
+                    twoPow *= 2.0;
+                    b = sqrt(a * b);
+                    a = an;
+                }
+                return PI * 0.25 * (2.0 * a * a - sum) / a;
+            }
+            
+            vec2 coilField(float rp, float zp, float I, float a) {
+                float eps = 1e-9;
+                float rSafe = max(eps, rp);
+                float num = 4.0 * a * rSafe;
+                float den = (a + rSafe) * (a + rSafe) + zp * zp + eps;
+                float k2 = clamp(num / den, 0.0, 0.99);
+                float K = ellipticK(k2);
+                float E = ellipticE(k2);
+                float denom = sqrt(den);
+                float commonFac = MU0 * I / (2.0 * PI * (denom + eps));
+                float denom2 = (a - rSafe) * (a - rSafe) + zp * zp + eps;
+                float Br = commonFac * (zp / rSafe) * (-K + (a*a + rSafe*rSafe + zp*zp) / denom2 * E);
+                float Bz = commonFac * (K + (a*a - rSafe*rSafe - zp*zp) / denom2 * E);
+                if (rp < eps) Br = 0.0;
+                return vec2(Br, Bz);
+            }
+            
+            vec3 hsv2rgb(vec3 c) {
+                vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+            }
+            
+            void main() {
+                // Map UV to world coords: z in [-1, 4], r in [-2.5, 2.5]
+                float z = mix(-1.0, 4.0, vUv.x);
+                float r = mix(-2.5, 2.5, vUv.y);
+                float rAbs = abs(r);
+                
+                // Accumulate field from all coils
+                vec2 B = vec2(0.0);
+                for (int i = 0; i < 64; i++) {
+                    if (i >= uNumCoils) break;
+                    float cr = uCoils[i * 4 + 0];
+                    float cz = uCoils[i * 4 + 1];
+                    float cI = uCoils[i * 4 + 2];
+                    vec2 Bi = coilField(rAbs, z - cz, cI, cr);
+                    B += Bi;
+                }
+                
+                // Flip Br for lower half
+                float sign = r >= 0.0 ? 1.0 : -1.0;
+                float By = B.x * sign;
+                float Bx = B.y;
+                
+                float mag = length(vec2(Bx, By));
+                float phi = atan(Bx, By); // Direction
+                
+                // Normalize magnitude
+                float Bref = uFieldScale;
+                float Bmag = clamp(mag / Bref, 0.0, 1.0);
+                
+                vec3 color;
+                if (uBgMode == 0) {
+                    // HSV mode: hue = direction, value = magnitude
+                    float hue = (phi + PI) / (2.0 * PI);
+                    color = hsv2rgb(vec3(hue, 1.0, Bmag));
+                } else {
+                    // Magnitude only (grayscale)
+                    color = vec3(Bmag);
+                }
+                
+                gl_FragColor = vec4(color, 0.8);
+            }
+        `;
+
+        const mat = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            transparent: true
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(1.5, 0, -0.1); // Behind other geometry
+        mesh.visible = false;
+        return mesh;
+    }
+
+    updateShaderUniforms(sim) {
+        const uniforms = this.shaderMesh.material.uniforms;
+        const data = uniforms.uCoils.value;
+        let idx = 0;
+
+        // SC coils
+        for (const c of sim.scCoils) {
+            if (idx >= 64) break;
+            data[idx * 4 + 0] = c.r;
+            data[idx * 4 + 1] = c.z;
+            data[idx * 4 + 2] = c.I;
+            data[idx * 4 + 3] = 0;
+            idx++;
+        }
+
+        // Cage coils
+        sim.cageCoils.forEach((c, i) => {
+            if (idx >= 64) return;
+            data[idx * 4 + 0] = c.r;
+            data[idx * 4 + 1] = c.z;
+            data[idx * 4 + 2] = sim.cageCurrents[i] || 0;
+            data[idx * 4 + 3] = 0;
+            idx++;
+        });
+
+        // Plasma nodes
+        sim.plasmaNodes.forEach((p, i) => {
+            if (idx >= 64) return;
+            data[idx * 4 + 0] = p.r;
+            data[idx * 4 + 1] = p.z;
+            data[idx * 4 + 2] = sim.plasmaCurrents[i] || 0;
+            data[idx * 4 + 3] = 0;
+            idx++;
+        });
+
+        uniforms.uNumCoils.value = idx;
+        uniforms.uFieldScale.value = this.bMax || 0.1; // Use bMax as saturation reference
     }
 
     makeControlPointsMesh() {
@@ -384,22 +567,21 @@ export class DemoRenderer {
         this.plasmaLine.visible = this.showRings || this.showProfile;
         this.cageLine.visible = this.showRings || this.showProfile;
         this.scLine.visible = this.showRings || this.showProfile;
-        this.fieldPoints.visible = this.showField;
-        this.gridPoints.visible = this.showField;
+        this.fieldPoints.visible = this.showField && !this.showShader;
+        this.gridPoints.visible = this.showField && !this.showShader;
         this.controlPointsMesh.visible = this.showControlPoints;
+        this.shaderMesh.visible = this.showShader;
 
         this.updateLines(sim);
-        if (this.showField) {
+        if (this.showField && !this.showShader) {
             this.updateField(sim);
+        }
+        if (this.showShader) {
+            this.updateShaderUniforms(sim);
         }
         if (this.showControlPoints) {
             this.updateControlPoints(sim);
         }
-
-        // CSS Labels update
-        // We call updateLabels explicitly from UI on change, but maybe also here if currents change continuously?
-        // Sim currents change during solve step only.
-        // But let's leave valid logic in updateLabels and call it if needed.
 
         this.renderer.render(this.scene, this.camera);
         if (this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);

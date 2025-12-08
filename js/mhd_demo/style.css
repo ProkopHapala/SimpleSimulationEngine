@@ -1,0 +1,201 @@
+/* MHD Demo Styles - Side Panel Layout (based on spacecraft_editor) */
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 320px;
+    /* Leave space for side panel */
+    height: 100vh;
+    z-index: 0;
+}
+
+/* CSS2D Label Style */
+.label {
+    color: #FFF;
+    font-family: monospace;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 2px 4px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+#side-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100vh;
+    background: rgba(30, 30, 30, 0.95);
+    border-left: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    box-sizing: border-box;
+    z-index: 10;
+    overflow-y: auto;
+    font-size: 11px;
+}
+
+#side-panel * {
+    font-size: 11px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #444;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 14px;
+    color: #fff;
+}
+
+.tabs {
+    display: flex;
+    gap: 2px;
+}
+
+.tab-btn {
+    background: #333;
+    border: 1px solid #555;
+    color: #aaa;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.tab-btn.active {
+    background: #444;
+    color: #fff;
+    border-bottom: 2px solid #2a6;
+}
+
+.section {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+h3 {
+    margin: 0 0 6px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.control-row label {
+    min-width: 80px;
+    color: #ccc;
+    flex: 1;
+}
+
+.control-row input[type="number"] {
+    width: 70px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 3px 5px;
+    border-radius: 3px;
+}
+
+.control-row select {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 3px;
+    border-radius: 3px;
+}
+
+button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #555;
+}
+
+button.primary {
+    background: #2a6;
+    border-color: #3b7;
+    color: #fff;
+}
+
+button.primary:hover {
+    background: #3b7;
+}
+
+button.active {
+    background: #48a;
+    border-color: #5ac;
+    color: #fff;
+}
+
+textarea {
+    width: 100%;
+    background: #222;
+    color: #afa;
+    border: 1px solid #444;
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    resize: vertical;
+    padding: 4px;
+    box-sizing: border-box;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+p.small {
+    margin: 2px 0 4px 0;
+    color: #777;
+    font-style: italic;
+}
+
+/* Log area */
+#log {
+    width: 100%;
+    min-height: 80px;
+    max-height: 150px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 10px;
+    white-space: pre;
+    color: #8f8;
+    background: #111;
+    border: 1px solid #444;
+    padding: 4px;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
