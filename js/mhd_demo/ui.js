@@ -37,6 +37,7 @@ export function initUI(sim, renderer) {
     const plasmaR1 = document.getElementById('plasma-r1');
 
     // Trajectory
+    const trajModeSel = document.getElementById('traj-mode');
     const tSlider = document.getElementById('t-slider');
     const tValue = document.getElementById('t-value');
 
@@ -60,6 +61,7 @@ export function initUI(sim, renderer) {
     // Trajectory data (pre-computed)
     let trajectory = [];
     let currentTIndex = 0;
+    let trajMode = 'interp'; // 'interp' or 'dynamic'
 
     // Logger Setup
     if (typeof window !== 'undefined') {
@@ -144,8 +146,23 @@ export function initUI(sim, renderer) {
         }
     }
 
-    // Interpolate plasma between t=0 and t=1
+    function cloneNodes(nodes) {
+        return nodes.map(n => ({ ...n }));
+    }
+
+    // Set state by interpolating or sampling precomputed trajectory
     function setStateAtT(t) {
+        if (trajMode === 'dynamic' && trajectory.length > 0) {
+            const idx = Math.min(trajectory.length - 1, Math.round(t * (trajectory.length - 1)));
+            const step = trajectory[idx];
+            sim.plasmaNodes = cloneNodes(step.plasmaNodes);
+            sim.plasmaCurrents = step.plasmaCurrents.slice();
+            sim.cageCurrents = step.cageCurrents.slice();
+            currentTIndex = idx;
+            sim.currentT = step.t;
+            return;
+        }
+
         if (!sim.state0 || !sim.state1) return;
 
         const p0 = sim.state0.plasmaNodes;
@@ -254,31 +271,242 @@ export function initUI(sim, renderer) {
 
     function computeTrajectory(nSteps = 20) {
         trajectory = [];
+        trajMode = trajModeSel?.value || 'interp';
+        sim.trajMode = trajMode;
 
-        for (let i = 0; i <= nSteps; i++) {
-            const t = i / nSteps;
-            setStateAtT(t);
-            solveFluxConservation(sim);
+        if (trajMode === 'dynamic') {
+            // ============================================================
+            // Dynamic simulation following Python demo_plasma_dynamics_flux.py
+            // Single plasma coil as point mass, flux-conserving currents,
+            // Lorentz + gas pressure forces, Euler integration
+            // ============================================================
+            
+            // Parameters matching Python defaults
+            const dt = 5e-6;           // time step [s]
+            const mass = 0.1;          // plasma coil mass [kg]
+            const P0 = 1e6;            // initial gas pressure [Pa]
+            const gamma_gas = 5.0/3.0; // adiabatic index
+            const L_eff = 1.0;         // effective axial length for pressure model
+            const r_min = 0.01;        // minimum radius guard
+            const nDynSteps = 400;     // integration steps (like Python default)
+            
+            // Get initial plasma geometry from state0 (same as interpolated t=0)
+            const p0 = sim.state0?.plasmaNodes || sim.plasmaNodes;
+            if (!p0 || p0.length === 0) {
+                log('No plasma nodes for dynamic simulation');
+                return;
+            }
+            
+            // Use middle node as the single "plasma coil" (like Python's single plasma loop)
+            const midIdx = Math.floor(p0.length / 2);
+            let r_p = p0[midIdx].r;
+            let z_p = p0[midIdx].z;
+            
+            // Initial velocity (outward radial kick, like Python v0 = [1000, 0])
+            let vr = sim.params?.initVr ?? 1000.0;
+            let vz = sim.params?.initVz ?? 0.0;
+            
+            // Initial volume for gas pressure model: V = pi * r^2 * L_eff
+            const r0 = r_p;
+            const V0_gas = Math.PI * r0 * r0 * L_eff;
+            
+            // Build initial flux Phi0 from SC coil through all loops at t=0
+            // For simplicity, we track flux through the plasma coil only
+            const MU0 = 4e-7 * Math.PI;
+            
+            // Helper: mutual inductance between two loops
+            const mutualInd = (r1, z1, r2, z2) => {
+                const eps = 1e-9;
+                const rp1 = Math.max(eps, r1), rp2 = Math.max(eps, r2);
+                const dz = z1 - z2;
+                const num = 4 * rp1 * rp2;
+                const den = (rp1 + rp2) * (rp1 + rp2) + dz * dz + eps;
+                let k2 = Math.min(1 - 1e-9, Math.max(0, num / den));
+                if (k2 < 1e-12) return 0;
+                const k = Math.sqrt(k2);
+                // Approximate elliptic integrals
+                let a = 1.0, b = Math.sqrt(1.0 - k2);
+                for (let i = 0; i < 15; i++) { const an = 0.5*(a+b); b = Math.sqrt(a*b); a = an; }
+                const K = Math.PI / (2.0 * a);
+                a = 1.0; b = Math.sqrt(1.0 - k2); let sum = 0, twoPow = 1;
+                for (let i = 0; i < 15; i++) { const an = 0.5*(a+b), cn = 0.5*(a-b); sum += twoPow*cn*cn; twoPow *= 2; b = Math.sqrt(a*b); a = an; }
+                const E = Math.PI * 0.25 * (2.0*a*a - sum) / a;
+                const M = MU0 * Math.sqrt(rp1*rp2) * ((2.0/k - k)*K - (2.0/k)*E);
+                return isFinite(M) ? M : 0;
+            };
+            
+            // Self inductance
+            const selfInd = (r) => {
+                const rp = Math.max(1e-9, r), rw = 0.01;
+                return MU0 * rp * (Math.log(8*rp/rw) - 2);
+            };
+            
+            // B-field from a loop at (a, zc) with current I, evaluated at (rp, zp)
+            const fieldFromLoop = (a, zc, I, rp, zp) => {
+                const eps = 1e-9;
+                const rSafe = Math.max(eps, rp);
+                const dz = zp - zc;
+                const num = 4 * a * rSafe;
+                const den = (a + rSafe)*(a + rSafe) + dz*dz + eps;
+                let k2 = Math.min(1 - 1e-9, Math.max(0, num / den));
+                let a_ = 1.0, b_ = Math.sqrt(1.0 - k2);
+                for (let i = 0; i < 15; i++) { const an = 0.5*(a_+b_); b_ = Math.sqrt(a_*b_); a_ = an; }
+                const K = Math.PI / (2.0 * a_);
+                a_ = 1.0; b_ = Math.sqrt(1.0 - k2); let sum = 0, twoPow = 1;
+                for (let i = 0; i < 15; i++) { const an = 0.5*(a_+b_), cn = 0.5*(a_-b_); sum += twoPow*cn*cn; twoPow *= 2; b_ = Math.sqrt(a_*b_); a_ = an; }
+                const E = Math.PI * 0.25 * (2.0*a_*a_ - sum) / a_;
+                const denom = Math.sqrt(den);
+                const common = MU0 * I / (2 * Math.PI * (denom + eps));
+                const denom2 = (a - rSafe)*(a - rSafe) + dz*dz + eps;
+                let Br = common * (dz / rSafe) * (-K + (a*a + rSafe*rSafe + dz*dz) / denom2 * E);
+                let Bz = common * (K + (a*a - rSafe*rSafe - dz*dz) / denom2 * E);
+                if (rp < eps) Br = 0;
+                return { Br: isFinite(Br) ? Br : 0, Bz: isFinite(Bz) ? Bz : 0 };
+            };
+            
+            // SC coil info
+            const sc = sim.scCoils[0] || { r: 1.0, z: 0.0, I: 1e6 };
+            
+            // Cage coils (fixed)
+            const cage = sim.cageCoils || [];
+            const nCage = cage.length;
+            
+            // Total loops = cage + 1 plasma
+            const nLoops = nCage + 1;
+            
+            // Initial flux Phi0 through each loop from SC only (at t=0 positions)
+            const Phi0 = [];
+            for (let i = 0; i < nCage; i++) {
+                Phi0.push(mutualInd(cage[i].r, cage[i].z, sc.r, sc.z) * sc.I);
+            }
+            Phi0.push(mutualInd(r_p, z_p, sc.r, sc.z) * sc.I); // plasma at initial position
+            
+            // Gaussian solve helper
+            const gaussSolve = (A, b) => {
+                const n = b.length;
+                const aug = A.map((row, i) => [...row, b[i]]);
+                for (let col = 0; col < n; col++) {
+                    let maxRow = col, maxVal = Math.abs(aug[col][col]);
+                    for (let row = col+1; row < n; row++) if (Math.abs(aug[row][col]) > maxVal) { maxVal = Math.abs(aug[row][col]); maxRow = row; }
+                    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+                    const pivot = aug[col][col];
+                    if (Math.abs(pivot) < 1e-12) continue;
+                    for (let row = col+1; row < n; row++) { const f = aug[row][col]/pivot; for (let j = col; j <= n; j++) aug[row][j] -= f*aug[col][j]; }
+                }
+                const x = new Array(n).fill(0);
+                for (let i = n-1; i >= 0; i--) { let s = aug[i][n]; for (let j = i+1; j < n; j++) s -= aug[i][j]*x[j]; if (Math.abs(aug[i][i]) > 1e-12) x[i] = s/aug[i][i]; }
+                return x;
+            };
+            
+            // Snapshot helper
+            const pushSnapshot = (tVal, r_cur, z_cur, I_cage, I_plasma) => {
+                // Reconstruct plasmaNodes with current plasma position
+                const plasmaNodes = cloneNodes(p0);
+                plasmaNodes[midIdx].r = r_cur;
+                plasmaNodes[midIdx].z = z_cur;
+                const plasmaCurrents = sim.plasmaCurrents.map(() => 0);
+                plasmaCurrents[midIdx] = I_plasma;
+                const cageCurrents = I_cage.slice();
+                let totalCurrent = I_plasma;
+                let energy = 0.5 * I_plasma * I_plasma * 1e-9;
+                cageCurrents.forEach(I => { energy += 0.5 * I * I * 1e-9; });
+                
+                if (typeof window !== 'undefined' && window.logger) {
+                    window.logger.info(`dyn t=${tVal.toFixed(3)} r=${r_cur.toFixed(4)} z=${z_cur.toFixed(4)} I_p=${(I_plasma/1e6).toFixed(3)}MA`, window.logger.INFO);
+                }
+                
+                trajectory.push({ t: tVal, plasmaNodes, plasmaCurrents, cageCurrents, totalCurrent, energy });
+            };
+            
+            // Time integration loop (like Python run_plasma_dynamics)
+            for (let step = 0; step <= nDynSteps; step++) {
+                // 1) Build inductance matrix K at current positions
+                const K = [];
+                for (let i = 0; i < nLoops; i++) {
+                    const row = [];
+                    for (let j = 0; j < nLoops; j++) {
+                        const ri = i < nCage ? cage[i].r : r_p;
+                        const zi = i < nCage ? cage[i].z : z_p;
+                        const rj = j < nCage ? cage[j].r : r_p;
+                        const zj = j < nCage ? cage[j].z : z_p;
+                        row.push(i === j ? selfInd(ri) : mutualInd(ri, zi, rj, zj));
+                    }
+                    K.push(row);
+                }
+                
+                // 2) Solve K @ I = Phi0 for currents
+                const I_all = gaussSolve(K, Phi0.slice());
+                const I_cage = I_all.slice(0, nCage);
+                const I_plasma = I_all[nCage] || 0;
+                
+                // 3) Store snapshot (map step to t in [0,1])
+                const tVal = step / nDynSteps;
+                pushSnapshot(tVal, r_p, z_p, I_cage, I_plasma);
+                
+                if (step === nDynSteps) break; // last step, don't integrate further
+                
+                // 4) Compute Lorentz force on plasma from SC and cage (not self)
+                let Br_tot = 0, Bz_tot = 0;
+                // From SC
+                const Bsc = fieldFromLoop(sc.r, sc.z, sc.I, r_p, z_p);
+                Br_tot += Bsc.Br; Bz_tot += Bsc.Bz;
+                // From cage coils
+                for (let i = 0; i < nCage; i++) {
+                    const Bc = fieldFromLoop(cage[i].r, cage[i].z, I_cage[i], r_p, z_p);
+                    Br_tot += Bc.Br; Bz_tot += Bc.Bz;
+                }
+                const L_len = 2 * Math.PI * r_p;
+                const Fr_lorentz = I_plasma * L_len * Bz_tot;
+                const Fz_lorentz = I_plasma * L_len * (-Br_tot);
+                
+                // 5) Gas pressure force (adiabatic P = P0 * (V0/V)^gamma)
+                const V_cur = Math.PI * Math.max(r_p, r_min) * Math.max(r_p, r_min) * L_eff;
+                const P_cur = P0 * Math.pow(V0_gas / V_cur, gamma_gas);
+                const Fr_gas = P_cur * (2 * Math.PI * r_p * L_eff);
+                
+                // Total force
+                const Fr = Fr_lorentz + Fr_gas;
+                const Fz = Fz_lorentz;
+                
+                // 6) Euler integration
+                const ar = Fr / mass;
+                const az = Fz / mass;
+                vr += ar * dt;
+                vz += az * dt;
+                r_p += vr * dt;
+                z_p += vz * dt;
+                
+                // Guard against collapse through axis
+                if (r_p < r_min) { r_p = r_min; vr = -0.5 * vr; }
+            }
+            
+            log(`Dynamic trajectory computed (${nDynSteps + 1} steps)`);
+        } else {
+            for (let i = 0; i <= nSteps; i++) {
+                const t = i / nSteps;
+                setStateAtT(t);
+                solveFluxConservation(sim);
 
-            const plasmaCurrents = sim.plasmaCurrents.slice();
-            const cageCurrents = sim.cageCurrents.slice();
-            const plasmaNodes = sim.plasmaNodes.map(n => ({ ...n }));
+                const plasmaCurrents = sim.plasmaCurrents.slice();
+                const cageCurrents = sim.cageCurrents.slice();
+                const plasmaNodes = cloneNodes(sim.plasmaNodes);
 
-            let totalCurrent = 0;
-            let energy = 0;
-            plasmaCurrents.forEach(I => {
-                totalCurrent += I;
-                energy += 0.5 * I * I * 1e-9;
-            });
-            cageCurrents.forEach(I => {
-                energy += 0.5 * I * I * 1e-9;
-            });
+                let totalCurrent = 0;
+                let energy = 0;
+                plasmaCurrents.forEach(I => {
+                    totalCurrent += I;
+                    energy += 0.5 * I * I * 1e-9;
+                });
+                cageCurrents.forEach(I => {
+                    energy += 0.5 * I * I * 1e-9;
+                });
 
-            trajectory.push({ t, plasmaNodes, plasmaCurrents, cageCurrents, totalCurrent, energy });
+                trajectory.push({ t, plasmaNodes, plasmaCurrents, cageCurrents, totalCurrent, energy });
+            }
+            log(`Interpolated trajectory computed (${nSteps + 1} steps)`);
         }
 
         drawEnergyPlot();
-        log(`Trajectory computed (${nSteps + 1} steps)`);
     }
 
     // Auto-solve if checkbox is checked
@@ -347,6 +575,18 @@ export function initUI(sim, renderer) {
         drawEnergyPlot();
         if (renderer?.updateLabels) renderer.updateLabels(sim);
     });
+
+    // Trajectory mode
+    if (trajModeSel) {
+        trajModeSel.addEventListener('change', () => {
+            trajMode = trajModeSel.value || 'interp';
+            computeTrajectory(20);
+            const t = parseFloat(tSlider?.value) || 0;
+            setStateAtT(t);
+            drawEnergyPlot();
+            if (renderer?.updateLabels) renderer.updateLabels(sim);
+        });
+    }
 
     // T-slider
     if (tSlider) tSlider.addEventListener('input', () => {

@@ -665,12 +665,23 @@ export function stepSimulation(state) {
     for (let i = 0; i < N; i++) {
         const p = state.plasmaNodes[i];
         const invm = 1.0 / p.m;
-        p.vr = (p.vr + dtSim * Fr[i] * invm) * damping;
-        p.vz = (p.vz + dtSim * Fz[i] * invm) * damping;
-        p.r = Math.max(0.05, p.r + dtSim * p.vr);
-        p.z = p.z + dtSim * p.vz;
-        if (!isFinite(p.r)) p.r = 0.1;
-        if (!isFinite(p.z)) p.z = 0;
+
+        const newVr = (p.vr + dtSim * Fr[i] * invm) * damping;
+        const newVz = (p.vz + dtSim * Fz[i] * invm) * damping;
+        let newR = p.r + dtSim * newVr;
+        let newZ = p.z + dtSim * newVz;
+
+        // If integration blows up (NaN/Inf), keep previous position and zero velocity
+        if (!isFinite(newR) || !isFinite(newZ)) {
+            p.vr = 0.0;
+            p.vz = 0.0;
+            // keep p.r, p.z as they were (no teleport)
+        } else {
+            p.vr = newVr;
+            p.vz = newVz;
+            p.r = Math.max(0.05, newR);
+            p.z = newZ;
+        }
     }
 }
 

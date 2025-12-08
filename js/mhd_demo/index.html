@@ -99,6 +99,13 @@
             <div class="section">
                 <h3>Trajectory</h3>
                 <div class="control-row">
+                    <label for="traj-mode">Mode</label>
+                    <select id="traj-mode">
+                        <option value="interp" selected>Interpolated (t0 → t1)</option>
+                        <option value="dynamic">Dynamic (simulate)</option>
+                    </select>
+                </div>
+                <div class="control-row">
                     <label>t = <span id="t-value">0.00</span></label>
                     <input type="range" id="t-slider" min="0" max="1" step="0.01" value="0" style="width:100%">
                 </div>

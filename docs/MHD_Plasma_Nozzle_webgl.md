@@ -94,6 +94,24 @@ Two solver strategies were implemented to determine induced currents in the plas
     -   Result: Dense coil spacing near the throat (vertex), sparse at exit.
     -   **Why**: Throat region needs high field precision for accurate flux shielding.
 
+7.  **Dynamic Trajectory Pitfall (Teleport Bug)**:
+    -   First attempt at "dynamic" mode reused the general surface-based `stepSimulation` solver:
+        -   Multi-node plasma surface with springs and control-point based current fitting.
+        -   Safety clamps (`if !isFinite(...) r=0.1,z=0`) caused an immediate jump of the plasma ring to a default location.
+        -   As a result the precomputed trajectory showed a **teleport** on the first step and essentially no subsequent motion.
+    -   This behavior fundamentally **did not match** the Python dynamic reference (`demo_plasma_dynamics_flux.py`), which models a **single plasma loop** as a point mass in $(r,z)$:
+        -   At each step: build inductance matrix $K(r,z)$, solve $K\,I = \Phi_0$ (flux conservation) for cage+plasma currents.
+        -   Compute Lorentz force on the plasma loop from other coils only.
+        -   Add gas pressure force from an adiabatic volume model $P = P_0 (V_0/V)^\gamma$.
+        -   Integrate $(r,z, v_r, v_z)$ forward in time (Euler).
+    -   **Fix / current design**:
+        -   The UI `computeTrajectory` dynamic branch now implements a **separate single-loop integrator** that mirrors the Python logic instead of calling `stepSimulation`:
+            -   Uses the same initial geometry as interpolated $t=0$ (middle plasma node inside the nozzle).
+            -   Uses Python-like parameters ($dt$, mass, $P_0$, $\gamma$, $L_{\text{eff}}$) and flux-conserving matrix solve for currents at each step.
+            -   Computes Lorentz + gas-pressure forces and performs explicit Euler integration for the plasma loop position.
+        -   The many-node `stepSimulation` remains for future full-surface MHD experiments but is **not** used for the simple dynamic demo trajectory.
+    -   **Lesson**: Do not try to "fake" the Python dynamics by driving the more complex surface solver; when validating against a reference, implement the same minimal model (same DOFs, same equations) and keep any extra physics in clearly separated code paths.
+
 ## MVP Status Checklist
 
 ### Core Features (Completed)
@@ -115,6 +133,7 @@ Two solver strategies were implemented to determine induced currents in the plas
     - [x] State switching ($t=0 \leftrightarrow t=1$).
     - [x] Parametric input for geometry (radius, focus, etc.).
     - [x] Trajectory slider with pre-computed interpolation.
+    - [x] Dynamic trajectory mode (single-loop Python-matched plasma dynamics).
     - [x] Auto-update checkbox for automatic re-solving.
     - [x] Mouse wheel support on all numeric inputs.
     - [x] Manual coil editing via textareas.
@@ -157,10 +176,15 @@ Two solver strategies were implemented to determine induced currents in the plas
     - [ ] Regression tests comparing to Python reference.
 
 #### Low Priority / Future
-- [ ] **Full MHD Dynamics**:
-    - [ ] Implement Lorentz force ($\vec{J} \times \vec{B}$).
-    - [ ] Add gas pressure model ($P = P_0 (V_0/V)^\gamma$).
+- [ ] **Full MHD Dynamics (Multi-Node Surface)**:
+    - [ ] Implement Lorentz force ($\vec{J} \times \vec{B}$) for the full plasma surface.
+    - [ ] Add gas pressure model ($P = P_0 (V_0/V)^\gamma$) for the full volume.
     - [ ] Time integration (Verlet/Leapfrog) for node motion.
+
+  Already implemented for the **single-loop dynamic demo**:
+    - [x] Lorentz force on a single plasma loop (using $I \cdot L \times B$ with flux-conserving currents).
+    - [x] Gas pressure model $P = P_0 (V_0/V)^\gamma$ for the loop volume $V \sim \pi r^2 L_{\text{eff}}$.
+    - [x] Explicit Euler integration of $(r,z,v_r,v_z)$ over time.
 - [ ] **Potential Flow Mode**: Toggle to switch math kernel to fluid sources/sinks.
 - [ ] **Advanced Interaction**: Drag-to-move coils/nodes with mouse.
 - [ ] **Multi-Physics**: Couple to thermal model, radiation losses.
