@@ -127,15 +127,38 @@ void SpaceCraftDynamicsApp::drawSim_f( TrussDynamics_f& sim ){
 };
 
 void SpaceCraftDynamicsApp::plotSliders( const TrussDynamics_d& sim, const SpaceCraft& craft ){
+    // Guard against cases where sliders exist but edgeVertBonds were not initialized
+    if( (craft.sliders.size() == 0) || (sim.nEdgeVertBonds <= 0) || (sim.edgeVertBonds == nullptr) ) return;
+    int n = craft.sliders.size();
+    if( sim.nEdgeVertBonds < n ) n = sim.nEdgeVertBonds;
+
     glLineWidth(3.0);
     glColor4f(1.0f, 0.0f, 1.0f, 1.0f); // Set color to red (RGBA)
-    for( int i=0; i<craft.sliders.size(); i++ ){
+    for( int i=0; i<n; i++ ){
         const Slider* o = craft.sliders[i];
         //Vec3d p = o->pos;
-        Vec3d po = sim.points[o->pointRange.x].f;
+        int ip = o->pointRange.x;
+        if( (ip < 0) || (ip >= sim.nPoint) ){
+            if(verbosity>0){ printf("ERROR plotSliders(): slider[%d] pointRange.x=%d out of [0,%d)\n", i, ip, sim.nPoint);}
+            if(exit_on_error){ exit(0); }
+            continue;
+        }
         const EdgeVertBond& ev = sim.edgeVertBonds[i];
-        Vec3d p1 = sim.points[ev.verts.x].f;
-        Vec3d p2 = sim.points[ev.verts.y].f;
+        int iv0 = ev.verts.x;
+        int iv1 = ev.verts.y;
+        if( (iv0 < 0) || (iv0 >= sim.nPoint) ){
+            if(verbosity>0){ printf("ERROR plotSliders(): edgeVertBonds[%d].verts.x=%d out of [0,%d)\n", i, iv0, sim.nPoint); }
+            if(exit_on_error){ exit(0); }
+            continue;
+        }
+        if( (iv1 < 0) || (iv1 >= sim.nPoint) ){
+            if(verbosity>0){ printf("ERROR plotSliders(): edgeVertBonds[%d].verts.y=%d out of [0,%d)\n", i, iv1, sim.nPoint); }
+            if(exit_on_error){ exit(0); }
+            continue;
+        }
+        Vec3d po = sim.points[ip].f;
+        Vec3d p1 = sim.points[iv0].f;
+        Vec3d p2 = sim.points[iv1].f;
         Vec3d pc = p1*(1-ev.c) + p2*ev.c; // interpolated point
         //Draw3D::drawLine( p1, o->pos );
         //Draw3D::drawLine( p2, o->pos );

@@ -13,8 +13,18 @@
 #include "IO_utils.h"
 #include "Tree.h"
 #include "LuaHelpers.h"
+#include "argparse.h"
 
 namespace SpaceCrafting {
+
+// Global pointer to the editor's simulator used by SpaceCraftControl
+static SpaceCraftSimulator* gEditorSimulator = nullptr;
+
+void SpaceCraftControl(double dt){
+    if(gEditorSimulator){
+        applySliders2sim( *theSpaceCraft, gEditorSimulator->sim, (double*)&gEditorSimulator->wheel_speed );
+    }
+}
 
 class SpaceCraftEditorNew : public SpaceCraftDynamicsApp {
 public:
@@ -90,21 +100,22 @@ public:
 
         // Initialize simulator and spacecraft
         simulator = new SpaceCraftSimulator();
+        // Bind simulator to base app and connect picker after _sim is valid
+        bindSimulators(simulator);
         if(_sim) picker.picker = _sim;
         picker.Rmax = 10.0;
+
+        // Expose simulator to SpaceCraftControl callback
+        gEditorSimulator = simulator;
 
         // Initialize workshop (materials)
         init_workshop();
 
-        // Initialize Lua and load default ship
+        // Initialize Lua and optionally load default ship when no CLI args
         initSpaceCraftingLua();
         if(argc <= 1) {
-            simulator->reloadShip("data/ship_ICF_marksman_2.lua");
-            simulator->initSimulators();
+            reloadShip("data/ship_ICF_marksman_2.lua");
         }
-
-        // Bind simulator to editor
-        bindSimulators(simulator);
     }
 
     virtual void draw() override {
@@ -152,7 +163,12 @@ public:
                 mouse_ray0 = (Vec3d)cam.pos;
                 mouse_hray = (Vec3d)cam.rot.c;  // Forward direction from camera                
                 if(edit_mode == EDIT_MODE::component && _mesh) {
-                    picker.pick(); // Use picker's built-in pick function
+                    // Configure picker ray before picking and ensure picker backend is valid
+                    picker.ray0 = mouse_ray0;
+                    picker.hray = mouse_hray;
+                    if(picker.picker) {
+                        picker.pick(); // Use picker's built-in pick function
+                    }
                 }
             }
             break;
@@ -179,7 +195,13 @@ public:
     void reloadShip(const char* fname) {
         if(simulator) {
             simulator->reloadShip(fname);
-            simulator->initSimDefault();
+            // Initialize simulators using the mesh built from the Lua ship
+            simulator->initSimulators();
+
+            // Setup sliders and dynamic control, analogously to spaceCraftEditor.cpp and spaceCraftDynamics.cpp
+            for( Ring* o : theSpaceCraft->rings ){ o->updateSlidersPaths( true, true, simulator->sim.points ); }
+            sliders2edgeverts( *theSpaceCraft, simulator->sim );
+            simulator->sim.user_update = SpaceCraftControl;
         }
     }
 };
@@ -194,10 +216,12 @@ int main(int argc, char *argv[]) {
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
 	SpaceCrafting::SpaceCraftEditorNew* app = new SpaceCrafting::SpaceCraftEditorNew( junk, dm.w-150, dm.h-100, argc, argv );
-    //app->bindSimulators( &W ); 
 
-    // int junk = 1;
-    // app = new SpaceCrafting::SpaceCraftEditorNew(junk, 800, 600, argc, argv);
+    // Handle command-line arguments (e.g., -s data/ship.lua)
+    LambdaDict funcs;
+    funcs["-s"] = {1, [&](const char** ss){ app->reloadShip( ss[0] ); }};
+    process_args( argc, argv, funcs );
+
     app->loop(1000000);
     
     return 0;

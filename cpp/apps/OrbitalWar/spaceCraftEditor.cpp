@@ -411,6 +411,7 @@ void reloadShip( const char* fname  ){
     makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
 
     sim.user_update = SpaceCraftControl;
+    for( Ring* o : theSpaceCraft->rings ){ o->updateSlidersPaths( true, true, sim.points ); }
     sliders2edgeverts( *theSpaceCraft, sim );
     //renderShip();
     //sim.updateInveriants(true);
