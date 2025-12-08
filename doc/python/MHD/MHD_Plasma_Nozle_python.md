@@ -396,13 +396,15 @@ While refactoring input handling, a couple of minor but practical issues showed 
 
 ### What it intentionally does *not* do yet
 
-- No explicit plasma dynamics (no forces, no gas pressure, no springs).
+- No multi‑ring or full soft‑body plasma dynamics (no springs between many
+  plasma segments, no remeshing, no shape change beyond a single loop).
 - No resistive losses, radiation, or finite conductivity effects.
 - No full MHD (pressure, density, temperature fields in the volume).
 - No control‑point (Method 2) solver; everything is Method 1 (flux/circuit).
 
-The Python code is therefore best viewed as a **static flux‑compression
-circuit solver and visualizer**, not as a full MHD engine.
+The main scripts described so far (especially `demo_coil_motion_flux.py`)
+are therefore best viewed as **static flux‑compression circuit solvers and
+visualizers**, not as full MHD engines.
 
 
 ## 7. Relation to the WebGL Design Document
@@ -454,3 +456,44 @@ Example commands:
   ```bash
   python demo_coil_motion_flux.py --steps 200
   ```
+
+
+## 9. Dynamic Single‑Plasma‑Coil Demo
+
+To start exploring dynamics while still keeping the system simple, there is an additional script:
+
+- `demo_plasma_dynamics_flux.py`
+
+This script reuses the inductance matrix machinery and flux conservation but replaces prescribed geometry with **explicit motion of a single plasma coil**:
+
+- The seed SC coil (and optional cage coil) are fixed in space.
+- The plasma is represented by one circular loop with:
+  - mass and velocity in `(r, z)`
+  - current determined at each time step from the flux‑conserving system
+    `K(t) @ I(t) = Phi0` (all coils included).
+- At each time step the code:
+  1. Builds `K(rs, zs)` for the current geometry and solves for `I(t)`.
+  2. Computes the Lorentz force on the plasma loop from the fields of the
+     other coils (using the same Biot–Savart kernel).
+  3. Adds two **expansion forces** on the plasma loop:
+     - a gas pressure term with a simple cylindrical volume model
+       `V ~ π r² L_eff` and adiabatic law `P ~ (V0/V)^γ`,
+     - a magnetic self‑pressure (hoop stress) term proportional to `I_p²/r`.
+  4. Integrates position and velocity forward in time with explicit Euler.
+
+Diagnostics and plots include:
+
+- Plasma trajectory `r(t)` and `z(t)`,
+- kinetic, magnetic, and total energy vs time,
+- coil currents vs time,
+- a phase‑space style trajectory in the `(z, r)` plane.
+
+This dynamic demo is still a **toy model**:
+
+- Only a single plasma ring is mobile (no deformable surface),
+- integration is explicit Euler, so time step must be chosen small enough
+  for stability,
+- no coupling to a full gas volume or to multiple plasma segments.
+
+However, it forms a useful bridge between the purely static flux demos and the more ambitious soft‑body / MHD dynamics envisioned in the design documents. 
+It lets you test how flux‑conserving currents, external fields, and simple pressure models interact to accelerate or decelerate an expanding plasma ring before moving to a full WebGL or C++ implementation.
