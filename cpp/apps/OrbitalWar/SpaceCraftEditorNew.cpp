@@ -22,6 +22,12 @@ static SpaceCraftSimulator* gEditorSimulator = nullptr;
 
 void SpaceCraftControl(double dt){
     if(gEditorSimulator){
+        // if(verbosity>0){
+        //     int nSliders = (int)theSpaceCraft->sliders.size();
+        //     double pathCur0 = (nSliders>0) ? theSpaceCraft->sliders[0]->path.cur : 0.0;
+        //     double evc0 = (gEditorSimulator->sim.nEdgeVertBonds>0) ? gEditorSimulator->sim.edgeVertBonds[0].c : 0.0;
+        //     printf("SpaceCraftEditorNew::SpaceCraftControl(dt=%g): wheel_speed=(%g,%g,%g) nSliders=%d path0.cur=%g ev0.c=%g\n",  dt,gEditorSimulator->wheel_speed.x, gEditorSimulator->wheel_speed.y, gEditorSimulator->wheel_speed.z, nSliders, pathCur0, evc0);
+        // }
         applySliders2sim( *theSpaceCraft, gEditorSimulator->sim, (double*)&gEditorSimulator->wheel_speed );
     }
 }
@@ -213,6 +219,8 @@ public:
 
 
 int main(int argc, char *argv[]) {
+    verbosity = 2;
+
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
 	SpaceCrafting::SpaceCraftEditorNew* app = new SpaceCrafting::SpaceCraftEditorNew( junk, dm.w-150, dm.h-100, argc, argv );

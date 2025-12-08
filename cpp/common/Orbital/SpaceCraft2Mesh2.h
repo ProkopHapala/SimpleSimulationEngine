@@ -270,10 +270,14 @@ void applySliders2sim( SpaceCraft& craft, TrussDynamics_d& sim, double* control_
         double l  = d.norm();
         double f  = d.dot( ev.f )/l; // force along the slider path
         double v  = d.dot( dv   )/l; // velocity along the slider path
+        double old_cur = o->path.cur;
         o->move( dt, l, v, f );
+        double new_cur = o->path.cur;
         // -- update corresponding EdgeVerts
+        double old_c = ev.c;
         ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
         ev.verts.z = o->ivert;
+        //if((verbosity>1) && (i==0)){ printf("applySliders2sim[%d]: icontrol=%d speed=%g dt=%g path.cur: %g->%g ev.c: %g->%g\n",  i, icon, o->speed, dt, old_cur, new_cur, old_c, ev.c); }
         //ev.K = 1000.0;
         //o->updateEdgeVerts( sim.points );
     }

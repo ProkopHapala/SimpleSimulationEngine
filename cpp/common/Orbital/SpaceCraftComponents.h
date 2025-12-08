@@ -751,13 +751,13 @@ class Slider : public Node { public:
     //int  ifix;    // to which vertex it is anchored
     Path path;
     double maxDist =1.;    // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
-    double forceMax=1.; // max force which ca ne exerted by this slider
+    double forceMax=1.; // max force which can be exerted by this slider motor
     double powerMax=1.;
     double maxSpeed=1.;
     double speed=0;
     double springK=0;
 
-    double Kdv  = 0.1; 
+    double Kdv  = 0.1;  // drive stiffness - how fast slider accelerates toward target speed 
     double vel  = 0.0;
     double mass = 1.;
 

@@ -181,3 +181,24 @@ These notes summarize recent issues in the C++ SpaceCrafting tools (editors + dy
 - **Use diagnostics aggressively during development**
   - Leverage `verbosity`, `exit_on_error`, and `_assert` to make data inconsistencies fail loudly while iterating.
   - Once stable, lower `verbosity` and disable fatal exits as needed for production-like runs.
+
+---
+
+## 7. Slider anchor indices: `ivert` vs `pointRange`
+
+**Observation**
+- `Slider` inherits `pointRange` from `ShipComponent`, but in the current mesh/export pipeline sliders do **not** own a contiguous vertex range in the truss.
+- Instead, `Slider::ivert` is the meaningful anchor into `sim.points`.
+- As a result, `pointRange.x` for sliders is often left at the default `-1`.
+
+**Bug**
+- The first version of `SpaceCraftDynamicsApp::plotSliders()` used `slider->pointRange.x` to look up the slider point, which for sliders was `-1`, leading to invalid indices and ASan errors.
+
+**Fix**
+- Change `plotSliders()` to use `slider->ivert` as the slider anchor vertex:
+  - Validate `ivert` in `[0, sim.nPoint)` and log/abort via `globals.h` if out of range.
+  - Keep using `EdgeVertBond.verts.{x,y}` for the two end vertices of the edge.
+
+**Takeaway**
+- For sliders, treat `ivert` as the canonical index into the truss; `pointRange` is for components that actually map to a contiguous vertex segment (girders, rings, ropes, etc.).
+- When adding new drawing or control code, always confirm which index field is semantically valid for a given component type before using it.

@@ -45,9 +45,10 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     double scale_force       = 0.01;
     double scale_velocity    = 1.0;
     float fontSize3D         = 0.014;
-    int perFrame = 1;
+    //int perFrame = 1;
     //int perFrame = 10;
-    //int perFrame = 100;
+    int perFrame = 100;
+    //int perFrame = 1000;
 
     // === GUI
     GUI gui;
@@ -137,9 +138,10 @@ void SpaceCraftDynamicsApp::plotSliders( const TrussDynamics_d& sim, const Space
     for( int i=0; i<n; i++ ){
         const Slider* o = craft.sliders[i];
         //Vec3d p = o->pos;
-        int ip = o->pointRange.x;
+        // use slider anchor vertex (ivert) instead of pointRange.x, which is not meaningful for sliders
+        int ip = o->ivert;
         if( (ip < 0) || (ip >= sim.nPoint) ){
-            if(verbosity>0){ printf("ERROR plotSliders(): slider[%d] pointRange.x=%d out of [0,%d)\n", i, ip, sim.nPoint);}
+            if(verbosity>0){ printf("ERROR plotSliders(): slider[%d] ivert=%d out of [0,%d)\n", i, ip, sim.nPoint); }
             if(exit_on_error){ exit(0); }
             continue;
         }
@@ -240,13 +242,20 @@ void SpaceCraftDynamicsApp::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
 
     SpaceCraftSimulator& s = *simulator;
-    if( keys[ SDL_SCANCODE_KP_5 ] ){ s.wheel_speed.y+=-s.wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_8 ] ){ s.wheel_speed.y+= s.wheel_speed_setup.y; }
-    if( keys[ SDL_SCANCODE_KP_4 ] ){ s.wheel_speed.x+=-s.wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_6 ] ){ s.wheel_speed.x+= s.wheel_speed_setup.x; }
-	if( keys[ SDL_SCANCODE_KP_7 ] ){ s.wheel_speed.z+=-s.wheel_speed_setup.z; }
-	if( keys[ SDL_SCANCODE_KP_9 ] ){ s.wheel_speed.z+= s.wheel_speed_setup.z; }
-    if( keys[ SDL_SCANCODE_KP_0 ] ){ s.wheel_speed=Vec3dZero; }
+    bool anyWheelKey = false;
+    if( keys[ SDL_SCANCODE_KP_5 ] ){ s.wheel_speed.y+=-s.wheel_speed_setup.y; anyWheelKey=true; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ s.wheel_speed.y+= s.wheel_speed_setup.y; anyWheelKey=true; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ s.wheel_speed.x+=-s.wheel_speed_setup.x; anyWheelKey=true; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ s.wheel_speed.x+= s.wheel_speed_setup.x; anyWheelKey=true; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ s.wheel_speed.z+=-s.wheel_speed_setup.z; anyWheelKey=true; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ s.wheel_speed.z+= s.wheel_speed_setup.z; anyWheelKey=true; }
+    if( keys[ SDL_SCANCODE_KP_0 ] ){ s.wheel_speed=Vec3dZero; anyWheelKey=true; }
+
+    if(anyWheelKey && (verbosity>0)){
+        printf("keyStateHandling(): wheel_speed = (%g,%g,%g) setup=(%g,%g,%g)\n",
+               s.wheel_speed.x, s.wheel_speed.y, s.wheel_speed.z,
+               s.wheel_speed_setup.x, s.wheel_speed_setup.y, s.wheel_speed_setup.z );
+    }
 
 };
 
