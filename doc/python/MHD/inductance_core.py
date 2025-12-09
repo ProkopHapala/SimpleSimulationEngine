@@ -305,3 +305,155 @@ def field_loop_rz(a, z0, I, r_grid, z_grid, eps=1e-12):
     # Set Br to zero on axis where symmetry enforces it
     Br = np.where(rho < eps, 0.0, Br)
     return Br, Bz
+
+
+def field_dipole_rz(m, z_m, r_grid, z_grid, eps=1e-12):
+    """Magnetic field (Br,Bz) of an axial point dipole in the (r,z) meridional plane.
+
+    Parameters
+    ----------
+    m : float
+        Dipole moment magnitude (A m^2), oriented along +z.
+    z_m : float
+        Axial position of the dipole (on the symmetry axis r=0).
+    r_grid, z_grid : ndarray
+        Evaluation grid in cylindrical coordinates.
+    eps : float, optional
+        Small regularization radius to avoid singularity at the dipole location.
+
+    Returns
+    -------
+    Br, Bz : ndarray
+        Radial and axial components of the dipole field.
+    """
+    r = np.asarray(r_grid, dtype=float)
+    z = np.asarray(z_grid, dtype=float)
+    rho = r
+    z_rel = z - z_m
+
+    # Regularized distance from dipole
+    rho_safe = np.where(rho < eps, eps, rho)
+    R2 = rho_safe * rho_safe + z_rel * z_rel
+    R = np.sqrt(R2)
+    R5 = R2 * R2 * R + eps
+
+    pref = MU0 * m / (4.0 * np.pi)
+
+    Br = pref * 3.0 * rho_safe * z_rel / R5
+    Bz = pref * (2.0 * z_rel * z_rel - rho_safe * rho_safe) / R5
+
+    # On-axis limit: Br must vanish by symmetry
+    Br = np.where(rho < eps, 0.0, Br)
+    return Br, Bz
+
+
+def Aphi_dipole_rz(m, z_m, r_grid, z_grid, eps=1e-12):
+    """Azimuthal vector potential A_phi of an axial point dipole in the (r,z) plane.
+
+    The dipole moment m is oriented along +z and located at (r=0, z=z_m). In
+    Coulomb gauge, the vector potential is
+
+        A = mu0 / (4 pi) * (m x R) / |R|^3 ,
+
+    which for an on-axis dipole reduces to a purely azimuthal component
+
+        A_phi = mu0 * m * r / (4 pi * R^3) ,   R^2 = r^2 + (z - z_m)^2.
+    """
+    r = np.asarray(r_grid, dtype=float)
+    z = np.asarray(z_grid, dtype=float)
+    rho = r
+    z_rel = z - z_m
+
+    rho_safe = np.where(rho < eps, eps, rho)
+    R2 = rho_safe * rho_safe + z_rel * z_rel
+    R = np.sqrt(R2)
+    R3 = R2 * R + eps
+
+    pref = MU0 * m / (4.0 * np.pi)
+    Aphi = pref * rho_safe / R3
+
+    # On axis the azimuthal component must vanish by symmetry
+    Aphi = np.where(rho < eps, 0.0, Aphi)
+    return Aphi
+
+
+def Aphi_loop_rz(a, z0, I, r_grid, z_grid, eps=1e-12):
+    """Azimuthal vector potential A_phi of a circular loop at (a,z0) with current I.
+
+    This uses the standard elliptic-integral expression in cylindrical
+    coordinates. With
+
+        k^2 = 4 a r / ((a + r)^2 + (z - z0)^2),
+
+    the azimuthal component for a loop of radius a and current I is
+
+        A_phi(r,z) = mu0 I / (2 pi k) * sqrt(a / r)
+                      * [ (1 - 0.5 k^2) K(k^2) - E(k^2) ],
+
+    where K,E are complete elliptic integrals of the first and second kind.
+    The expression is regularized near r=0 and on-axis A_phi is forced to 0
+    by symmetry.
+    """
+    r = np.asarray(r_grid, dtype=float)
+    z = np.asarray(z_grid, dtype=float)
+    rho = r
+    z_rel = z - z0
+
+    # Avoid singularity at r=0: A_phi must vanish on axis, but formula has 1/sqrt(r)
+    rho_safe = np.where(rho < eps, eps, rho)
+
+    # Elliptic parameter m = k^2
+    denom = (a + rho_safe) ** 2 + z_rel * z_rel
+    m = (4.0 * a * rho_safe) / denom
+    K = ellipk(m)
+    E = ellipe(m)
+
+    # A_phi = (mu0 I / pi) * sqrt(a/r) * (1/k) * [ (1 - m/2) K(m) - E(m) ]
+    # Algebraically this simplifies to
+    # A_phi = (mu0 I / (2 pi r)) * sqrt(denom) * [ (1 - m/2) K(m) - E(m) ]
+    prefactor = (MU0 * I) / (2.0 * np.pi * rho_safe) * np.sqrt(denom)
+    bracket = (1.0 - 0.5 * m) * K - E
+    Aphi = prefactor * bracket
+
+    # Enforce A_phi = 0 on axis by symmetry
+    Aphi = np.where(rho < eps, 0.0, Aphi)
+    return Aphi
+
+
+def coil_axis_Bz(a, z0, I, z_eval):
+    """Axial Bz of a circular loop at radius a, center z0, on the symmetry axis.
+
+    Parameters
+    ----------
+    a : float
+        Loop radius.
+    z0 : float
+        Axial coordinate of loop center.
+    I : float
+        Loop current (A).
+    z_eval : float or ndarray
+        Axial position(s) where Bz is evaluated (r=0).
+
+    Returns
+    -------
+    Bz_axis : float or ndarray
+        Axial component of B at (r=0, z=z_eval).
+    """
+    z_eval = np.asarray(z_eval, dtype=float)
+    z_rel = z_eval - float(z0)
+    denom = (a * a + z_rel * z_rel) ** 1.5
+    return MU0 * I * a * a / (2.0 * denom)
+
+
+def coil_dipole_energy(a, z0, I, m, z_m):
+    """Interaction energy between a circular coil and an axial point dipole.
+
+    The dipole is on-axis at z_m with moment m along +z. The energy is
+
+        U = - m * Bz_coil(r=0, z=z_m)
+
+    where Bz_coil is the axial field produced by the loop at the dipole
+    location.
+    """
+    Bz_at_dip = coil_axis_Bz(a, z0, I, z_m)
+    return -m * float(Bz_at_dip)
