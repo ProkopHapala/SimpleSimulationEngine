@@ -497,3 +497,140 @@ This dynamic demo is still a **toy model**:
 
 However, it forms a useful bridge between the purely static flux demos and the more ambitious soft‑body / MHD dynamics envisioned in the design documents. 
 It lets you test how flux‑conserving currents, external fields, and simple pressure models interact to accelerate or decelerate an expanding plasma ring before moving to a full WebGL or C++ implementation.
+
+
+## 10. Spherical Plasma Shell Demo
+
+To better approximate a **3D plasma “ball”** and study shielding/leakage through a cage, an additional demo script was added:
+
+- `demo_plasma_sphere_flux.py`
+
+This script reuses the same inductance and flux‑conservation machinery but changes how the geometry is generated.
+
+### 10.1 Geometry: parabolic cage + spherical plasma
+
+The configuration is built in two steps, using helpers from `inductance_core.py`:
+
+1. **Parabolic SC + cage** via `generate_parabolic_nozzle(...)`:
+
+   - Generates an SC seed coil plus a set of `CAGE` rings following a parabolic wall defined by throat radius `r_throat`, exit radius `r_exit` and axial range `[z_start, z_end]`.
+   - Output is a text block in the usual
+
+     ```text
+     TYPE  R0  Z0  R1  Z1  I0
+     ```
+
+     format. `demo_plasma_sphere_flux.py` discards the parabolic `PLASMA` line and keeps only the `SC` and `CAGE` entries, so the cage geometry is identical to the nozzle demo.
+
+2. **Spherical plasma shell** via `generate_spherical_plasma_loops(...)`:
+
+   - Implemented directly in `inductance_core.py`.
+   - Produces multiple `PLASMA` loops approximating a spherical shell in the `(r, z)` meridional plane:
+
+     ```text
+     PLASMA  R0  Z0   R1  Z1   I0
+     ```
+
+   - The shell is centered at `z0` and expands **purely radially** from radius `r0` to `r1` (the center does not move).
+   - A small number of loops (e.g. 5–8) is used so the geometry remains readable while still approximating a sphere.
+
+The demo concatenates the parabolic `SC` + `CAGE` lines with the spherical `PLASMA` lines and feeds the result into `run_coil_motion_flux`, exactly like any other coils file.
+
+### 10.2 CLI and typical use
+
+`demo_plasma_sphere_flux.py` exposes CLI parameters for both the plasma ball and the parabolic wall, in a compact one‑line style:
+
+- Plasma shell:
+  - `--n-plasma` – number of plasma loops on the sphere
+  - `--r0`, `--r1` – initial and final sphere radii
+  - `--z0` – sphere center `z` (fixed for both initial and final state)
+
+- Seed coil:
+  - `--sc-r`, `--sc-z`, `--sc-current`
+
+- Parabolic cage:
+  - `--n-cage` – number of cage rings from throat to exit
+  - `--r-throat`, `--r-exit` – throat and exit radii
+  - `--z-start`, `--z-end` – axial extent of the parabola
+
+- Solver / plotting:
+  - `--steps` – number of interpolation steps
+  - `--no-timeseries`, `--no-geometry` – disable plots
+  - `--bg-mode` – HSV vs magnitude background for B‑field plots
+
+The seed coil is typically centered at the parabola vertex (`z = 0`), and the plasma sphere expands from a tiny initial radius (e.g. `r0 = 0.01`) to a radius that just touches the throat (e.g. `r1 = r_throat`).
+
+### 10.3 Insights from the spherical demo
+
+- A **finite number of cage rings** and plasma loops means shielding is never perfectly “topological”: field lines can and do leak between rings, which is physically expected.
+- When the SC, parabolic cage and spherical plasma are all built from the same inductance machinery and flux‑conserving solve, any apparent “field penetrating the ball” is due to geometry and discretization, not a kernel bug.
+- The shared plotting utilities (`MHD_plots.py`) make it easier to visually compare different geometries (nozzle vs sphere) with consistent B‑field rendering.
+
+
+## 11. B‑Field Kernel and Inductance Consistency Checks
+
+Because the demos use elliptic‑integral formulas in **two different roles**:
+
+- to build the inductance matrix (`calc_mutual_inductance`, `calc_self_inductance`), and
+- to visualize fields and compute forces (`field_loop_rz`),
+
+it is important to verify that these kernels are mutually consistent.
+
+Two small standalone check scripts were added for this purpose:
+
+- `check_B_kernels.py`
+- `check_B_consistency.py`
+
+### 11.1 On‑axis field check
+
+`check_B_kernels.py` compares the on‑axis `Bz` from `field_loop_rz` against the textbook formula for a single loop of radius `a` and current `I`:
+
+```text
+Bz_on_axis(z) = mu0 * I * a^2 / (2 * (a^2 + (z - z0)^2)^(3/2))
+```
+
+This is a clean, non‑ambiguous test because:
+
+- the geometry is simple (single loop, axis evaluation), and
+- the analytic expression is exact.
+
+Result: numerical and analytic `Bz` agree to machine precision (relative errors ~1e‑16), strongly confirming the correctness and normalization of `field_loop_rz`.
+
+### 11.2 Mutual inductance vs integrated B: “apples to apples”
+
+Attempting to compare a crude **self‑flux integral** directly to `calc_self_inductance` produced huge discrepancies, because
+
+- `calc_self_inductance` assumes a finite wire radius and an internal field model, while
++- integrating `Bz` from a **filamentary** kernel over the loop area is not the same quantity and is formally divergent near the wire.
+
+To avoid this mismatch, `check_B_consistency.py` focuses on **mutual inductance** between *distinct* loops, where the geometry is non‑singular and the physics is unambiguous:
+
+1. Compute
+
+   ```python
+   M = calc_mutual_inductance(R_src, Z_src, R_tgt, Z_tgt)
+   Phi_analytic = M * I
+   ```
+
+2. Numerically integrate the flux of `field_loop_rz` from the source loop through the target loop’s area:
+
+   ```text
+   Phi_numeric = ∫_0^{R_tgt} Bz(r, Z_tgt; R_src, Z_src) * 2π r dr
+   ```
+
+3. Compare `Phi_numeric` vs `Phi_analytic` for:
+   - separated loops (e.g. cage vs plasma at different `z`),
+   - concentric loops (e.g. plasma expanding inside a larger seed coil).
+
+Result: relative errors are in the `1e-8 – 1e-9` range, i.e. essentially perfect agreement given floating‑point and quadrature. This shows that:
+
+- `calc_mutual_inductance` and `field_loop_rz` are mathematically consistent,
+- the B‑field used for visualization and forces is exactly the same field that underlies the inductance matrix used in the flux solver.
+
+### 11.3 Takeaways for interpreting the demos
+
+- The **B‑field kernel and inductance matrix are internally consistent**; discrepancies between intuition and plots are almost certainly due to geometry and discretization (finite number of cage rings / plasma loops), not kernel errors.
+- Self‑inductance is inherently sensitive to **core radius and internal current distribution**. Naively integrating filamentary `Bz` over the loop area is not equivalent to `calc_self_inductance` and can give order‑of‑magnitude differences; mutual‑inductance tests avoid this ambiguity.
+- For debugging and design work it is therefore better to:
+  - trust the mutual‑inductance vs integrated‑B checks and the on‑axis tests for kernel correctness, and
+  - use energy/flux diagnostics plus controlled geometries (simple 2‑coil/3‑coil setups, spherical plasma shell inside a parabolic cage) to reason about physical shielding and flux compression.

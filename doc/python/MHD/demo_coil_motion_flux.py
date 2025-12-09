@@ -22,7 +22,7 @@ Usage
     python demo_coil_motion_flux.py
 
    In this case, a default parabolic nozzle configuration is generated
-   via `generate_parabolic_nozzle()` from `inductance_core`.
+   by composing helper generators from `inductance_core`.
 
 Options
 -------
@@ -41,7 +41,9 @@ from inductance_core import (
     build_inductance_matrix,
     compute_flux,
     magnetic_energy,
-    generate_parabolic_nozzle,
+    generate_sc_seed_coil,
+    generate_parabolic_rings,
+    generate_parabolic_plasma_armature,
 )
 from MHD_plots import plot_coil_geometry
 
@@ -150,20 +152,15 @@ def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True,
         ax[1].legend()
         ax[1].grid(True)
         plt.tight_layout()
+    fig = None
+    axes = None
     if plot_geom:
         # Geometry figure: initial vs final positions and currents
-        plot_coil_geometry(
-            types,
-            R0,
-            z0,
-            I0,
-            R1,
-            z1,
-            currents[-1],
-            title="Coil geometry (initial vs final)",
-            bg_mode=bg_mode,
-        )
+        fig, axes = plot_coil_geometry( types, R0, z0, I0, R1, z1, currents[-1], title="Coil geometry (initial vs final)", bg_mode=bg_mode, )
         plt.show()
+
+    # Return basic information that other demos can reuse (geometry, final currents, and axes if available).
+    return { "types": types, "R0": R0, "z0": z0,"R1": R1,"z1": z1,"I0": I0,"I_final": currents[-1],"fig": fig,"axes": axes,}
 
     
 
@@ -216,21 +213,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.coils_file is None:
-        # Auto-generate a parabolic nozzle configuration using CLI geometry
-        data_str = generate_parabolic_nozzle(
-            n_rings=args.n_rings,
-            r_throat=args.r_throat,
-            r_exit=args.r_exit,
-            z_start=args.z_start,
-            z_end=args.z_end,
-            sc_current=args.sc_current,
-            plasma_r_start=args.plasma_r0,
-            plasma_r_end=args.plasma_r1,
-            sc_r=args.sc_r,
-            sc_z=args.sc_z,
-            plasma_z_start=args.plasma_z0,
-            plasma_z_end=args.plasma_z1,
-        )
+        # Auto-generate a parabolic nozzle configuration using modular generators
+        sc_r = args.sc_r if args.sc_r is not None else 1.5 * args.r_throat
+        sc_z = args.sc_z if args.sc_z is not None else args.z_start
+        sc_line = generate_sc_seed_coil(sc_r, sc_z, sc_current=args.sc_current, coil_type="SC")
+        cage_block = generate_parabolic_rings( n_rings=args.n_rings, r_throat=args.r_throat, r_exit=args.r_exit,z_start=args.z_start,z_end=args.z_end,  coil_type="CAGE",   )
+        plasma_line = generate_parabolic_plasma_armature( plasma_r_start=args.plasma_r0, plasma_r_end=args.plasma_r1, plasma_z_start=args.plasma_z0,plasma_z_end=args.plasma_z1,coil_type="PLASMA",   )
+        data_str = "\n".join([sc_line, cage_block, plasma_line])
         data = np.genfromtxt(StringIO(data_str), dtype=str)
     else:
         data = np.genfromtxt(args.coils_file, dtype=str)

@@ -5,17 +5,7 @@ from matplotlib.colors import hsv_to_rgb
 from inductance_core import field_loop_rz
 
 
-def plot_coil_geometry(
-    types,
-    R0,
-    z0,
-    I0,
-    R1,
-    z1,
-    I_final,
-    title="Coil geometry (initial vs final)",
-    bg_mode="hsv",
-):
+def plot_coil_geometry( types, R0,  z0, I0, R1, z1, I_final, bg_mode="hsv", title="Coil geometry (initial vs final)" ):
     """Plot initial and final coil positions with current labels in (z,r) plane.
 
     Parameters
@@ -93,43 +83,17 @@ def plot_coil_geometry(
     Br_final, Bz_final, rgb_final = make_field_and_rgb(R1, z1, I_final)
     field_states = [(Br_init, Bz_init, rgb_initial), (Br_final, Bz_final, rgb_final)]
 
+    colors={'CAGE':'g','PLASMA':'r','SC':'k'}
+
     for ax, (Rs, Zs, Is, subt), (Br_s, Bz_s, rgb) in zip(axes, states, field_states):
-        ax.imshow(
-            rgb,
-            extent=(z_min - dz, z_max + dz, r_min_plot, r_max_plot),
-            origin="lower",
-            aspect="equal",
-            alpha=0.8,
-        )
-        ax.streamplot(
-            z_grid,
-            r_grid,
-            Bz_s,
-            Br_s,
-            color="k",
-            linewidth=0.6,
-            density=1.2,
-            arrowsize=0.7,
-        )
+        extent = (z_min - dz, z_max + dz, r_min_plot, r_max_plot)
+        ax.imshow(  rgb, extent=extent,origin="lower",aspect="equal",alpha=0.8,)
+        ax.streamplot( z_grid, r_grid,Bz_s, Br_s, color="gray",linewidth=0.4,density=1.8,arrowsize=0.6,)
         for typ, r, z, I in zip(types, Rs, Zs, Is):
             I_MA = I / 1e6
-            if typ == "SC":
-                color = "k"
-            elif typ == "CAGE":
-                color = "g"
-            else:
-                color = "r"
-            radius_draw = 0.02 * max(1.0, r_extent)
+            color = colors.get(typ, "k")
             for sign in (+1, -1):
                 r_pos = sign * r
-                circle = plt.Circle(
-                    (z, r_pos),
-                    radius_draw,
-                    fill=False,
-                    color=color,
-                    linewidth=1.0,
-                )
-                ax.add_patch(circle)
                 ax.plot(z, r_pos, marker="o", markersize=4, color=color)
             ax.text(z, r, f"{I_MA:.6f} MA", ha="center", va="bottom", fontsize=8)
 
@@ -143,3 +107,139 @@ def plot_coil_geometry(
     axes[0].set_ylabel("r [m]")
     fig.suptitle(title)
     plt.tight_layout()
+    return fig, axes
+
+
+def compute_axial_Bz_profile(Rs, Zs, Is, z_min, z_max, n_samples=400):
+    """Compute Bz(r=0,z) profile from a set of loops.
+
+    Returns z_axis, Bz_axis.
+    """
+    Rs = np.asarray(Rs, dtype=float); Zs = np.asarray(Zs, dtype=float); Is = np.asarray(Is, dtype=float)
+    z_axis = np.linspace(z_min, z_max, n_samples)
+    r_axis = np.zeros_like(z_axis)
+    Br_ax = np.zeros_like(z_axis); Bz_ax = np.zeros_like(z_axis)
+    for a, zc, I in zip(Rs, Zs, Is):
+        Rg, Zg = np.meshgrid(r_axis, z_axis)
+        Br_i, Bz_i = field_loop_rz(a, zc, I, np.abs(Rg), Zg)
+        Br_ax += Br_i[:, 0]
+        Bz_ax += Bz_i[:, 0]
+    return z_axis, Bz_ax
+
+
+def compute_radial_B_profile(Rs, Zs, Is, z0, r_max, n_samples=400):
+    """Compute Br, Bz, |B| as functions of radius at fixed z0.
+
+    Returns r, Br(r), Bz(r), |B|(r).
+    """
+    Rs = np.asarray(Rs, dtype=float); Zs = np.asarray(Zs, dtype=float); Is = np.asarray(Is, dtype=float)
+    r = np.linspace(0.0, r_max, n_samples)
+    z = np.full_like(r, float(z0))
+    Br_rad = np.zeros_like(r); Bz_rad = np.zeros_like(r)
+    for a, zc, I in zip(Rs, Zs, Is):
+        Rg, Zg = np.meshgrid(r, z)
+        Br_i, Bz_i = field_loop_rz(a, zc, I, Rg, Zg)
+        Br_rad += Br_i[0, :]
+        Bz_rad += Bz_i[0, :]
+    Bmag_rad = np.sqrt(Br_rad * Br_rad + Bz_rad * Bz_rad)
+    return r, Br_rad, Bz_rad, Bmag_rad
+
+
+def overlay_B_profiles_on_axes(ax, z0, Rs, Zs, Is, frac_height=0.25, frac_width=0.25):
+    """Overlay axial and radial B profiles onto an existing (z,r) axes.
+
+    This is a thin wrapper around :func:`overlay_axial_B_profile_on_axes` and
+    :func:`overlay_radial_B_profile_on_axes`.
+    """
+    (z_axis, Bz_ax)                   = overlay_axial_B_profile_on_axes (ax,     Rs, Zs, Is, frac_height=frac_height)
+    (r_rad, Br_rad, Bz_rad, Bmag_rad) = overlay_radial_B_profile_on_axes(ax, z0, Rs, Zs, Is, frac_width=frac_width)
+    return (z_axis, Bz_ax), (r_rad, Br_rad, Bz_rad, Bmag_rad)
+
+
+def overlay_axial_B_profile_on_axes(ax, Rs, Zs, Is, frac_height=0.25):
+    """Overlay axial Bz(r=0,z) profile onto an existing (z,r) axes.
+
+    The curve is normalized and scaled to occupy a fraction of the vertical
+    span; a zero-reference line at r=0 is drawn for comparison.
+    """
+    z_min, z_max = ax.get_xlim(); r_min, r_max = ax.get_ylim()
+    z_axis, Bz_ax = compute_axial_Bz_profile(Rs, Zs, Is, z_min, z_max)
+    Bz_norm = Bz_ax / (np.max(np.abs(Bz_ax)) + 1e-30)
+    r_scale = frac_height * (r_max - r_min)
+    r_curve = Bz_norm * r_scale
+    ax.axhline(0.0, color="k", linestyle=":", linewidth=0.7)
+    ax.plot(z_axis, r_curve, color="k", linewidth=1.0)
+    return z_axis, Bz_ax
+
+
+def overlay_radial_B_profile_on_axes(ax, z0, Rs, Zs, Is, frac_width=0.25):
+    """Overlay radial Br/Bz/|B| profile at fixed z0 onto an existing (z,r) axes.
+
+    The three components are drawn as horizontal deviations around z0, scaled
+    to occupy a fraction of the horizontal span; a zero-reference line at
+    z=z0 is drawn for comparison.
+    """
+    z_min, z_max = ax.get_xlim(); r_min, r_max = ax.get_ylim()
+    r_max_rad = max(abs(r_min), abs(r_max))
+    r_rad, Br_rad, Bz_rad, Bmag_rad = compute_radial_B_profile(Rs, Zs, Is, z0, r_max_rad)
+    Bmax = np.max(Bmag_rad) + 1e-30
+    z_scale = frac_width * (z_max - z_min)
+    z_Br = z0 + (Br_rad / Bmax) * z_scale
+    z_Bz = z0 + (Bz_rad / Bmax) * z_scale
+    z_Bm = z0 + (Bmag_rad / Bmax) * z_scale
+    ax.axvline(z0, color="k", linestyle=":", linewidth=0.7)
+    ax.plot(z_Br, r_rad, color="b", linewidth=1.0)
+    ax.plot(z_Bz, r_rad, color="r", linewidth=1.0)
+    ax.plot(z_Bm, r_rad, color="k", linewidth=1.0)
+    return r_rad, Br_rad, Bz_rad, Bmag_rad
+
+
+def plot_B_profiles(Rs, Zs, Is, z0, axes=None, show_separate=True):
+    """High-level helper to draw B profiles.
+
+    - If ``axes`` is a 2-panel geometry axes array (as returned by plot_coil_geometry),
+      overlays profiles on ``axes[1]``.
+    - If ``axes`` is None, creates a fresh (z,r) axes for the overlay.
+    - Optionally creates a separate figure with two 1D plots (axial and radial).
+
+    Returns
+    -------
+    (z_axis, Bz_ax), (r_rad, Br_rad, Bz_rad, Bmag_rad)
+        Raw profile data used for the plots.
+    """
+    Rs = np.asarray(Rs, dtype=float); Zs = np.asarray(Zs, dtype=float); Is = np.asarray(Is, dtype=float)
+
+    if axes is None:
+        fig, ax_final = plt.subplots(figsize=(6, 6))
+        ax_final.set_xlabel("z [m]"); ax_final.set_ylabel("r [m]")
+        z_min_plot, z_max_plot = float(np.min(Zs)), float(np.max(Zs))
+        r_extent = float(np.max(np.abs(Rs)))
+        r_min_plot, r_max_plot = -r_extent, r_extent
+        ax_final.set_xlim(z_min_plot, z_max_plot); ax_final.set_ylim(r_min_plot, r_max_plot)
+    else:
+        # axes may be a 2-panel array (from plot_coil_geometry) or a single Axes
+        try:
+            # treat as sequence and use final panel
+            ax_final = axes[1]
+        except (TypeError, IndexError):
+            ax_final = axes
+
+    (z_axis, Bz_ax), (r_rad, Br_rad, Bz_rad, Bmag_rad) = overlay_B_profiles_on_axes(ax_final, float(z0), Rs, Zs, Is)
+
+    if show_separate:
+        fig_p, ax_p = plt.subplots(1, 2, figsize=(10, 4))
+        # Axial profile
+        ax_p[0].plot(z_axis, Bz_ax, color="k")
+        ax_p[0].axhline(0.0, color="gray", linestyle=":", linewidth=0.7)
+        ax_p[0].set_xlabel("z [m]"); ax_p[0].set_ylabel("Bz(r=0) [T]"); ax_p[0].set_title("Axial Bz profile")
+        ax_p[0].grid(True)
+        # Radial profile
+        ax_p[1].plot(r_rad, Br_rad, color="b", label="Br")
+        ax_p[1].plot(r_rad, Bz_rad, color="r", label="Bz")
+        ax_p[1].plot(r_rad, Bmag_rad, color="k", label="|B|")
+        ax_p[1].axhline(0.0, color="gray", linestyle=":", linewidth=0.7)
+        ax_p[1].set_xlabel("r [m]"); ax_p[1].set_ylabel("B components [T]"); ax_p[1].set_title("Radial B profile at z0")
+        ax_p[1].grid(True); ax_p[1].legend()
+        plt.tight_layout()
+
+    return (z_axis, Bz_ax), (r_rad, Br_rad, Bz_rad, Bmag_rad)

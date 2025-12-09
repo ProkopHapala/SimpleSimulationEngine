@@ -174,98 +174,90 @@ def magnetic_energy(K, I):
     return 0.5 * float(I.T @ (K @ I))
 
 
-def generate_parabolic_nozzle(
-    n_rings=12,
-    r_throat=1.0,
-    r_exit=3.0,
-    z_start=0.0,
-    z_end=2.0,
-    sc_current=1.0e6,
-    plasma_r_start=0.2,
-    plasma_r_end=None,
-    plasma_r_end_factor=0.90,
-    sc_r=None,
-    sc_z=None,
-    plasma_z_start=None,
-    plasma_z_end=None,
-):
-    """Generate a simple parabolic nozzle configuration as coil definitions.
+def generate_sc_seed_coil(sc_r, sc_z, sc_current=1.0e6, coil_type="SC"):
+    """Return a single seed coil definition line (type configurable, default "SC")."""
+    t = f"{coil_type:6s}"
+    return f"{t}  {sc_r:.3f}  {sc_z:.3f}   {sc_r:.3f}  {sc_z:.3f}   {sc_current:.1e}"
 
-    Returns a multi-line string with lines of the form:
-        TYPE  R0  Z0  R1  Z1  I0
 
-    Where:
-    - SC     : seed superconducting coil (radius/z can be overridden)
-    - CAGE   : a set of nozzle cage rings following a parabolic wall
-    - PLASMA : plasma armature moving from throat to exit (r,z path configurable)
+def generate_parabolic_rings(n_rings=12, r_throat=1.0, r_exit=3.0, z_start=0.0, z_end=2.0, coil_type="CAGE"):
+    """Generate rings following a parabolic wall (generic coil type).
+
+    By default this is used for CAGE coils of a parabolic nozzle.
     """
-    if sc_r is None:
-        sc_r = r_throat * 1.5
-    if sc_z is None:
-        sc_z = z_start
-
-    if plasma_z_start is None:
-        pl_z_start = z_start
-    else:
-        pl_z_start = plasma_z_start
-
-    if plasma_z_end is None:
-        pl_z_end = z_end
-    else:
-        pl_z_end = plasma_z_end
-
-    if plasma_r_end is None:
-        pl_r_end = r_exit * plasma_r_end_factor
-    else:
-        pl_r_end = plasma_r_end
-
-    # Parabola parameter A such that (r_exit, z_end) lies on the wall
-    A = (z_end - z_start) / ((r_exit - r_throat) ** 2)
+    A = (z_end - z_start) / ((r_exit - r_throat) ** 2)  # parabola parameter
     r_step = (r_exit - r_throat) / max(1, n_rings - 1)
-
+    t = f"{coil_type:6s}"
     lines = []
-
-    # Seed SC coil
-    lines.append(f"SC      {sc_r:.3f}  {sc_z:.3f}   {sc_r:.3f}  {sc_z:.3f}   {sc_current:.1e}")
-
-    # Cage coils along parabolic wall
     for i in range(n_rings):
         r_curr = r_throat + i * r_step
         z_curr = A * r_curr ** 2 + z_start
-        lines.append(f"CAGE    {r_curr:.3f}  {z_curr:.3f}   {r_curr:.3f}  {z_curr:.3f}   0.0")
-
-    # Plasma coil trajectory
-    lines.append(
-        f"PLASMA  {plasma_r_start:.3f}  {pl_z_start:.3f}   {pl_r_end:.3f}  {pl_z_end:.3f}   0.0"
-    )
-
+        lines.append(f"{t}  {r_curr:.3f}  {z_curr:.3f}   {r_curr:.3f}  {z_curr:.3f}   0.0")
     return "\n".join(lines)
 
 
-def generate_spherical_plasma_loops(n_plasma=8, r0=0.01, r1=0.4, z0=0.0):
-    """Generate PLASMA loop lines approximating a spherical shell in (r,z).
+def generate_parabolic_cage_rings(n_rings=12, r_throat=1.0, r_exit=3.0, z_start=0.0, z_end=2.0):
+    """Backward-compatible wrapper: CAGE rings along a parabolic nozzle wall."""
+    return generate_parabolic_rings(n_rings=n_rings, r_throat=r_throat, r_exit=r_exit, z_start=z_start, z_end=z_end, coil_type="CAGE")
 
-    The output is a multi-line string with lines of the form
 
-        PLASMA  R0  Z0   R1  Z1   I0
+def generate_parabolic_plasma_armature(plasma_r_start=0.2, plasma_r_end=1.0, plasma_z_start=0.0, plasma_z_end=2.0, coil_type="PLASMA"):
+    """Generate only a single armature line between two (r,z) endpoints.
 
-    where (R0,Z0) and (R1,Z1) describe initial and final spherical shells
-    centered at z0 with radii r0 and r1, respectively, and I0 = 0.
+    Historically used for the PLASMA armature of a parabolic nozzle; coil_type
+    allows reuse for other types.
+    """
+    t = f"{coil_type:6s}"
+    return (
+        f"{t}  {plasma_r_start:.3f}  {plasma_z_start:.3f}   "
+        f"{plasma_r_end:.3f}  {plasma_z_end:.3f}   0.0"
+    )
+
+def generate_spherical_rings(n_rings=8, r0=0.01, r1=0.4, z0=0.0, coil_type="PLASMA"):
+    """Generate loop lines approximating a spherical shell in (r,z).
+
+    coil_type allows using the same geometry for PLASMA, CAGE, etc.
     """
     import numpy as _np
 
     lines = []
-    theta_min = 0.5 * _np.pi / max(4.0, float(n_plasma))
+    theta_min = 0.5 * _np.pi / max(4.0, float(n_rings))
     theta_max = _np.pi - theta_min
-    thetas = _np.linspace(theta_min, theta_max, n_plasma)
+    thetas = _np.linspace(theta_min, theta_max, n_rings)
+    t = f"{coil_type:6s}"
 
     for th in thetas:
         sr0 =      r0 * _np.sin(th)
         zz0 = z0 + r0 * _np.cos(th)
         sr1 =      r1 * _np.sin(th)
         zz1 = z0 + r1 * _np.cos(th)
-        lines.append(f"PLASMA  {sr0:.6f}  {zz0:.6f}   {sr1:.6f}  {zz1:.6f}   {0.0:.6e}")
+        lines.append(f"{t}  {sr0:.6f}  {zz0:.6f}   {sr1:.6f}  {zz1:.6f}   {0.0:.6e}")
 
+    return "\n".join(lines)
+
+
+def generate_spherical_plasma_loops(n_plasma=8, r0=0.01, r1=0.4, z0=0.0):
+    """Backward-compatible wrapper for PLASMA spherical shell loops."""
+    return generate_spherical_rings(n_rings=n_plasma, r0=r0, r1=r1, z0=z0, coil_type="PLASMA")
+
+
+def generate_disk_rings(n_rings=8, r_inner=0.1, r_outer=1.0, z0=0.0, coil_type="PLASMA"):
+    """Generate concentric rings in a disk at fixed z0."""
+    rs = np.linspace(r_inner, r_outer, n_rings)
+    t = f"{coil_type:6s}"
+    lines = []
+    for r in rs:
+        lines.append(f"{t}  {r:.6f}  {z0:.6f}   {r:.6f}  {z0:.6f}   {0.0:.6e}")
+    return "\n".join(lines)
+
+
+def generate_tube_rings(n_rings=8, radius=1.0, z_start=0.0, z_end=2.0, coil_type="PLASMA"):
+    """Generate rings forming a straight tube between z_start and z_end."""
+    zs = np.linspace(z_start, z_end, n_rings)
+    t = f"{coil_type:6s}"
+    lines = []
+    for z in zs:
+        lines.append(f"{t}  {radius:.6f}  {z:.6f}   {radius:.6f}  {z:.6f}   {0.0:.6e}")
     return "\n".join(lines)
 
 
@@ -307,9 +299,7 @@ def field_loop_rz(a, z0, I, r_grid, z_grid, eps=1e-12):
     factor = MU0 * I / (2.0 * np.pi * denom)
     common = (a - rho_safe) ** 2 + z_rel ** 2
 
-    Br = factor * z_rel / rho_safe * (
-        -K + ((a * a + rho_safe * rho_safe + z_rel * z_rel) / common) * E
-    )
+    Br = factor * z_rel / rho_safe * (  -K + ((a * a + rho_safe * rho_safe + z_rel * z_rel) / common) * E )
     Bz = factor * (K + ((a * a - rho_safe * rho_safe - z_rel * z_rel) / common) * E)
 
     # Set Br to zero on axis where symmetry enforces it
