@@ -35,7 +35,6 @@ Options
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 from io import StringIO
 
 from inductance_core import (
@@ -43,8 +42,8 @@ from inductance_core import (
     compute_flux,
     magnetic_energy,
     generate_parabolic_nozzle,
-    field_loop_rz,
 )
+from MHD_plots import plot_coil_geometry
 
 
 def parse_coils(data):
@@ -85,97 +84,6 @@ def parse_coils(data):
         np.array(z1_list, dtype=float),
         np.array(I0_list, dtype=float),
     )
-
-
-def plot_geometry(types, R0, z0, I0, R1, z1, I_final, title="Coil geometry (initial vs final)", bg_mode="hsv"):
-    """Plot initial and final coil positions with current labels in (z,r) plane.
-
-    types : array of strings (e.g. SC, CAGE, PLASMA)
-    R0,z0 : initial radii/positions
-    R1,z1 : final radii/positions
-    I0    : initial currents
-    I_final : final currents from solver (same order)
-    """
-    fig, axes = plt.subplots(1, 2, figsize=(10,10), sharey=True)
-    states = [
-        (R0, z0, I0,      "t=0"     ),
-        (R1, z1, I_final, "t=final" ),
-    ]
-
-    # Determine global bounds for margins
-    all_R = np.concatenate([R0, R1])
-    all_Z = np.concatenate([z0, z1])
-    r_span = max(1.0, np.max(np.abs(all_R)) - np.min(np.abs(all_R)))
-    r_pad = 0.1 * r_span
-    r_extent = np.max(np.abs(all_R)) + r_pad
-    r_min_plot, r_max_plot = -r_extent, r_extent
-    z_min, z_max = all_Z.min(), all_Z.max()
-    dz = 0.1 * max(1.0, z_max - z_min)
-
-    Nr, Nz = 120, 240
-    r_grid = np.linspace(r_min_plot, r_max_plot, Nr)
-    z_grid = np.linspace(z_min - dz, z_max + dz, Nz)
-    Zg, Rg = np.meshgrid(z_grid, r_grid)
-
-    def make_field_and_rgb(Rs, Zs, Is):
-        Br = np.zeros_like(Rg)
-        Bz = np.zeros_like(Rg)
-        for a, zc, I in zip(Rs, Zs, Is):
-            Br_i_abs, Bz_i = field_loop_rz(a, zc, I, np.abs(Rg), Zg)
-            Br += np.sign(Rg) * Br_i_abs
-            Bz += Bz_i
-        Bmag = np.sqrt(Br * Br + Bz * Bz)
-        B_ref = 0.01 * np.max(Bmag)  # damp dominant field to reveal weaker structures
-        Bmag_norm = np.clip(Bmag / max(B_ref, 1e-30), 0.0, 1.0)
-        phi = np.arctan2(Bz, Br)  # direction in (r,z)
-        if bg_mode == "hsv":
-            hue = (phi + np.pi) / (2 * np.pi)
-            sat = np.ones_like(hue)
-            val = Bmag_norm
-            hsv = np.stack([hue, sat, val], axis=-1)
-            rgb = hsv_to_rgb(hsv)
-        else:
-            cmap = plt.cm.magma
-            rgb = cmap(Bmag_norm)[..., :3]
-        return Br, Bz, rgb
-
-    Br_init, Bz_init, rgb_initial = make_field_and_rgb(R0, z0, I0)
-    Br_final, Bz_final, rgb_final = make_field_and_rgb(R1, z1, I_final)
-    field_states = [(Br_init, Bz_init, rgb_initial), (Br_final, Bz_final, rgb_final)]
-
-    for ax, (Rs, Zs, Is, subt), (Br_s, Bz_s, rgb) in zip(axes, states, field_states):
-        ax.imshow( rgb, extent=(z_min - dz, z_max + dz, r_min_plot, r_max_plot), origin="lower", aspect="equal", alpha=0.8, )
-        # Field lines (streamplot) in the (z,r) plane; note streamplot expects x=z_grid, y=r_grid
-        ax.streamplot( z_grid, r_grid, Bz_s, Br_s, color="k", linewidth=0.6, density=1.2, arrowsize=0.7, )
-        for typ, r, z, I in zip(types, Rs, Zs, Is):
-            I_MA = I / 1e6
-            if typ ==   "SC":
-                color = "k"
-            elif typ == "CAGE":
-                color = "g"
-            else:
-                color = "r"
-            # Circle outline
-            radius_draw = 0.02 * max(1.0, r_extent)
-            for sign in (+1, -1):
-                r_pos = sign * r
-                circle = plt.Circle((z, r_pos), radius_draw, fill=False, color=color, linewidth=1.0)
-                ax.add_patch(circle)
-                # Marker at coil center for visibility
-                ax.plot(z, r_pos, marker="o", markersize=4, color=color)
-            #ax.text(z, r, f"{typ}\n{I_MA:.6f} MA", ha="center", va="bottom", fontsize=8)
-            ax.text(z, r, f"{I_MA:.6f} MA", ha="center", va="bottom", fontsize=8)
-
-        ax.set_title(subt)
-        ax.set_xlabel("z [m]")
-        ax.set_xlim(z_min - dz, z_max + dz)
-        ax.set_ylim(r_min_plot, r_max_plot)
-        ax.set_aspect("equal", adjustable="box")
-        ax.grid(True, linestyle=":", linewidth=0.5, alpha=0.5)
-
-    axes[0].set_ylabel("r [m]")
-    fig.suptitle(title)
-    plt.tight_layout()
 
 
 def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True, bg_mode="hsv"):
@@ -244,7 +152,17 @@ def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True,
         plt.tight_layout()
     if plot_geom:
         # Geometry figure: initial vs final positions and currents
-        plot_geometry(types, R0, z0,   I0, R1, z1, currents[-1], title="Coil geometry (initial vs final)", bg_mode=bg_mode)
+        plot_coil_geometry(
+            types,
+            R0,
+            z0,
+            I0,
+            R1,
+            z1,
+            currents[-1],
+            title="Coil geometry (initial vs final)",
+            bg_mode=bg_mode,
+        )
         plt.show()
 
     

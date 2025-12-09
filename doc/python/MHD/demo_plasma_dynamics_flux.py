@@ -241,13 +241,13 @@ def run_plasma_dynamics(
 
         t += dt
 
-    times = np.array(times)
-    r_hist = np.array(r_hist)
-    z_hist = np.array(z_hist)
+    times      = np.array(times)
+    r_hist     = np.array(r_hist)
+    z_hist     = np.array(z_hist)
     E_mag_hist = np.array(E_mag_hist)
     E_kin_hist = np.array(E_kin_hist)
     E_tot_hist = np.array(E_tot_hist)
-    I_hist = np.array(I_hist)
+    I_hist     = np.array(I_hist)
 
     return {
         "types": types,
@@ -317,61 +317,17 @@ def plot_results(result):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Dynamic plasma-coil demo with flux-conserving currents.",
-    )
-    parser.add_argument(
-        "--no-cage",
-        action="store_true",
-        help="Disable cage coil (simulate only seed + plasma)",
-    )
-    parser.add_argument(
-        "--dt",
-        type=float,
-        default=5e-6,
-        help="Time step [s] (default: 5e-6)",
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        default=400,
-        help="Number of integration steps (default: 400)",
-    )
-    parser.add_argument(
-        "--P0",
-        type=float,
-        default=1e6,
-        help="Initial effective plasma pressure [Pa] (default: 1e6)",
-    )
-    parser.add_argument(
-        "--gamma-gas",
-        type=float,
-        default=5.0 / 3.0,
-        help="Polytropic index gamma for gas pressure (default: 5/3)",
-    )
-    parser.add_argument(
-        "--L-eff",
-        type=float,
-        default=1.0,
-        help="Effective axial length of plasma ring for pressure model (default: 1.0)",
-    )
-    parser.add_argument(
-        "--mag-self-coeff",
-        type=float,
-        default=1e-7,
-        help="Coefficient for magnetic self-pressure term ~ coeff * I^2 / r (default: 1e-7)",
-    )
+    parser = argparse.ArgumentParser(description="Dynamic plasma-coil demo with flux-conserving currents.")
+    parser.add_argument( "--no-cage", action="store_true", help="Disable cage coil (simulate only seed + plasma)" )
+    parser.add_argument( "--dt", type=float, default=5e-6, help="Time step [s] (default: 5e-6)")
+    parser.add_argument( "--steps", type=int, default=400, help="Number of integration steps (default: 400)")
+    parser.add_argument( "--P0", type=float, default=1e6, help="Initial effective plasma pressure [Pa] (default: 1e6)")
+    parser.add_argument( "--gamma-gas", type=float, default=5.0 / 3.0, help="Polytropic index gamma for gas pressure (default: 5/3)", )
+    parser.add_argument( "--L-eff", type=float, default=1.0, help="Effective axial length of plasma ring for pressure model (default: 1.0)", )
+    parser.add_argument( "--mag-self-coeff", type=float, default=1e-7, help="Coefficient for magnetic self-pressure term ~ coeff * I^2 / r (default: 1e-7)", )
     args = parser.parse_args()
 
-    res = run_plasma_dynamics(
-        with_cage=not args.no_cage,
-        dt=args.dt,
-        n_steps=args.steps,
-        P0=args.P0,
-        gamma_gas=args.gamma_gas,
-        L_eff=args.L_eff,
-        mag_self_coeff=args.mag_self_coeff,
-    )
+    res = run_plasma_dynamics( with_cage=not args.no_cage, dt=args.dt, n_steps=args.steps, P0=args.P0, gamma_gas=args.gamma_gas, L_eff=args.L_eff, mag_self_coeff=args.mag_self_coeff, )
     plot_results(res)
     plt.show()
 

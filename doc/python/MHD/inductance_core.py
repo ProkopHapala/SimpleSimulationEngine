@@ -242,6 +242,33 @@ def generate_parabolic_nozzle(
     return "\n".join(lines)
 
 
+def generate_spherical_plasma_loops(n_plasma=8, r0=0.01, r1=0.4, z0=0.0):
+    """Generate PLASMA loop lines approximating a spherical shell in (r,z).
+
+    The output is a multi-line string with lines of the form
+
+        PLASMA  R0  Z0   R1  Z1   I0
+
+    where (R0,Z0) and (R1,Z1) describe initial and final spherical shells
+    centered at z0 with radii r0 and r1, respectively, and I0 = 0.
+    """
+    import numpy as _np
+
+    lines = []
+    theta_min = 0.5 * _np.pi / max(4.0, float(n_plasma))
+    theta_max = _np.pi - theta_min
+    thetas = _np.linspace(theta_min, theta_max, n_plasma)
+
+    for th in thetas:
+        sr0 =      r0 * _np.sin(th)
+        zz0 = z0 + r0 * _np.cos(th)
+        sr1 =      r1 * _np.sin(th)
+        zz1 = z0 + r1 * _np.cos(th)
+        lines.append(f"PLASMA  {sr0:.6f}  {zz0:.6f}   {sr1:.6f}  {zz1:.6f}   {0.0:.6e}")
+
+    return "\n".join(lines)
+
+
 def field_loop_rz(a, z0, I, r_grid, z_grid, eps=1e-12):
     """Biot–Savart field of a circular loop at (a, z0) with current I in (r,z) plane.
 
