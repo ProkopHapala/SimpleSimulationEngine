@@ -4,8 +4,6 @@
 
 This overview mirrors the structure of the English Markdown files in `Markdown_Eng/` and highlights key ideas from each chapter.
 
----
-
 ## 1. Tactics – how battles are actually fought
 
 **File:** `01_Tactics.md`
@@ -19,14 +17,14 @@ Key ideas:
   Weeks or months of maneuvering and energy accumulation culminate in seconds to minutes of intense combat near closest approach.
 
 - **Long‑range vs. close‑range regimes.**  
-  - Long‑range: lasers and other beams at \(\gtrsim 10^5\,\text{km}\), dominated by large ships with big apertures and strong shields.  
-  - Close‑range: heavy kinetic weapons at \(\sim 10^2–10^4\,\text{km}\), where damage per hit is much higher and shields erode rapidly.
+  - Long‑range: lasers and other beams at $\gtrsim 10^5\,\text{km}$, dominated by large ships with big apertures and strong shields.  
+  - Close‑range: heavy kinetic weapons at $\sim 10^2–10^4\,\text{km}$, where damage per hit is much higher and shields erode rapidly.
 
 - **Maneuvering parameters.**  
-  The outcome of pursuits is set mainly by \(\Delta v\), long‑term \(\bar{a}\) and peak \(a_{\text{max}}\). These determine who can force or break contact.
+  The outcome of pursuits is set mainly by $\Delta v$, long‑term $\bar{a}$ and peak $a_{\text{max}}$. These determine who can force or break contact.
 
 - **Internal vs. external maneuvers.**  
-  External maneuvers (changing trajectory) are expensive in \(\Delta v\); internal maneuvers (reconfiguring the ship, rotating segments, moving shields) are cheaper and dominate during the short climax.
+  External maneuvers (changing trajectory) are expensive in $\Delta v$; internal maneuvers (reconfiguring the ship, rotating segments, moving shields) are cheaper and dominate during the short climax.
 
 - **Information warfare and bluff.**  
   Concealing true engine performance, fuel reserves and weapon strength is one of the few ways to undermine the opponent’s planning algorithms.
@@ -36,8 +34,6 @@ Key ideas:
 
 - **Broadside fire and inertial projectiles.**  
   Using the fleets’ closing velocity as "free" impact velocity, ships release clouds of projectiles sideways at modest lateral speed instead of firing them forward at full muzzle velocity.
-
----
 
 ## 2. Weapons – how damage is delivered
 
@@ -68,18 +64,16 @@ Key cross‑cutting themes:
 - **Role of missiles.**  
   Missiles are more like expendable mini‑ships than simple munitions; cost and logistics restrict them to special situations.
 
----
-
 ## 3. Defense – how ships survive
 
 **File:** `03_Defense.md`
 
 Defence mechanisms:
 
-- **Evasion without \(\Delta v\).**  
+- **Evasion without $\Delta v$.**  
   Internal maneuvers to rotate, reconfigure and shift shields without moving the centre of mass.
 
-- **Evasion with \(\Delta v\).**  
+- **Evasion with $\Delta v$.**  
   External maneuvers using main engines. Powerful but expensive in propellant and future options.
 
 - **Thin shields.**  
@@ -99,15 +93,13 @@ Core principles:
 - **Active defence.**  
   Lasers, particle beams and interceptor projectiles form "fire curtains" against incoming projectiles and small threats.
 
----
-
 ## 4. Propulsion – how ships move
 
 **File:** `04_Propulsion.md`
 
 Key tensions:
 
-- **High \(\Delta v\)** vs. **high instantaneous acceleration** \(a\),
+- **High $\Delta v$** vs. **high instantaneous acceleration** $a$,
 - small propellant fraction vs. powerful engines and radiators,
 - efficient cruise vs. aggressive combat maneuvers.
 
@@ -117,17 +109,15 @@ Main families:
   Classic rocketry (chemical, nuclear‑thermal, electric, fusion). Governed by Tsiolkovsky’s equation and power‑limited thrust.
 
 - **Externally‑impulsive propulsion.**  
-  Solar and magnetic sails, tethers, magnetic tracks: effectively infinite \(\Delta v\) but tiny accelerations and dependence on environment.
+  Solar and magnetic sails, tethers, magnetic tracks: effectively infinite $\Delta v$ but tiny accelerations and dependence on environment.
 
 - **Advanced nuclear / fusion concepts.**  
   Nuclear pulse propulsion, continuous fusion nozzles, plasma thrusters, EM mass‑drivers.
 
 Tactical relevance:
 
-- Combat ships rely on high‑\(I_{sp}\) engines for strategic mobility and on high‑thrust subsystems for short bursts of \(a_{\text{max}}\).
+- Combat ships rely on high‑$I_{sp}$ engines for strategic mobility and on high‑thrust subsystems for short bursts of $a_{\text{max}}$.
 - Space infrastructure (sails, tethers, tracks) is strategically important and itself a major target.
-
----
 
 ## 5. Ship construction – what ships look like and why
 
@@ -148,7 +138,7 @@ Structural themes:
   Tensioned cables are mass‑efficient; rigid beams are used sparingly.
 
 - **Locomotor system.**  
-  Networks of actuators and rotating masses let the ship reconfigure without large \(\Delta v\).
+  Networks of actuators and rotating masses let the ship reconfigure without large $\Delta v$.
 
 Design archetypes:
 
@@ -158,8 +148,6 @@ Design archetypes:
 - **Circular / ring ships.**  
   Rings as accelerators, structural elements and possibly parts of magnetic sails; excel at firing in many azimuths during close fly‑bys.
 
----
-
 ## 6. Physical model – equations behind the game
 
 **File:** `07_Physical_model_and_equations.md`
@@ -167,7 +155,7 @@ Design archetypes:
 This chapter acts as a **whitepaper for implementation**. It collects simplified but consistent models for:
 
 - **Kinematics and orbital mechanics.**  
-  Approach times, role of \(\Delta v\), \(\bar{a}\), \(a_{\text{max}}\).
+  Approach times, role of $\Delta v$, $\bar{a}$, $a_{\text{max}}$.
 
 - **Propulsion energetics.**  
   Rocket equation, relations between exhaust velocity, thrust, power and specific impulse.
@@ -176,7 +164,7 @@ This chapter acts as a **whitepaper for implementation**. It collects simplified
   Diffraction limits, spot size vs. range, intensity at target.
 
 - **Particle beams.**  
-  Parametrised divergence (\(L_{\text{eff}}\)), Coulomb expansion sketch, simple penetration models.
+  Parametrised divergence ($L_{\text{eff}}$), Coulomb expansion sketch, simple penetration models.
 
 - **Kinetic ballistics.**  
   Force‑ and power‑limited acceleration, optimal projectile velocities, target deviation under maneuvering.
@@ -188,8 +176,6 @@ This chapter acts as a **whitepaper for implementation**. It collects simplified
   Geometric‑series model of fission chains, burn fractions, simple Lawson‑based fusion stage.
 
 Each model is meant to be simple enough for a game/simulation engine, but grounded enough to capture the key trade‑offs.
-
----
 
 ## 7. How to use this overview
 

@@ -10,7 +10,7 @@ In this framework, the defense of spacecraft can be divided into several basic m
    Fast internal maneuvers that change the orientation and configuration of the ship, but not its overall trajectory.
 
 2. **Evasion with a shift of the centre of mass**  
-   External maneuvers using the main engines – changing the trajectory of the ship (consuming \(\Delta v\)).
+   External maneuvers using the main engines – changing the trajectory of the ship (consuming $ \Delta v$).
 
 3. **Thin shields**  
    Lightweight, replaceable protective layers (foils, plasma or aerosol clouds, dust layers), effective mainly against beam weapons and small kinetic projectiles.
@@ -83,7 +83,7 @@ The original text distinguishes two types of "evasion":
 
 2. **With a shift of the centre of mass** – a true evasive maneuver:
    - changing the trajectory using main engines,
-   - paid for in \(\Delta v\) and limitations on options in later phases of the campaign (see [04_Propulsion](04_Propulsion.md)).
+   - paid for in $\Delta v$ and limitations on options in later phases of the campaign (see [04_Propulsion](04_Propulsion.md)).
 
 As a rule, it is desirable to **minimize the number of external maneuvers**, which are expensive in propellant. Most defensive actions should be handled by proper ship design (layout of mass, shields and weapons) and by internal maneuvers (see also [01_Tactics](01_Tactics.md), the section on internal maneuvers).
 
@@ -106,7 +106,7 @@ In practice, ships are designed so that they can:
 
 ## 6. Links to other chapters
 
-- The tactical context of defense (when to hide behind a body, when to actively cover incoming fire, when to spend \(\Delta v\) to break contact) is discussed in detail in [01_Tactics](01_Tactics.md).
+- The tactical context of defense (when to hide behind a body, when to actively cover incoming fire, when to spend $\Delta v$ to break contact) is discussed in detail in [01_Tactics](01_Tactics.md).
 - The nature of individual threats and physical parameters of weapons are described in [02_Weapons](02_Weapons.md).
 - Structural and material aspects of shields and supporting structures will be covered in [05_Ship_construction](05_Ship_construction.md).
 - Quantitative models (probability of shield penetration, erosion of thin layers, required material thickness for a given type of hit) will be collected in [07_Physical_model_and_equations](07_Physical_model_and_equations.md).

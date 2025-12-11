@@ -6,8 +6,8 @@
 
 Propulsion of spacecraft, especially warships, must meet mutually conflicting requirements:
 
-- high **total \(\Delta v\)** for interplanetary transfers,
-- high **instantaneous acceleration** \(a\) for maneuvering in combat,
+- high **total $\Delta v$** for interplanetary transfers,
+- high **instantaneous acceleration** $a$ for maneuvering in combat,
 - low propellant mass fraction relative to ship mass,
 - low mass of the engine itself,
 - the ability to **throttle thrust and consumption** over a wide range,
@@ -17,7 +17,7 @@ Propulsion of spacecraft, especially warships, must meet mutually conflicting re
 The original text refers to two key illustrations (future figures in `images/`):
 
 - **Typical flight times in the Solar System** (`TimeOfFlight.pdf`) – the dependence of travel time on achievable velocity.
-- **Specific power vs. required acceleration** (`PowerLimit.pdf`) – how required power per unit ship mass grows with demanded \(a\) and exhaust velocity.
+- **Specific power vs. required acceleration** (`PowerLimit.pdf`) – how required power per unit ship mass grows with demanded $a$ and exhaust velocity.
 
 These diagrams will later be redrawn into `images/` and analysed quantitatively in `07_Physical_model_and_equations.md`.
 
@@ -50,8 +50,8 @@ Consequences:
 
 Example from the original text:
 
-- we want to accelerate a ship to \(300\,\text{km/s}\) using an ion engine with \(v_e \approx 0.1c = 30\,000\,\text{km/s}\),
-- the energy given to the propellant must be \(\sim 100\times\) higher than the ideal minimum (the case of an infinitely massive "reaction body").
+- we want to accelerate a ship to $300\,\text{km/s}$ using an ion engine with $v_e \approx 0.1c = 30\,000\,\text{km/s}$,
+- the energy given to the propellant must be $\sim 100\times$ higher than the ideal minimum (the case of an infinitely massive "reaction body").
 
 ### 3.2 Externally‑impulsive propulsion
 
@@ -64,7 +64,7 @@ Externally‑impulsive propulsion transfers momentum **via the surrounding mediu
 
 Advantages:
 
-- in principle **"infinite \(\Delta v\)"** – not limited by carried propellant,
+- in principle **"infinite $\Delta v$"** – not limited by carried propellant,
 - very energy‑efficient (we "bounce off" effectively infinite‑mass environments).
 
 Drawbacks:
@@ -74,8 +74,6 @@ Drawbacks:
 - often limited maximum force and therefore acceleration.
 
 More detailed discussion of externally‑impulsive systems follows in chapter 6.
-
----
 
 ## 4. Self‑impulsive propulsion – thermal thrusters
 
@@ -89,7 +87,7 @@ Classic thermal rockets, conceptually similar to early spaceflight rockets, stil
 Drawbacks:
 
 - limited specific impulse (set by maximum working temperature and propellant properties),
-- to achieve high \(\Delta v\) they require **very large propellant reserves**.
+- to achieve high $\Delta v$ they require **very large propellant reserves**.
 
 Therefore they are mainly suitable for:
 
@@ -131,8 +129,8 @@ The original chapter lists several advanced concepts, only sketched for now:
 ### 5.1 Nuclear pulse propulsion
 
 - analogous to Project Orion – the ship is accelerated by a series of small nuclear explosions,
-- advantages: potentially very high \(\Delta v\) and thrust,
-- drawbacks: enormous structural loads, radiation exposure, political and environmental issues,
+- advantages: potentially very high $\Delta v$ and thrust,
+- drawbacks: enormous structural loads, radiation exposure, political and environmental issues, 
 - more suitable for large ships or heavy tugs than for finely maneuvering warships.
 
 ### 5.2 Continuous fusion magnetic nozzles
@@ -160,7 +158,7 @@ In the model these systems will be handled mainly through:
 
 - specific impulse,  
 - maximum achievable thrust,  
-- \(P/m\) ratio (power per unit mass of the propulsion system),  
+- $P/m$ ratio (power per unit mass of the propulsion system),  
 - thermal losses and radiator requirements.
 
 ---
@@ -170,7 +168,7 @@ In the model these systems will be handled mainly through:
 ### 6.1 Solar sails
 
 - use pressure of solar radiation on a large reflective sail,  
-- advantages: no carried propellant, in principle inexhaustible \(\Delta v\),  
+- advantages: no carried propellant, in principle inexhaustible $\Delta v$,  
 - drawbacks: very low acceleration, dependence on distance from the star.
 
 Military use:
@@ -223,9 +221,9 @@ From a military point of view:
 
 When building `07_Physical_model_and_equations.md`, this chapter will provide in particular:
 
-- relations between \(I_{sp}\), \(\Delta v\), propellant mass and ship mass,
-- the relation between propulsion system power \(P\), exhaust velocity and achievable thrust,
-- models of long‑term average acceleration \(\bar{a}\) vs. short‑term \(a_{\text{max}}\),
+- relations between $I_{sp}$, $\Delta v$, propellant mass and ship mass,
+- the relation between propulsion system power $P$, exhaust velocity and achievable thrust,
+- models of long‑term average acceleration $\bar{a}$ vs. short‑term $a_{\text{max}}$,
 - constraints imposed by thermal management and radiator area,
 - typical flight times between key Solar System locations for various propulsion types.
 

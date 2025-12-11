@@ -73,8 +73,6 @@ In addition:
 - protective shields are usually **highly directional** (they cover only a narrow solid angle),  
 - they must be coordinated with internal maneuvers and ship rotation (see [03_Defense](03_Defense.md)).
 
----
-
 ## 3. Principle of "more tethers, fewer beams"
 
 One of the basic design principles is to **use cables instead of solid beams wherever possible**:
@@ -91,8 +89,6 @@ This reliance on flexible, low‑stiffness structures and on inertial forces ass
 
 - carefully simulated during design,  
 - continuously evaluated by onboard computers during maneuvers.
-
----
 
 ## 4. Linear ship concepts
 
@@ -127,8 +123,6 @@ Conversely, in close‑range environments or when attacked from multiple directi
 - rapidly redirect its main weapons to another azimuth,
 - reconfigure shields to cover multiple directions at once.
 
----
-
 ## 5. Circular ship concepts
 
 ### 5.1 Basic scheme
@@ -149,7 +143,7 @@ Advantages:
 
 Drawbacks:
 
-- to achieve the same projectile acceleration as a linear barrel, a **longer path** is required (roughly \(\pi\) times longer than a straight section),
+- to achieve the same projectile acceleration as a linear barrel, a **longer path** is required (roughly $\pi$ times longer than a straight section),
 - in typical long‑range combat only a small solid angle is tactically relevant – the ability to "fire anywhere" is not fully used.
 
 ### 5.2 Tactical implications
@@ -174,8 +168,6 @@ The original text notes that:
 
 Magnetic sails thus often form **a separate extended system**, only weakly coupled to the ship (by tethers, fields) and not identical with the main load‑bearing structure.
 
----
-
 ## 6. Lightweight structures of large size (outline)
 
 The original LaTeX chapter ends here with only a heading; for further development it is useful to plan for:
@@ -186,9 +178,7 @@ The original LaTeX chapter ends here with only a heading; for further developmen
 
 This section will later be expanded and linked to specific models in `07_Physical_model_and_equations.md` (stresses in cable structures during maneuvers, limits on maximum accelerations, resonance frequencies).
 
----
-
-## 7. Locomotor system for zero‑\(\Delta v\) maneuvers (outline)
+## 7. Locomotor system for zero‑$\Delta v$ maneuvers (outline)
 
 The second unfinished subsection of the original text will cover in particular:
 
@@ -201,8 +191,6 @@ Together with [01_Tactics](01_Tactics.md) and [03_Defense](03_Defense.md) this s
 - how fast a ship can realistically change its orientation and configuration,
 - how this depends on its shape (linear vs. circular) and mass distribution,
 - what are the "safe" and "risky" regimes of internal maneuvering.
-
----
 
 ## 8. Links to other chapters and simulations
 

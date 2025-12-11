@@ -34,9 +34,9 @@ A large fraction of a warship’s equipment does not serve direct fire, but **pr
 
 ## 2. Long‑range and close‑range combat
 
-Consider a very fast spacecraft moving at roughly \(100\,\text{km/s}\). Such a ship crosses the radius of a geostationary orbit in about 6 minutes and the Earth–Moon distance in roughly one hour.
+Consider a very fast spacecraft moving at roughly $100\,\text{km/s}$. Such a ship crosses the radius of a geostationary orbit in about 6 minutes and the Earth–Moon distance in roughly one hour.
 
-Some weapons (e.g. X‑ray lasers) can engage targets quite precisely at distances \(>10^5\,\text{km}\). Other weapons (kinetic projectiles) are limited to much shorter ranges (typically \(<10^3\,\text{km}\)). At the same time, the destructive effect of available laser weapons is many times lower than that of heavy kinetic weapons with large mass and momentum of the projectile.
+Some weapons (e.g. X‑ray lasers) can engage targets quite precisely at distances $>10^5\,\text{km}$. Other weapons (kinetic projectiles) are limited to much shorter ranges (typically $<10^3\,\text{km}$). At the same time, the destructive effect of available laser weapons is many times lower than that of heavy kinetic weapons with large mass and momentum of the projectile.
 
 During approach, combat gradually shifts between two extremes:
 
@@ -45,36 +45,36 @@ During approach, combat gradually shifts between two extremes:
   **Effective hits** in this regime are relatively rare and the doctrine favours **large ships** with powerful long‑range weapons, strong shields and massive power sources.
 
 - **Close‑range combat**  
-  Once the distance shrinks (typically to \(10^2–10^4\,\text{km}\), exceptionally less), ships can employ much more effective and cheaper weapons: primarily heavier kinetic projectiles, in some cases fired with higher cadence from many shorter accelerators. Heavier projectiles punch more easily through thin shields; high rate of fire raises the probability of hitting critical subsystems and quickly erodes protective layers. In the closest phase of the battle, **broadside salvos** become important: large numbers of projectiles are fired sideways at speeds much lower than the mutual closing speed of the ships. Heavy nuclear warheads are often delivered in this way.
+  Once the distance shrinks (typically to $10^2–10^4\,\text{km}$, exceptionally less), ships can employ much more effective and cheaper weapons: primarily heavier kinetic projectiles, in some cases fired with higher cadence from many shorter accelerators. Heavier projectiles punch more easily through thin shields; high rate of fire raises the probability of hitting critical subsystems and quickly erodes protective layers. In the closest phase of the battle, **broadside salvos** become important: large numbers of projectiles are fired sideways at speeds much lower than the mutual closing speed of the ships. Heavy nuclear warheads are often delivered in this way.
 
 Close‑range combat usually takes place in a **very short time interval**:
 
-- for two ships passing head‑on: \(\sim 0.1–10\,\text{s}\),
+- for two ships passing head‑on: $\sim 0.1–10\,\text{s}$,
 - in a tail chase: up to several minutes.
 
 These times are generally shorter than what is needed for substantial **reconfiguration and reorientation of the ship** (internal maneuvers). A ship therefore has very limited ability to adapt to the situation during the close‑range phase itself, and it is crucial that it **enters the close‑range zone already in an optimal configuration**.
 
 ## 3. Maneuvering
 
-Interplanetary spacecraft gain their speed long before the engagement itself. High‑specific‑impulse engines used to traverse interplanetary distances typically provide very low thrust (\(\ll 1\,g\)), and reaching cruise speeds of order \(100\,\text{km/s}\) is a matter of days to weeks. The same holds for braking.
+Interplanetary spacecraft gain their speed long before the engagement itself. High‑specific‑impulse engines used to traverse interplanetary distances typically provide very low thrust ($\ll 1\,g$), and reaching cruise speeds of order $100\,\text{km/s}$ is a matter of days to weeks. The same holds for braking.
 
 Under these conditions, the main task of piloting is to:
 
 - put the ship or fleet on a **suitable trajectory** that either maximally approaches the target, or conversely maximally avoids the pursuing enemy,
-- optimize the use of **available \(\Delta v\)** with regard to possible future engagements.
+- optimize the use of **available $\Delta v$** with regard to possible future engagements.
 
 Key parameters are:
 
-- \(\Delta v\) – total maneuvering capability of the ship (see [04_Propulsion](04_Propulsion.md)),
-- \(\bar{a}\) – long‑term average acceleration (important for interception and escape),
-- \(a_{\text{max}}\) – peak acceleration (important for short evasive or surprise maneuvers).
+- $\Delta v$ – total maneuvering capability of the ship (see [04_Propulsion](04_Propulsion.md)),
+- $\bar{a}$ – long‑term average acceleration (important for interception and escape),
+- $a_{\text{max}}$ – peak acceleration (important for short evasive or surprise maneuvers).
 
 In broad terms:
 
-- a ship with **higher long‑term acceleration** \(\bar{a}\) can, over time,
+- a ship with **higher long‑term acceleration** $\bar{a}$ can, over time,
   - catch an enemy,
   - or avoid it if it is the one being pursued;
-- **peak acceleration** \(a_{\text{max}}\) determines how much a ship can "surprise" the opponent with a sudden maneuver (e.g. at the end of a chase or just before entering the close‑range zone).
+- **peak acceleration** $a_{\text{max}}$ determines how much a ship can "surprise" the opponent with a sudden maneuver (e.g. at the end of a chase or just before entering the close‑range zone).
 
 ## 4. Bluff and information warfare
 
@@ -82,8 +82,8 @@ In space, the **number** and approximate **size** of targets are usually easy to
 
 Secrecy about true parameters (especially
 
-- maximum thrust and \(a_{\text{max}}\),
-- propellant reserves and achievable \(\Delta v\),
+- maximum thrust and $a_{\text{max}}$,
+- propellant reserves and achievable $\Delta v$,
 - exact performance of weapons and shields)
 
 has enormous importance in combat. It is one of the few ways to **disrupt otherwise largely deterministic planning algorithms** on both sides.
@@ -93,7 +93,7 @@ A typical example is hiding the true maximum thrust and the duration for which i
 - a ship may pretend to have weaker engines for a long time and only just before the engagement briefly switch to an overthrust mode,
 - this may allow it to exit the enemy’s effective range if the pursuing ship cannot generate comparable thrust.
 
-Such a maneuver is, however, **very expensive in \(\Delta v\)** and usually leaves the ship with severely limited options for the rest of the campaign. The decision whether to spend this "trick" depends critically on the technical parameters of both ships. Keeping those parameters secret greatly complicates the enemy’s planning.
+Such a maneuver is, however, **very expensive in $(\Delta v)$** and usually leaves the ship with severely limited options for the rest of the campaign. The decision whether to spend this "trick" depends critically on the technical parameters of both ships. Keeping those parameters secret greatly complicates the enemy’s planning.
 
 ## 5. Internal and external maneuvers
 
@@ -101,10 +101,10 @@ For ground warfare we distinguish between maneuvers that move the centre of mass
 
 For space combat we introduce a similar distinction:
 
-- **External maneuver** – a maneuver that moves the centre of mass of a ship or the entire formation (changing orbit, speed, flight direction); it consumes \(\Delta v\) and propellant.
+- **External maneuver** – a maneuver that moves the centre of mass of a ship or the entire formation (changing orbit, speed, flight direction); it consumes $(\Delta v)$ and propellant.
 - **Internal maneuver** – a maneuver that changes the shape, orientation or configuration of the ship without significantly moving its centre of mass (rotating segments, moving shields, reorienting weapons, redistributing masses).
 
-External maneuvers are limited by engine thrust and propellant supply (see [04_Propulsion](04_Propulsion.md)) and consume a large amount of \(\Delta v\). Commanders therefore try to minimize them and carry out as many operations as possible using **internal maneuvers**.
+External maneuvers are limited by engine thrust and propellant supply (see [04_Propulsion](04_Propulsion.md)) and consume a large amount of $(\Delta v)$. Commanders therefore try to minimize them and carry out as many operations as possible using **internal maneuvers**.
 
 Internal maneuvers are used mainly for:
 
@@ -158,7 +158,5 @@ With well‑designed pursuing trajectories, the required **lateral launch veloci
 Some warships specialized for this style of combat are largely made up of **stores of projectiles** that they can rapidly release. They behave like a **directed and carefully coordinated shrapnel explosion**. A portion of the projectiles may also carry **nuclear warheads** – thanks to the absence of onboard propulsion and low launch accelerations, the construction of such warheads is simpler and cheaper (see [02_Weapons](02_Weapons.md)).
 
 Nuclear warheads are an effective means to **cripple and strip away shields** over a large area ("soft‑killers"), so that kinetic projectiles have a clear path to the main body of the ship ("hard‑killers"). The nuclear explosions themselves usually have too little net momentum and insufficiently concentrated energy to efficiently penetrate deep into hardened targets – their main role is to disrupt defensive systems and cause widespread surface damage.
-
----
 
 *Note:* This chapter serves as a qualitative foundation. In the file `07_Physical_model_and_equations.md` each section will be complemented by concrete mathematical models (e.g. geometry of approach, flight times, hit probabilities, optimization of broadside salvo trajectories) and by potential figures and tables stored in the `images/` directory.

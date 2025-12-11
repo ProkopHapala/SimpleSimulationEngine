@@ -21,8 +21,6 @@ In this chapter we focus on:
 - their link to tactical scenarios (long‑range vs. close‑range combat – see [01_Tactics](01_Tactics.md)),
 - basic modelling ideas for future simulations.
 
----
-
 ## 2. Energy beams
 
 Energy beams include lasers, directed electromagnetic pulses (EMP) and other forms of EM radiation. Common features:
@@ -84,7 +82,7 @@ Conceptual uses:
 
 A nuclear reactor (fission or fusion) producing neutrons can secondarily pump lasers, for example as follows:
 
-- neutrons interact with suitable nuclei (\(^3\)He, \(^6\)Li, etc.),
+- neutrons interact with suitable nuclei ($^3\text{He}$, $^6\text{Li}$, etc.),
 - high‑energy particles or non‑equilibrium electronic excitations are produced,
 - these can drive laser action in a heavy gas or plasma.
 
@@ -118,21 +116,19 @@ In the current framework they should be treated more as **theoretical limits** t
 
 ### 2.5 Diffraction limit and beam geometry
 
-The figure in the original text (`Difraction.pdf`) illustrates the relation between **wavelength \(\lambda\)**, **aperture \(D\)**, distance \(L\) and spot diameter \(d\) on target. Approximately:
+The figure in the original text (`Difraction.pdf`) illustrates the relation between **wavelength $(\lambda)$**, **aperture $(D)$**, distance $(L)$ and spot diameter $(d)$ on target. Approximately:
 
-\[
+$$
 \theta \sim 1.22\, \frac{\lambda}{D}, \quad d \sim \theta L.
-\]
+$$
 
 In the notes `Vykony_kosmickych_lodi.md` this is written in the convenient form
 
-\[
+$$
 \lambda_{[\mu m]} \cdot L_{[\text{thousand km}]} \approx D_{[\text{m}]} \cdot d_{[\text{m}]}.
-\]
+$$
 
 This simple approximation will be elaborated in `07_Physical_model_and_equations.md` and illustrated with plots.
-
----
 
 ## 3. Particle beams
 
@@ -247,46 +243,44 @@ Disadvantages:
 - penetration is limited – one gets micro‑craters of millimetre scale,
 - flight times to target are longer than for very fast atomic or charged beams.
 
----
-
 ## 4. Solid projectiles
 
 Solid projectiles are classical **kinetic weapons** – momentum and kinetic energy of the projectile destroy the target mechanically.
 
-- destructive effect is governed by **kinetic energy** \(E_k = \tfrac{1}{2} m v^2\),
-- penetration is more directly tied to **momentum** \(p = m v\).
+- destructive effect is governed by **kinetic energy** $(E_k = \tfrac{1}{2} m v^2)$,
+- penetration is more directly tied to **momentum** $(p = m v)$.
 
-Relatively "slow" but heavy projectiles (velocities \(10–10^3\,\text{km/s}\)) often penetrate deep into the target, while ultrafast particle streams are stopped in a thin surface layer.
+Relatively "slow" but heavy projectiles (velocities $10–10^3\,\text{km/s}$) often penetrate deep into the target, while ultrafast particle streams are stopped in a thin surface layer.
 
 ### 4.1 Limitations of kinetics in space
 
 The main drawback of kinetic projectiles is their **low speed relative to c**, with several consequences:
 
 - long flight time at large distances ⇒ the target has time to maneuver,
-- limited effective range (practically \(10^3–10^4\,\text{km}\) for ship‑to‑ship combat),
+- limited effective range (practically $10^3–10^4\,\text{km}$ for ship‑to‑ship combat),
 - low rate of fire of heavy accelerators, limited number of main barrels.
 
 The original text notes that **acceleration tracks** for projectiles are extremely expensive and their length and cost grow roughly with the 2nd–3rd power of the demanded exit velocity (depending on engineering limits).
 
 ### 4.2 Basic model of projectile acceleration
 
-For a simple model of a kinetic gun with **constant driving force** \(F\) and projectile mass \(m\), accelerated over distance \(x\), we can write:
+For a simple model of a kinetic gun with **constant driving force** $F$ and projectile mass $m$, accelerated over distance $x$, we can write:
 
-\[
+$$
  v(x) = \sqrt{\frac{2 F x}{m}}.
-\]
+$$
 
 The original LaTeX text contains a simplified form (without the factor 2), which we include here only as an illustration:
 
-\[
+$$
  v(x) \propto \sqrt{\frac{F x}{m}}.
-\]
+$$
 
-If the system is limited by **input power** \(P\) instead of force (for example by power limits of the current source in a railgun), different scaling appears – see the notes in `Vykony_kosmickych_lodi.md` and the chapter `07_Physical_model_and_equations.md`.
+If the system is limited by **input power** $P$ instead of force (for example by power limits of the current source in a railgun), different scaling appears – see the notes in `Vykony_kosmickych_lodi.md` and the chapter `07_Physical_model_and_equations.md`.
 
 ### 4.3 Projectiles with nuclear warheads
 
-Nuclear warheads are fragile under acceleration – conventional designs do not survive accelerations of order \(10^5 g\), common for kinetic projectiles. This limits the possibility of firing them from classic guns at very short ranges.
+Nuclear warheads are fragile under acceleration – conventional designs do not survive accelerations of order $10^5\,g$, common for kinetic projectiles. This limits the possibility of firing them from classic guns at very short ranges.
 
 An alternative is **compaction upon impact** – a long rod‑shaped projectile made of fissile material with low critical mass and a possible fusion booster. On impact into a massive body (asteroid, planetary crust) the rod can be compressed enough to reach nuclear supercriticality and explode inside the target.
 
@@ -295,8 +289,6 @@ Against lightly built spacecraft this concept faces a problem:
 - defensive shields often consist of **thin layers** that tend to vaporize and disperse the projectile rather than compress it coherently.
 
 Nuclear projectiles are therefore more suitable for bombardment of **massive bodies** (military bases in asteroids, etc.), where the depth of the explosion dramatically affects the efficiency of coupling to shock waves.
-
----
 
 ## 5. Guided missiles
 
@@ -316,7 +308,7 @@ For use in space combat it is difficult to build **small but very powerful engin
 
 Examples:
 
-- **Chemical engines** – high thrust, low specific impulse, \(\Delta v \lesssim 40\,\text{km/s}\) at the cost of a very unfavourable fuel‑to‑payload ratio.
+- **Chemical engines** – high thrust, low specific impulse, $\Delta v \lesssim 40\,\text{km/s}$ at the cost of a very unfavourable fuel‑to‑payload ratio.   
 - **Engines based on nuclear isomers** – compact nuclear reactors with high specific impulse but extremely expensive fuel preparation.
 
 ### 5.2 Cost and role of guided missiles
@@ -331,8 +323,6 @@ Their advantages include:
 
 - at relatively low accelerations they can carry **complex warheads and electronics**,
 - they can execute complex maneuvers and coordinated "wolf‑pack" attacks against ships with limited maneuverability.
-
----
 
 ## 6. Link to tactics and defence
 
