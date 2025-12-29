@@ -13,6 +13,7 @@ export class MeshRenderer {
 
         this.atomMesh = null;
         this.bondLines = null;
+        this.faceMesh = null;
         this.labelMesh = null;
         this.selectionMesh = null; // Highlight selected vertices
         this.fontTexture = null;
@@ -131,6 +132,16 @@ export class MeshRenderer {
             this.scene.add(this.bondLines);
         }
 
+        // --- 4. Faces (Triangles) ---
+        const maxTris = this.capacity * 8; // generous default
+        const triGeo = new THREE.BufferGeometry();
+        triGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxTris * 9), 3));
+        triGeo.setDrawRange(0, 0);
+        const triMat = new THREE.MeshBasicMaterial({ color: 0x6666ff, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+        this.faceMesh = new THREE.Mesh(triGeo, triMat);
+        this.faceMesh.frustumCulled = false;
+        this.scene.add(this.faceMesh);
+
         // --- 4. Labels ---
         if (this.shaders.label) {
             this.fontTexture = Draw3D.createFontTexture();
@@ -243,6 +254,37 @@ export class MeshRenderer {
         Draw3D.updateLabelBuffers(this.labelMesh, stringGetter, count);
     }
 
+    updateFaces(tris, verts) {
+        if (!this.faceMesh) return 0;
+        if (!tris || tris.length === 0) {
+            this.faceMesh.geometry.setDrawRange(0, 0);
+            return 0;
+        }
+        const geo = this.faceMesh.geometry;
+        const needed = tris.length * 9;
+        let posAttr = geo.getAttribute('position');
+        if (!posAttr || posAttr.array.length < needed) {
+            posAttr = new THREE.BufferAttribute(new Float32Array(Math.max(needed, (posAttr ? posAttr.array.length : 0) * 2 || needed)), 3);
+            geo.setAttribute('position', posAttr);
+        }
+        const arr = posAttr.array;
+        let ptr = 0;
+        for (let i = 0; i < tris.length; i++) {
+            const t = tris[i];
+            const va = verts[t.a].pos, vb = verts[t.b].pos, vc = verts[t.c].pos;
+            arr[ptr++] = va.x; arr[ptr++] = va.y; arr[ptr++] = va.z;
+            arr[ptr++] = vb.x; arr[ptr++] = vb.y; arr[ptr++] = vb.z;
+            arr[ptr++] = vc.x; arr[ptr++] = vc.y; arr[ptr++] = vc.z;
+        }
+        posAttr.needsUpdate = true;
+        geo.setDrawRange(0, tris.length * 3);
+        geo.computeVertexNormals();
+        const triCount = tris.length;
+        const msg = `[MeshRenderer] updateFaces tris=${triCount}`;
+        if (typeof logger !== 'undefined' && logger.info) logger.info(msg); else console.log(msg);
+        return triCount;
+    }
+
     setLabelStyle(colorHex, scale, screenSpace) {
         if (this.labelMesh) {
             if (colorHex) {
@@ -274,7 +316,12 @@ export class MeshRenderer {
     }
 
     setLabelsVisible(flag) {
-        if (this.labelMesh) this.labelMesh.visible = !!flag;
+        if (this.labelMesh) {
+            this.labelMesh.visible = !!flag;
+            if (flag && typeof this.updateLabelsContent === 'function') {
+                this.updateLabelsContent();
+            }
+        }
     }
 
     setSelectionVisible(flag) {

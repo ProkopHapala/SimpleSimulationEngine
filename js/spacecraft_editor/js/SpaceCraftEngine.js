@@ -113,7 +113,14 @@ export class SpaceCraftEngine {
                     const b2 = idMap.Girder[cmd.args[1]] || idMap.Rope[cmd.args[1]];
                     if (b1 && b2) {
                         const idx = (cmd.id !== undefined) ? cmd.id : seq.Plate;
-                        const plate = this.craft.addPlate(b1, b2, cmd.args[2], cmd.args[3], cmd.args[4], cmd.args[5]);
+                        const plate = this.craft.addPlate(
+                            b1, b2,
+                            cmd.args[2], cmd.args[3],             // spans
+                            cmd.args[4], cmd.args[5],             // type/kind
+                            cmd.args[6], cmd.args[7], cmd.args[8], // nx,ny,nz
+                            cmd.args[9], cmd.args[10],            // upA, upB
+                            cmd.args[11], cmd.args[12]            // sideOffset, weldDist
+                        );
                         idMap.Plate[idx] = plate;
                         seq.Plate++;
                     } else {

@@ -33,14 +33,14 @@ const api = {
         _commands.push({ method: 'Rope', args: [n1, n2, thick, matName], id });
         return id;
     },
-    Radiator: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName) {
+    Radiator: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName, nx = 2, ny = 2, nz = 1, upA = true, upB = true, sideOff = 0, weldDist = 0) {
         const id = _counters.Plate++;
-        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Radiator'], id });
+        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Radiator', nx, ny, nz, upA, upB, sideOff, weldDist], id });
         return id;
     },
-    Shield: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName) {
+    Shield: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName, nx = 2, ny = 2, nz = 1, upA = true, upB = true, sideOff = 0, weldDist = 0) {
         const id = _counters.Plate++;
-        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Shield'], id });
+        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Shield', nx, ny, nz, upA, upB, sideOff, weldDist], id });
         return id;
     },
     Slider: function (boundTo, calong, matName) {

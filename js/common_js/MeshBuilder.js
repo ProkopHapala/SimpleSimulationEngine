@@ -10,6 +10,7 @@ export class MeshBuilder {
 
         this.verts = [];   // Vertices: Array of {pos: Vec3, nor: Vec3, uv: {x, y}}
         this.edges = [];   // Edges:    Array of {x: int, y: int, z: type, w: type2}
+        this.tris  = [];   // Triangles: Array of {a: int, b: int, c: int, mat: type}
         this.chunks = [];  // Chunks:   Array of {x: stripStart, y: edgeStart, z: count, w: type}
         this.strips = [];  // Strips:   Flat array of vertex/edge indices for faces        
         this.blocks = [];  // Blocks:   [ivert_start, iedge_start, ichunk_start]
@@ -55,6 +56,7 @@ export class MeshBuilder {
         this.chunks = [];
         this.strips = [];
         this.blocks = [];
+        this.tris = [];
         // Also clear any cached de-duplication maps; topology will be rebuilt from scratch.
         if (this._edgeMap) this._edgeMap.clear();
         logger.info("MeshBuilder cleared.");
@@ -437,41 +439,52 @@ export class MeshBuilder {
                 // Otherwise fall through and create a near-duplicate explicitly.
             }
         }
-        const v = {
-            pos: new Vec3(x, y, z),
-            nor: new Vec3(0, 0, 1),
-            uv: { x: 0, y: 0 }
-        };
+        const v = { pos: new Vec3(x, y, z), nor: new Vec3(0, 0, 1), uv: { x: 0, y: 0 } };
         this.verts.push(v);
         const idx = this.verts.length - 1;
         if (logger.verb(4)) logger.debug(`Vert[${idx}]: ${v.pos.x}, ${v.pos.y}, ${v.pos.z}`);
         return idx;
     }
 
-    edge(a, b, type = -1, type2 = 0) {
-        const idx = this.edges.length;
+    edge(i0, i1, type = 0, type2 = 0) {
+        // Optional duplicate edge check
         if (this.bCheckEdgeExist) {
-            const key = this._edgeKey(a, b);
-            const existing = this._edgeMap.get(key);
-            if (existing !== undefined) {
-                if (this.bEdgeExistError) { throw new Error(`MeshBuilder.edge: edge already exists between ${a} and ${b} -> ie=${existing}`);  }
-                if (this.bEdgeExistSkip ) { return existing; }
+            const idx = this._findEdge(i0, i1);
+            if (idx >= 0) {
+                if (this.bEdgeExistError) { throw new Error(`MeshBuilder.edge: edge already exists between ${i0} and ${i1} -> ie=${idx}`); }
+                if (this.bEdgeExistSkip ) { return idx; }
                 // If neither error nor skip is desired, fall through and create a duplicate explicitly.
             }
-            this._edgeMap.set(key, idx); // Cache new  edge for de-duplication
         }
-        this.edges.push({ x: a, y: b, z: type, w: type2 });
-        if (logger.verb(4)) logger.debug(`Edge[${idx}]: ${a} -> ${b} (t=${type})`);
-        return idx;
+        this.edges.push({ x: i0, y: i1, z: type, w: type2 });
+        return this.edges.length - 1;
     }
 
+    /**
+     * Insert a triangle into the mesh.
+     * 
+     * @param {number} a - Index of the first vertex.
+     * @param {number} b - Index of the second vertex.
+     * @param {number} c - Index of the third vertex.
+     * @param {number} mat - Material index (default 0).
+     * @returns {number} Index of the newly inserted triangle.
+     */
+    tri(a, b, c, mat = 0) {
+        this.tris.push({ a, b, c, mat });
+        return this.tris.length - 1;
+    }
 
+    /**
+     * Insert a chunk into the mesh.
+     * 
+     * @param {Object} data - Chunk data (x: stripStart, y: edgeStart, z: count, w: type).
+     * @returns {number} Index of the newly inserted chunk.
+     */
     chunk(data) {
         // data = {x: stripStart, y: edgeStart, z: count, w: type}
         this.chunks.push(data);
         return this.chunks.length - 1;
     }
-
     block() {
         const b = {
             ivert: this.verts.length,
@@ -909,6 +922,66 @@ export class MeshBuilder {
             return { x: ichStart, y: this.chunks.length };
         }
         return { x: -1, y: -1 };
+    }
+
+    /**
+     * Weld vertices in range va (inclusive/exclusive) to nearest verts in range vb within Rmax.
+     * Creates edges with type et. Returns number of edges created.
+     */
+    weldRanges(va, vb, Rmax, et = 0) {
+        const R2 = Rmax * Rmax;
+        let nb = 0;
+        const n1 = va.y - va.x;
+        const n2 = vb.y - vb.x;
+        for (let i = 0; i < n1; i++) {
+            const iv1 = va.x + i;
+            const p1 = this.verts[iv1].pos;
+            let best = -1;
+            let bestR2 = R2;
+            for (let j = 0; j < n2; j++) {
+                const iv2 = vb.x + j;
+                const p2 = this.verts[iv2].pos;
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                const dz = p1.z - p2.z;
+                const r2 = dx * dx + dy * dy + dz * dz;
+                if (r2 < bestR2) {
+                    bestR2 = r2;
+                    best = iv2;
+                }
+            }
+            if (best >= 0) {
+                this.edge(iv1, best, et);
+                nb++;
+            }
+        }
+        return nb;
+    }
+
+    /**
+     * Weld a list of specific vertices to nearest verts in range vb within Rmax.
+     * Creates edges with type et. Returns number of edges created.
+     */
+    weldListToRange(idxList, vb, Rmax, et = 0) {
+        const R2 = Rmax * Rmax;
+        let nb = 0;
+        const n2 = vb.y - vb.x;
+        for (const iv1 of idxList) {
+            const p1 = this.verts[iv1].pos;
+            let best = -1;
+            let bestR2 = R2;
+            for (let j = 0; j < n2; j++) {
+                const iv2 = vb.x + j;
+                const p2 = this.verts[iv2].pos;
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                const dz = p1.z - p2.z;
+                const r2 = dx * dx + dy * dy + dz * dz;
+                if (r2 < bestR2) { bestR2 = r2; best = iv2; }
+            }
+            if (best >= 0) { this.edge(iv1, best, et); nb++; }
+        }
+        return nb;
     }
 
     // --- Plates Between Ropes / Girders (JS P2 helpers) ---

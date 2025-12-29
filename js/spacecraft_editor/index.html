@@ -171,23 +171,23 @@ api.Material("SlideMat", 2700, 80, 80);
 
 //                     (pos), (size)    
 const n_c  = api.Node( vec(   0, 0,  0  ), 1.0 );
-const n_fw = api.Node( vec(  20, 0,  0  ), 1.0 );
-const n_bk = api.Node( vec( -10, 0,  0  ), 1.0 );
-const n_lf = api.Node( vec(  0,  10, 0  ), 1.0 );
-const n_rt = api.Node( vec(  0, -10, 0  ), 1.0 );
-const n_up = api.Node( vec(  0,  0,  10 ), 1.0 );
-const n_dn = api.Node( vec(  0,  0, -10 ), 1.0 );
+const n_fw = api.Node( vec(  20, 0,  0  ), 0.3 );
+const n_bk = api.Node( vec( -10, 0,  0  ), 0.6 );
+const n_lf = api.Node( vec(  0,  10, 0  ), 0.3 );
+const n_rt = api.Node( vec(  0, -10, 0  ), 0.3 );
+const n_up = api.Node( vec(  0,  0,  5  ), 0.2 );
+const n_dn = api.Node( vec(  0,  0, -5  ), 0.2 );
 
 //                     (nodes, nseg, material)   
 const g1 = api.Girder(n_c, n_fw, 10, "Steel");
-const g2 = api.Girder(n_c, n_bk, 10, "Steel");
+const g2 = api.Girder(n_c, n_bk, 20, "Steel");
 const g3 = api.Girder(n_c, n_lf, 10, "Steel");
 const g4 = api.Girder(n_c, n_rt, 10, "Steel");
-const g5 = api.Girder(n_c, n_up, 10, "Steel");
-const g6 = api.Girder(n_c, n_dn, 10, "Steel");
+const g5 = api.Girder(n_c, n_up, 5, "Steel");
+const g6 = api.Girder(n_c, n_dn, 5, "Steel");
 
 // Radiator spanning partial segments between two girders (span coefs along each girder)
-api.Radiator(g1, g4, [0.2, 0.8], [0.1, 0.9], "Shield");
+api.Radiator(g1, g4, [0.2, 0.8], [0.2, 0.8], "Shield", 4, 4, 4, true, true, 0.1, 1.5 );
 
 //api.Rope(n_fw, n_bk, 0.1, "Cable");
 

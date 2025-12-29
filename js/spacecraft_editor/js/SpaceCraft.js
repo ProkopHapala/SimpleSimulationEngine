@@ -38,12 +38,16 @@ export class Rope {
 }
 
 export class Plate {
-    constructor(boundA, boundB, spanA = [0, 1], spanB = [0, 1], type = 0, kind = 'Radiator') {
+    constructor(boundA, boundB, spanA = [0, 1], spanB = [0, 1], type = 0, kind = 'Radiator', nx = 2, ny = 2, nz = 1, upA = true, upB = true, sideOffset = 0, weldDist = 0) {
         this.boundA = boundA; // Girder or Rope
         this.boundB = boundB; // Girder or Rope
         this.spanA = spanA;   // [cmin,cmax] along boundA
         this.spanB = spanB;   // [cmin,cmax] along boundB
         this.kind = kind;     // 'Radiator' or 'Shield'
+        this.nx = nx; this.ny = ny; this.nz = nz; // segment counts for ParametricQuadPatch
+        this.upA = upA; this.upB = upB; // which edge (upper/lower) to attach on each girder
+        this.sideOffset = sideOffset; // shift along side axis to snap to girder corner
+        this.weldDist = weldDist;     // weld radius to connect to nearest girder verts
         this.type = type;
         this.id = -1;
         this.pointRange = { x: -1, y: -1 };
@@ -123,9 +127,9 @@ export class SpaceCraft {
         return r;
     }
 
-    addPlate(boundA, boundB, spanA, spanB, type, kind = 'Radiator') {
+    addPlate(boundA, boundB, spanA, spanB, type, kind = 'Radiator', nx = 2, ny = 2, nz = 1, upA = true, upB = true, sideOffset = 0, weldDist = 0) {
         if (!this.plates) this.plates = [];
-        const p = new Plate(boundA, boundB, spanA, spanB, type, kind);
+        const p = new Plate(boundA, boundB, spanA, spanB, type, kind, nx, ny, nz, upA, upB, sideOffset, weldDist);
         p.id = this.plates.length;
         this.plates.push(p);
         return p;

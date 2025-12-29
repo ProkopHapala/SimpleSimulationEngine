@@ -183,6 +183,23 @@ export class Vec3 {
         return this.rotateCSA(ca, sa, axis);
     }
 
+    getSomePerp() {
+        // returns a normalized vector perpendicular to this
+        const ax = Math.abs(this.x), ay = Math.abs(this.y);
+        const ref = (ax < 0.9 && ay < 0.9) ? new Vec3(1, 0, 0) : new Vec3(0, 0, 1);
+        const perp = new Vec3().setCross(this, ref);
+        const n = perp.norm();
+        if (n < 1e-12) return new Vec3(0, 1, 0);
+        return perp.mulScalar(1 / n);
+    }
+    withLen(l) {
+        const n = this.norm();
+        if (n < 1e-12) return this;
+        const s = l / n;
+        this.x *= s; this.y *= s; this.z *= s;
+        return this;
+    }
+
     // ================= Utility =================
 
     dist2(v) {

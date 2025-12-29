@@ -748,6 +748,7 @@ ParametricParabolaPatch(nTop, nBottom, nRows, R1, R2, L) {
                     this.edge(aCurr, bCurr);
                     this.edge(bCurr, aNext);
                     this.edge(aCurr, aNext);
+                    this.tri(aCurr, bCurr, aNext);
 
                     ia += 1;
                 } else {
@@ -759,6 +760,7 @@ ParametricParabolaPatch(nTop, nBottom, nRows, R1, R2, L) {
                     this.edge(aCurr, bCurr);
                     this.edge(bCurr, bNext);
                     this.edge(aCurr, bNext);
+                    this.tri(aCurr, bCurr, bNext);
 
                     ib += 1;
                 }

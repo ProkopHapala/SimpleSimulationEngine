@@ -4,7 +4,7 @@ export class SpaceCraftRenderer extends MeshRenderer {
     constructor(engine) {
         super(null, null, 0);
         this.engine = engine;
-        this.labelMode = 'none';
+        this.labelMode = 'id';
     }
 
     init(container, shaders) {
@@ -101,30 +101,31 @@ export class SpaceCraftRenderer extends MeshRenderer {
 
         // 4. Update Labels
         this.updateLabelsContent();
+
+        // 5. Update Faces (Triangles)
+        const triCount = (meshBuilder.tris) ? meshBuilder.tris.length : 0;
+        if (typeof this.updateFaces === 'function') this.updateFaces(meshBuilder.tris || [], meshBuilder.verts || []);
+
+        // Debug counts
+        const msg = `[SpaceCraftRenderer] updateGeometry verts=${numVerts} edges=${edges.length} tris=${triCount}`;
+        if (typeof logger !== 'undefined' && logger.info) logger.info(msg); else console.log(msg);
     }
 
     updateLabelsContent() {
-        if (this.labelMode === 'none' || !this.labelMesh) return;
-
-        const numVerts = this.atomMesh.count; // Or track separately
-
-        this.updateLabels((i) => {
-            if (this.labelMode === 'id') {
-                return i.toString();
-            }
-            return "";
-        }, numVerts);
+        if (!this.labelMesh) return;
+        const numVerts = this.atomMesh ? this.atomMesh.count : 0;
+        if (this.labelMode === 'none' || !this.labelMesh.visible) {
+            return;
+        }
+        this.updateLabels((i) => (this.labelMode === 'id') ? i.toString() : "", numVerts);
     }
 
     setLabelMode(mode) {
-        if (this.labelMode !== mode) {
-            this.labelMode = mode;
-            if (this.labelMesh) {
-                this.labelMesh.visible = (mode !== 'none');
-                if (this.labelMesh.visible) {
-                    this.updateLabelsContent();
-                }
-            }
+        if (this.labelMode === mode) return;
+        this.labelMode = mode;
+        if (this.labelMesh) {
+            this.labelMesh.visible = (mode !== 'none');
+            if (this.labelMesh.visible) this.updateLabelsContent();
         }
     }
 
