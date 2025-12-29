@@ -1,5 +1,6 @@
 import { Vec3 } from '../../common_js/Vec3.js';
 import { Girder, Ring } from './SpaceCraft.js';
+import { SDF_Cylinder } from '../../common_js/SDfuncs.js';
 
 /**
  * BuildCraft_blocks_js
@@ -185,48 +186,221 @@ export function BuildCraft_blocks_js(mesh, craft) {
         logV(1, `[BuildCraft] Ring id=${ring.id} pos=${ring.pos} R=${ring.R} nseg=${ring.nseg} verts=${ring.pointRange.y - iv0}`);
     }
 
-    // 6. Generate Slider Anchors and Visualization
+    // 6. Generate Sliders (rail + sliding vertex)
     const sliderPathStickType = 2; // Different material for visualization
+
+    const getRailEndpoints = (rail) => {
+        if (rail instanceof Girder) {
+            const pA = new Vec3(rail.nodeA.pos[0], rail.nodeA.pos[1], rail.nodeA.pos[2]);
+            const pB = new Vec3(rail.nodeB.pos[0], rail.nodeB.pos[1], rail.nodeB.pos[2]);
+            return { pA, pB, closed: false };
+        } else if (rail instanceof Ring) {
+            const pos = new Vec3(rail.pos[0], rail.pos[1], rail.pos[2]);
+            const p1 = new Vec3(pos.x, pos.y + rail.R, pos.z);
+            const dir = new Vec3().setSub(p1, pos); // axis hint
+            return { pA: pos, pB: pos, closed: true, ringDir: dir };
+        }
+        return null;
+    };
+
+    const sortPathByProjection = (psIdx, origin, dir) => {
+        const d = new Vec3(dir.x, dir.y, dir.z).normalize();
+        return psIdx.slice().sort((a, b) => {
+            const pa = mesh.verts[a].pos;
+            const pb = mesh.verts[b].pos;
+            const ta = (pa.x - origin.x) * d.x + (pa.y - origin.y) * d.y + (pa.z - origin.z) * d.z;
+            const tb = (pb.x - origin.x) * d.x + (pb.y - origin.y) * d.y + (pb.z - origin.z) * d.z;
+            return ta - tb;
+        });
+    };
+
+    // corner selector for a girder side: side=0..3 => (+side,+up), (+side,-up), (-side,+up), (-side,-up)
+    const cornerDirs = [
+        { a: 1, b: 1 },
+        { a: 1, b: -1 },
+        { a: -1, b: 1 },
+        { a: -1, b: -1 },
+    ];
+
+    const edgeOffset = (rail, side, offMag) => {
+        const ep = getRailEndpoints(rail);
+        const dir = rail instanceof Ring ? ep.ringDir : new Vec3().setSub(ep.pB, ep.pA);
+        const dirN = new Vec3(dir.x, dir.y, dir.z);
+        const ldir = dirN.normalize();
+        if (ldir === 0) { dirN.set(1, 0, 0); }
+        let offset = new Vec3();
+        let sideVec = new Vec3();
+        if (rail instanceof Girder) {
+            const railUp = rail.up || [0, 1, 0];
+            const up = new Vec3(railUp[0] ?? railUp.x ?? 0, railUp[1] ?? railUp.y ?? 1, railUp[2] ?? railUp.z ?? 0);
+            let lup = up.normalize();
+            if (lup < 1e-6) { up.set(0, 1, 0); lup = 1.0; }
+            sideVec = new Vec3().setCross(dirN, up);
+            let lside = sideVec.normalize();
+            if (lside < 1e-6) { sideVec.set(0, 0, 1); lside = 1.0; }
+            const cd = cornerDirs[side % 4];
+            offset = new Vec3().setV(up).mulScalar(cd.b * offMag).addMul(sideVec, cd.a * offMag);
+        }
+        return { offset, dirN, ep, ldir: ldir || dirN.norm(), lup: rail instanceof Girder ? 1.0 : 0, lside: rail instanceof Girder ? 1.0 : 0 };
+    };
+
+    const buildPathOnEdge = (rail, side, radius) => {
+        if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
+        if (rail instanceof Ring) {
+            // For ring, still use SDF around circumference (offset unused)
+            const ep = getRailEndpoints(rail);
+            const p0 = new Vec3(ep.pA.x, ep.pA.y, ep.pA.z);
+            const p1 = new Vec3(p0.x, p0.y + (ep.ringDir ? ep.ringDir.norm() : rail.R), p0.z);
+            const sdf = SDF_Cylinder(p0, p1, radius, true);
+            mesh.setSelectionKind('vert'); mesh.applySelection([], 'vert', false);
+            const nsel = mesh.selectVertsBySDF(sdf, 0.0, true);
+            logV(1, `[SliderPath] Ring rail=${rail.id} side=${side} radius=${radius} selAll=${nsel}`);
+            const psIdx = mesh.selection.vec.filter(i => i >= rail.pointRange.x && i < rail.pointRange.y);
+            logV(1, `[SliderPath] Ring rail=${rail.id} filtered=${psIdx.length} range=[${rail.pointRange.x},${rail.pointRange.y}) verts=${JSON.stringify(psIdx)}`);
+            const ps = sortPathByProjection(psIdx, p0, new Vec3().setSub(p1, p0));
+            return { ps, closed: true };
+        }
+        const eo = edgeOffset(rail, side, radius);
+        const { offset, ep } = eo;
+        const p0 = new Vec3(ep.pA.x, ep.pA.y, ep.pA.z).add(offset);
+        const p1 = new Vec3(ep.pB.x, ep.pB.y, ep.pB.z).add(offset);
+        // radius is too large (0.35 selects all verts of 1.0x1.0 square girder). 
+        // We need a very small radius to pick only one edge.
+        const selRadius = 0.05; 
+        const sdf = SDF_Cylinder(p0, p1, selRadius, true);
+
+        mesh.setSelectionKind('vert');
+        mesh.applySelection([], 'vert', false);
+        const nsel = mesh.selectVertsBySDF(sdf, 0.05, true); // use small positive threshold
+        const fmt = (v) => Number(v).toFixed(3);
+        logV(1, `[SliderPath] Girder rail=${rail.id} side=${side} radius=${radius} selAll=${nsel} p0=(${fmt(p0.x)},${fmt(p0.y)},${fmt(p0.z)}) p1=(${fmt(p1.x)},${fmt(p1.y)},${fmt(p1.z)}) offset=(${fmt(offset.x)},${fmt(offset.y)},${fmt(offset.z)}) ldir=${eo.ldir.toFixed(3)} lup=${eo.lup} lside=${eo.lside}`);
+        let psIdx = mesh.selection.vec.filter(i => i >= rail.pointRange.x && i < rail.pointRange.y);
+        logV(1, `[SliderPath] Girder rail=${rail.id} filtered=${psIdx.length} range=[${rail.pointRange.x},${rail.pointRange.y}) verts=${JSON.stringify(psIdx)}`);
+        
+        if (psIdx.length === 0) {
+            // fallback: use whole pointRange
+            psIdx = [];
+            for (let i = rail.pointRange.x; i < rail.pointRange.y; i++) psIdx.push(i);
+            logV(1, `[SliderPath] Girder rail=${rail.id} FALLBACK full range count=${psIdx.length}`);
+        }
+        const ps = sortPathByProjection(psIdx, p0, new Vec3().setSub(p1, p0));
+        return { ps, closed: false };
+    };
+
+    const buildPathStride = (rail, side, radius) => {
+        // approximate edgePathVert(i,j): pick closest rail vertex to desired corner positions along girder segments
+        if (!(rail instanceof Girder) || rail.pointRange.x < 0) return buildPathOnEdge(rail, side, radius);
+        const nseg = rail.nseg || Math.max(1, (rail.pointRange.y - rail.pointRange.x) - 1);
+        const eo = edgeOffset(rail, side, radius);
+        const { offset, ep } = eo;
+        const pA = new Vec3(ep.pA.x, ep.pA.y, ep.pA.z).add(offset);
+        const pB = new Vec3(ep.pB.x, ep.pB.y, ep.pB.z).add(offset);
+        const dir = new Vec3().setSub(pB, pA);
+        const ps = [];
+        for (let j = 0; j <= nseg; j++) {
+            const t = j / nseg;
+            const target = new Vec3(pA.x, pA.y, pA.z).addMul(dir, t);
+            // find nearest rail vertex within pointRange to target
+            let best = -1; let bestd2 = 1e30;
+            for (let i = rail.pointRange.x; i < rail.pointRange.y; i++) {
+                const v = mesh.verts[i].pos;
+                const dx = v.x - target.x; const dy = v.y - target.y; const dz = v.z - target.z;
+                const d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < bestd2) { bestd2 = d2; best = i; }
+            }
+            if (best >= 0) ps.push(best);
+        }
+        logV(1, `[SliderPath] Stride rail=${rail.id} side=${side} nseg=${nseg} psN=${ps.length} range=[${rail.pointRange.x},${rail.pointRange.y}) offset=(${offset.x.toFixed(3)},${offset.y.toFixed(3)},${offset.z.toFixed(3)}) verts=${JSON.stringify(ps)}`);
+        if (ps.length === 0) {
+            for (let i = rail.pointRange.x; i < rail.pointRange.y; i++) ps.push(i);
+            logV(1, `[SliderPath] Stride FALLBACK rail=${rail.id} using full range count=${ps.length}`);
+        }
+        return { ps, closed: false };
+    };
+
+    const findNearestOnPath = (path, p) => {
+        if (path.ps.length === 0) return { cur: 0, idx: -1 };
+        let best = -1; let bestd2 = 1e30;
+        for (let i = 0; i < path.ps.length; i++) {
+            const vp = mesh.verts[path.ps[i]].pos;
+            const dx = vp.x - p.x; const dy = vp.y - p.y; const dz = vp.z - p.z;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < bestd2) { bestd2 = d2; best = i; }
+        }
+        return { cur: best, idx: best };
+    };
+
     for (const slider of craft.sliders) {
-        const boundTo = slider.boundTo;
-        if (!boundTo || boundTo.pointRange.x < 0) continue;
+        const rail = slider.rail;
+        if (!rail || rail.pointRange.x < 0) { logV(1, `[BuildCraft] Slider id=${slider.id} rail missing range`); continue; }
+
+        const slidingComp = slider.sliding || rail; // fallback: rail itself
+        const slidingRange = slidingComp.pointRange || { x: -1, y: -1 };
+        const ivSlide = (slider.slidingVertId >= 0 && slider.slidingVertId < mesh.verts.length)
+            ? slider.slidingVertId
+            : (slidingRange.x >= 0 ? slidingRange.x : -1);
+        if (ivSlide < 0) continue;
+
+        const useStride = !!slider.methodFlag;
+        const radius = slider.pathRadius || 0.35;
+        let path = useStride ? buildPathStride(rail, slider.side || 0, radius) : buildPathOnEdge(rail, slider.side || 0, radius);
+        if (path.ps.length < 2) { // fallback: try SDF if stride failed, or stride if SDF failed
+            const alt = useStride ? buildPathOnEdge(rail, slider.side || 0, radius * 1.5) : buildPathStride(rail, slider.side || 0, radius * 1.5);
+            if (alt.ps.length > path.ps.length) path = alt;
+        }
+        if (path.ps.length < 2) { logV(1, `[BuildCraft] Slider id=${slider.id} path too short rail=${rail.id} side=${slider.side} method=${useStride ? 'stride' : 'sdf'} selN=${path.ps.length}`); continue; }
+        path.closed = !!path.closed;
+
+        // initialize cur from calong if provided, else nearest
+        const pSlide = mesh.verts[ivSlide].pos;
+        const tRaw = (slider.calong !== undefined && slider.calong !== null && Number.isFinite(slider.calong))
+            ? slider.calong * (path.ps.length - 1)
+            : null;
+        let i0, tFrac;
+        if (tRaw !== null) {
+            const tClamped = Math.max(0, Math.min(path.ps.length - 1 - 1e-6, tRaw));
+            i0 = Math.floor(tClamped);
+            tFrac = tClamped - i0;
+        } else {
+            const nearest = findNearestOnPath(path, pSlide);
+            i0 = Math.max(0, Math.min(path.ps.length - 2, nearest.idx));
+            tFrac = 0.0;
+        }
+        path.cur = (i0 || 0) + tFrac;
+        slider.path = path;
 
         const iv0 = mesh.verts.length;
         const ie0 = mesh.edges.length;
 
-        // Calculate position along path
-        // For now, simple linear interpolation between endpoints of girder
-        let p;
-        if (boundTo instanceof Girder) {
-            const pA = new Vec3(boundTo.nodeA.pos[0], boundTo.nodeA.pos[1], boundTo.nodeA.pos[2]);
-            const pB = new Vec3(boundTo.nodeB.pos[0], boundTo.nodeB.pos[1], boundTo.nodeB.pos[2]);
-            p = new Vec3().setAddMul(pA, new Vec3().setSub(pB, pA), slider.calong);
-        } else if (boundTo instanceof Ring) {
-            // Placeholder for ring position
-            p = new Vec3(boundTo.pos[0], boundTo.pos[1], boundTo.pos[2]);
-        } else {
-            continue;
-        }
-
-        // Generate anchor point (different color/stick type)
-        const ivert = mesh.vert(p);
+        // Create explicit slider vertex if different from sliding vertex (visualization). Otherwise reuse.
+        const ivert = ivSlide;
         slider.ivert = ivert;
-        
-        // Visualization: draw path on the girder/ring in a different color
-        if (boundTo instanceof Girder) {
-            const pA = new Vec3(boundTo.nodeA.pos[0], boundTo.nodeA.pos[1], boundTo.nodeA.pos[2]);
-            const pB = new Vec3(boundTo.nodeB.pos[0], boundTo.nodeB.pos[1], boundTo.nodeB.pos[2]);
-            // Draw a line segment parallel to the girder
-            const offset = 0.2;
-            const pA_off = new Vec3(pA.x, pA.y + offset, pA.z);
-            const pB_off = new Vec3(pB.x, pB.y + offset, pB.z);
-            const ivA = mesh.vert(pA_off);
-            const ivB = mesh.vert(pB_off);
-            mesh.edge(ivA, ivB, sliderPathStickType);
+
+        // weld slider vertex to the two path verts around cur
+        const iA = path.ps[i0];
+        const iB = path.ps[(i0 + 1) % path.ps.length];
+        const weldR = slider.weldDist || 0.25;
+        mesh.weldListToRange([ivert], { x: iA, y: iA + 1 }, weldR, stickTypes.w);
+        mesh.weldListToRange([ivert], { x: iB, y: iB + 1 }, weldR, stickTypes.w);
+
+        // Visual link from slider vertex to interpolated position on path (cyan line)
+        const pA = mesh.verts[iA].pos;
+        const pB = mesh.verts[iB].pos;
+        const pInterp = new Vec3().setV(pA).addMul(new Vec3().setSub(pB, pA), tFrac || 0.0);
+        const ivInterp = mesh.vert(pInterp);
+        const linkStickType = 2; // cyan-ish
+        mesh.edge(ivert, ivInterp, linkStickType);
+
+        // Visualization of the whole path (green line)
+        const sliderPathStickType = 5; // green
+        for (let i = 0; i < path.ps.length - (path.closed ? 0 : 1); i++) {
+            const ia = path.ps[i];
+            const ib = path.ps[(i + 1) % path.ps.length];
+            mesh.edge(ia, ib, sliderPathStickType);
         }
 
         slider.pointRange = { x: iv0, y: mesh.verts.length };
         slider.stickRange = { x: ie0, y: mesh.edges.length };
-        logV(1, `[BuildCraft] Slider id=${slider.id} boundTo=${slider.boundTo.id} calong=${slider.calong} verts=${slider.pointRange.y - iv0}`);
+        logV(1, `[BuildCraft] Slider id=${slider.id} rail=${rail.id} sliding=${slidingComp.id ?? 'self'} pathN=${path.ps.length} cur=${path.cur.toFixed(3)} method=${useStride ? 'stride' : 'sdf'} weldR=${weldR} verts=${slider.pointRange.y - iv0} ivSlide=${ivSlide} iA=${iA} iB=${iB} tFrac=${(tFrac||0).toFixed(3)}`);
     }
 }

@@ -62,6 +62,14 @@ export class SpaceCraftEngine {
         logger.info("Engine reset.");
     }
 
+    rebuildMesh() {
+        if (!this.mesh || !this.craft) return;
+        BuildCraft_blocks_js(this.mesh, this.craft);
+        if (window.renderer) {
+            window.renderer.updateGeometry(this.mesh);
+        }
+    }
+
     processCommands(cmds) {
         logger.info(`Processing ${cmds.length} commands...`);
 
@@ -129,13 +137,14 @@ export class SpaceCraftEngine {
                     break;
                 }
                 case 'Slider': {
-                    const boundTo = idMap.Girder[cmd.args[0]] || idMap.Ring[cmd.args[0]] || idMap.Rope[cmd.args[0]];
-                    if (boundTo) {
+                    const rail = idMap.Girder[cmd.args[0]] || idMap.Ring[cmd.args[0]] || idMap.Rope[cmd.args[0]];
+                    const sliding = (cmd.args[3] !== null) ? (idMap.Girder[cmd.args[3]] || idMap.Ring[cmd.args[3]] || idMap.Rope[cmd.args[3]]) : null;
+                    if (rail) {
                         const idx = (cmd.id !== undefined) ? cmd.id : seq.Slider;
-                        this.craft.addSlider(boundTo, cmd.args[1], cmd.args[2]);
+                        this.craft.addSlider(rail, cmd.args[1], cmd.args[2], sliding, cmd.args[4], cmd.args[5], cmd.args[6]);
                         seq.Slider++;
                     } else {
-                        logV(1, `[Engine] Slider skipped: missing bound ${cmd.args[0]}`);
+                        logV(1, `[Engine] Slider skipped: missing rail ${cmd.args[0]}`);
                     }
                     break;
                 }
@@ -162,6 +171,11 @@ export class SpaceCraftEngine {
         // 3. Notify Renderer to update
         if (window.renderer) {
             window.renderer.updateGeometry(this.mesh);
+        }
+
+        // 4. Update GUI components list
+        if (window.gui) {
+            window.gui.updateSliderList();
         }
     }
 }

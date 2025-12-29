@@ -113,9 +113,9 @@ export class Selection {
         return this.subtract(container, true);
     }
 
-    selectByPredicate(range, predicate) {
+    selectByPredicate(range, predicate, i0 = 0) {
         this.clear();
-        let index = 0;
+        let index = i0;
         for (const element of range) {
             if (predicate(element)) {
                 this.add(index);

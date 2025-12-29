@@ -846,10 +846,57 @@ api.Slider(g1, 0.5, "SlideMat");
         }
     }
 
-    initControls() {
-        this.initMouseControls();
-        this.initKeyControls();
-        this.initWidgetCallbacks();
+initControls() {
+    this.initMouseControls();
+    this.initKeyControls();
+    this.initSliderControls();
+    this.initWidgetCallbacks();
+}
+
+initSliderControls() {
+    this.selSlider = document.getElementById('selSlider');
+    this.rngSliderAlong = document.getElementById('rngSliderAlong');
+    this.lblSliderAlong = document.getElementById('lblSliderAlong');
+
+    if (this.selSlider) {
+        this.selSlider.addEventListener('change', () => {
+            const id = parseInt(this.selSlider.value);
+            if (id >= 0 && this.engine.craft.sliders[id]) {
+                const slider = this.engine.craft.sliders[id];
+                this.rngSliderAlong.value = slider.calong;
+                this.lblSliderAlong.textContent = Number(slider.calong).toFixed(2);
+            }
+        });
+    }
+
+    if (this.rngSliderAlong) {
+        this.rngSliderAlong.addEventListener('input', () => {
+            const val = parseFloat(this.rngSliderAlong.value);
+            this.lblSliderAlong.textContent = val.toFixed(2);
+            const id = parseInt(this.selSlider.value);
+            if (id >= 0 && this.engine.craft.sliders[id]) {
+                this.engine.craft.sliders[id].calong = val;
+                // Trigger mesh rebuild to update visualization
+                this.engine.rebuildMesh();
+            }
+        });
     }
 }
 
+updateSliderList() {
+    if (!this.selSlider) return;
+    const sliders = this.engine.craft.sliders;
+    const currentId = this.selSlider.value;
+    this.selSlider.innerHTML = '<option value="-1">-- None --</option>';
+    sliders.forEach((s, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Slider ${i} (Rail:${s.rail.id})`;
+        this.selSlider.appendChild(opt);
+    });
+    if (currentId >= 0 && currentId < sliders.length) {
+        this.selSlider.value = currentId;
+    }
+}
+
+}

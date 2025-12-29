@@ -56,15 +56,23 @@ export class Plate {
 }
 
 export class Slider {
-    constructor(boundTo, calong, type = 0) {
-        this.boundTo = boundTo; // StructuralComponent reference
-        this.calong = calong;   // position along 0..1
+    constructor(rail, calong = 0.0, type = 0, sliding = null, slidingVertId = -1, side = 0, methodFlag = true) {
+        // rail: structural component providing the path
+        // sliding: structural component that owns the sliding vertex
+        this.rail = rail;
+        this.sliding = sliding;
+        this.slidingVertId = slidingVertId; // vertex index on sliding component (within mesh)
+        this.calong = calong;   // initial param guess along sliding component (e.g., along its girder)
+        this.side = side;       // desired rail side (stride mode)
+        this.methodFlag = methodFlag; // true=stride, false=SDF
         this.type = type;
         this.id = -1;
         this.pointRange = { x: -1, y: -1 };
         this.stickRange = { x: -1, y: -1 };
         this.path = { ps: [], cur: 0, closed: false };
-        this.ivert = -1;
+        this.ivert = -1;        // actual slider vertex id in mesh (created during build)
+        this.weldDist = 0.25;   // default weld radius to connect slider vertex to rail segment
+        this.pathRadius = 0.35; // SDF cylinder radius for path picking
     }
 }
 
@@ -135,8 +143,8 @@ export class SpaceCraft {
         return p;
     }
 
-    addSlider(boundTo, calong, type) {
-        const s = new Slider(boundTo, calong, type);
+    addSlider(rail, calong, type, sliding = null, slidingVertId = -1, side = 0, methodFlag = true) {
+        const s = new Slider(rail, calong, type, sliding, slidingVertId, side, methodFlag);
         s.id = this.sliders.length;
         this.sliders.push(s);
         return s;

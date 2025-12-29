@@ -43,9 +43,9 @@ const api = {
         _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Shield', nx, ny, nz, upA, upB, sideOff, weldDist], id });
         return id;
     },
-    Slider: function (boundTo, calong, matName) {
+    Slider: function (rail, calong, matName, sliding = null, slidingVertId = -1, side = 0, methodFlag = true) {
         const id = _counters.Slider++;
-        _commands.push({ method: 'Slider', args: [boundTo, calong, matName], id });
+        _commands.push({ method: 'Slider', args: [rail, calong, matName, sliding, slidingVertId, side, methodFlag], id });
         return id;
     },
     Ring: function (pos, rot, R, matName) {

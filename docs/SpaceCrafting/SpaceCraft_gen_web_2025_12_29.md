@@ -5,17 +5,18 @@
 
 
 
-## Status
+## Status (JS editor, 2025-12-29)
 
-[ ] Node blocks (addCube/addCMesh octa)  
-[ ] Girder bridges (bridgeFacingPolygons)  
-[ ] Rope generation (`mesh.rope`)  
-[ ] Slider anchors/paths (make_anchor_point equivalent + path export)  
-[ ] Wheel/ring generation and slider binding  
-[ ] Radiator panel generation between rails (Quad/Parametric)  
+[x] Node blocks (addCube)  
+[x] Girder bridges (bridgeFacingPolygons)  
+[x] Rope generation (`mesh.rope`)  
+[x] Radiator panels between rails (ParametricQuadPatch) with welded edges  
+[x] Weld/auto-connections between components (edge→girder)  
+[~] Ring (Wheel) generation  
+[~] Slider anchors/paths (placeholder anchor + path viz; not exported)  
+[ ] Wheel/ring slider binding  
 [ ] Shield/pusher-plate/dish (Parabola/Slab)  
 [ ] Nozzle/dish attachments (parabolic patch + connections)  
-[ ] Weld/auto-connections between components  
 [ ] Material/stick catalogs in JS craft  
 [ ] GUI hooks: run BuildCraft_blocks_js, load sample script  
 [ ] Worker commands: Node/Girder/Rope/Ring/Slider/Plate/Material  
@@ -29,9 +30,11 @@ Status from docs (all in `docs/SpaceCrafting`):
 
 Can we already generate a spacecraft?
 - Yes, via C++: Lua scripts → `BuildCraft_blocks` → OBJ/truss (headless `spaceCraftMeshExport`, or interactive apps). Core structural components (nodes as blocks, girders as bridges, rings, sliders, ropes) are implemented. Plates/tanks/welds are not yet wired in for the block path.
-- In JS editor (`js/spacecraft_editor`): the engine still uses the legacy `BuildCraft_truss` pipeline (`SpaceCraftEngine.processCommands` calls `BuildCraft_truss(this.mesh, this.craft)`) and only supports Nodes + Girders (materials TODO, no blocks/bridges/sliders/plates). So the browser editor can render a simple truss, but not the new block-based craft yet.
+- In JS editor (`js/spacecraft_editor`): now uses `BuildCraft_blocks_js` to generate blocks, bridged girders, ropes, rings, radiators (ParametricQuadPatch), welds, and triangle faces rendered in MeshRenderer. Sliders are placeholder anchors/paths only. Materials/catalog, OBJ export, and GUI hooks to invoke the new builder are still TODO.
 
-Main subproblems (from docs and code):
+
+## Main subproblems (from docs and code):
+
 1) Migration to block-based generator:
    - C++ block path covers nodes/girders/rings/sliders/ropes; plates, welds, tanks, thrusters are TODO in `BuildCraft_blocks` @cpp/common/Orbital/SpaceCraft2Mesh2.h#555-594.
    - Standalone truss-view path (`SpaceCraft2Mesh_blocks.h`) lacks sliders/plates/welds.
@@ -81,6 +84,7 @@ Overall readiness:
 3) Hook GUI to new builder
 - Add dropdown/actions in `GUI.js` to run `BuildCraft_blocks_js` instead of `BuildCraft_truss` and to load a sample script (JS or Lua-parsed JSON) into the worker.
 - Keep MeshGenTest panel for diagnostics; add “Build Craft (blocks)” button next to existing run script.
+- Add “Show triangles” toggle if desired; faces already render via MeshRenderer.faceMesh.
 
 4) Reuse existing mesh generators (already tested)
 - From `MeshGenTestGUI` (`js/spacecraft_editor/js/MeshGenTestGUI.js`):
@@ -122,3 +126,72 @@ Overall readiness:
   - Slider anchor vertex as a highlighted point; optional small glyph/line to show the slider body.
 - Hook “MakeShip” in GUI:
   - Button executes the JS ship script, then runs `BuildCraft_blocks_js`, then triggers renderer update.
+
+## Slider (rail + moving joint) design notes — JS editor
+
+What is a slider (concept)
+- A slider is a joint that lets one structural component move along a defined path on another structural component. Think “carriage on a rail”: the rail component provides the vertex path; the sliding component contributes a single vertex that travels along that path while the rest of the component stays rigid. The slider holds the relative transform along the rail via a floating parameter (`cur`) and enforces a constraint/weld between the sliding vertex and the current edge segment on the rail.
+
+What the C++ reference does (current state)
+- Slider is Node-derived in C++, with `Path path` (ps[], n, cur, closed), `updatePath(rail, side)` using rail->sideToPath, `move` integrating `cur` with drive params, and `StructuralComponent::updateSlidersPaths` picking nearest side, sharing paths, and snapping to nearest path point.
+- Path semantics: ordered vertex indices along a rail; `cur` = edge index + interpolation; `closed` for rings; nearest-point search used to initialize `cur`.
+- Rail candidates: girder, ring, rope (any StructuralComponent implementing sideToPath/findNearestPoint). Rings set `closed=true`.
+
+Design correction for JS (per new requirement)
+- Slider is **not** a Node anymore (nodes are cubes). Slider is a movable joint between two structural components:
+  - Rail component: provides the path (edge loop).
+  - Sliding component: owns the sliding vertex that is constrained/welded to a point on the path.
+- Slider stores references: rail {id,type}, sliding {id,type}, sliding vertex index (in sliding component’s pointRange), path {ps[], closed, cur}, side, method flag (stride vs SDF), plus drive params (force/power/speed/springK/Kdv/maxDist).
+
+Path construction methods (JS)
+1) Stride-based (bPickSideByStrides=true)
+   - Use rail pointRange and known vertex ordering to derive edge loops by side.
+   - Implement `sideToPath`/`getEdgePathVert` for girders (open loop) and rings (closed).
+2) SDF-based (bPickSideByStrides=false)
+   - Use cylindrical SDF along target edge(s) via `selectVertsBySDF` (SDfuncs cylinder).
+   - Sort selected verts along edge direction to form ordered ps[]; mark closed for ring.
+
+Initialization flow
+- Choose rail + side (explicit or inferred from nearest rail vertex modulo layout).
+- Build path via chosen method; set `closed` if rail is ring.
+- Find nearest point on path to the sliding vertex position → set `cur`; optionally snap sliding vertex to interpolated position.
+
+Constraint/welding behavior
+- Sliding vertex belongs to sliding component; at runtime/mesh build, bind it to the path segment defined by `cur` (interpolate between path vertices i,i+1; wrap if closed).
+- For debugging/logging: store/report path length, ps list, side, method used, current segment indices, and welded vertex IDs.
+
+Data model fields to add in JS
+- Slider: { railId, railType, sliderCompId, sliderCompType, sliderVertId, side, methodFlag(bPickSideByStrides), path:{ps:[], closed:false, cur:0}, drive:{maxDist, forceMax, powerMax, maxSpeed, springK, Kdv, mass}, shareId? for shared paths }.
+- StructuralComponent helpers: `sideToPath(side)` (stride) and `pathFromSDF(side)` to populate ps[]; `findNearestPoint` for initialization.
+
+Planned JS build step (BuildCraft_blocks_js)
+- After both rail and sliding components are built (so pointRange known), build Slider:
+  - Build path via stride/SDF per global flag.
+  - Initialize `cur` by nearest point; snap sliding vertex position if desired.
+  - Record mapping: slider → {rail pointRange, sliding vertex id}.
+  - Emit weld/constraint: connect sliding vertex to path segment endpoints used by `cur` (MeshBuilder weldListToRange or dedicated constraint hook).
+
+Test scenario (to validate both methods)
+- Two nearby girders; pick one girder edge as rail.
+- Sliding component = second girder; pick one of its verts as sliding vertex.
+- Run twice: (a) stride path, (b) SDF cylinder path. Log ps[], cur, chosen segment vertices, weld result.
+## Slider implementation progress (JS, 2025-12-29)
+- **Data model**: Slider now stores rail, sliding component, sliding vertex id, side, methodFlag (stride/SDF), path (ps/cur/closed), weldDist, pathRadius; worker/engine/API carry these params end-to-end.
+- **Path selection**:
+  - **Stride**: Approximates `edgePathVert` by sampling along the chosen girder edge with tiny radius/threshold so only that edge is picked.
+  - **SDF**: Uses a corner-offset cylinder with very small radius/threshold; ring remains SDF (closed loop). Fallbacks/logs if empty.
+- **Visualization**:
+  - Rail path drawn **green** (stick type 5).
+  - Sliding vertex linked to interpolated path point in **cyan** (stick type 2).
+  - Test script offsets sliding girder in Z for visual clarity.
+- **GUI**:
+  - New **Components** panel with slider selection dropdown and `c_along` control.
+  - Live updates via `engine.rebuildMesh()` (no worker round-trip).
+  - Slider list refreshed after each script run.
+- **Diagnostics**:
+  - Node test `js/spacecraft_editor/tests/diag_slider.js` validates SDF radius/threshold and offsets.
+- **Issues solved**:
+  - **NaNs** from missing `rail.up` -> default up + robust normalization.
+  - **SDF picking all verts** -> reduced radius (0.05) + edge offset.
+  - **GUI syntax error** from stray brace fixed.
+  - **Worker/engine API** expanded to support joint-style slider parameters.
