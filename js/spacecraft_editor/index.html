@@ -210,6 +210,25 @@ api.Material("SlideMat", 2700, 80, 80);
 
 //api.Rope(n_fw, n_bk, 0.1, "Cable");
 
+// Create a Wheel and a Slider attached to it
+const wheelCenter = [0, 10, 0];
+const wheelDir = [0, 0, 1];
+const wheelUp = [0, 1, 0];
+const wheelRadius = 5.0;
+const wheelNseg = 16;
+const wheelWH = [0.4, 0.4];
+const wheelMat = "Steel";
+const wheelSt = [1, 1, 1, 1];
+        
+const wheel = api.Ring(wheelCenter, wheelDir, wheelUp, wheelRadius, wheelNseg, wheelWH, wheelMat, wheelSt);
+        
+// Sliding girder
+const nS1 = api.Node([-2, 12, 0], 0.5);
+const nS2 = api.Node([ 2, 12, 0], 0.5);
+const gS = api.Girder(nS1, nS2, 4);
+
+// Slider on wheel (rail=wheel, side=0, methodFlag=true for strides)
+api.Slider(wheel, 0.5, "Steel", gS, -1, 0, true);
 
 // Slider test: two crossing girders near each other, slider moves along gX1, sliding vertex on gX2
 const gX1 = api.Girder( api.Node( vec(2.0,  1.0, 0.0), 0.6 ), api.Node( vec(12.0,  1.0, 0.0), 0.6 ), 8, "Steel" );

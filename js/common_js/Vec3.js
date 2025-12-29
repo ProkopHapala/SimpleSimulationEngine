@@ -13,7 +13,10 @@ export class Vec3 {
     }
 
     setV(v) {
-        this.x = v.x; this.y = v.y; this.z = v.z;
+        if (!v) return this;
+        this.x = v.x ?? v[0] ?? 0;
+        this.y = v.y ?? v[1] ?? 0;
+        this.z = v.z ?? v[2] ?? 0;
         return this;
     }
 

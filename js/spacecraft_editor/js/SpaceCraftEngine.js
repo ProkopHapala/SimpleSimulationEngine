@@ -149,9 +149,18 @@ export class SpaceCraftEngine {
                     break;
                 }
                 case 'Ring': {
+                    const pos = cmd.args[0];
+                    const dir = cmd.args[1];
+                    const up = cmd.args[2];
+                    const R = cmd.args[3];
+                    const nseg = cmd.args[4];
+                    const wh = cmd.args[5];
+                    const matName = cmd.args[6];
+                    const st = cmd.args[7];
+                    const ring = this.craft.addRing(pos, dir, up, R, nseg, wh, matName, st);
+                    logger.info(`Engine: Added Ring ${ring.id}`);
                     const idx = (cmd.id !== undefined) ? cmd.id : seq.Ring;
-                    const r = this.craft.addRing(cmd.args[0], cmd.args[1], cmd.args[2], cmd.args[3]);
-                    idMap.Ring[idx] = r;
+                    idMap.Ring[idx] = ring;
                     seq.Ring++;
                     break;
                 }
@@ -166,7 +175,7 @@ export class SpaceCraftEngine {
         // 2. Generate Concrete Mesh
         BuildCraft_blocks_js(this.mesh, this.craft);
 
-        logger.info(`Generated Mesh: ${this.mesh.verts.length / 3} verts, ${this.mesh.edges.length / 4} edges.`);
+        logger.info(`Generated Mesh: ${this.mesh.verts.length} verts, ${this.mesh.edges.length} edges.`);
 
         // 3. Notify Renderer to update
         if (window.renderer) {

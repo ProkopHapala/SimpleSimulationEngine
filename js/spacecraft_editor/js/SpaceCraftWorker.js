@@ -48,9 +48,9 @@ const api = {
         _commands.push({ method: 'Slider', args: [rail, calong, matName, sliding, slidingVertId, side, methodFlag], id });
         return id;
     },
-    Ring: function (pos, rot, R, matName) {
+    Ring: function (pos, dir, up, R, nseg, wh, matName, st) {
         const id = _counters.Ring++;
-        _commands.push({ method: 'Ring', args: [pos, rot, R, matName], id });
+        _commands.push({ method: 'Ring', args: [pos, dir, up, R, nseg, wh, matName, st], id });
         return id;
     }
 };

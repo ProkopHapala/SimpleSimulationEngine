@@ -171,19 +171,49 @@ export function BuildCraft_blocks_js(mesh, craft) {
     }
 
     // 5. Generate Rings
-    for (const ring of craft.rings) {
+    for (let i = 0; i < craft.rings.length; i++) {
+        const ring = craft.rings[i];
         const iv0 = mesh.verts.length;
         const ie0 = mesh.edges.length;
         
-        // Using mesh.wheel from MeshGenerators
-        const pos = new Vec3(ring.pos[0], ring.pos[1], ring.pos[2]);
-        const p1 = new Vec3(pos.x, pos.y + ring.R, pos.z); // axis hint
-        const ax = new Vec3(0, 0, 1);
-        mesh.wheel(pos, p1, ax, ring.nseg, ring.wh, stickTypes);
+        const normalAxis = new Vec3(
+            Number((ring.up && (ring.up[0] ?? ring.up.x)) ?? 0), 
+            Number((ring.up && (ring.up[1] ?? ring.up.y)) ?? 0), 
+            Number((ring.up && (ring.up[2] ?? ring.up.z)) ?? 1)
+        );
+        const radiusDir = new Vec3(
+            Number((ring.dir && (ring.dir[0] ?? ring.dir.x)) ?? 1), 
+            Number((ring.dir && (ring.dir[1] ?? ring.dir.y)) ?? 0), 
+            Number((ring.dir && (ring.dir[2] ?? ring.dir.z)) ?? 0)
+        );
+        const center = new Vec3(
+            Number((ring.pos && (ring.pos[0] ?? ring.pos.x)) ?? 0), 
+            Number((ring.pos && (ring.pos[1] ?? ring.pos.y)) ?? 0), 
+            Number((ring.pos && (ring.pos[2] ?? ring.pos.z)) ?? 0)
+        );
+        const ringR = Number(ring.R ?? 5.0);
+        const p1 = new Vec3().setV(center).addMul(radiusDir, ringR);
 
+        // EXTRA DEBUG LOGS
+        logger.info(`[BuildCraft] PRE-GEN Ring ${i}: pos=${JSON.stringify(ring.pos)} dir=${JSON.stringify(ring.dir)} up=${JSON.stringify(ring.up)} R=${ring.R} (${typeof ring.R})`);
+        logger.info(`[BuildCraft] PARSED Ring ${i}: center=(${center.x},${center.y},${center.z}) radiusDir=(${radiusDir.x},${radiusDir.y},${radiusDir.z}) normalAxis=(${normalAxis.x},${normalAxis.y},${normalAxis.z}) p1=(${p1.x},${p1.y},${p1.z}) ringR=${ringR}`);
+
+        const iStart = mesh.wheel(
+            center,
+            p1,
+            normalAxis,
+            Number(ring.nseg ?? 16),
+            { x: Number(ring.wh?.x ?? ring.wh?.[0] ?? 0.4), y: Number(ring.wh?.y ?? ring.wh?.[1] ?? 0.4) },
+            { x: 5, y: 5, z: 5, w: 5 } // Using stick type 5 (green) for rings
+        );
+        logger.info(`[BuildCraft] Generated Ring ${i}: iStart=${iStart} nverts=${mesh.verts.length - iv0} nedges=${mesh.edges.length - ie0}`);
+        for (let j = iv0; j < mesh.verts.length; j++) {
+            const v = mesh.verts[j].pos;
+            logger.info(`  RingVert ${j}: (${v.x.toFixed(3)}, ${v.y.toFixed(3)}, ${v.z.toFixed(3)})`);
+        }
         ring.pointRange = { x: iv0, y: mesh.verts.length };
         ring.stickRange = { x: ie0, y: mesh.edges.length };
-        logV(1, `[BuildCraft] Ring id=${ring.id} pos=${ring.pos} R=${ring.R} nseg=${ring.nseg} verts=${ring.pointRange.y - iv0}`);
+        logV(1, `[BuildCraft] Ring id=${ring.id} pos=${JSON.stringify(ring.pos)} R=${ring.R} nseg=${ring.nseg} verts=${ring.pointRange.y - iv0} edges=${ring.stickRange.y - ie0}`);
     }
 
     // 6. Generate Sliders (rail + sliding vertex)
@@ -195,9 +225,10 @@ export function BuildCraft_blocks_js(mesh, craft) {
             const pB = new Vec3(rail.nodeB.pos[0], rail.nodeB.pos[1], rail.nodeB.pos[2]);
             return { pA, pB, closed: false };
         } else if (rail instanceof Ring) {
-            const pos = new Vec3(rail.pos[0], rail.pos[1], rail.pos[2]);
-            const p1 = new Vec3(pos.x, pos.y + rail.R, pos.z);
-            const dir = new Vec3().setSub(p1, pos); // axis hint
+            const pos = new Vec3(rail.pos[0] ?? rail.pos.x ?? 0, rail.pos[1] ?? rail.pos.y ?? 0, rail.pos[2] ?? rail.pos.z ?? 0);
+            const rDir = new Vec3(rail.dir[0] ?? rail.dir.x ?? 1, rail.dir[1] ?? rail.dir.y ?? 0, rail.dir[2] ?? rail.dir.z ?? 0);
+            const p1 = new Vec3().setV(pos).addMul(rDir, rail.R);
+            const dir = new Vec3().setSub(p1, pos); // radius orientation hint
             return { pA: pos, pB: pos, closed: true, ringDir: dir };
         }
         return null;
@@ -244,7 +275,35 @@ export function BuildCraft_blocks_js(mesh, craft) {
         return { offset, dirN, ep, ldir: ldir || dirN.norm(), lup: rail instanceof Girder ? 1.0 : 0, lside: rail instanceof Girder ? 1.0 : 0 };
     };
 
-    const buildPathOnEdge = (rail, side, radius) => {
+    const buildPathByStrides = (rail, side) => {
+        if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
+        const ps = [];
+        const n = rail.pointRange.y - rail.pointRange.x;
+        
+        if (rail instanceof Girder) {
+            // Girder vertices are generated in blocks of 4 (i00, i01, i10, i11)
+            // side 0: i00, side 1: i01, side 2: i10, side 3: i11
+            const offset = side % 4;
+            for (let i = rail.pointRange.x + offset; i < rail.pointRange.y; i += 4) {
+                ps.push(i);
+            }
+            return { ps, closed: false };
+        } else if (rail instanceof Ring) {
+            // Ring (wheel) vertices are also in blocks of 4
+            // i00, i01 are radial pair at step i
+            // i10, i11 are axial pair at half-step i+0.5
+            // To get a circular edge, we pick one of these offsets
+            const offset = side % 4;
+            for (let i = rail.pointRange.x + offset; i < rail.pointRange.y; i += 4) {
+                ps.push(i);
+            }
+            return { ps, closed: true };
+        }
+        return { ps: [], closed: false };
+    };
+
+    const buildPathOnEdge = (rail, side, radius, useStrides = false) => {
+        if (useStrides) return buildPathByStrides(rail, side);
         if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
         if (rail instanceof Ring) {
             // For ring, still use SDF around circumference (offset unused)
@@ -334,6 +393,9 @@ export function BuildCraft_blocks_js(mesh, craft) {
         const rail = slider.rail;
         if (!rail || rail.pointRange.x < 0) { logV(1, `[BuildCraft] Slider id=${slider.id} rail missing range`); continue; }
 
+        const path = buildPathOnEdge(slider.rail, slider.side, slider.pathRadius, slider.methodFlag);
+        slider.path = path;
+
         const slidingComp = slider.sliding || rail; // fallback: rail itself
         const slidingRange = slidingComp.pointRange || { x: -1, y: -1 };
         const ivSlide = (slider.slidingVertId >= 0 && slider.slidingVertId < mesh.verts.length)
@@ -343,7 +405,7 @@ export function BuildCraft_blocks_js(mesh, craft) {
 
         const useStride = !!slider.methodFlag;
         const radius = slider.pathRadius || 0.35;
-        let path = useStride ? buildPathStride(rail, slider.side || 0, radius) : buildPathOnEdge(rail, slider.side || 0, radius);
+        //let path = useStride ? buildPathStride(rail, slider.side || 0, radius) : buildPathOnEdge(rail, slider.side || 0, radius);
         if (path.ps.length < 2) { // fallback: try SDF if stride failed, or stride if SDF failed
             const alt = useStride ? buildPathOnEdge(rail, slider.side || 0, radius * 1.5) : buildPathStride(rail, slider.side || 0, radius * 1.5);
             if (alt.ps.length > path.ps.length) path = alt;

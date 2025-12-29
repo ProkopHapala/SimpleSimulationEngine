@@ -77,13 +77,15 @@ export class Slider {
 }
 
 export class Ring {
-    constructor(pos, rot, R, type = 0) {
+    constructor(pos, dir, up, R, nseg, wh, matName, st) {
         this.pos = pos;
-        this.rot = rot; // Mat3
+        this.dir = dir;
+        this.up = up;
         this.R = R;
-        this.type = type;
-        this.nseg = 16;
-        this.wh = { x: 0.5, y: 0.5 };
+        this.nseg = nseg;
+        this.wh = wh;
+        this.matName = matName;
+        this.st = st;
         this.id = -1;
         this.pointRange = { x: -1, y: -1 };
         this.stickRange = { x: -1, y: -1 };
@@ -101,8 +103,8 @@ export class SpaceCraft {
         this.girders = [];
         this.ropes = [];
         this.plates = [];
-        this.sliders = [];
         this.rings = [];
+        this.sliders = [];
     }
 
     clear() {
@@ -150,10 +152,16 @@ export class SpaceCraft {
         return s;
     }
 
-    addRing(pos, rot, R, type) {
-        const r = new Ring(pos, rot, R, type);
+    addRing(pos, dir, up, R, nseg, wh, matName, st) {
+        const r = new Ring(pos, dir, up, R, nseg, wh, matName, st);
         r.id = this.rings.length;
         this.rings.push(r);
         return r;
+    }
+
+    getStructuralComponent(id, kind) {
+        if (kind === 1) return this.girders[id]; // ComponetKind::Girder
+        if (kind === 3) return this.rings[id];   // ComponetKind::Ring
+        return null;
     }
 }

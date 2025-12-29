@@ -485,6 +485,161 @@ export class MeshBuilder {
         this.chunks.push(data);
         return this.chunks.length - 1;
     }
+    /**
+     * Generate a wheel truss structure.
+     * Ported from MeshBuilder2.cpp::wheel
+     */
+    wheel(p0, p1, ax, n, wh, stickTypes = { x: 1, y: 1, z: 1, w: 1 }) {
+        const dir = new Vec3().setSub(p1, p0);
+        const r = dir.norm();
+        if (r > 1e-6) {
+            dir.mulScalar(1.0 / r); 
+        } else { 
+            dir.set(1, 0, 0);
+        }
+
+        const axVec = new Vec3().setV(ax);
+        axVec.makeOrthoU(dir);
+        let lax = axVec.norm();
+        if (lax > 1e-6) {
+            axVec.mulScalar(1.0 / lax);
+        } else {
+            axVec.set(0, 0, 1);
+        }
+
+        const side = new Vec3().setCross(dir, axVec);
+        side.normalize();
+
+        const whX = wh.x ?? wh[0] ?? 0.5;
+        const whY = wh.y ?? wh[1] ?? 0.5;
+
+        logger.info(`MeshBuilder.wheel: nseg=${n} r=${r.toFixed(3)} wh=(${whX},${whY}) dir=(${dir.x.toFixed(3)},${dir.y.toFixed(3)},${dir.z.toFixed(3)}) ax=(${axVec.x.toFixed(3)},${axVec.y.toFixed(3)},${axVec.z.toFixed(3)}) side=(${side.x.toFixed(3)},${side.y.toFixed(3)},${side.z.toFixed(3)})`);
+
+        const dnp = 4;
+        const i000 = this.verts.length;
+        let i00 = i000;
+
+        let rotA = 1.0;
+        let rotB = 0.0;
+        const angleStep = Math.PI / n;
+        const cosStep = Math.cos(angleStep) || 0;
+        const sinStep = Math.sin(angleStep) || 0;
+
+        if (isNaN(cosStep) || isNaN(sinStep)) {
+            logger.error(`MeshBuilder.wheel ERROR: NaN in trig steps. angleStep=${angleStep} n=${n}`);
+            return i000;
+        }
+
+        for (let i = 0; i < n; i++) {
+            const i01 = i00 + 1;
+            const i10 = i00 + 2;
+            const i11 = i00 + 3;
+
+            // First pair of vertices (radial plane)
+            let R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
+            this.vert(new Vec3().setAddMul(p0, R, r + whX));
+            this.vert(new Vec3().setAddMul(p0, R, r - whX));
+
+            // Rotate half step
+            let nextRotA = rotA * cosStep - rotB * sinStep;
+            let nextRotB = rotA * sinStep + rotB * cosStep;
+            rotA = nextRotA;
+            rotB = nextRotB;
+
+            // Second pair of vertices (offset along axis)
+            R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
+            this.vert(new Vec3().setAddMul(p0, axVec, whY).addMul(R, r));
+            this.vert(new Vec3().setAddMul(p0, axVec, -whY).addMul(R, r));
+
+            // Rotate another half step for next iteration
+            nextRotA = rotA * cosStep - rotB * sinStep;
+            nextRotB = rotA * sinStep + rotB * cosStep;
+            rotA = nextRotA;
+            rotB = nextRotB;
+
+            // Internal edges
+            this.edge(i00, i01, stickTypes.y);
+            this.edge(i10, i11, stickTypes.y);
+            this.edge(i00, i10, stickTypes.z);
+            this.edge(i00, i11, stickTypes.z);
+            this.edge(i01, i10, stickTypes.z);
+            this.edge(i01, i11, stickTypes.z);
+
+            if (i < (n - 1)) {
+                const next_i00 = i00 + dnp;
+                const next_i01 = next_i00 + 1;
+                this.edge(i10, next_i00, stickTypes.w);
+                this.edge(i10, next_i01, stickTypes.w);
+                this.edge(i11, next_i00, stickTypes.w);
+                this.edge(i11, next_i01, stickTypes.w);
+                this.edge(i00, next_i00, stickTypes.x);
+                this.edge(i01, next_i01, stickTypes.x);
+                this.edge(i10, i10 + dnp, stickTypes.x);
+                this.edge(i11, i11 + dnp, stickTypes.x);
+            } else {
+                this.edge(i10, i000 + 0, stickTypes.w);
+                this.edge(i10, i000 + 1, stickTypes.w);
+                this.edge(i11, i000 + 0, stickTypes.w);
+                this.edge(i11, i000 + 1, stickTypes.w);
+                this.edge(i00, i000 + 0, stickTypes.x);
+                this.edge(i01, i000 + 1, stickTypes.x);
+                this.edge(i10, i000 + 2, stickTypes.x);
+                this.edge(i11, i000 + 3, stickTypes.x);
+            }
+            i00 += dnp;
+        }
+        return i000;
+    }
+
+    /**
+     * Generate an n-gon ring.
+     * Ported from MeshBuilder2.cpp::ngon
+     */
+    ngon(p0, p1, ax, n, stickType = -1) {
+        const dir = new Vec3().setSub(p1, p0);
+        const r = dir.norm();
+        if (r > 1e-6) dir.mulScalar(1.0 / r); 
+        else dir.set(1, 0, 0);
+
+        const axVec = new Vec3().setV(ax);
+        axVec.makeOrthoU(dir);
+        let lax = axVec.norm();
+        if (lax > 1e-6) axVec.mulScalar(1.0 / lax);
+        else axVec.set(0, 0, 1);
+
+        const side = new Vec3().setCross(dir, axVec);
+        side.normalize();
+
+        const angleStep = (2 * Math.PI) / n;
+        const cosStep = Math.cos(angleStep) || 0;
+        const sinStep = Math.sin(angleStep) || 0;
+
+        if (isNaN(cosStep) || isNaN(sinStep)) {
+            logger.error(`MeshBuilder.ngon ERROR: NaN in trig steps. n=${n}`);
+            return i0;
+        }
+
+        let rotA = 1.0;
+        let rotB = 0.0;
+        const i0 = this.verts.length;
+
+        for (let i = 0; i < n; i++) {
+            const R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
+            this.vert(new Vec3().setAddMul(p0, R, r));
+
+            const nextRotA = rotA * cosStep - rotB * sinStep;
+            const nextRotB = rotA * sinStep + rotB * cosStep;
+            rotA = nextRotA;
+            rotB = nextRotB;
+
+            if (i > 0) {
+                this.edge(i0 + i - 1, i0 + i, stickType);
+            }
+        }
+        this.edge(i0 + n - 1, i0, stickType);
+        return i0;
+    }
+
     block() {
         const b = {
             ivert: this.verts.length,
