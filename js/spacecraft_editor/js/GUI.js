@@ -337,6 +337,31 @@ export class GUI {
             });
         }
 
+        const btnMakeShip = document.getElementById('btnMakeShip');
+        if (btnMakeShip) {
+            btnMakeShip.addEventListener('click', () => {
+                const shipScript = `
+// MakeShip Test Script
+const n1 = api.Node([0, 0, 0]);
+const n2 = api.Node([10, 0, 0]);
+const n3 = api.Node([5, 10, 0]);
+const n4 = api.Node([5, 5, 10]);
+
+const g1 = api.Girder(n1, n2, "Steel");
+const g2 = api.Girder(n2, n3, "Steel");
+const g3 = api.Girder(n3, n1, "Steel");
+
+api.Rope(n1, n4, 0.1, "Cable");
+api.Plate(n1, n2, n3, n4, "Shield");
+
+const r1 = api.Ring([5, 5, 0], [1,0,0, 0,1,0, 0,0,1], 3.0, "Aluminium");
+api.Slider(g1, 0.5, "SlideMat");
+`;
+                scriptInput.value = shipScript.trim();
+                this.runScript(shipScript);
+            });
+        }
+
 
         // --- Verbosity ---
         const numVerbosityUI = document.getElementById('numVerbosityUI');

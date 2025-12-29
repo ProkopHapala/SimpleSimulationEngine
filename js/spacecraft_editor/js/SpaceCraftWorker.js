@@ -5,7 +5,10 @@
 const _counters = {
     Node: 0,
     Girder: 0,
-    Rope: 0
+    Rope: 0,
+    Plate: 0,
+    Slider: 0,
+    Ring: 0
 };
 
 const _commands = [];
@@ -15,19 +18,39 @@ const api = {
     Material: function (name, density, Spull, Spush) {
         _commands.push({ method: 'Material', args: [name, density, Spull, Spush] });
     },
-    Node: function (pos) {
+    Node: function (pos, size = 1) {
         const id = _counters.Node++;
-        _commands.push({ method: 'Node', args: [pos] });
+        _commands.push({ method: 'Node', args: [pos, size], id });
         return id;
     },
-    Girder: function (n1, n2, matName) {
+    Girder: function (n1, n2, nseg = 1, matName) {
         const id = _counters.Girder++;
-        _commands.push({ method: 'Girder', args: [n1, n2, matName] });
+        _commands.push({ method: 'Girder', args: [n1, n2, nseg, matName], id });
         return id;
     },
     Rope: function (n1, n2, thick, matName) {
         const id = _counters.Rope++;
-        _commands.push({ method: 'Rope', args: [n1, n2, thick, matName] });
+        _commands.push({ method: 'Rope', args: [n1, n2, thick, matName], id });
+        return id;
+    },
+    Radiator: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName) {
+        const id = _counters.Plate++;
+        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Radiator'], id });
+        return id;
+    },
+    Shield: function (b1, b2, span1 = [0, 1], span2 = [0, 1], matName) {
+        const id = _counters.Plate++;
+        _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Shield'], id });
+        return id;
+    },
+    Slider: function (boundTo, calong, matName) {
+        const id = _counters.Slider++;
+        _commands.push({ method: 'Slider', args: [boundTo, calong, matName], id });
+        return id;
+    },
+    Ring: function (pos, rot, R, matName) {
+        const id = _counters.Ring++;
+        _commands.push({ method: 'Ring', args: [pos, rot, R, matName], id });
         return id;
     }
 };
