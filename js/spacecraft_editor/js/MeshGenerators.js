@@ -1,9 +1,9 @@
 import { Vec3 } from '../../common_js/Vec3.js';
+import { Logger } from '../../common_js/Logger.js';
 
-// Simplified Skeleton and Block mesh generators
-// These are simplified versions focused on mesh generation only
+const logger = new Logger();
 
-const MeshGenerator = {
+export const MeshGenerator = {
 
     /**
      * Generate a skeleton (network of girders connecting nodes)
@@ -136,23 +136,45 @@ const MeshGenerator = {
      * - 4 vertices per segment (outer/inner at two successive angles with axial offset)
      * - longitudinal edges (stickTypes.x), rim spokes (stickTypes.y), diagonals (stickTypes.z), cross-bracing (stickTypes.w)
      */
-    wheel(pos, p1, ax, nseg, wh = { x: 0.5, y: 0.5 }, stickTypes = { x: 1, y: 1, z: 1, w: 1 }) {
+    wheel(pos, p1, ax, nseg, wh = { x: 0.5, y: 0.5 }, stickTypes = { x: 1, y: 1, z: 1, w: 1 }, up = null) {
         const dir = new Vec3().setSub(p1, pos);
         const r = dir.norm();
         if (r <= 0) {
             logger.error('wheel: invalid radius');
             return -1;
         }
-        
+
         const z = new Vec3(ax.x, ax.y, ax.z);
         z.normalize();
-        
+
         // build orthonormal basis
-        const tmpV = (Math.abs(z.x) < 0.9) ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
-        const x = new Vec3().setCross(tmpV, z);
-        x.normalize();
-        const y = new Vec3().setCross(z, x);
-        y.normalize();
+        let x, y;
+        if (up) {
+            const upV = new Vec3().setV(up);
+            upV.normalize();
+            // C++ style: pose.rot.fromDirUp(dir, up)
+            // z is dir (axis), y is up, x is cross(up, z)
+            x = new Vec3().setCross(upV, z);
+            let lx = x.normalize();
+            if (lx < 1e-6) {
+                x = z.getSomeOrtho();
+            }
+            y = new Vec3().setCross(z, x);
+            y.normalize();
+        } else {
+            // build orthonormal basis with x aligned to projected dir, y = z x x
+            x = new Vec3().setV(dir);
+            const proj = x.x * z.x + x.y * z.y + x.z * z.z;
+            x.addMul(z, -proj); // project dir onto plane orthogonal to z
+            let lx = x.normalize();
+            if (lx < 1e-6) {
+                // fallback if dir parallel to z
+                x = z.getSomeOrtho();
+            }
+            y = new Vec3().setCross(z, x);
+            y.normalize();
+        }
+        logger.info(`wheel: pos=(${pos.x.toFixed(3)},${pos.y.toFixed(3)},${pos.z.toFixed(3)}) r=${r.toFixed(3)} nseg=${nseg} wh=(${wh.x},${wh.y}) z=(${z.x.toFixed(3)},${z.y.toFixed(3)},${z.z.toFixed(3)}) x=(${x.x.toFixed(3)},${x.y.toFixed(3)},${x.z.toFixed(3)}) y=(${y.x.toFixed(3)},${y.y.toFixed(3)},${y.z.toFixed(3)})`);
 
         const dnp = 4; // verts per segment
         const iStart = this.verts.length;

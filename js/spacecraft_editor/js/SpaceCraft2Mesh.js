@@ -1,6 +1,7 @@
 import { Vec3 } from '../../common_js/Vec3.js';
 import { Girder, Ring } from './SpaceCraft.js';
 import { SDF_Cylinder } from '../../common_js/SDfuncs.js';
+import { logger } from '../../common_js/Logger.js';
 
 const getRailEndpoints = (rail) => {
     if (rail instanceof Girder) {
@@ -55,34 +56,22 @@ const edgeOffset = (rail, side, offMag) => {
 };
 
 const buildPathByStrides = (rail, side) => {
-    if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
-    const ps = [];
-    const n = rail.pointRange.y - rail.pointRange.x;
-    if (rail instanceof Girder) {
-        const offset = side % 4;
-        for (let i = rail.pointRange.x + offset; i < rail.pointRange.y; i += 4) ps.push(i);
-        return { ps, closed: false };
-    } else if (rail instanceof Ring) {
-        const offset = side % 4;
-        for (let i = rail.pointRange.x + offset; i < rail.pointRange.y; i += 4) ps.push(i);
-        return { ps, closed: true };
+    if (!rail || rail.pointRange.x < 0) {
+        logger.warn(`[SpaceCraft2Mesh] buildPathByStrides: rail is null or has invalid pointRange`);
+        return { ps: [], closed: false };
     }
-    return { ps: [], closed: false };
+    const ps = rail.sideToPath(side);
+    const closed = (rail instanceof Ring);
+    logger.info(`[SpaceCraft2Mesh] buildPathByStrides: rail=${rail.constructor.name} side=${side} n=${ps.length} closed=${closed}`);
+    return { ps, closed };
 };
 
 const buildPathOnEdge = (mesh, rail, side, radius, useStrides = false) => {
+    logger.info(`[SpaceCraft2Mesh] buildPathOnEdge: rail=${rail?.constructor.name} side=${side} useStrides=${useStrides}`);
     if (useStrides) return buildPathByStrides(rail, side);
     if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
     if (rail instanceof Ring) {
-        const ep = getRailEndpoints(rail);
-        const p0 = new Vec3(ep.pA.x, ep.pA.y, ep.pA.z);
-        const p1 = new Vec3(p0.x, p0.y + (ep.ringDir ? ep.ringDir.norm() : rail.R), p0.z);
-        const sdf = SDF_Cylinder(p0, p1, radius, true);
-        mesh.setSelectionKind('vert'); mesh.applySelection([], 'vert', false);
-        mesh.selectVertsBySDF(sdf, 0.0, true);
-        const psIdx = mesh.selection.vec.filter(i => i >= rail.pointRange.x && i < rail.pointRange.y);
-        const ps = sortPathByProjection(mesh, psIdx, p0, new Vec3().setSub(p1, p0));
-        return { ps, closed: true };
+        return buildPathByStrides(rail, side); // Default to strides for Ring if SDF fails or as fallback
     }
     const eo = edgeOffset(rail, side, radius);
     const { offset, ep } = eo;
@@ -101,27 +90,10 @@ const buildPathOnEdge = (mesh, rail, side, radius, useStrides = false) => {
 };
 
 const buildPathStride = (mesh, rail, side, radius) => {
-    if (!(rail instanceof Girder) || rail.pointRange.x < 0) return buildPathOnEdge(mesh, rail, side, radius);
-    const nseg = rail.nseg || Math.max(1, (rail.pointRange.y - rail.pointRange.x) - 1);
-    const eo = edgeOffset(rail, side, radius);
-    const { offset, ep } = eo;
-    const pA = new Vec3(ep.pA.x, ep.pA.y, ep.pA.z).add(offset);
-    const pB = new Vec3(ep.pB.x, ep.pB.y, ep.pB.z).add(offset);
-    const dir = new Vec3().setSub(pB, pA);
-    const ps = [];
-    for (let j = 0; j <= nseg; j++) {
-        const t = j / nseg;
-        const target = new Vec3(pA.x, pA.y, pA.z).addMul(dir, t);
-        let best = -1; let bestd2 = 1e30;
-        for (let i = rail.pointRange.x; i < rail.pointRange.y; i++) {
-            const v = mesh.verts[i].pos;
-            const dx = v.x - target.x; const dy = v.y - target.y; const dz = v.z - target.z;
-            const d2 = dx * dx + dy * dy + dz * dz;
-            if (d2 < bestd2) { bestd2 = d2; best = i; }
-        }
-        if (best >= 0) ps.push(best);
-    }
-    return { ps, closed: false };
+    if (!rail || rail.pointRange.x < 0) return { ps: [], closed: false };
+    const ps = rail.sideToPath(side);
+    const closed = (rail instanceof Ring);
+    return { ps, closed };
 };
 
 /**
@@ -160,6 +132,7 @@ export function BuildCraft_blocks_js(mesh, craft) {
         mesh.bridgeFacingPolygons(pA, pB, nA.chunkRange, nB.chunkRange, girder.nseg || 3, bridgeStickTypes, bridgeStickTypes);
         girder.pointRange = { x: iv0, y: mesh.verts.length };
         girder.stickRange = { x: ie0, y: mesh.edges.length };
+        logger.info(`[BuildCraft] Girder ${girder.id}: pointRange=[${girder.pointRange.x}, ${girder.pointRange.y}] nverts=${girder.pointRange.y - girder.pointRange.x}`);
     }
 
     // 3. Generate Ropes
@@ -226,17 +199,36 @@ export function BuildCraft_blocks_js(mesh, craft) {
     for (let i = 0; i < craft.rings.length; i++) {
         const ring = craft.rings[i];
         const iv0 = mesh.verts.length; const ie0 = mesh.edges.length;
-        const center = new Vec3(Number(ring.pos?.[0] ?? ring.pos?.x ?? 0), Number(ring.pos?.[1] ?? ring.pos?.y ?? 0), Number(ring.pos?.[2] ?? ring.pos?.z ?? 0));
-        const up = new Vec3(Number(ring.up?.[0] ?? ring.up?.x ?? 0), Number(ring.up?.[1] ?? ring.up?.y ?? 0), Number(ring.up?.[2] ?? ring.up?.z ?? 1));
-        const dir = new Vec3(Number(ring.dir?.[0] ?? ring.dir?.x ?? 1), Number(ring.dir?.[1] ?? ring.dir?.y ?? 0), Number(ring.dir?.[2] ?? ring.dir?.z ?? 0));
-        const p1 = new Vec3().setV(center).addMul(dir, Number(ring.R ?? 5.0));
-        mesh.wheel(center, p1, up, Number(ring.nseg ?? 16), { x: Number(ring.wh?.x ?? ring.wh?.[0] ?? 0.4), y: Number(ring.wh?.y ?? ring.wh?.[1] ?? 0.4) }, { x: 5, y: 5, z: 5, w: 5 });
+        const center = new Vec3().setV(ring.pos);
+        let ax = new Vec3().setV(ring.dir);
+        const lax = ax.normalize();
+        if (lax < 1e-9) { ax = new Vec3(0, 0, 1); }
+        const up = ring.up ? new Vec3().setV(ring.up) : null;
+        const R = Number(ring.R ?? 5.0);
+        if (!(R > 1e-9)) {
+            logger.error(`[BuildCraft] Ring ${ring.id} has non-positive radius R=${R}, skipping mesh.`);
+            continue;
+        }
+        const rimDir = up ? new Vec3().setV(up) : ax.getSomeOrtho();
+        rimDir.makeOrtho(ax);
+        const lrd = rimDir.normalize();
+        if (lrd < 1e-9) {
+            logger.error(`[BuildCraft] Ring ${ring.id} failed to find rim direction, skipping mesh.`);
+            continue;
+        }
+        const p1 = new Vec3().setV(center).addMul(rimDir, R);
+        mesh.wheel(center, p1, ax, Number(ring.nseg ?? 16), { x: Number(ring.wh?.x ?? ring.wh?.[0] ?? 0.4), y: Number(ring.wh?.y ?? ring.wh?.[1] ?? 0.4) }, { x: 1, y: 1, z: 1, w: 1 }, up);
         ring.pointRange = { x: iv0, y: mesh.verts.length }; ring.stickRange = { x: ie0, y: mesh.edges.length };
+        logger.info(`[BuildCraft] Ring ${ring.id}: pointRange=[${ring.pointRange.x}, ${ring.pointRange.y}] nverts=${ring.pointRange.y - ring.pointRange.x}`);
     }
 
     // 6. Generate Sliders (hull part - joining logic)
     for (const slider of craft.sliders) {
-        const rail = slider.rail; if (!rail || rail.pointRange.x < 0) continue;
+        const rail = slider.rail; 
+        if (!rail || rail.pointRange.x < 0) {
+            logger.warn(`[BuildCraft] Slider ${slider.id} rail ${rail?.constructor.name} has invalid pointRange: [${rail?.pointRange.x}, ${rail?.pointRange.y}]`);
+            continue;
+        }
         const slidingComp = slider.sliding || rail;
         const slidingRange = slidingComp.pointRange || { x: -1, y: -1 };
         const pSlide = (Number.isInteger(slider.slidingVertId) && slider.slidingVertId >= 0 && slider.slidingVertId < mesh.verts.length) 
@@ -254,6 +246,7 @@ export function BuildCraft_blocks_js(mesh, craft) {
         }
         // Pre-build path for Aux visualization to reuse
         slider.path = buildPathOnEdge(mesh, rail, slider.side, slider.pathRadius || 0.35, slider.methodFlag);
+        logger.info(`[BuildCraft] Slider ${slider.id}: rail=${rail.constructor.name} side=${slider.side} methodFlag=${slider.methodFlag} pathN=${slider.path.ps.length} closed=${slider.path.closed}`);
     }
 }
 
@@ -278,8 +271,10 @@ export function BuildCraft_aux_js(auxMesh, craft, hullMesh) {
         }
         // Draw Anchor
         const tRaw = (slider.calong !== undefined && slider.calong !== null) ? slider.calong : 0.5;
-        const tClamped = Math.max(0, Math.min(path.ps.length - 1 - 1e-6, tRaw * (path.ps.length - 1)));
-        const i0 = Math.floor(tClamped), tFrac = tClamped - i0;
+        const span = path.closed ? path.ps.length : (path.ps.length - 1);
+        if (span <= 0) continue;
+        const tClamped = Math.max(0, Math.min(span - 1e-6, tRaw * span));
+        const i0 = Math.floor(tClamped) % path.ps.length, tFrac = tClamped - Math.floor(tClamped);
         const iA = path.ps[i0], iB = path.ps[(i0 + 1) % path.ps.length];
         
         if (Number.isInteger(iA) && Number.isInteger(iB) && iA >= 0 && iA < hullMesh.verts.length && iB >= 0 && iB < hullMesh.verts.length) {
