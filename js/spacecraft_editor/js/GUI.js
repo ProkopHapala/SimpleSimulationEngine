@@ -876,8 +876,8 @@ initSliderControls() {
             const id = parseInt(this.selSlider.value);
             if (id >= 0 && this.engine.craft.sliders[id]) {
                 this.engine.craft.sliders[id].calong = val;
-                // Trigger mesh rebuild to update visualization
-                this.engine.rebuildMesh();
+                // Trigger fast auxiliary update instead of full mesh rebuild
+                this.engine.updateAux();
             }
         });
     }

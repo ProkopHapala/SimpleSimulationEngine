@@ -5,6 +5,7 @@ export class SpaceCraftRenderer extends MeshRenderer {
         super(null, null, 0);
         this.engine = engine;
         this.labelMode = 'id';
+        this.auxRenderer = null;
     }
 
     init(container, shaders) {
@@ -39,6 +40,10 @@ export class SpaceCraftRenderer extends MeshRenderer {
         this.capacity = 10000; // Max verts
 
         MeshRenderer.prototype.init.call(this);
+
+        // Initialize Auxiliary Renderer for sliders/paths/helpers
+        this.auxRenderer = new MeshRenderer(this.scene, shaders, 2000); 
+        this.auxRenderer.init();
 
         // 3. Grid & Axes (from original SpaceCraftRenderer)
         this.gridHelper = new THREE.GridHelper(20, 20);
@@ -109,6 +114,52 @@ export class SpaceCraftRenderer extends MeshRenderer {
         // Debug counts
         const msg = `[SpaceCraftRenderer] updateGeometry verts=${numVerts} edges=${edges.length} tris=${triCount}`;
         if (typeof logger !== 'undefined' && logger.info) logger.info(msg); else console.log(msg);
+    }
+
+    updateAuxGeometry(meshBuilder) {
+        if (!this.auxRenderer || !meshBuilder) return;
+
+        const verts = meshBuilder.verts;
+        const numVerts = verts.length;
+
+        if (numVerts > this.auxRenderer.capacity) {
+            console.warn(`AuxMesh exceeds capacity! ${numVerts} > ${this.auxRenderer.capacity}`);
+            return;
+        }
+
+        // 1. Update Positions
+        for (let i = 0; i < numVerts; i++) {
+            const v = verts[i];
+            this.auxRenderer.posData[i * 4] = v.pos.x;
+            this.auxRenderer.posData[i * 4 + 1] = v.pos.y;
+            this.auxRenderer.posData[i * 4 + 2] = v.pos.z;
+            this.auxRenderer.posData[i * 4 + 3] = 1.0;
+        }
+        this.auxRenderer.posTexture.needsUpdate = true;
+
+        // 2. Update Particles (Helper Points)
+        this.auxRenderer.updateParticles(numVerts, (i) => {
+            return [0.0, 1.0, 1.0]; // Cyan for helper points
+        }, (i) => {
+            return 0.1; 
+        });
+
+        // 3. Update Bonds (Helper Lines)
+        const edges = meshBuilder.edges;
+        const pairs = [];
+        for (let i = 0; i < edges.length; i++) {
+            const e = edges[i];
+            pairs.push([e.x, e.y, e.z]);
+        }
+        this.auxRenderer.updateBonds(pairs);
+        
+        // Disable labels/tris for aux for now unless needed
+        if (this.auxRenderer.labelMesh) this.auxRenderer.labelMesh.visible = false;
+        if (this.auxRenderer.faceMesh) this.auxRenderer.faceMesh.geometry.setDrawRange(0, 0);
+
+        if (typeof logger !== 'undefined' && logger.info) {
+            logger.info(`[SpaceCraftRenderer] updateAuxGeometry: verts=${verts.length}, edges=${edges.length}`);
+        }
     }
 
     updateLabelsContent() {

@@ -143,41 +143,59 @@ const MeshGenerator = {
             logger.error('wheel: invalid radius');
             return -1;
         }
-        const z = new Vec3(ax.x, ax.y, ax.z).normalize();
+        
+        const z = new Vec3(ax.x, ax.y, ax.z);
+        z.normalize();
+        
         // build orthonormal basis
-        const tmp = Math.abs(z.x) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
-        const x = new Vec3().setCross(tmp, z).normalize();
-        const y = new Vec3().setCross(z, x).normalize();
+        const tmpV = (Math.abs(z.x) < 0.9) ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+        const x = new Vec3().setCross(tmpV, z);
+        x.normalize();
+        const y = new Vec3().setCross(z, x);
+        y.normalize();
 
         const dnp = 4; // verts per segment
-        const i00 = this.verts.length / 3;
+        const iStart = this.verts.length;
 
         const angStep = (2 * Math.PI) / nseg;
-        let ang = 0;
         const cos = Math.cos;
         const sin = Math.sin;
 
-        const pushVertAt = (a, radial, axial) => {
-            const ca = cos(a), sa = sin(a);
-            const Rv = new Vec3(
-                x.x * (radial * ca) + y.x * (radial * sa),
-                x.y * (radial * ca) + y.y * (radial * sa),
-                x.z * (radial * ca) + y.z * (radial * sa)
-            );
-            return this.vert(new Vec3(
-                pos.x + Rv.x + z.x * axial,
-                pos.y + Rv.y + z.y * axial,
-                pos.z + Rv.z + z.z * axial
-            ));
-        };
+        // 1. First, generate ALL vertices to avoid forward references in edge creation
+        for (let i = 0; i < nseg; i++) {
+            const ang = i * angStep;
+            const angNext = (i + 1) * angStep;
+            
+            const pushVertAt = (a, radial, axial) => {
+                const ca = cos(a), sa = sin(a);
+                const Rv = new Vec3(
+                    x.x * (radial * ca) + y.x * (radial * sa),
+                    x.y * (radial * ca) + y.y * (radial * sa),
+                    x.z * (radial * ca) + y.z * (radial * sa)
+                );
+                return this.vert(new Vec3(
+                    pos.x + Rv.x + z.x * axial,
+                    pos.y + Rv.y + z.y * axial,
+                    pos.z + Rv.z + z.z * axial
+                ));
+            };
 
-        for (let i = 0; i < nseg; i++, ang += angStep) {
-            const angNext = ang + angStep;
-            // four verts: outer/inner at ang, outer/inner at angNext with axial offsets
-            const v0 = pushVertAt(ang,     r + wh.x, +0.0);
-            const v1 = pushVertAt(ang,     r - wh.x, +0.0);
-            const v2 = pushVertAt(angNext, r + wh.x, +wh.y);
-            const v3 = pushVertAt(angNext, r - wh.x, -wh.y);
+            // four verts per segment:
+            // v0, v1 at ang
+            // v2, v3 at angNext with axial offsets
+            pushVertAt(ang,     r + wh.x, +0.0); // base + 0
+            pushVertAt(ang,     r - wh.x, +0.0); // base + 1
+            pushVertAt(angNext, r + wh.x, +wh.y); // base + 2
+            pushVertAt(angNext, r - wh.x, -wh.y); // base + 3
+        }
+
+        // 2. Now generate all edges
+        for (let i = 0; i < nseg; i++) {
+            const base = iStart + i * dnp;
+            const v0 = base + 0;
+            const v1 = base + 1;
+            const v2 = base + 2;
+            const v3 = base + 3;
 
             // rim spokes
             this.edge(v0, v1, stickTypes.y);
@@ -189,18 +207,23 @@ const MeshGenerator = {
             this.edge(v1, v3, stickTypes.z);
 
             // connect to next segment or wrap
-            const baseNext = (i === nseg - 1) ? i00 : i00 + (i + 1) * dnp;
+            const baseNext = (i === nseg - 1) ? iStart : base + dnp;
+            
+            // Cross-bracing to next segment
             this.edge(v2, baseNext + 0, stickTypes.w);
             this.edge(v2, baseNext + 1, stickTypes.w);
             this.edge(v3, baseNext + 0, stickTypes.w);
             this.edge(v3, baseNext + 1, stickTypes.w);
-            this.edge(v0, baseNext + 0, stickTypes.x);
+            
+            // Longitudinal/diagonal links
+            this.edge(v0, baseNext + 0, stickTypes.x); // changed from baseNext + 0 based on logic? Wait, let's keep it similar to before
             this.edge(v1, baseNext + 1, stickTypes.x);
             this.edge(v2, baseNext + 2, stickTypes.x);
             this.edge(v3, baseNext + 3, stickTypes.x);
         }
-        logger.info(`wheel: generated truss wheel nseg=${nseg} r=${r}`);
-        return i00;
+        
+        logger.info(`wheel: generated truss wheel nseg=${nseg} r=${r.toFixed(3)} iStart=${iStart} nverts=${this.verts.length - iStart}`);
+        return iStart;
     }
 };
 

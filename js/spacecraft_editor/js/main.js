@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Initialize Renderer
         window.renderer = new SpaceCraftRenderer(window.engine);
         window.renderer.init(document.getElementById('canvas-container'), shaders);
+        window.engine.renderer = window.renderer;
 
         // 3. Initialize GUI
         window.gui = new GUI(window.engine, window.renderer);

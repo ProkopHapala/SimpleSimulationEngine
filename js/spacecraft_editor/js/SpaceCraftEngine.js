@@ -1,7 +1,7 @@
 import { SpaceCraft } from './SpaceCraft.js';
 import { MeshBuilder } from '../../common_js/MeshBuilder.js';
 import { logger } from '../../common_js/Logger.js';
-import { BuildCraft_blocks_js } from './SpaceCraft2Mesh.js';
+import { BuildCraft_blocks_js, BuildCraft_aux_js } from './SpaceCraft2Mesh.js';
 import { extendMeshBuilder } from '../../common_js/MeshesUV.js';
 import { extendMeshBuilderWithGenerators } from './MeshGenerators.js';
 
@@ -23,6 +23,8 @@ export class SpaceCraftEngine {
         // Pipeline Objects
         this.craft = new SpaceCraft();
         this.mesh = new MeshBuilder();
+        this.auxMesh = new MeshBuilder();
+        this.renderer = null; // Linked in main.js
 
         // GPU Data Texture (still used for positions)
         this.dataTexture = null;
@@ -59,14 +61,24 @@ export class SpaceCraftEngine {
     reset() {
         this.craft.clear();
         this.mesh.clear();
+        this.auxMesh.clear();
         logger.info("Engine reset.");
     }
 
     rebuildMesh() {
         if (!this.mesh || !this.craft) return;
         BuildCraft_blocks_js(this.mesh, this.craft);
-        if (window.renderer) {
-            window.renderer.updateGeometry(this.mesh);
+        this.updateAux();
+        if (this.renderer) {
+            this.renderer.updateGeometry(this.mesh);
+        }
+    }
+
+    updateAux() {
+        if (!this.auxMesh || !this.craft || !this.mesh) return;
+        BuildCraft_aux_js(this.auxMesh, this.craft, this.mesh);
+        if (this.renderer) {
+            this.renderer.updateAuxGeometry(this.auxMesh);
         }
     }
 
@@ -174,12 +186,13 @@ export class SpaceCraftEngine {
 
         // 2. Generate Concrete Mesh
         BuildCraft_blocks_js(this.mesh, this.craft);
+        this.updateAux();
 
         logger.info(`Generated Mesh: ${this.mesh.verts.length} verts, ${this.mesh.edges.length} edges.`);
 
         // 3. Notify Renderer to update
-        if (window.renderer) {
-            window.renderer.updateGeometry(this.mesh);
+        if (this.renderer) {
+            this.renderer.updateGeometry(this.mesh);
         }
 
         // 4. Update GUI components list

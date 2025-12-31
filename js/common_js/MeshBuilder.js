@@ -281,6 +281,56 @@ export class MeshBuilder {
         return imin;
     }
 
+    /**
+     * Finds the nearest vertex within a cutoff distance.
+     * @param {Vec3|Array} pos Position to search near.
+     * @param {number} cutoff Maximum distance to search.
+     * @param {number} iStart Start of search range in this.verts.
+     * @param {number} iEnd End of search range in this.verts.
+     * @returns {number} Index of the nearest vertex, or -1 if none found.
+     */
+    vert_collapse(pos, cutoff, iStart = 0, iEnd = this.verts.length) {
+        let best = -1;
+        let bestd2 = cutoff * cutoff;
+        const x = pos.x ?? pos[0], y = pos.y ?? pos[1], z = pos.z ?? pos[2];
+        for (let i = iStart; i < iEnd; i++) {
+            const p = this.verts[i].pos;
+            const dx = p.x - x, dy = p.y - y, dz = p.z - z;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < bestd2) {
+                bestd2 = d2;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Creates a new vertex and connects (welds) it to all vertices in the range within cutoff.
+     * @param {Vec3|Array} pos Position for the new vertex.
+     * @param {number} cutoff Maximum distance for welding edges.
+     * @param {number} iStart Start of search range in this.verts.
+     * @param {number} iEnd End of search range in this.verts.
+     * @param {number} type Material type for the new edges.
+     * @returns {number} Index of the newly created vertex.
+     */
+    vert_weld(pos, cutoff, iStart = 0, iEnd = this.verts.length, type = 0) {
+        const iv = this.vert(pos);
+        const p0 = this.verts[iv].pos;
+        const d2max = cutoff * cutoff;
+        const x = p0.x, y = p0.y, z = p0.z;
+        for (let i = iStart; i < iEnd; i++) {
+            if (i === iv) continue;
+            const p = this.verts[i].pos;
+            const dx = p.x - x, dy = p.y - y, dz = p.z - z;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < d2max) {
+                this.edge(iv, i, type);
+            }
+        }
+        return iv;
+    }
+
     scanDuplicateVerts(Rmax = this.RvertCollapse) {
         const n = this.verts.length;
         if (n === 0) { logger.info("scanDuplicateVerts: mesh has no vertices."); return 0; }
@@ -427,9 +477,22 @@ export class MeshBuilder {
     }
 
     vert(pos) {
-        const x = pos.x !== undefined ? pos.x : pos[0];
-        const y = pos.y !== undefined ? pos.y : pos[1];
-        const z = pos.z !== undefined ? pos.z : pos[2];
+        let x, y, z;
+        if (pos.x !== undefined) {
+            x = pos.x; y = pos.y; z = pos.z;
+        } else if (Array.isArray(pos)) {
+            x = pos[0]; y = pos[1]; z = pos[2];
+        } else {
+            const err = `MeshBuilder.vert: Invalid pos format: ${JSON.stringify(pos)}`;
+            logger.error(err);
+            throw new Error(err);
+        }
+
+        if (isNaN(x) || isNaN(y) || isNaN(z) || x === undefined || y === undefined || z === undefined) {
+            const err = `MeshBuilder.vert: NaN or undefined detected in position: (${x}, ${y}, ${z})`;
+            logger.error(err);
+            throw new Error(err);
+        }
 
         if (this.bCheckVertExist) {
             const iv = this.findVert(new Vec3(x, y, z), this.RvertCollapse);
@@ -447,6 +510,17 @@ export class MeshBuilder {
     }
 
     edge(i0, i1, type = 0, type2 = 0) {
+        if (!Number.isInteger(i0) || !Number.isInteger(i1)) {
+            const err = `MeshBuilder.edge: Invalid vertex indices (not integers): i0=${i0}, i1=${i1}`;
+            logger.error(err);
+            throw new Error(err);
+        }
+        if (i0 < 0 || i0 >= this.verts.length || i1 < 0 || i1 >= this.verts.length) {
+            const err = `MeshBuilder.edge: Vertex index out of bounds: i0=${i0}, i1=${i1}, nverts=${this.verts.length}`;
+            logger.error(err);
+            throw new Error(err);
+        }
+
         // Optional duplicate edge check
         if (this.bCheckEdgeExist) {
             const idx = this._findEdge(i0, i1);
@@ -515,12 +589,6 @@ export class MeshBuilder {
 
         logger.info(`MeshBuilder.wheel: nseg=${n} r=${r.toFixed(3)} wh=(${whX},${whY}) dir=(${dir.x.toFixed(3)},${dir.y.toFixed(3)},${dir.z.toFixed(3)}) ax=(${axVec.x.toFixed(3)},${axVec.y.toFixed(3)},${axVec.z.toFixed(3)}) side=(${side.x.toFixed(3)},${side.y.toFixed(3)},${side.z.toFixed(3)})`);
 
-        const dnp = 4;
-        const i000 = this.verts.length;
-        let i00 = i000;
-
-        let rotA = 1.0;
-        let rotB = 0.0;
         const angleStep = Math.PI / n;
         const cosStep = Math.cos(angleStep) || 0;
         const sinStep = Math.sin(angleStep) || 0;
@@ -530,11 +598,13 @@ export class MeshBuilder {
             return i000;
         }
 
-        for (let i = 0; i < n; i++) {
-            const i01 = i00 + 1;
-            const i10 = i00 + 2;
-            const i11 = i00 + 3;
+        let rotA = 1.0;
+        let rotB = 0.0;
+        const dnp = 4;
+        const iStart = this.verts.length;
 
+        // 1. First, generate ALL vertices for all segments
+        for (let i = 0; i < n; i++) {
             // First pair of vertices (radial plane)
             let R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
             this.vert(new Vec3().setAddMul(p0, R, r + whX));
@@ -556,6 +626,14 @@ export class MeshBuilder {
             nextRotB = rotA * sinStep + rotB * cosStep;
             rotA = nextRotA;
             rotB = nextRotB;
+        }
+
+        // 2. Now generate all edges
+        let i00 = iStart;
+        for (let i = 0; i < n; i++) {
+            const i01 = i00 + 1;
+            const i10 = i00 + 2;
+            const i11 = i00 + 3;
 
             // Internal edges
             this.edge(i00, i01, stickTypes.y);
@@ -577,18 +655,18 @@ export class MeshBuilder {
                 this.edge(i10, i10 + dnp, stickTypes.x);
                 this.edge(i11, i11 + dnp, stickTypes.x);
             } else {
-                this.edge(i10, i000 + 0, stickTypes.w);
-                this.edge(i10, i000 + 1, stickTypes.w);
-                this.edge(i11, i000 + 0, stickTypes.w);
-                this.edge(i11, i000 + 1, stickTypes.w);
-                this.edge(i00, i000 + 0, stickTypes.x);
-                this.edge(i01, i000 + 1, stickTypes.x);
-                this.edge(i10, i000 + 2, stickTypes.x);
-                this.edge(i11, i000 + 3, stickTypes.x);
+                this.edge(i10, iStart + 0, stickTypes.w);
+                this.edge(i10, iStart + 1, stickTypes.w);
+                this.edge(i11, iStart + 0, stickTypes.w);
+                this.edge(i11, iStart + 1, stickTypes.w);
+                this.edge(i00, iStart + 0, stickTypes.x);
+                this.edge(i01, iStart + 1, stickTypes.x);
+                this.edge(i10, iStart + 2, stickTypes.x);
+                this.edge(i11, iStart + 3, stickTypes.x);
             }
             i00 += dnp;
         }
-        return i000;
+        return iStart;
     }
 
     /**
