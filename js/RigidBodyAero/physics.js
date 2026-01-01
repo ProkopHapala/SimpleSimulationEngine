@@ -68,7 +68,7 @@ export class Physics {
             this.createStateTextures(),
             this.createStateTextures()
         ];
-        this.reset();
+        this.reset(0);
     }
 
     createStateTextures() {
@@ -124,7 +124,7 @@ export class Physics {
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     }
 
-    reset() {
+    reset(scatterRad = 0) {
         const gl = this.gl;
         const count = this.size * this.size;
         const pos = new Float32Array(count * 4);
@@ -137,7 +137,18 @@ export class Physics {
             pos[i*4+2] = (Math.random() - 0.5) * 20;
             pos[i*4+3] = 1.0; // mass
 
-            quat[i*4+3] = 1.0; // identity quat
+            // random small scatter quaternion
+            let axis = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
+            let len = Math.hypot(axis[0], axis[1], axis[2]);
+            if (len === 0) { axis = [1,0,0]; len = 1; }
+            axis = axis.map(a => a/len);
+            const angle = (Math.random()-0.5) * scatterRad;
+            const c = Math.cos(angle/2);
+            const s = Math.sin(angle/2);
+            quat[i*4+0] = axis[0]*s;
+            quat[i*4+1] = axis[1]*s;
+            quat[i*4+2] = axis[2]*s;
+            quat[i*4+3] = c;
         }
 
         const texs = this.textures[this.pingPong];
@@ -164,6 +175,7 @@ export class Physics {
         const write = this.fbos[next];
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, write);
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3, gl.COLOR_ATTACHMENT4, gl.COLOR_ATTACHMENT5]);
         gl.viewport(0, 0, this.size, this.size);
         gl.useProgram(this.program);
 
@@ -183,7 +195,11 @@ export class Physics {
         gl.bindVertexArray(this.quadVAO);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         
+        // Cleanup state to avoid leaking draw buffers into Three.js
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (gl.drawBuffers) gl.drawBuffers([gl.BACK]);
+        gl.bindVertexArray(null);
+        gl.useProgram(null);
         this.pingPong = next;
     }
 

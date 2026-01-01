@@ -5,13 +5,18 @@ export class UI {
             nParticles: 1,
             dt: 0.01,
             gravity: 0.0,
-            paused: false
+            rotScatterDeg: 20,
+            paused: false,
+            running: false
         };
 
         this.elements = {
             nParticles: document.getElementById('n-particles'),
             dt: document.getElementById('dt'),
             gravity: document.getElementById('gravity'),
+            renderMode: document.getElementById('render-mode'),
+            rotScatter: document.getElementById('rot-scatter'),
+            btnRun: document.getElementById('btn-run'),
             btnReset: document.getElementById('btn-reset'),
             btnPause: document.getElementById('btn-pause'),
             fps: document.getElementById('fps-val')
@@ -30,6 +35,17 @@ export class UI {
         });
         this.elements.gravity.addEventListener('input', (e) => {
             this.params.gravity = parseFloat(e.target.value);
+        });
+        this.elements.rotScatter.addEventListener('input', (e) => {
+            this.params.rotScatterDeg = parseFloat(e.target.value);
+        });
+        this.elements.renderMode.addEventListener('change', (e) => {
+            if (this.callbacks.onRenderModeChange) this.callbacks.onRenderModeChange(e.target.value);
+        });
+        this.elements.btnRun.addEventListener('click', () => {
+            this.params.running = !this.params.running;
+            this.elements.btnRun.textContent = this.params.running ? "Run (On)" : "Run (Off)";
+            if (this.callbacks.onRunToggle) this.callbacks.onRunToggle(this.params.running);
         });
         this.elements.btnReset.addEventListener('click', () => {
             if (this.callbacks.onReset) this.callbacks.onReset();
