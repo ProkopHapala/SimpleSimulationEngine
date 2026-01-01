@@ -2,10 +2,13 @@ export class UI {
     constructor(callbacks) {
         this.callbacks = callbacks;
         this.params = {
-            nParticles: 1,
+            nParticles: 16,
             dt: 0.01,
-            gravity: 0.0,
+            gravity: -9.81,
             rotScatterDeg: 20,
+            speedBase: 1.0,
+            speedSpread: 1.0,
+            verbosity: 0,
             paused: false,
             running: false
         };
@@ -14,8 +17,11 @@ export class UI {
             nParticles: document.getElementById('n-particles'),
             dt: document.getElementById('dt'),
             gravity: document.getElementById('gravity'),
+            speedBase: document.getElementById('speed-base'),
+            speedSpread: document.getElementById('speed-spread'),
             renderMode: document.getElementById('render-mode'),
             rotScatter: document.getElementById('rot-scatter'),
+            verbosity: document.getElementById('verbosity'),
             btnRun: document.getElementById('btn-run'),
             btnReset: document.getElementById('btn-reset'),
             btnPause: document.getElementById('btn-pause'),
@@ -35,6 +41,15 @@ export class UI {
         });
         this.elements.gravity.addEventListener('input', (e) => {
             this.params.gravity = parseFloat(e.target.value);
+        });
+        this.elements.speedBase.addEventListener('input', (e) => {
+            this.params.speedBase = parseFloat(e.target.value);
+        });
+        this.elements.speedSpread.addEventListener('input', (e) => {
+            this.params.speedSpread = parseFloat(e.target.value);
+        });
+        this.elements.verbosity.addEventListener('input', (e) => {
+            this.params.verbosity = parseInt(e.target.value);
         });
         this.elements.rotScatter.addEventListener('input', (e) => {
             this.params.rotScatterDeg = parseFloat(e.target.value);

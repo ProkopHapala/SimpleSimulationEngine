@@ -124,22 +124,33 @@ export class Physics {
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     }
 
-    reset(scatterRad = 0) {
+    reset(scatterRad = 0, speedBase = 1.0, speedSpread = 1.0) {
         const gl = this.gl;
         const count = this.size * this.size;
-        const pos = new Float32Array(count * 4);
+        const pos  = new Float32Array(count * 4);
         const quat = new Float32Array(count * 4);
+        const vel  = new Float32Array(count * 4);
         const zero = new Float32Array(count * 4);
 
-        for (let i = 0; i < this.nParticles; i++) {
-            pos[i*4] = (Math.random() - 0.5) * 20;
-            pos[i*4+1] = 10 + Math.random() * 20;
-            pos[i*4+2] = (Math.random() - 0.5) * 20;
-            pos[i*4+3] = 1.0; // mass
+        const rotateVecByQuat = (v, q) => {
+            const x = q[0], y = q[1], z = q[2], w = q[3];
+            const uvx  = 2 * (y * v[2] - z * v[1]);
+            const uvy  = 2 * (z * v[0] - x * v[2]);
+            const uvz  = 2 * (x * v[1] - y * v[0]);
+            const uuvx = 2 * (y * uvz - z * uvy);
+            const uuvy = 2 * (z * uvx - x * uvz);
+            const uuvz = 2 * (x * uvy - y * uvx);
+            return [v[0] + w * uvx + uuvx, v[1] + w * uvy + uuvy, v[2] + w * uvz + uuvz];
+        };
 
-            // random small scatter quaternion
+        for (let i = 0; i < this.nParticles; i++) {
+            pos[i*4  ] =       (Math.random() - 0.5) * 5.0;
+            pos[i*4+1] = 5.0 + (Math.random() - 0.5) * 5.0;
+            pos[i*4+2] =       (Math.random() - 0.5) * 5.0;
+            pos[i*4+3] = 1.0;
+
             let axis = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
-            let len = Math.hypot(axis[0], axis[1], axis[2]);
+            let len  = Math.hypot(axis[0], axis[1], axis[2]);
             if (len === 0) { axis = [1,0,0]; len = 1; }
             axis = axis.map(a => a/len);
             const angle = (Math.random()-0.5) * scatterRad;
@@ -149,7 +160,20 @@ export class Physics {
             quat[i*4+1] = axis[1]*s;
             quat[i*4+2] = axis[2]*s;
             quat[i*4+3] = c;
+
+            const nose = rotateVecByQuat([0, 0, 1], [quat[i*4+0], quat[i*4+1], quat[i*4+2], quat[i*4+3]]);
+            const speed = (Math.random() - 0.5 ) * speedSpread + speedBase;
+            vel[i*4+0] = nose[0] * speed;
+            vel[i*4+1] = nose[1] * speed;
+            vel[i*4+2] = nose[2] * speed;
+            vel[i*4+3] = 0.0;
+
+            console.log("Init vel[", i, "]:", Array.from(vel.slice(i*4, (i+1)*4)));
         }
+
+        console.log("Init pos[0..7]:", Array.from(pos.slice(0, 8)));
+        console.log("Init vel[0..7]:", Array.from(vel.slice(0, 8)));
+        console.log("Init quat[0..7]:", Array.from(quat.slice(0, 8)));
 
         const texs = this.textures[this.pingPong];
         const texsNext = this.textures[1 - this.pingPong];
@@ -161,14 +185,56 @@ export class Physics {
 
         upload(texs.pos, pos); upload(texsNext.pos, pos);
         upload(texs.quat, quat); upload(texsNext.quat, quat);
-        upload(texs.vel, zero); upload(texsNext.vel, zero);
+        upload(texs.vel, vel); upload(texsNext.vel, vel);
         upload(texs.angVel, zero); upload(texsNext.angVel, zero);
         upload(texs.force, zero); upload(texsNext.force, zero);
         upload(texs.torque, zero); upload(texsNext.torque, zero);
     }
 
-    step(dt, gravity) {
+    readback(verbosity) {
+        if (verbosity <= 0) return;
+        const gl = this.gl;
+        const count = this.nParticles;
+        const dataPos = new Float32Array(this.size * this.size * 4);
+        const dataVel = new Float32Array(this.size * this.size * 4);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos[this.pingPong]);
+        
+        gl.readBuffer(gl.COLOR_ATTACHMENT0);
+        gl.readPixels(0, 0, this.size, this.size, gl.RGBA, gl.FLOAT, dataPos);
+        
+        gl.readBuffer(gl.COLOR_ATTACHMENT1);
+        gl.readPixels(0, 0, this.size, this.size, gl.RGBA, gl.FLOAT, dataVel);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        let avgPos = [0,0,0];
+        let avgVel = [0,0,0];
+        
+        for (let i = 0; i < count; i++) {
+            avgPos[0] += dataPos[i*4+0];
+            avgPos[1] += dataPos[i*4+1];
+            avgPos[2] += dataPos[i*4+2];
+            
+            avgVel[0] += dataVel[i*4+0];
+            avgVel[1] += dataVel[i*4+1];
+            avgVel[2] += dataVel[i*4+2];
+        }
+        
+        avgPos = avgPos.map(v => v / count);
+        avgVel = avgVel.map(v => v / count);
+
+        console.log(`[GPU Readback] Avg Pos: (${avgPos[0].toFixed(3)}, ${avgPos[1].toFixed(3)}, ${avgPos[2].toFixed(3)}) | Avg Vel: (${avgVel[0].toFixed(3)}, ${avgVel[1].toFixed(3)}, ${avgVel[2].toFixed(3)})`);
+        
+        if (verbosity >= 2) {
+            console.log("First Particle Pos:", dataPos.slice(0, 3));
+            console.log("First Particle Vel:", dataVel.slice(0, 3));
+        }
+    }
+
+    step(dt, gravity, bodyDef) {
         if (!this.program) return;
+        if (bodyDef) this.bodyDef = bodyDef;
         const gl = this.gl;
         const next = 1 - this.pingPong;
         const read = this.textures[this.pingPong];

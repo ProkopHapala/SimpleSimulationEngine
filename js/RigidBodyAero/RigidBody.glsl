@@ -58,18 +58,19 @@ void main() {
     ivec2 uv = ivec2(gl_FragCoord.xy);
 
     // 2. Fetch Previous State
-    vec4  p_data = texelFetch(u_tex_pos, uv, 0);
-    vec4  v_data = texelFetch(u_tex_vel, uv, 0);
-    vec4  q_data = texelFetch(u_tex_quat, uv, 0);
+    vec4  p_data = texelFetch(u_tex_pos,     uv, 0);
+    vec4  v_data = texelFetch(u_tex_vel,     uv, 0);
+    vec4  q_data = texelFetch(u_tex_quat,    uv, 0);
     vec4  w_data = texelFetch(u_tex_ang_vel, uv, 0);
-    vec3  F_old  = texelFetch(u_tex_force, uv, 0).xyz;
-    vec3  T_old  = texelFetch(u_tex_torque, uv, 0).xyz;
+    vec3  F_old  = texelFetch(u_tex_force,   uv, 0).xyz;
+    vec3  T_old  = texelFetch(u_tex_torque,  uv, 0).xyz;
 
     vec3  pos  = p_data.xyz;
     float mass = p_data.w;
     vec3  vel  = v_data.xyz;
     vec4  quat = q_data;
     vec3  ang  = w_data.xyz;
+
 
     // Safety check for empty pixels
     if (mass <= 0.0) { discard; }
@@ -182,12 +183,22 @@ void main() {
 
     vec3 w_final = w_half + alpha_world_new * (0.5 * u_dt);
 
+    
+
     // =========================================================
-    // OUTPUT
+    // OUTPUT (debug: bypass physics, just pass through existing state)
     // =========================================================
     
     out_pos     = vec4(pos, mass);
-    out_vel     = vec4(v_final, 0.0);
+    out_vel     = vec4(vel, 0.0);
+
+    // DEBUG: write uniforms to outputs to verify propagation/buffer writes
+    //out_pos     = vec4(u_dt, u_gravity.y, 0.0, mass);
+    //out_vel     = vec4( u_gravity.xyz, 0.0);
+    // vec3 F_new   = vec3(0.0);
+    // vec3 T_new   = vec3(0.0);
+    // vec3 w_final = vec3(0.0);
+
     out_quat    = quat;
     out_ang_vel = vec4(w_final, 0.0);
     out_force   = vec4(F_new, 0.0);  // Store for next frame
