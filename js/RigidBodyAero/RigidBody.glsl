@@ -38,6 +38,7 @@ mat3 quat_to_mat3(vec4 q) {
     float yy = q.y * y2;  float yz = q.y * z2;  float zz = q.z * z2;
     float wx = q.w * x2;  float wy = q.w * y2;  float wz = q.w * z2;
 
+    // Standard Body-to-World (Column-Major for GLSL)
     return mat3(
         1.0 - (yy + zz), xy + wz,          xz - wy,
         xy - wz,         1.0 - (xx + zz),  yz + wx,
@@ -93,11 +94,10 @@ void main() {
     // Transform Torque to Body Space
     vec3 T_body_old = R_t * T_old;
     // Apply Inertia
-    vec3 alpha_body = u_inertia_inv * T_body_old;
-    // Back to World
-    vec3 alpha_world = R * alpha_body;
+    vec3 alpha_body_old = u_inertia_inv * T_body_old;
+    vec3 alpha_world_old = R * alpha_body_old;
 
-    vec3 w_half = ang + alpha_world * (0.5 * u_dt);
+    vec3 w_half = ang + alpha_world_old * (0.5 * u_dt);
 
     // =========================================================
     // STEP 2: DRIFT
@@ -150,16 +150,7 @@ void main() {
             float k_drag = 0.01; 
             vec3 f_drag = -k_drag * vel_sq * dir;
             
-            // 2. Lift (Perpendicular to velocity)
-            // For a maple seed, lift depends on the blade angle.
-            // Let's assume the local point normal defines the blade surface.
-            // But for simple "points", we can approximate lift as 
-            // perpendicular to velocity and "up" in local frame.
-            // This is a hacky placeholder for real lift:
-            // vec3 lift_dir = normalize(cross(dir, vec3(0,1,0))); 
-            // vec3 f_lift = 0.05 * vel_sq * lift_dir;
-
-            vec3 f_total_pt = f_drag; // + f_lift
+            vec3 f_total_pt = f_drag; 
 
             F_new += f_total_pt;
             T_new += cross(r_world, f_total_pt);
@@ -171,36 +162,24 @@ void main() {
     // Advance velocities from t+0.5 to t+1
     // =========================================================
     
-    // Linear
-    vec3 v_final = v_half + (F_new / mass) * (0.5 * u_dt);
+    // a. Linear kick
+    vec3 v_cm = v_half + (F_new / mass) * (0.5 * u_dt);
 
-    // Angular
-    // Recalculate alpha for the NEW Torque
-    R_t = transpose(R);
-    vec3 T_body_new = R_t * T_new;
-    vec3 alpha_body_new = u_inertia_inv * T_body_new;
+    // b. Angular kick (body frame)
+    // alpha_body = I^-1 * (T_world -> body)
+    mat3 Rt = transpose(R);
+    vec3 T_body = Rt * T_new;
+    vec3 alpha_body_new = u_inertia_inv * T_body;
+    
+    // alpha_world = R * alpha_body
     vec3 alpha_world_new = R * alpha_body_new;
+    vec3 w_cm = w_half + alpha_world_new * (0.5 * u_dt);
 
-    vec3 w_final = w_half + alpha_world_new * (0.5 * u_dt);
-
-    
-
-    // =========================================================
-    // OUTPUT (debug: bypass physics, just pass through existing state)
-    // =========================================================
-    
+    // Final pack
     out_pos     = vec4(pos, mass);
-    out_vel     = vec4(vel, 0.0);
-
-    // DEBUG: write uniforms to outputs to verify propagation/buffer writes
-    //out_pos     = vec4(u_dt, u_gravity.y, 0.0, mass);
-    //out_vel     = vec4( u_gravity.xyz, 0.0);
-    // vec3 F_new   = vec3(0.0);
-    // vec3 T_new   = vec3(0.0);
-    // vec3 w_final = vec3(0.0);
-
+    out_vel     = vec4(v_cm, 0.0);
     out_quat    = quat;
-    out_ang_vel = vec4(w_final, 0.0);
-    out_force   = vec4(F_new, 0.0);  // Store for next frame
-    out_torque  = vec4(T_new, 0.0);  // Store for next frame
+    out_ang_vel = vec4(w_cm, 0.0);
+    out_force   = vec4(F_new, 0.0);
+    out_torque  = vec4(T_new, 0.0);
 }

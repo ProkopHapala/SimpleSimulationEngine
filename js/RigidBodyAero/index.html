@@ -15,6 +15,10 @@
             <input type="number" id="n-particles" value="16" step="1" min="1" max="65536">
         </div>
         <div class="control-group">
+            <label>CoM Offset:</label>
+            <input type="range" id="com-offset" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div class="control-group">
             <label for="verbosity">Verbosity: </label>
             <input type="number" id="verbosity" value="0" min="0" max="2">
         </div>
@@ -40,6 +44,18 @@
                 <option value="buffer">Buffer (CPU)</option>
                 <option value="texture">Texture (GPU)</option>
             </select>
+        </div>
+        <div class="control-group" style="display:flex; gap:12px; align-items:center; flex-wrap:nowrap;">
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="checkbox" id="show-gpu" checked> Show GPU</label>
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="checkbox" id="show-cpu" checked> Show CPU Debug</label>
+        </div>
+        <div class="control-group" style="display:flex; gap:12px; align-items:center; flex-wrap:nowrap;">
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="checkbox" id="show-cpu-mesh" checked> CPU Mesh</label>
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="checkbox" id="show-cpu-lines" checked> CPU Lines</label>
+        </div>
+        <div class="control-group">
+            <label for="head-size">Arrow Head Size: </label>
+            <input type="number" id="head-size" value="0.02" step="0.005" min="0.001" max="0.2">
         </div>
         <div class="control-group">
             <label for="rot-scatter">Rotation Scatter (deg): </label>

@@ -144,31 +144,36 @@ export class Physics {
         };
 
         for (let i = 0; i < this.nParticles; i++) {
-            pos[i*4  ] =       (Math.random() - 0.5) * 5.0;
-            pos[i*4+1] = 5.0 + (Math.random() - 0.5) * 5.0;
-            pos[i*4+2] =       (Math.random() - 0.5) * 5.0;
-            pos[i*4+3] = 1.0;
+            // FIXED SEED FOR PARTICLE 0
+            if (i === 0) {
+                pos[0] = 0; pos[1] = 5.0; pos[2] = 0; pos[3] = 1.0;
+                quat[0] = 0; quat[1] = 0; quat[2] = 0; quat[3] = 1.0;
+                vel[0] = 0; vel[1] = 0; vel[2] = speedBase; vel[3] = 0;
+            } else {
+                pos[i*4  ] =       (Math.random() - 0.5) * 5.0;
+                pos[i*4+1] = 5.0 + (Math.random() - 0.5) * 5.0;
+                pos[i*4+2] =       (Math.random() - 0.5) * 5.0;
+                pos[i*4+3] = 1.0;
 
-            let axis = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
-            let len  = Math.hypot(axis[0], axis[1], axis[2]);
-            if (len === 0) { axis = [1,0,0]; len = 1; }
-            axis = axis.map(a => a/len);
-            const angle = (Math.random()-0.5) * scatterRad;
-            const c = Math.cos(angle/2);
-            const s = Math.sin(angle/2);
-            quat[i*4+0] = axis[0]*s;
-            quat[i*4+1] = axis[1]*s;
-            quat[i*4+2] = axis[2]*s;
-            quat[i*4+3] = c;
+                let axis = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
+                let len  = Math.hypot(axis[0], axis[1], axis[2]);
+                if (len === 0) { axis = [1,0,0]; len = 1; }
+                axis = axis.map(a => a/len);
+                const angle = (Math.random()-0.5) * scatterRad;
+                const c = Math.cos(angle/2);
+                const s = Math.sin(angle/2);
+                quat[i*4+0] = axis[0]*s;
+                quat[i*4+1] = axis[1]*s;
+                quat[i*4+2] = axis[2]*s;
+                quat[i*4+3] = c;
 
-            const nose = rotateVecByQuat([0, 0, 1], [quat[i*4+0], quat[i*4+1], quat[i*4+2], quat[i*4+3]]);
-            const speed = (Math.random() - 0.5 ) * speedSpread + speedBase;
-            vel[i*4+0] = nose[0] * speed;
-            vel[i*4+1] = nose[1] * speed;
-            vel[i*4+2] = nose[2] * speed;
-            vel[i*4+3] = 0.0;
-
-            console.log("Init vel[", i, "]:", Array.from(vel.slice(i*4, (i+1)*4)));
+                const nose = rotateVecByQuat([0, 0, 1], [quat[i*4+0], quat[i*4+1], quat[i*4+2], quat[i*4+3]]);
+                const speed = (Math.random() - 0.5 ) * speedSpread + speedBase;
+                vel[i*4+0] = nose[0] * speed;
+                vel[i*4+1] = nose[1] * speed;
+                vel[i*4+2] = nose[2] * speed;
+                vel[i*4+3] = 0.0;
+            }
         }
 
         console.log("Init pos[0..7]:", Array.from(pos.slice(0, 8)));

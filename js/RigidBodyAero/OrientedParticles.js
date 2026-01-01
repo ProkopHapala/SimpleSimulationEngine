@@ -9,7 +9,9 @@ export class Renderer {
         this.scene.background = new THREE.Color(0x222222); // Dark grey background
 
         // 2. Camera Setup
-        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 20; // Orthographic frustum vertical half-size
+        this.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
         this.camera.position.set(20, 20, 20);
         this.camera.lookAt(0, 0, 0);
 
@@ -33,20 +35,12 @@ export class Renderer {
         this.scene.add(ambientLight);
     }
 
-    async initInstancedMesh(nParticles) {
+    async initInstancedMesh(nParticles, comOffset = 0.5) {
         this.nParticles = nParticles;
         const vertSrc = await fetch('./shaders/orientedParticle_buffer.glslv').then(r => r.text());
         const fragSrc = await fetch('./shaders/orientedParticle.glslf').then(r => r.text());
 
-        // 1. Geometry (Reuse Step 1.5 Geometry)
-        const positions = [
-            // Left Wing (Left Tip, Back Center, Nose)
-            -0.5, 0, 0,   0, 0, 0,   0, 0, 1.0,
-            // Right Wing (Right Tip, Back Center, Nose)
-            0.5, 0, 0,    0, 0, 0,   0, 0, 1.0,
-            // Rudder (Top Tip, Back Center, Nose)
-            0, 0.5, 0,    0, 0, 0,   0, 0, 1.0
-        ];
+        this.basePositions = this.computePositions(comOffset);
 
         const colors = [
             // Left Wing Colors (Red, Black, White)
@@ -58,7 +52,7 @@ export class Renderer {
         ];
 
         const baseGeometry = new THREE.BufferGeometry();
-        baseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        baseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(this.basePositions, 3));
         baseGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
         // 2. Instanced Geometry
@@ -85,6 +79,25 @@ export class Renderer {
         this.scene.add(this.mesh);
     }
 
+    computePositions(comOffset = 0.5) {
+        const z_shift = -comOffset;
+        return [
+            // Left Wing (Left Tip, Back Center, Nose)
+            -0.5, 0, 0 + z_shift,   0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift,
+            // Right Wing (Right Tip, Back Center, Nose)
+            0.5, 0, 0 + z_shift,    0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift,
+            // Rudder (Top Tip, Back Center, Nose)
+            0, 0.5, 0 + z_shift,    0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift
+        ];
+    }
+
+    updateGeometry(comOffset = 0.5) {
+        if (!this.instancedGeometry) return;
+        this.basePositions = this.computePositions(comOffset);
+        this.instancedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(this.basePositions, 3));
+        this.instancedGeometry.attributes.position.needsUpdate = true;
+    }
+
     updateInstances(posArray, quatArray) {
         if (this.instancedGeometry) {
             this.instancedGeometry.attributes.a_instance_pos.array.set(posArray);
@@ -100,7 +113,12 @@ export class Renderer {
     }
 
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 20;
+        this.camera.left = -d * aspect;
+        this.camera.right = d * aspect;
+        this.camera.top = d;
+        this.camera.bottom = -d;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }

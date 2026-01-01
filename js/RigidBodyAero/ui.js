@@ -8,6 +8,12 @@ export class UI {
             rotScatterDeg: 20,
             speedBase: 1.0,
             speedSpread: 1.0,
+            comOffset: 0.5,
+            showGPU: true,
+            showCPU: true,
+            showCPUMesh: true,
+            showCPULines: true,
+            headSize: 0.02,
             verbosity: 0,
             paused: false,
             running: false
@@ -19,6 +25,12 @@ export class UI {
             gravity: document.getElementById('gravity'),
             speedBase: document.getElementById('speed-base'),
             speedSpread: document.getElementById('speed-spread'),
+            comOffset: document.getElementById('com-offset'),
+            showGPU: document.getElementById('show-gpu'),
+            showCPU: document.getElementById('show-cpu'),
+            showCPUMesh: document.getElementById('show-cpu-mesh'),
+            showCPULines: document.getElementById('show-cpu-lines'),
+            headSize: document.getElementById('head-size'),
             renderMode: document.getElementById('render-mode'),
             rotScatter: document.getElementById('rot-scatter'),
             verbosity: document.getElementById('verbosity'),
@@ -47,6 +59,30 @@ export class UI {
         });
         this.elements.speedSpread.addEventListener('input', (e) => {
             this.params.speedSpread = parseFloat(e.target.value);
+        });
+        this.elements.comOffset.addEventListener('input', (e) => {
+            this.params.comOffset = parseFloat(e.target.value);
+            if (this.callbacks.onReset) this.callbacks.onReset();
+        });
+        this.elements.showGPU.addEventListener('change', (e) => {
+            this.params.showGPU = e.target.checked;
+            if (this.callbacks.onToggleShowGPU) this.callbacks.onToggleShowGPU(this.params.showGPU);
+        });
+        this.elements.showCPU.addEventListener('change', (e) => {
+            this.params.showCPU = e.target.checked;
+            if (this.callbacks.onToggleShowCPU) this.callbacks.onToggleShowCPU(this.params.showCPU);
+        });
+        this.elements.showCPUMesh.addEventListener('change', (e) => {
+            this.params.showCPUMesh = e.target.checked;
+            if (this.callbacks.onToggleCPUDebug) this.callbacks.onToggleCPUDebug();
+        });
+        this.elements.showCPULines.addEventListener('change', (e) => {
+            this.params.showCPULines = e.target.checked;
+            if (this.callbacks.onToggleCPUDebug) this.callbacks.onToggleCPUDebug();
+        });
+        this.elements.headSize.addEventListener('input', (e) => {
+            this.params.headSize = parseFloat(e.target.value);
+            if (this.callbacks.onHeadSizeChange) this.callbacks.onHeadSizeChange(this.params.headSize);
         });
         this.elements.verbosity.addEventListener('input', (e) => {
             this.params.verbosity = parseInt(e.target.value);
