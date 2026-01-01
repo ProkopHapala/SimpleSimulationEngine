@@ -9,27 +9,14 @@ export class OrientedParticles_tex {
         this.size = 0;
     }
 
-    async init(nParticles, size, comOffset = 0.5) {
+    async init(nParticles, size, bodyDef) {
         this.nParticles = nParticles;
         this.size = size;
 
-        // Correct shader path (texture-driven vertex shader)
         const vertSrc = await fetch('./shaders/orientedParticle_texture.glslv').then(r => r.text());
         const fragSrc = await fetch('./shaders/orientedParticle.glslf').then(r => r.text());
 
-        this.basePositions = this.computePositions(comOffset);
-        const colors = [
-            1, 0, 0,  0, 0, 0,  1, 1, 1, // Red
-            0, 1, 0,  0, 0, 0,  1, 1, 1, // Green
-            0, 0, 1,  0, 0, 0,  1, 1, 1  // Blue
-        ];
-
-        const baseGeometry = new THREE.BufferGeometry();
-        baseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(this.basePositions, 3));
-        baseGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-        const geometry = new THREE.InstancedBufferGeometry();
-        geometry.copy(baseGeometry);
+        const geometry = this.createGeometry(bodyDef);
         geometry.instanceCount = nParticles;
 
         this.material = new THREE.ShaderMaterial({
@@ -49,20 +36,39 @@ export class OrientedParticles_tex {
         this.scene.add(this.mesh);
     }
 
-    computePositions(comOffset = 0.5) {
-        const z_shift = -comOffset;
-        return [
-            -0.5, 0, 0 + z_shift,   0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift,
-             0.5, 0, 0 + z_shift,   0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift,
-             0, 0.5, 0 + z_shift,   0, 0, 0 + z_shift,   0, 0, 1.0 + z_shift
-        ];
+    createGeometry(bodyDef) {
+        const positions = [];
+        const colors = [];
+        const wingWidth = 0.5;
+        const wingLength = 0.5;
+
+        bodyDef.points.forEach((p, idx) => {
+            const side = new THREE.Vector3().crossVectors(p.t, p.n).normalize();
+            const v0 = p.pos.clone().addScaledVector(side, -wingWidth);
+            const v1 = p.pos.clone().addScaledVector(side, wingWidth);
+            const v2 = p.pos.clone().addScaledVector(p.t, -wingLength);
+
+            positions.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+            
+            const color = new THREE.Color().setHSL((idx * 0.3) % 1.0, 0.8, 0.5);
+            colors.push(color.r, color.g, color.b, color.r, color.g, color.b, color.r, color.g, color.b);
+        });
+
+        const baseGeometry = new THREE.BufferGeometry();
+        baseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        baseGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+        const geometry = new THREE.InstancedBufferGeometry();
+        geometry.copy(baseGeometry);
+        return geometry;
     }
 
-    updateGeometry(comOffset = 0.5) {
-        if (!this.mesh || !this.mesh.geometry) return;
-        this.basePositions = this.computePositions(comOffset);
-        this.mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.basePositions, 3));
-        this.mesh.geometry.attributes.position.needsUpdate = true;
+    updateGeometry(bodyDef) {
+        if (!this.mesh) return;
+        const newGeom = this.createGeometry(bodyDef);
+        newGeom.instanceCount = this.nParticles;
+        this.mesh.geometry.dispose();
+        this.mesh.geometry = newGeom;
     }
 
     updateTextures(texPos, texQuat) {

@@ -31,10 +31,28 @@ export class Physics {
             u_tex_torque: this.gl.getUniformLocation(this.program, 'u_tex_torque'),
             u_dt: this.gl.getUniformLocation(this.program, 'u_dt'),
             u_gravity: this.gl.getUniformLocation(this.program, 'u_gravity'),
+            u_wind_tunnel_mode: this.gl.getUniformLocation(this.program, 'u_wind_tunnel_mode'),
             u_point_count: this.gl.getUniformLocation(this.program, 'u_point_count'),
-            u_points: this.gl.getUniformLocation(this.program, 'u_points'),
+            u_points_pos: this.gl.getUniformLocation(this.program, 'u_points_pos'),
+            u_points_t: this.gl.getUniformLocation(this.program, 'u_points_t'),
+            u_points_n: this.gl.getUniformLocation(this.program, 'u_points_n'),
             u_inertia_inv: this.gl.getUniformLocation(this.program, 'u_inertia_inv')
         };
+
+        // Cache locations for struct array uniforms
+        this.locations.u_aero_params = [];
+        for (let i = 0; i < 16; i++) {
+            this.locations.u_aero_params[i] = {
+                area:   this.gl.getUniformLocation(this.program, `u_aero_params[${i}].area`),
+                CD0:    this.gl.getUniformLocation(this.program, `u_aero_params[${i}].CD0`),
+                dCD:    this.gl.getUniformLocation(this.program, `u_aero_params[${i}].dCD`),
+                dCDS:   this.gl.getUniformLocation(this.program, `u_aero_params[${i}].dCDS`),
+                dCL:    this.gl.getUniformLocation(this.program, `u_aero_params[${i}].dCL`),
+                dCLS:   this.gl.getUniformLocation(this.program, `u_aero_params[${i}].dCLS`),
+                sStall: this.gl.getUniformLocation(this.program, `u_aero_params[${i}].sStall`),
+                wStall: this.gl.getUniformLocation(this.program, `u_aero_params[${i}].wStall`)
+            };
+        }
     }
 
     createProgram(vsSource, fsSource) {
@@ -237,7 +255,7 @@ export class Physics {
         }
     }
 
-    step(dt, gravity, bodyDef) {
+    step(dt, gravity, bodyDef, windTunnelMode = false) {
         if (!this.program) return;
         if (bodyDef) this.bodyDef = bodyDef;
         const gl = this.gl;
@@ -259,8 +277,36 @@ export class Physics {
 
         gl.uniform1f(this.locations.u_dt, dt);
         gl.uniform4f(this.locations.u_gravity, 0, gravity, 0, 0);
-        gl.uniform1i(this.locations.u_point_count, this.bodyDef.points.length / 3);
-        gl.uniform3fv(this.locations.u_points, this.bodyDef.points);
+        gl.uniform1i(this.locations.u_wind_tunnel_mode, windTunnelMode ? 1 : 0);
+        
+        const count = Math.min(this.bodyDef.points.length, 16);
+        gl.uniform1i(this.locations.u_point_count, count);
+
+        // Upload per-point data
+        const posArr = new Float32Array(count * 3);
+        const tArr   = new Float32Array(count * 3);
+        const nArr   = new Float32Array(count * 3);
+
+        for (let i = 0; i < count; i++) {
+            const p = this.bodyDef.points[i];
+            posArr.set([p.pos.x, p.pos.y, p.pos.z], i * 3);
+            tArr.set([p.t.x, p.t.y, p.t.z], i * 3);
+            nArr.set([p.n.x, p.n.y, p.n.z], i * 3);
+
+            const u = this.locations.u_aero_params[i];
+            gl.uniform1f(u.area, p.params.area);
+            gl.uniform1f(u.CD0, p.params.CD0);
+            gl.uniform1f(u.dCD, p.params.dCD);
+            gl.uniform1f(u.dCDS, p.params.dCDS);
+            gl.uniform1f(u.dCL, p.params.dCL);
+            gl.uniform1f(u.dCLS, p.params.dCLS);
+            gl.uniform1f(u.sStall, p.params.sStall);
+            gl.uniform1f(u.wStall, p.params.wStall);
+        }
+
+        gl.uniform3fv(this.locations.u_points_pos, posArr);
+        gl.uniform3fv(this.locations.u_points_t, tArr);
+        gl.uniform3fv(this.locations.u_points_n, nArr);
         gl.uniform3f(this.locations.u_inertia_inv, ...this.bodyDef.inertiaInv);
 
         gl.bindVertexArray(this.quadVAO);

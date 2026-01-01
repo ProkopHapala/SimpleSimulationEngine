@@ -8,6 +8,7 @@
 </head>
 <body>
     <div id="container"></div>
+    <div id="ui-resizer"></div>
     <div id="ui-panel" class="panel">
         <h2>Settings</h2>
         <div class="control-group">
@@ -24,7 +25,11 @@
         </div>
         <div class="control-group">
             <label for="dt">Time Step (dt): </label>
-            <input type="number" id="dt" value="0.01" step="0.001" min="0.0001" max="0.1">
+            <input type="number" id="dt" value="0.001" step="0.00002" min="0.0001" max="0.1">
+        </div>
+        <div class="control-group">
+            <label for="substeps">Physics Substeps / frame: </label>
+            <input type="number" id="substeps" value="1" step="1" min="1" max="50">
         </div>
         <div class="control-group">
             <label for="gravity">Gravity: </label>
@@ -65,6 +70,46 @@
             <button id="btn-run">Run (Off)</button>
             <button id="btn-reset">Reset Simulation</button>
             <button id="btn-pause">Pause</button>
+        </div>
+
+        <div class="control-group">
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                <input type="checkbox" id="wind-tunnel-mode"> Wind Tunnel Mode
+            </label>
+        </div>
+
+        <div class="foldable">
+            <button class="fold-toggle">Wing Geometry (Text)</button>
+            <div class="fold-content">
+                <textarea id="wing-geometry" rows="8" style="width:100%; font-family:monospace;"></textarea>
+            </div>
+        </div>
+
+        <div class="foldable">
+            <button class="fold-toggle">Aero Parameters (Text)</button>
+            <div class="fold-content">
+                <textarea id="aero-params" rows="8" style="width:100%; font-family:monospace;"></textarea>
+            </div>
+        </div>
+
+        <div class="foldable">
+            <button class="fold-toggle">Lift/Drag Plots</button>
+            <div id="plots-content" class="fold-content">
+                <div style="display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                        Plot:
+                        <select id="plot-type">
+                            <option value="aoa">AoA vs CL/CD</option>
+                            <option value="polar">Polar (CD*10 vs CL)</option>
+                        </select>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                        Wing:
+                        <select id="plot-wing"></select>
+                    </label>
+                </div>
+                <canvas id="aero-plot" width="230" height="150" style="background:#000; border:1px solid #444;"></canvas>
+            </div>
         </div>
         <div id="stats">
             <p>FPS: <span id="fps-val">0</span></p>

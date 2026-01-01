@@ -12,12 +12,27 @@ uniform sampler2D u_tex_torque; // Stored Torque from prev step
 // ================= SIMULATION PARAMETERS =================
 uniform float u_dt;
 uniform vec4  u_gravity; // e.g., (0, -9.81, 0, 0)
+uniform bool  u_wind_tunnel_mode;
 
-// ================= BODY DEFINITION (Maple Seed) =================
-// Max points limited by uniform buffer size (usually 1024 floats safe)
+// ================= BODY DEFINITION (Wing Segments) =================
 #define MAX_POINTS 16 
 uniform int  u_point_count;
-uniform vec3 u_points[MAX_POINTS]; // Local positions
+uniform vec3 u_points_pos[MAX_POINTS]; // Local positions
+uniform vec3 u_points_t[MAX_POINTS];   // Chord/Tangent (World basis)
+uniform vec3 u_points_n[MAX_POINTS];   // Normal/Up (World basis)
+
+struct AeroParams {
+    float area;
+    float CD0;
+    float dCD;
+    float dCDS;
+    float dCL;
+    float dCLS;
+    float sStall;
+    float wStall;
+};
+uniform AeroParams u_aero_params[MAX_POINTS];
+
 uniform vec3 u_inertia_inv;        // Diagonal of Body-Space Inverse Inertia
 
 // ================= OUTPUTS (Next Frame) =================
@@ -104,14 +119,18 @@ void main() {
     // Advance Position to t + dt using v_half
     // =========================================================
     
-    pos += v_half * u_dt;
+    if (!u_wind_tunnel_mode) {
+        pos += v_half * u_dt;
 
-    // Update Quaternion
-    // dq/dt = 0.5 * w * q
-    vec4 w_quat = vec4(w_half, 0.0);
-    vec4 dq = quat_mul(w_quat, quat);
-    quat += dq * (0.5 * u_dt);
-    quat = normalize(quat); // Important to combat drift!
+        // Update Quaternion
+        // dq/dt = 0.5 * w * q
+        vec4 w_quat = vec4(w_half, 0.0);
+        vec4 dq = quat_mul(w_quat, quat);
+        quat += dq * (0.5 * u_dt);
+        quat = normalize(quat); // Important to combat drift!
+    } else {
+        pos = vec3(0.0);
+    }
 
     // Recompute Rotation Matrix for the NEW orientation
     // We need this to transform points for Force evaluation
@@ -127,30 +146,53 @@ void main() {
     // A. Gravity
     F_new += u_gravity.xyz * mass;
 
-    // B. Aerodynamics (Loop over body points)
-    //    Using v_half allows correct drag estimation (centered in time)
+    // B. Aerodynamics (Loop over wing segments)
     for(int i = 0; i < u_point_count; i++) {
-        vec3 r_local = u_points[i];
-        
-        // Transform point to world relative to CoM
+        vec3 r_local = u_points_pos[i];
         vec3 r_world = R * r_local;
         
-        // Velocity of this specific point
-        // v_point = v_cm + w x r
+        // Wind Tunnel: constant incident wind
+        vec3 v_wind = u_wind_tunnel_mode ? vec3(0.0, 0.0, -5.0) : vec3(0.0);
         vec3 v_point = v_half + cross(w_half, r_world);
+        vec3 v_air = v_wind - v_point;
         
-        // --- Aerodynamic Model (Simplified Maple Seed) ---
-        float vel_sq = dot(v_point, v_point);
-        if(vel_sq > 0.0001) {
-            vec3 dir = normalize(v_point);
+        float v2 = dot(v_air, v_air);
+        if(v2 > 0.0001) {
+            vec3 u_air = normalize(v_air);
             
-            // 1. Drag (Opposite to velocity)
-            // F_d = -0.5 * rho * Cd * A * v^2 * dir
-            // Simplified: -k * v^2
-            float k_drag = 0.01; 
-            vec3 f_drag = -k_drag * vel_sq * dir;
+            // Local frame in world space
+            vec3 t_world = R * u_points_t[i];
+            vec3 n_world = R * u_points_n[i];
             
-            vec3 f_total_pt = f_drag; 
+            float ca = dot(u_air, n_world);
+            float sa = dot(u_air, t_world);
+            
+            float abs_sa = abs(sa);
+            AeroParams p = u_aero_params[i];
+            
+            // Stall blending
+            float wS = 0.0;
+            if (abs_sa > p.sStall) {
+                float x = (abs_sa - p.sStall) / p.wStall;
+                wS = (x > 1.0) ? 1.0 : (3.0*x*x - 2.0*x*x*x);
+            }
+            float mS = 1.0 - wS;
+            
+            // Drag
+            float CD = p.CD0 + (mS * p.dCD * abs_sa + wS * p.dCDS) * abs_sa;
+            
+            // Lift
+            float CL_ca = ca;
+            float CL_sa = sa;
+            if (CL_ca < 0.0) { CL_ca = -CL_ca; CL_sa = -CL_sa; }
+            float CL = (mS * p.dCL + wS * p.dCLS * CL_ca) * CL_sa;
+            
+            float prefactor = v2 * p.area;
+            
+            // Lift direction
+            vec3 liftDir = normalize(t_world - sa * u_air);
+            
+            vec3 f_total_pt = (liftDir * CL + u_air * CD) * prefactor;
 
             F_new += f_total_pt;
             T_new += cross(r_world, f_total_pt);
@@ -162,18 +204,24 @@ void main() {
     // Advance velocities from t+0.5 to t+1
     // =========================================================
     
-    // a. Linear kick
-    vec3 v_cm = v_half + (F_new / mass) * (0.5 * u_dt);
+    vec3 v_cm = v_half;
+    vec3 w_cm = w_half;
 
-    // b. Angular kick (body frame)
-    // alpha_body = I^-1 * (T_world -> body)
-    mat3 Rt = transpose(R);
-    vec3 T_body = Rt * T_new;
-    vec3 alpha_body_new = u_inertia_inv * T_body;
-    
-    // alpha_world = R * alpha_body
-    vec3 alpha_world_new = R * alpha_body_new;
-    vec3 w_cm = w_half + alpha_world_new * (0.5 * u_dt);
+    if (!u_wind_tunnel_mode) {
+        // a. Linear kick
+        v_cm = v_half + (F_new / mass) * (0.5 * u_dt);
+
+        // b. Angular kick (body frame)
+        mat3 Rt = transpose(R);
+        vec3 T_body = Rt * T_new;
+        vec3 alpha_body_new = u_inertia_inv * T_body;
+        
+        vec3 alpha_world_new = R * alpha_body_new;
+        w_cm = w_half + alpha_world_new * (0.5 * u_dt);
+    } else {
+        v_cm = vec3(0.0);
+        w_cm = vec3(0.0);
+    }
 
     // Final pack
     out_pos     = vec4(pos, mass);

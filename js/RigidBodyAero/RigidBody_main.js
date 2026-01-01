@@ -3,6 +3,7 @@ import { OrientedParticles_tex } from './OrientedParticles_tex.js';
 import { UI } from './ui.js';
 import { Physics } from './physics.js';
 import { RigidBody } from './RigidBody.js';
+import { geomFromString, paramsFromString, buildPoints, computePointForce } from './AeroSurface.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -47,6 +48,11 @@ class App {
         this.totalForceArrow = new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), 0, 0xffff00, this.headLen, this.headWid);
         this.debugHelpers.add(this.torqueArrow, this.totalForceArrow);
 
+        // Resizer for UI panel
+        this.panel = document.getElementById('ui-panel');
+        this.resizer = document.getElementById('ui-resizer');
+        this.initResizer();
+
         // Kick off async setup
         this.setup();
     }
@@ -60,10 +66,10 @@ class App {
 
         this.physics = new Physics(this.gl, nParticles, this.bodyDef);
         
-        await this.renderer.initInstancedMesh(nParticles, this.ui.params.comOffset);
+        await this.renderer.initInstancedMesh(nParticles, this.bodyDef);
         
         this.rendererTex = new OrientedParticles_tex(this.renderer.scene, this.renderer.camera);
-        await this.rendererTex.init(nParticles, texSize, this.ui.params.comOffset);
+        await this.rendererTex.init(nParticles, texSize, this.bodyDef);
         
         this.setRenderMode(this.ui.params.renderMode || 'texture');
         this.running = true;
@@ -85,57 +91,108 @@ class App {
         });
     }
 
+    initResizer() {
+        if (!this.resizer || !this.panel) return;
+        let isResizing = false;
+
+        const onMouseMove = (e) => {
+            if (!isResizing) return;
+            const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, 260), window.innerWidth * 0.9);
+            this.panel.style.width = `${newWidth}px`;
+            this.resizer.style.right = `${newWidth}px`;
+        };
+
+        this.resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
+    }
+
     updateBodyDef() {
         const offset = this.ui.params.comOffset; // 0 (back) to 1 (nose)
-        // Nose is at z=1, Back is at z=0 (relative to local origin before shift)
-        // We want to shift the COG such that it is at 'offset' between back and nose.
-        // If offset=1, COG is at nose. If offset=0, COG is at back.
-        // New local coordinates r' = r - r_com
-        // r_com = [0, 0, offset]
         const z_shift = -offset;
 
+        // Parse Wing Geometry and Params via helper
+        const geomLines = this.ui.elements.wingGeometry.value;
+        const aeroLines = this.ui.elements.aeroParams.value;
+
+        const geom = geomFromString(geomLines, z_shift);
+        const aero = paramsFromString(aeroLines);
+        const points = buildPoints(geom, aero);
+
+        // If parsing fails, fall back to a default wing
+        if (points.length === 0) {
+            points.push({
+                pos: new THREE.Vector3(0, 0, z_shift),
+                t: new THREE.Vector3(0, 0, 1),
+                n: new THREE.Vector3(0, 1, 0),
+                params: { area: 1.0, CD0: 0.02, dCD: 0.9, dCDS: 0.9, dCL: 6.28, dCLS: 2.82, sStall: 0.16, wStall: 0.08 }
+            });
+        }
+
         this.bodyDef = {
-            points: new Float32Array([
-                -0.5, 0.0, 0.0 + z_shift,  0.5, 0.0, 0.0 + z_shift,  0.0, 0.0, 1.0 + z_shift, // Wing
-                 0.0, 0.0, 0.0 + z_shift,  0.0, 0.5, 0.0 + z_shift,  0.0, 0.0, 1.0 + z_shift  // Rudder
-            ]),
-            inertiaInv: [2.0, 2.0, 2.0]
+            points: points,
+            inertiaInv: [2.0, 2.0, 2.0],
+            z_shift: z_shift
         };
+
+        if (this.ui && typeof this.ui.setWingOptions === 'function') {
+            this.ui.setWingOptions(points.length);
+        }
     }
 
     initCPUDebugGeometry() {
         this.cpuMeshGroup.clear();
         this.cpuLinesGroup.clear();
 
-        // 1. Create a simple dart mesh for the CPU body
-        const positions = [
-            -0.5, 0, 0,   0, 0, 0,   0, 0, 1.0,  // Left Wing
-             0.5, 0, 0,   0, 0, 0,   0, 0, 1.0,  // Right Wing
-             0, 0.5, 0,   0, 0, 0,   0, 0, 1.0   // Rudder
-        ];
-        const colors = [
-            1, 0, 0,  1, 0, 0,  1, 0, 0,
-            0, 1, 0,  0, 1, 0,  0, 1, 0,
-            0, 0, 1,  0, 0, 1,  0, 0, 1
-        ];
+        const z_shift = this.bodyDef.z_shift;
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, wireframe: false });
-        this.cpuDartMesh = new THREE.Mesh(geometry, material);
+        // Placeholder for COG marker (to avoid undefined refs)
+        this.cpuDartMesh = new THREE.Group();
         this.cpuMeshGroup.add(this.cpuDartMesh);
 
-        // 2. Create lines from COG to force points
+        // Create a mesh for each wing segment
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-        for (let i = 0; i < this.bodyDef.points.length; i += 3) {
+        
+        this.bodyDef.points.forEach(p => {
+            // Visualize the wing chord as a small triangle/line
+            const geom = new THREE.BufferGeometry();
+            const wingWidth = 0.5;
+            const wingLength = 0.5;
+            
+            // local coords of the segment
+            const side = new THREE.Vector3().crossVectors(p.t, p.n).normalize();
+            
+            const v0 = p.pos.clone().addScaledVector(side, -wingWidth);
+            const v1 = p.pos.clone().addScaledVector(side,  wingWidth);
+            const v2 = p.pos.clone().addScaledVector(p.t,  wingLength); // tip forward along t
+            
+            const positions = new Float32Array([
+                v0.x, v0.y, v0.z,
+                v1.x, v1.y, v1.z,
+                v2.x, v2.y, v2.z
+            ]);
+            
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({ color: 0x4444ff, wireframe: true, side: THREE.DoubleSide }));
+            this.cpuMeshGroup.add(mesh);
+
+            // CoM to wing connection
             const lineGeom = new THREE.BufferGeometry().setFromPoints([
                 new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(this.bodyDef.points[i], this.bodyDef.points[i+1], this.bodyDef.points[i+2])
+                p.pos
             ]);
             const line = new THREE.Line(lineGeom, lineMaterial);
             this.cpuLinesGroup.add(line);
-        }
+        });
     }
 
     async reset() {
@@ -156,15 +213,15 @@ class App {
         
         // Reuse renderers; just update geometry for new CoM offset (avoid duplicate meshes)
         if (this.renderer.mesh) {
-            this.renderer.updateGeometry(this.ui.params.comOffset);
+            this.renderer.updateGeometry(this.bodyDef);
         } else {
-            await this.renderer.initInstancedMesh(nParticles, this.ui.params.comOffset);
+            await this.renderer.initInstancedMesh(nParticles, this.bodyDef);
         }
 
         if (this.rendererTex.mesh) {
-            this.rendererTex.updateGeometry(this.ui.params.comOffset);
+            this.rendererTex.updateGeometry(this.bodyDef);
         } else {
-            await this.rendererTex.init(nParticles, texSize, this.ui.params.comOffset);
+            await this.rendererTex.init(nParticles, texSize, this.bodyDef);
         }
 
         // SYNC RANDOM SEED/VALUES FOR FIRST PARTICLE
@@ -291,32 +348,26 @@ class App {
         const R = new THREE.Matrix3().setFromMatrix4(Rm4);
         
         // Update mesh position/rotation
-        this.cpuDartMesh.position.copy(this.cpuBody.pos);
-        this.cpuDartMesh.setRotationFromQuaternion(this.cpuBody.quat);
+        if (this.cpuDartMesh) {
+            this.cpuDartMesh.position.copy(this.cpuBody.pos);
+            this.cpuDartMesh.setRotationFromQuaternion(this.cpuBody.quat);
+        }
 
         // Update line group position/rotation
         this.cpuLinesGroup.position.copy(this.cpuBody.pos);
         this.cpuLinesGroup.setRotationFromQuaternion(this.cpuBody.quat);
 
-        // Update force point arrows
+        const v_wind = this.ui.params.windTunnelMode ? new THREE.Vector3(0, 0, -5.0) : new THREE.Vector3(0, 0, 0);
         for (let i = 0; i < this.forceArrows.length; i++) {
             const arrow = this.forceArrows[i];
-            const r_local = new THREE.Vector3(this.bodyDef.points[i*3], this.bodyDef.points[i*3+1], this.bodyDef.points[i*3+2]);
-            const r_world = r_local.clone().applyMatrix3(R);
-            const p_world = this.cpuBody.pos.clone().add(r_world);
-            
-            // Re-calculate local force for visualization (simplified drag only for now)
-            const v_point = this.cpuBody.vel.clone().add(new THREE.Vector3().crossVectors(this.cpuBody.angVel, r_world));
-            const vel_sq = v_point.lengthSq();
-            const f_point = new THREE.Vector3(0,0,0);
-            if (vel_sq > 0.0001) {
-                f_point.copy(v_point).normalize().multiplyScalar(-0.01 * vel_sq);
-            }
-            
-            arrow.position.copy(p_world);
-            if (f_point.length() > 0.001) {
-                arrow.setDirection(f_point.clone().normalize());
-                arrow.setLength(f_point.length() * 10, this.headLen, this.headWid); // Scale for visibility
+            const p = this.bodyDef.points[i];
+            if (!p) continue;
+
+            const { force, position } = computePointForce(p, this.cpuBody, v_wind, R);
+            arrow.position.copy(position);
+            if (force.length() > 0.001) {
+                arrow.setDirection(force.clone().normalize());
+                arrow.setLength(force.length() * 0.1, this.headLen, this.headWid); // Scaled for visibility
                 arrow.visible = true;
             } else {
                 arrow.visible = false;
@@ -355,14 +406,19 @@ class App {
         if (this.running && !this.ui.params.paused) {
             const dt = this.ui.params.dt;
             const gravity = this.ui.params.gravity;
+            const substeps = Math.max(1, this.ui.params.substeps || 1);
+            const subDt = dt / substeps;
 
-            // CPU Step
-            this.cpuBody.step(dt, gravity);
+            for (let s = 0; s < substeps; s++) {
+                // CPU Step
+                this.cpuBody.step(subDt, gravity, this.ui.params.windTunnelMode);
+                // GPU Step
+                this.renderer.renderer.state.reset(); 
+                this.physics.step(subDt, gravity, this.bodyDef);
+            }
+
             this.updateDebugVisuals();
-
-            // GPU Step
-            this.renderer.renderer.state.reset(); 
-            this.physics.step(dt, gravity, this.bodyDef);
+            this.ui.drawPlots(this.bodyDef);
             
             this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
             this.gl.bindVertexArray(null);
