@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rigid Body Aero Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container"></div>
+    <div id="ui-panel" class="panel">
+        <h2>Settings</h2>
+        <div class="control-group">
+            <label for="n-particles">Particles: </label>
+            <input type="number" id="n-particles" value="1" step="1" min="1" max="65536">
+        </div>
+        <div class="control-group">
+            <label for="dt">Time Step (dt): </label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.0001" max="0.1">
+        </div>
+        <div class="control-group">
+            <label for="gravity">Gravity: </label>
+            <input type="number" id="gravity" value="0.0" step="0.1">
+        </div>
+        <div class="control-group">
+            <button id="btn-reset">Reset Simulation</button>
+            <button id="btn-pause">Pause</button>
+        </div>
+        <div id="stats">
+            <p>FPS: <span id="fps-val">0</span></p>
+        </div>
+    </div>
+
+    <!-- Import Map for Three.js and other modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "../../node_modules/three/build/three.module.js",
+                "three/examples/jsm/": "../../node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="RigidBody_main.js"></script>
+</body>
+</html>

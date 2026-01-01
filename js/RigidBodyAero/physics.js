@@ -1,0 +1,217 @@
+import * as THREE from 'three';
+
+export class Physics {
+    constructor(gl, nParticles, bodyDef) {
+        this.gl = gl;
+        this.nParticles = nParticles;
+        this.bodyDef = bodyDef;
+        this.size = Math.ceil(Math.sqrt(nParticles));
+        this.pingPong = 0;
+        
+        this.initShaders();
+        this.initTextures();
+        this.initFramebuffers();
+        this.initGeometry();
+    }
+
+    async initShaders() {
+        const response = await fetch('RigidBody.glsl');
+        const fsSource = await response.text();
+        const vsSource = `#version 300 es
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0, 1); }`;
+
+        this.program = this.createProgram(vsSource, fsSource);
+        this.locations = {
+            u_tex_pos: this.gl.getUniformLocation(this.program, 'u_tex_pos'),
+            u_tex_vel: this.gl.getUniformLocation(this.program, 'u_tex_vel'),
+            u_tex_quat: this.gl.getUniformLocation(this.program, 'u_tex_quat'),
+            u_tex_ang_vel: this.gl.getUniformLocation(this.program, 'u_tex_ang_vel'),
+            u_tex_force: this.gl.getUniformLocation(this.program, 'u_tex_force'),
+            u_tex_torque: this.gl.getUniformLocation(this.program, 'u_tex_torque'),
+            u_dt: this.gl.getUniformLocation(this.program, 'u_dt'),
+            u_gravity: this.gl.getUniformLocation(this.program, 'u_gravity'),
+            u_point_count: this.gl.getUniformLocation(this.program, 'u_point_count'),
+            u_points: this.gl.getUniformLocation(this.program, 'u_points'),
+            u_inertia_inv: this.gl.getUniformLocation(this.program, 'u_inertia_inv')
+        };
+    }
+
+    createProgram(vsSource, fsSource) {
+        const gl = this.gl;
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, vsSource);
+        gl.compileShader(vs);
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+            console.error('VS Error:', gl.getShaderInfoLog(vs));
+        }
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, fsSource);
+        gl.compileShader(fs);
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+            console.error('FS Error:', gl.getShaderInfoLog(fs));
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Link Error:', gl.getProgramInfoLog(program));
+        }
+        return program;
+    }
+
+    initTextures() {
+        this.textures = [
+            this.createStateTextures(),
+            this.createStateTextures()
+        ];
+        this.reset();
+    }
+
+    createStateTextures() {
+        return {
+            pos: this.createFloatTexture(),
+            vel: this.createFloatTexture(),
+            quat: this.createFloatTexture(),
+            angVel: this.createFloatTexture(),
+            force: this.createFloatTexture(),
+            torque: this.createFloatTexture()
+        };
+    }
+
+    createFloatTexture() {
+        const gl = this.gl;
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.size, this.size, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        return tex;
+    }
+
+    initFramebuffers() {
+        const gl = this.gl;
+        this.fbos = [gl.createFramebuffer(), gl.createFramebuffer()];
+        this.setupFBO(this.fbos[0], this.textures[0]);
+        this.setupFBO(this.fbos[1], this.textures[1]);
+    }
+
+    setupFBO(fbo, texs) {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texs.pos, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, texs.vel, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, texs.quat, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, texs.angVel, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT4, gl.TEXTURE_2D, texs.force, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT5, gl.TEXTURE_2D, texs.torque, 0);
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3, gl.COLOR_ATTACHMENT4, gl.COLOR_ATTACHMENT5]);
+    }
+
+    initGeometry() {
+        const gl = this.gl;
+        this.quadVAO = gl.createVertexArray();
+        gl.bindVertexArray(this.quadVAO);
+        const posBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    }
+
+    reset() {
+        const gl = this.gl;
+        const count = this.size * this.size;
+        const pos = new Float32Array(count * 4);
+        const quat = new Float32Array(count * 4);
+        const zero = new Float32Array(count * 4);
+
+        for (let i = 0; i < this.nParticles; i++) {
+            pos[i*4] = (Math.random() - 0.5) * 20;
+            pos[i*4+1] = 10 + Math.random() * 20;
+            pos[i*4+2] = (Math.random() - 0.5) * 20;
+            pos[i*4+3] = 1.0; // mass
+
+            quat[i*4+3] = 1.0; // identity quat
+        }
+
+        const texs = this.textures[this.pingPong];
+        const texsNext = this.textures[1 - this.pingPong];
+        
+        const upload = (tex, data) => {
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.size, this.size, gl.RGBA, gl.FLOAT, data);
+        };
+
+        upload(texs.pos, pos); upload(texsNext.pos, pos);
+        upload(texs.quat, quat); upload(texsNext.quat, quat);
+        upload(texs.vel, zero); upload(texsNext.vel, zero);
+        upload(texs.angVel, zero); upload(texsNext.angVel, zero);
+        upload(texs.force, zero); upload(texsNext.force, zero);
+        upload(texs.torque, zero); upload(texsNext.torque, zero);
+    }
+
+    step(dt, gravity) {
+        if (!this.program) return;
+        const gl = this.gl;
+        const next = 1 - this.pingPong;
+        const read = this.textures[this.pingPong];
+        const write = this.fbos[next];
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, write);
+        gl.viewport(0, 0, this.size, this.size);
+        gl.useProgram(this.program);
+
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, read.pos); gl.uniform1i(this.locations.u_tex_pos, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, read.vel); gl.uniform1i(this.locations.u_tex_vel, 1);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, read.quat); gl.uniform1i(this.locations.u_tex_quat, 2);
+        gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, read.angVel); gl.uniform1i(this.locations.u_tex_ang_vel, 3);
+        gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, read.force); gl.uniform1i(this.locations.u_tex_force, 4);
+        gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, read.torque); gl.uniform1i(this.locations.u_tex_torque, 5);
+
+        gl.uniform1f(this.locations.u_dt, dt);
+        gl.uniform4f(this.locations.u_gravity, 0, gravity, 0, 0);
+        gl.uniform1i(this.locations.u_point_count, this.bodyDef.points.length / 3);
+        gl.uniform3fv(this.locations.u_points, this.bodyDef.points);
+        gl.uniform3f(this.locations.u_inertia_inv, ...this.bodyDef.inertiaInv);
+
+        gl.bindVertexArray(this.quadVAO);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        this.pingPong = next;
+    }
+
+    getOutput() {
+        return this.textures[this.pingPong];
+    }
+
+    debugReadback() {
+        const gl = this.gl;
+        const texs = this.textures[this.pingPong];
+        const data = new Float32Array(4);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos[this.pingPong]);
+        
+        const check = (attachment, name) => {
+            gl.readBuffer(attachment);
+            gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, data);
+            console.log(`[Debug 0,0] ${name}:`, data[0], data[1], data[2], data[3]);
+        };
+
+        check(gl.COLOR_ATTACHMENT0, "Pos ");
+        check(gl.COLOR_ATTACHMENT1, "Vel ");
+        check(gl.COLOR_ATTACHMENT2, "Quat");
+        check(gl.COLOR_ATTACHMENT3, "AngV");
+        check(gl.COLOR_ATTACHMENT4, "Forc");
+        check(gl.COLOR_ATTACHMENT5, "Torq");
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+}
+
