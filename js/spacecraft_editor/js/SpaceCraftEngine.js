@@ -3,16 +3,16 @@ import { MeshBuilder } from '../../common_js/MeshBuilder.js';
 import { logger } from '../../common_js/Logger.js';
 import { BuildCraft_blocks_js, BuildCraft_aux_js } from './SpaceCraft2Mesh.js';
 import { extendMeshBuilder } from '../../common_js/MeshesUV.js';
-import { extendMeshBuilderWithGenerators } from './MeshGenerators.js';
+//import { extendMeshBuilderWithGenerators } from './MeshGenerators.js';
 
 // Ensure MeshBuilder prototype is extended with UV and generator helpers
 // when used via ES modules (the old global auto-extend path relied on
 // window.MeshBuilder, which we no longer depend on here).
-if (!MeshBuilder.__extendedForSpacecraft) {
-    extendMeshBuilder(MeshBuilder);
-    extendMeshBuilderWithGenerators(MeshBuilder);
-    MeshBuilder.__extendedForSpacecraft = true;
-}
+// if (!MeshBuilder.__extendedForSpacecraft) {
+//     extendMeshBuilder(MeshBuilder);
+//     extendMeshBuilderWithGenerators(MeshBuilder);
+//     MeshBuilder.__extendedForSpacecraft = true;
+// }
 
 export class SpaceCraftEngine {
     constructor() {
@@ -194,7 +194,8 @@ export class SpaceCraftEngine {
                     const wh = cmd.args[5] || 0.1;
                     const matName = cmd.args[6];
                     const st = cmd.args[7];
-                    const ring = this.craft.addRing(pos, dir, up, R, nseg, wh, matName, st);
+                    const phase = cmd.args[8] || 0.0;
+                    const ring = this.craft.addRing(pos, dir, up, R, nseg, wh, matName, st, phase);
                     idMap.Ring[idx] = ring;
                     addToRegistry('Ring', ring, idx);
                     seq.Ring++;
@@ -202,8 +203,8 @@ export class SpaceCraftEngine {
                 }
                 case 'Ring3P': {
                     const p1 = cmd.args[0], p2 = cmd.args[1], p3 = cmd.args[2];
-                    const nseg = cmd.args[3] || 16, wh = cmd.args[4], matName = cmd.args[5], st = cmd.args[6];
-                    const ring = this.craft.addRing3P(p1, p2, p3, nseg, wh, matName, st);
+                    const nseg = cmd.args[3] || 16, wh = cmd.args[4], matName = cmd.args[5], st = cmd.args[6], phase = cmd.args[7] || 0.0;
+                    const ring = this.craft.addRing3P(p1, p2, p3, nseg, wh, matName, st, phase);
                     const idx = (cmd.id !== undefined) ? cmd.id : seq.Ring;
                     idMap.Ring[idx] = ring;
                     addToRegistry('Ring', ring, idx);

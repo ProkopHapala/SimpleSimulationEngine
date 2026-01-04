@@ -54,14 +54,15 @@ const api = {
         console.log(`[Worker] api.Slider: rail=${railUid} sliding=${slidingUid} calong=${calong} side=${side}`);
         return uid;
     },
-    Ring: function (pos, dir, up = null, R, nseg, wh, matName, st) {
+    Ring: function (pos, dir, up = null, R, nseg, wh, matName, st, phase = 0.0) {
         const uid = newUid(); _counters.Ring++;
-        _commands.push({ method: 'Ring', args: [pos, dir, up, R, nseg, wh, matName, st], id: uid });
+        _commands.push({ method: 'Ring', args: [pos, dir, up, R, nseg, wh, matName, st, phase], id: uid });
+        console.log(`[Worker] api.Ring uid=${uid} phase=${phase}`);
         return uid;
     },
-    Ring3P: function (p1, p2, p3, nseg, wh, matName, st) {
+    Ring3P: function (p1, p2, p3, nseg, wh, matName, st, phase = 0.0) {
         const uid = newUid(); _counters.Ring++;
-        _commands.push({ method: 'Ring3P', args: [p1, p2, p3, nseg, wh, matName, st], id: uid });
+        _commands.push({ method: 'Ring3P', args: [p1, p2, p3, nseg, wh, matName, st, phase], id: uid });
         return uid;
     }
 };

@@ -563,7 +563,7 @@ export class MeshBuilder {
      * Generate a wheel truss structure.
      * Ported from MeshBuilder2.cpp::wheel
      */
-    wheel(p0, p1, ax, n, wh, stickTypes = { x: 1, y: 1, z: 1, w: 1 }) {
+    wheel(p0, p1, ax, n, wh, stickTypes = { x: 1, y: 1, z: 1, w: 1 }, phase = 0.0) {
         const dir = new Vec3().setSub(p1, p0);
         const r = dir.norm();
         if (r > 1e-6) {
@@ -587,45 +587,46 @@ export class MeshBuilder {
         const whX = wh.x ?? wh[0] ?? 0.5;
         const whY = wh.y ?? wh[1] ?? 0.5;
 
-        logger.info(`MeshBuilder.wheel: nseg=${n} r=${r.toFixed(3)} wh=(${whX},${whY}) dir=(${dir.x.toFixed(3)},${dir.y.toFixed(3)},${dir.z.toFixed(3)}) ax=(${axVec.x.toFixed(3)},${axVec.y.toFixed(3)},${axVec.z.toFixed(3)}) side=(${side.x.toFixed(3)},${side.y.toFixed(3)},${side.z.toFixed(3)})`);
+        logger.info(`MeshBuilder.wheel: nseg=${n} r=${r.toFixed(3)} wh=(${whX},${whY}) phase=${phase.toFixed(3)} dir=(${dir.x.toFixed(3)},${dir.y.toFixed(3)},${dir.z.toFixed(3)}) ax=(${axVec.x.toFixed(3)},${axVec.y.toFixed(3)},${axVec.z.toFixed(3)}) side=(${side.x.toFixed(3)},${side.y.toFixed(3)},${side.z.toFixed(3)})`);
 
-        const angleStep = Math.PI / n;
-        const cosStep = Math.cos(angleStep) || 0;
-        const sinStep = Math.sin(angleStep) || 0;
-
-        if (isNaN(cosStep) || isNaN(sinStep)) {
-            logger.error(`MeshBuilder.wheel ERROR: NaN in trig steps. angleStep=${angleStep} n=${n}`);
+        const angleStep = (2 * Math.PI) / n;
+        if (!isFinite(angleStep)) {
+            logger.error(`MeshBuilder.wheel ERROR: bad angleStep=${angleStep} n=${n}`);
             return i000;
         }
 
-        let rotA = 1.0;
-        let rotB = 0.0;
+        const cos = Math.cos;
+        const sin = Math.sin;
         const dnp = 4;
         const iStart = this.verts.length;
 
+        // make vertex ring along small-radius 
+        const ring = [];
+        const nsmall  = 4;
+        const dasmall = Math.PI * 2.0 / nsmall;
+        for(let i=0; i<nsmall; i++) {
+            let ang = phase + i * dasmall;
+            let ca = cos(ang);
+            let sa = sin(ang);
+            ring.push(new Vec3( whX*ca, whY*sa, 0));
+            //logger.info(`MeshBuilder.wheel: ring[${i}]=(${ring[i].x.toFixed(3)},${ring[i].y.toFixed(3)},${ring[i].z.toFixed(3)})`);
+        }
+
         // 1. First, generate ALL vertices for all segments
-        for (let i = 0; i < n; i++) {
-            // First pair of vertices (radial plane)
-            let R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
-            this.vert(new Vec3().setAddMul(p0, R, r + whX));
-            this.vert(new Vec3().setAddMul(p0, R, r - whX));
+        for (let i=0; i<n; i++) {
+            const ang = i * angleStep;
+            const ca  = cos(ang);
+            const sa  = sin(ang);
+            // radial direction in plane spanned by dir (tangent) and side (binormal); length 1
+            const radial = new Vec3().setV(dir).mulScalar(ca).addMul(side, sa);
+            // base position on main rim (radius r)
+            const base = new Vec3().setAddMul(p0, radial, r);
 
-            // Rotate half step
-            let nextRotA = rotA * cosStep - rotB * sinStep;
-            let nextRotB = rotA * sinStep + rotB * cosStep;
-            rotA = nextRotA;
-            rotB = nextRotB;
-
-            // Second pair of vertices (offset along axis)
-            R = new Vec3().setV(dir).mulScalar(rotA).addMul(side, rotB);
-            this.vert(new Vec3().setAddMul(p0, axVec, whY).addMul(R, r));
-            this.vert(new Vec3().setAddMul(p0, axVec, -whY).addMul(R, r));
-
-            // Rotate another half step for next iteration
-            nextRotA = rotA * cosStep - rotB * sinStep;
-            nextRotB = rotA * sinStep + rotB * cosStep;
-            rotA = nextRotA;
-            rotB = nextRotB;
+            // Four vertices per segment using precomputed small-radius offsets (ring[])
+            this.vert(new Vec3().setAdd(base, new Vec3().setV(radial).mulScalar(ring[0].x).addMul(axVec, ring[0].y)));
+            this.vert(new Vec3().setAdd(base, new Vec3().setV(radial).mulScalar(ring[2].x).addMul(axVec, ring[2].y)));
+            this.vert(new Vec3().setAdd(base, new Vec3().setV(radial).mulScalar(ring[1].x).addMul(axVec, ring[1].y)));
+            this.vert(new Vec3().setAdd(base, new Vec3().setV(radial).mulScalar(ring[3].x).addMul(axVec, ring[3].y)));
         }
 
         // 2. Now generate all edges

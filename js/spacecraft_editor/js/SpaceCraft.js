@@ -99,25 +99,26 @@ export class Slider {
 }
 
 export class Ring {
-    constructor(pos, dir, up, R, nseg, wh, matName, st) {
-        this.pos = pos; // Vec3
-        this.dir = dir; // Vec3 (axis)
-        this.up = up;   // Vec3 (stable up)
+    constructor(pos, dir, up, R, nseg, wh, matName, st, phase = 0.0) {
+        this.pos = pos;
+        this.dir = dir;
+        this.up = up;
         this.R = R;
         this.nseg = nseg;
         this.wh = wh;
         this.matName = matName;
         this.st = st;
+        this.phase = phase;
         this.id = -1;
         this.pointRange = { x: -1, y: -1 };
         this.stickRange = { x: -1, y: -1 };
     }
 
-    static from3Points(p1, p2, p3, nseg, wh, matName, st) {
+    static from3Points(p1, p2, p3, nseg, wh, matName, st, phase = 0.0) {
         const { center, radius, x, y } = Vec3.circle3Point(p1, p2, p3);
         const axis = new Vec3().setCross(x, y);
         axis.normalize();
-        return new Ring(center, axis, x, radius, nseg, wh, matName, st);
+        return new Ring(center, axis, x, radius, nseg, wh, matName, st, phase);
     }
 
     getVertByStride(i, j) {
@@ -200,15 +201,15 @@ export class SpaceCraft {
         return s;
     }
 
-    addRing(pos, dir, up, R, nseg, wh, matName, st) {
-        const r = new Ring(pos, dir, up, R, nseg, wh, matName, st);
+    addRing(pos, dir, up, R, nseg, wh, matName, st, phase = 0.0) {
+        const r = new Ring(pos, dir, up, R, nseg, wh, matName, st, phase);
         r.id = this.rings.length;
         this.rings.push(r);
         return r;
     }
 
-    addRing3P(p1, p2, p3, nseg, wh, matName, st) {
-        const r = Ring.from3Points(p1, p2, p3, nseg, wh, matName, st);
+    addRing3P(p1, p2, p3, nseg, wh, matName, st, phase = 0.0) {
+        const r = Ring.from3Points(p1, p2, p3, nseg, wh, matName, st, phase);
         r.id = this.rings.length;
         this.rings.push(r);
         return r;

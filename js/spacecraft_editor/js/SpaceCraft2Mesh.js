@@ -217,9 +217,10 @@ export function BuildCraft_blocks_js(mesh, craft) {
             continue;
         }
         const p1 = new Vec3().setV(center).addMul(rimDir, R);
-        mesh.wheel(center, p1, ax, Number(ring.nseg ?? 16), { x: Number(ring.wh?.x ?? ring.wh?.[0] ?? 0.4), y: Number(ring.wh?.y ?? ring.wh?.[1] ?? 0.4) }, { x: 1, y: 1, z: 1, w: 1 }, up);
+        const phase = Number(ring.phase ?? 0.0);
+        mesh.wheel(center, p1, ax, Number(ring.nseg ?? 16), { x: Number(ring.wh?.x ?? ring.wh?.[0] ?? 0.4), y: Number(ring.wh?.y ?? ring.wh?.[1] ?? 0.4) }, { x: 1, y: 1, z: 1, w: 1 }, phase);
         ring.pointRange = { x: iv0, y: mesh.verts.length }; ring.stickRange = { x: ie0, y: mesh.edges.length };
-        logger.info(`[BuildCraft] Ring ${ring.id}: pointRange=[${ring.pointRange.x}, ${ring.pointRange.y}] nverts=${ring.pointRange.y - ring.pointRange.x}`);
+        logger.info(`[BuildCraft] Ring ${ring.id}: pointRange=[${ring.pointRange.x}, ${ring.pointRange.y}] nverts=${ring.pointRange.y - ring.pointRange.x} phase=${phase.toFixed(3)}`);
     }
 
     // 6. Generate Sliders (hull part - joining logic)

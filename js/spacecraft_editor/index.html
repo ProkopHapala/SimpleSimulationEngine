@@ -210,27 +210,25 @@ api.Radiator(g1, g4, [0.2, 0.8], [0.2, 0.8], "Shield", 4, 4, 4, true, true, 0.1,
 
 //api.Rope(n_fw, n_bk, 0.1, "Cable");
 
-// Create a Wheel and a Slider attached to it
-const wheelCenter = vec(0, 10, 0);
-const wheelDir = vec(0, 0, 1);
-const wheelUp = vec(0, 1, 0);
-const wheelRadius = 5.0;
-const wheelNseg = 16;
-const wheelWH = vec(0.4, 0.4);
-const wheelMat = "Steel";
-const wheelSt = [1, 1, 1, 1];
         
-const wheel = api.Ring(wheelCenter, wheelDir, wheelUp, wheelRadius, wheelNseg, wheelWH, wheelMat, wheelSt);
+const wheel = api.Ring(
+   vec(0, 10, 0), // wheelCenter, 
+   vec(0, 0, 1),  // wheelDir, 
+   vec(0, 1, 0),  // wheelUp, 
+   5.0,           // wheelRadius, 
+   16,            // wheelNseg, 
+   vec(0.4, 0.4), // wheelWH, 
+   "Steel",       // wheelMat, 
+   [1, 1, 1, 1],  // wheelSt
+   Math.PI * 0.25 // wheelPhase (0 = rectangle axes aligned, pi/4 = kite/diamond)
+);
         
 // Slider on wheel (rail=wheel, sliding=g1, side=0, methodFlag=true for strides)
 // Args: railUid, slidingUid, calong, matName, slidingVertId, side, methodFlag
 api.Slider(wheel, g1, 0.5, "Steel", -1, 0, true);
 
 // Ring from 3 points test
-const p1 = vec(10, 15, 0);
-const p2 = vec(15, 10, 0);
-const p3 = vec(10, 5, 0);
-const wheel2 = api.Ring3P(p1, p2, p3, 16, vec(0.4, 0.4), "Steel", [1,1,1,1]);
+const wheel2 = api.Ring3P( vec(10, 15, 0), vec(15, 10, 0), vec(10, 5, 0), 16, vec(0.4, 0.4), "Steel", [1,1,1,1]);
 api.Slider(wheel2, g2, 0.2, "Steel", -1, 0, true);
 
 // Slider test: two crossing girders near each other
