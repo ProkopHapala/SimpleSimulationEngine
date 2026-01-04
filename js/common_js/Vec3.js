@@ -245,6 +245,51 @@ export class Vec3 {
         return { center, radius, x, y };
     }
 
+    /**
+     * Compute intersection of a line (p1, p2) and a plane (p0, normal)
+     */
+    static linePlaneIntersect(p1, p2, p0, normal) {
+        const d = new Vec3().setSub(p2, p1);
+        const dot = d.dot(normal);
+        if (Math.abs(dot) < 1e-12) return null;
+        const w = new Vec3().setSub(p1, p0);
+        const fac = -w.dot(normal) / dot;
+        return new Vec3().setAddMul(p1, d, fac);
+    }
+
+    /**
+     * Compute intersection of a line (p1, p2) and a cylinder (center, axis, radius)
+     * Returns an array of up to 2 intersection points
+     */
+    static lineCylinderIntersect(p1, p2, center, axis, radius) {
+        const d = new Vec3().setSub(p2, p1);
+        const w = new Vec3().setSub(p1, center);
+        
+        // proj axis
+        const a = d.dot(axis);
+        const b = w.dot(axis);
+        
+        const d_perp = new Vec3().setAddMul(d, axis, -a);
+        const w_perp = new Vec3().setAddMul(w, axis, -b);
+        
+        const A = d_perp.norm2();
+        const B = 2 * d_perp.dot(w_perp);
+        const C = w_perp.norm2() - radius * radius;
+        
+        const det = B * B - 4 * A * C;
+        if (det < 0) return [];
+        if (Math.abs(A) < 1e-12) return [];
+
+        const sdet = Math.sqrt(det);
+        const t1 = (-B - sdet) / (2 * A);
+        const t2 = (-B + sdet) / (2 * A);
+        
+        return [
+            new Vec3().setAddMul(p1, d, t1),
+            new Vec3().setAddMul(p1, d, t2)
+        ];
+    }
+
     // ================= Utility =================
 
     dist2(v) {

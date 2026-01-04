@@ -225,29 +225,53 @@ export function BuildCraft_blocks_js(mesh, craft) {
 
     // 6. Generate Sliders (hull part - joining logic)
     for (const slider of craft.sliders) {
-        const rail = slider.rail; 
+        const path = slider.path;
+        const rail = path?.rail;
         if (!rail || rail.pointRange.x < 0) {
-            logger.warn(`[BuildCraft] Slider ${slider.id} rail ${rail?.constructor.name} has invalid pointRange: [${rail?.pointRange.x}, ${rail?.pointRange.y}]`);
+            logger.warn(`[BuildCraft] Slider ${slider.id} rail is invalid or mesh not built yet`);
             continue;
         }
-        const slidingComp = slider.sliding || rail;
-        const slidingRange = slidingComp.pointRange || { x: -1, y: -1 };
-        const pSlide = (Number.isInteger(slider.slidingVertId) && slider.slidingVertId >= 0 && slider.slidingVertId < mesh.verts.length) 
-            ? mesh.verts[slider.slidingVertId].pos 
-            : (Number.isInteger(slidingRange.x) && slidingRange.x >= 0 && slidingRange.x < mesh.verts.length ? mesh.verts[slidingRange.x].pos : null);
-        if (!pSlide) continue;
-        const weldR = slider.weldDist || 0.25;
-        if (slider.joinStrategy === 'weld') {
-            const iv = (slider.slidingVertId >= 0) ? slider.slidingVertId : slidingRange.x;
-            mesh.vert_weld(pSlide, weldR, rail.pointRange.x, rail.pointRange.y, stickTypes.w);
-            slider.ivert = iv;
+
+        // If slider has a pAttach, we create a new vertex on the girder and weld it
+        // This is used by RingAttached to ensure the slider is exactly on the path point
+        if (slider.pAttach) {
+            const pa = new Vec3().setV(slider.pAttach);
+            if (isFinite(pa.x) && isFinite(pa.y) && isFinite(pa.z)) {
+                // 1. Create a NEW vertex at the exact interpolation point
+                const vNew = mesh.vert(pa);
+                slider.ivert = vNew;
+                
+                // 2. Weld this new vertex to the sliding component (usually a girder)
+                // This ensures the ring is physically connected to the girder in the simulation.
+                const slidingComp = slider.sliding || rail;
+                if (slidingComp.pointRange && slidingComp.pointRange.x >= 0) {
+                    mesh.vert_weld(pa, slider.weldDist || 0.25, slidingComp.pointRange.x, slidingComp.pointRange.y, stickTypes.w);
+                }
+            }
         } else {
+            // Standard sliding logic using existing vertices
+            const slidingComp = slider.sliding || rail;
+            const slidingRange = slidingComp.pointRange || { x: -1, y: -1 };
+            const pSlide = (Number.isInteger(slider.slidingVertId) && slider.slidingVertId >= 0 && slider.slidingVertId < mesh.verts.length) 
+                ? mesh.verts[slider.slidingVertId].pos 
+                : (Number.isInteger(slidingRange.x) && slidingRange.x >= 0 && slidingRange.x < mesh.verts.length ? mesh.verts[slidingRange.x].pos : null);
+            
+            if (!pSlide) continue;
+            
+            const weldR = slider.weldDist || 0.25;
             const nearestIdx = mesh.vert_collapse(pSlide, weldR, rail.pointRange.x, rail.pointRange.y);
             slider.ivert = (nearestIdx >= 0) ? nearestIdx : ((slider.slidingVertId >= 0) ? slider.slidingVertId : slidingRange.x);
         }
-        // Pre-build path for Aux visualization to reuse
-        slider.path = buildPathOnEdge(mesh, rail, slider.side, slider.pathRadius || 0.35, slider.methodFlag);
-        logger.info(`[BuildCraft] Slider ${slider.id}: rail=${rail.constructor.name} side=${slider.side} methodFlag=${slider.methodFlag} pathN=${slider.path.ps.length} closed=${slider.path.closed}`);
+
+        // Build/Update Path indices if they are empty
+        // This allows multiple sliders to share the same pre-computed path indices
+        if (path.ps.length === 0) {
+            const pData = buildPathOnEdge(mesh, rail, path.side, path.radius || 0.35, path.methodFlag);
+            path.ps = pData.ps;
+            path.closed = pData.closed;
+        }
+        
+        logger.info(`[BuildCraft] Slider ${slider.id}: rail=${rail.constructor.name} pathN=${path.ps.length} closed=${path.closed}`);
     }
 }
 
@@ -259,17 +283,23 @@ export function BuildCraft_aux_js(auxMesh, craft, hullMesh) {
     auxMesh.clear();
     const sliderPathStickType = 5; // Cyan
     const anchorStickType = 2;     // Green
-    for (const slider of craft.sliders) {
-        const rail = slider.rail; if (!rail || rail.pointRange.x < 0) continue;
-        const path = (slider.path && slider.path.ps) ? slider.path : { ps: [], closed: false };
+    // First draw all unique paths
+    for (const path of craft.paths) {
         if (path.ps.length < 2) continue;
-        // Draw Path
+        const rail = path.rail;
+        if (!rail || rail.pointRange.x < 0) continue;
         for (let i = 0; i < path.ps.length - (path.closed ? 0 : 1); i++) {
             const iA = path.ps[i], iB = path.ps[(i + 1) % path.ps.length];
             if (Number.isInteger(iA) && Number.isInteger(iB) && iA >= 0 && iA < hullMesh.verts.length && iB >= 0 && iB < hullMesh.verts.length) {
                 auxMesh.edge(auxMesh.vert(hullMesh.verts[iA].pos), auxMesh.vert(hullMesh.verts[iB].pos), sliderPathStickType);
             }
         }
+    }
+
+    for (const slider of craft.sliders) {
+        const path = slider.path;
+        if (!path || path.ps.length < 2) continue;
+        
         // Draw Anchor
         const tRaw = (slider.calong !== undefined && slider.calong !== null) ? slider.calong : 0.5;
         const span = path.closed ? path.ps.length : (path.ps.length - 1);

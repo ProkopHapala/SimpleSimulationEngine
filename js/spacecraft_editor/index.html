@@ -198,43 +198,68 @@ const n_up = api.Node( vec(  0,  0,  5  ), 0.2 );
 const n_dn = api.Node( vec(  0,  0, -5  ), 0.2 );
 
 // //                     (nodes, nseg, material)   
-const g1 = api.Girder(n_c, n_fw, 10, "Steel");
-const g2 = api.Girder(n_c, n_bk, 20, "Steel");
-const g3 = api.Girder(n_c, n_lf, 10, "Steel");
-const g4 = api.Girder(n_c, n_rt, 10, "Steel");
-const g5 = api.Girder(n_c, n_up, 5, "Steel");
-const g6 = api.Girder(n_c, n_dn, 5, "Steel");
+const g_fw = api.Girder(n_c, n_fw, 20, "Steel");
+const g_bk = api.Girder(n_c, n_bk, 10, "Steel");
+const g_lf = api.Girder(n_c, n_lf, 10, "Steel");
+const g_rt = api.Girder(n_c, n_rt, 10, "Steel");
+const g_up = api.Girder(n_c, n_up, 5, "Steel");
+const g_dn = api.Girder(n_c, n_dn, 5, "Steel");
 
 // Radiator spanning partial segments between two girders (span coefs along each girder)
-api.Radiator(g1, g4, [0.2, 0.8], [0.2, 0.8], "Shield", 4, 4, 4, true, true, 0.1, 1.5 );
+api.Radiator(g_fw, g_rt, [0.2, 0.8], [0.2, 0.8], "Shield", 4, 4, 4, true, true, 0.1, 1.5 );
 
 //api.Rope(n_fw, n_bk, 0.1, "Cable");
 
         
-const wheel = api.Ring(
-   vec(0, 10, 0), // wheelCenter, 
-   vec(0, 0, 1),  // wheelDir, 
-   vec(0, 1, 0),  // wheelUp, 
-   5.0,           // wheelRadius, 
-   16,            // wheelNseg, 
-   vec(0.4, 0.4), // wheelWH, 
-   "Steel",       // wheelMat, 
-   [1, 1, 1, 1],  // wheelSt
-   Math.PI * 0.25 // wheelPhase (0 = rectangle axes aligned, pi/4 = kite/diamond)
-);
+//const wheel = api.Ring(
+//   vec(0, 10, 0), // wheelCenter, 
+//   vec(0, 0, 1),  // wheelDir, 
+//   vec(0, 1, 0),  // wheelUp, 
+//   5.0,           // wheelRadius, 
+//   16,            // wheelNseg, 
+//   vec(0.4, 0.4), // wheelWH, 
+//   "Steel",       // wheelMat, 
+//   [1, 1, 1, 1],  // wheelSt
+//   Math.PI * 0.25 // wheelPhase (0 = rectangle axes aligned, pi/4 = kite/diamond)
+//);
         
 // Slider on wheel (rail=wheel, sliding=g1, side=0, methodFlag=true for strides)
 // Args: railUid, slidingUid, calong, matName, slidingVertId, side, methodFlag
-api.Slider(wheel, g1, 0.5, "Steel", -1, 0, true);
+//api.Slider(wheel, g_fw, 0.5, "Steel", -1, 0, true);
 
 // Ring from 3 points test
-const wheel2 = api.Ring3P( vec(10, 15, 0), vec(15, 10, 0), vec(10, 5, 0), 16, vec(0.4, 0.4), "Steel", [1,1,1,1]);
-api.Slider(wheel2, g2, 0.2, "Steel", -1, 0, true);
-
+//const wheel2 = api.Ring3P( vec(10, 15, 0), vec(15, 10, 0), vec(10, 5, 0), 16, vec(0.4, 0.4), "Steel", [1,1,1,1]);
+//api.Slider(wheel2, g_fw, 0.2, "Steel", -1, 0, true);
 // Slider test: two crossing girders near each other
-const gX1 = api.Girder( api.Node( vec(2.0,  1.0, 0.0), 0.6 ), api.Node( vec(12.0,  1.0, 0.0), 0.6 ), 8, "Steel" );
-const gX2 = api.Girder( api.Node( vec(7.0, -2.0, 1.5), 0.6 ), api.Node( vec(7.0,  6.0, 1.5), 0.6 ), 8, "Steel" );
-api.Slider(gX1, gX2, 0.5, "SlideMat", -1, 0, true);
+//const gX1 = api.Girder( api.Node( vec(2.0,  1.0, 0.0), 0.6 ), api.Node( vec(12.0,  1.0, 0.0), 0.6 ), 8, "Steel" );
+//const gX2 = api.Girder( api.Node( vec(7.0, -2.0, 1.5), 0.6 ), api.Node( vec(7.0,  6.0, 1.5), 0.6 ), 8, "Steel" );
+//api.Slider(gX1, gX2, 0.5, "SlideMat", -1, 0, true);
+
+// Virtual wheel intersection test
+// We want a wheel at x=5, r=5, axis along x. Intersection with g_lf, g_rt, g_up
+api.GetGirderCircleIntersection(g_lf, vec(5, 0, 0), vec(1, 0, 0), 5.0);
+api.GetGirderCircleIntersection(g_rt, vec(5, 0, 0), vec(1, 0, 0), 5.0);
+api.GetGirderCircleIntersection(g_up, vec(5, 0, 0), vec(1, 0, 0), 5.0);
+
+// RingAttached demonstration:
+// Attaches a wheel to 3 girders at specific interpolation parameters (t) 
+// using sideDir to automatically choose the girder side closest to a vector.
+api.RingAttached([
+    //{ uid: g_lf, t: 0.6, sideDir: vec(0,  1,  1) },
+    //{ uid: g_rt, t: 0.6, sideDir: vec(0, -1,  1) },
+    //{ uid: g_fw, t: 0.3, sideDir: vec(1,  0,  1) }
+    { uid: g_lf, t: 0.6 },
+    { uid: g_rt, t: 0.6 },
+    { uid: g_fw, t: 0.3 }
+], {
+    nseg: 24,
+    wh: vec(0.4, 0.4),
+    matName: "Steel",
+    st: [1, 1, 1, 1],
+    phase: 0,
+    axis: vec(0, 0, 1),
+    //ringSide: 2    // overide automatic ring selection
+});
             </textarea>
             <button id="run-script-btn">Run Script</button>
         </div>

@@ -5,21 +5,21 @@
 
 
 
-## Status (JS editor, 2025-12-29)
+## TODO / Check-list
 
 [x] Node blocks (addCube)  
 [x] Girder bridges (bridgeFacingPolygons)  
 [x] Rope generation (`mesh.rope`)  
 [x] Radiator panels between rails (ParametricQuadPatch) with welded edges  
 [x] Weld/auto-connections between components (edge→girder)  
-[~] Ring (Wheel) generation  
-[~] Slider anchors/paths (placeholder anchor + path viz; not exported)  
-[ ] Wheel/ring slider binding  
+[x] Ring (Wheel) generation  
+[x] Slider anchors/paths (shared Path object, exact pAttach welding)  
+[x] Wheel/ring slider binding (RingAttached: one shared Path, welded pAttach verts to girders)  
 [ ] Shield/pusher-plate/dish (Parabola/Slab)  
 [ ] Nozzle/dish attachments (parabolic patch + connections)  
 [ ] Material/stick catalogs in JS craft  
 [ ] GUI hooks: run BuildCraft_blocks_js, load sample script  
-[ ] Worker commands: Node/Girder/Rope/Ring/Slider/Plate/Material  
+[~] Worker commands: Node/Girder/Rope/Ring/Path/Slider/Plate/Material (Material still TODO on engine side)  
 [ ] Connectivity check + OBJ export in GUI  
 
 Status from docs (all in `docs/SpaceCrafting`):
@@ -195,3 +195,26 @@ Test scenario (to validate both methods)
   - **SDF picking all verts** -> reduced radius (0.05) + edge offset.
   - **GUI syntax error** from stray brace fixed.
   - **Worker/engine API** expanded to support joint-style slider parameters.
+
+## Session update (2026-01-04) — Path/Slider refactor & RingAttached welding
+- **Path as independent object**: Restored a standalone `Path` class; multiple sliders now share a single path (e.g., the wheel rim) rather than duplicating paths.
+- **Slider uses Path, not rail**: `Slider` now references a `Path` and carries `pAttach` for exact coordinate welding; `addSlider(path, sliding, ...)` signature restored.
+- **RingAttached flow**:
+  - Compute 3 girder attachment points (interpolated with side offsets).
+  - Build one ring via `addRing3P` from those exact points.
+  - Create **one shared Path** on the ring (auto edge pick with inverted axis; can override with `params.ringSide`).
+  - Spawn one Slider per attachment; each slider stores `pAttach` (the same point used for ring creation).
+  - In mesh build, each slider creates a **new vertex at `pAttach`** and welds it to the respective girder’s pointRange (zero strain, exact fit).
+- **Wheel edge selection**:
+  - Default: automatic inverted-axis pick (attachment above center → use opposite/bottom edge; below → use top).
+  - Override: set `params.ringSide` in `RingAttached` to force a specific ring edge.
+- **Worker/Engine API**: Re-exposed `Path` command; `Slider` now takes `pathUid`. Logging updated accordingly.
+- **GUI**: Slider list resolves rail via `s.path?.rail` to avoid undefined id errors after the refactor.
+- **Mesh build**: `BuildCraft_blocks_js` uses `pAttach` to create and weld new vertices; paths are precomputed once and reused across sliders.
+
+### Takeaways / guardrails
+- Keep `Path` independent and shared; do not store path params on `Slider`.
+- Always weld using the exact geometric points that defined the ring to avoid strain.
+- When auto-picking opposing edges (girder vs ring), invert the axis-side choice so the faces meet.
+- Expose manual overrides (`ringSide`) but keep a robust automatic fallback.
+- Validate inputs (finite vectors, positive radii) and log clearly; GUI should not assume `rail` lives on `Slider`.

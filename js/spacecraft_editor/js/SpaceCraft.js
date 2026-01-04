@@ -77,24 +77,37 @@ export class Plate {
     }
 }
 
+/**
+ * Path represents an ordered sequence of vertices in the concrete mesh.
+ * Multiple Sliders can share the same Path object to slide along the same edge.
+ */
+export class Path {
+    constructor(rail, side = 0, methodFlag = true, radius = 0.35) {
+        this.rail = rail;       // The structural component (Girder or Ring) providing the geometry
+        this.side = side;       // The specific side/corner of the rail to follow
+        this.methodFlag = methodFlag; // true = stride (exact vertices), false = SDF (nearest vertices)
+        this.radius = radius;   // Picking radius for SDF method
+        this.id = -1;           // Unique ID assigned by SpaceCraft
+        this.ps = [];           // Concrete vertex indices in the mesh (populated during build)
+        this.closed = (rail instanceof Ring); // Paths on rings are naturally circular
+    }
+}
+
+/**
+ * Slider attaches a vertex to a Path.
+ * It can either use an existing vertex from a 'sliding' component or generate a new one.
+ */
 export class Slider {
-    constructor(rail, sliding = null, calong = 0.0, matName = null, slidingVertId = -1, side = 0, methodFlag = true) {
-        // rail: structural component providing the path
-        // sliding: structural component that owns the sliding vertex
-        this.rail = rail;
-        this.sliding = sliding;
-        this.slidingVertId = slidingVertId; // vertex index on sliding component (within mesh)
-        this.calong = calong;   // param along path (0..1), wraps if path is closed
-        this.side = side;       // desired rail side (stride mode)
-        this.methodFlag = methodFlag; // true=stride, false=SDF
-        this.type = matName;
-        this.id = -1;
-        this.pointRange = { x: -1, y: -1 };
-        this.stickRange = { x: -1, y: -1 };
-        this.path = { ps: [], cur: 0, closed: rail instanceof Ring };
-        this.ivert = -1;        // actual slider vertex id in mesh (created during build)
-        this.weldDist = 0.25;   // default weld radius to connect slider vertex to rail segment
-        this.pathRadius = 0.35; // SDF cylinder radius for path picking
+    constructor(path, sliding = null, calong = 0.0, matName = null, slidingVertId = -1) {
+        this.path = path;       // The shared Path object this slider moves on
+        this.sliding = sliding; // Optional: The component whose vertex is being attached (usually a Girder)
+        this.slidingVertId = slidingVertId; // Optional: Specific vertex index if provided
+        this.calong = calong;   // Interpolation parameter (0.0 to 1.0) along the path
+        this.type = matName;    // Material name
+        this.id = -1;           // Unique ID
+        this.ivert = -1;        // The concrete vertex index in the mesh for this slider
+        this.pAttach = null;    // IMPORTANT: If set, a NEW vertex is created at this [x,y,z] and welded to 'sliding'
+        this.weldDist = 0.25;   // Tolerance for welding to the sliding component
     }
 }
 
@@ -153,6 +166,7 @@ export class SpaceCraft {
         this.ropes = [];
         this.plates = [];
         this.rings = [];
+        this.paths = [];
         this.sliders = [];
     }
 
@@ -161,6 +175,7 @@ export class SpaceCraft {
         this.girders = [];
         this.ropes = [];
         this.plates = [];
+        this.paths = [];
         this.sliders = [];
         this.rings = [];
     }
@@ -194,8 +209,15 @@ export class SpaceCraft {
         return p;
     }
 
-    addSlider(rail, sliding = null, calong = 0.0, matName = null, slidingVertId = -1, side = 0, methodFlag = true) {
-        const s = new Slider(rail, sliding, calong, matName, slidingVertId, side, methodFlag);
+    addPath(rail, side, methodFlag, radius) {
+        const p = new Path(rail, side, methodFlag, radius);
+        p.id = this.paths.length;
+        this.paths.push(p);
+        return p;
+    }
+
+    addSlider(path, sliding = null, calong = 0.0, matName = null, slidingVertId = -1) {
+        const s = new Slider(path, sliding, calong, matName, slidingVertId);
         s.id = this.sliders.length;
         this.sliders.push(s);
         return s;

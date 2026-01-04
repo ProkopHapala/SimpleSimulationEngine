@@ -889,9 +889,12 @@ updateSliderList() {
     const currentId = this.selSlider.value;
     this.selSlider.innerHTML = '<option value="-1">-- None --</option>';
     sliders.forEach((s, i) => {
+        // Sliders now hold a Path; the rail lives on that Path.
+        const rail = s.path?.rail || s.rail || s.sliding;
+        const railId = (rail && rail.id !== undefined) ? rail.id : '?';
         const opt = document.createElement('option');
         opt.value = i;
-        opt.textContent = `Slider ${i} (Rail:${s.rail.id})`;
+        opt.textContent = `Slider ${i} (Rail:${railId})`;
         this.selSlider.appendChild(opt);
     });
     if (currentId >= 0 && currentId < sliders.length) {

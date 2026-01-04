@@ -559,6 +559,28 @@ export class MeshBuilder {
         this.chunks.push(data);
         return this.chunks.length - 1;
     }
+
+    /**
+     * Debug helper: draw a small 3-axis cross at position `p`.
+     * @param {Vec3|Array} p    center position
+     * @param {number} size     half-length of each arm
+     * @param {number} type     edge type to use
+     */
+    pointCross(p, size = 0.3, type = 9) {
+        const c = new Vec3().setV(p);
+        const base = this.verts.length;
+        this.vert(new Vec3(c.x + size, c.y, c.z));
+        this.vert(new Vec3(c.x - size, c.y, c.z));
+        this.vert(new Vec3(c.x, c.y + size, c.z));
+        this.vert(new Vec3(c.x, c.y - size, c.z));
+        this.vert(new Vec3(c.x, c.y, c.z + size));
+        this.vert(new Vec3(c.x, c.y, c.z - size));
+        this.edge(base + 0, base + 1, type);
+        this.edge(base + 2, base + 3, type);
+        this.edge(base + 4, base + 5, type);
+        return base;
+    }
+
     /**
      * Generate a wheel truss structure.
      * Ported from MeshBuilder2.cpp::wheel

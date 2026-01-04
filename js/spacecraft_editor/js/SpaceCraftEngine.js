@@ -92,8 +92,8 @@ export class SpaceCraftEngine {
 
         // 1. Populate Abstract SpaceCraft
         // We need a temporary map to resolve Shadow IDs from worker to real objects
-        const idMap = { Node: [], Girder: [], Rope: [], Plate: [], Slider: [], Ring: [] };
-        const seq = { Node: 0, Girder: 0, Rope: 0, Plate: 0, Slider: 0, Ring: 0 };
+        const idMap = { Node: [], Girder: [], Rope: [], Plate: [], Slider: [], Ring: [], Path: [] };
+        const seq = { Node: 0, Girder: 0, Rope: 0, Plate: 0, Slider: 0, Ring: 0, Path: 0 };
         const logV = (lvl, msg) => { try { if (typeof logger !== 'undefined' && logger.uiVerbosity >= lvl) logger.info(msg); } catch (e) {} };
         const addToRegistry = (type, obj, uid) => {
             obj.uid = uid;
@@ -101,7 +101,7 @@ export class SpaceCraftEngine {
         };
         const resolveRef = (uid) => {
             if (uid === null || uid === undefined) return null;
-            return this.globalRegistry[uid]?.obj || idMap.Node[uid] || idMap.Girder[uid] || idMap.Ring[uid] || idMap.Rope[uid] || idMap.Plate[uid] || idMap.Slider[uid] || null;
+            return this.globalRegistry[uid]?.obj || idMap.Node[uid] || idMap.Girder[uid] || idMap.Ring[uid] || idMap.Rope[uid] || idMap.Plate[uid] || idMap.Slider[uid] || idMap.Path[uid] || null;
         };
 
         for (const cmd of cmds) {
@@ -166,21 +166,33 @@ export class SpaceCraftEngine {
                     break;
                 }
                 case 'Slider': {
-                    const railUid = cmd.args[0];
-                    const slidingUid = cmd.args[1]; // sliding component comes second now
-                    const rail = resolveRef(railUid);
+                    const pathUid = cmd.args[0];
+                    const slidingUid = cmd.args[1];
+                    const path = resolveRef(pathUid);
                     const sliding = resolveRef(slidingUid);
                     
-                    logger.info(`[Engine] Slider processing: railUid=${railUid} railFound=${!!rail} (${rail?.constructor?.name}) slidingUid=${slidingUid} slidingFound=${!!sliding} (${sliding?.constructor?.name})`);
+                    logger.info(`[Engine] Slider processing: pathUid=${pathUid} pathFound=${!!path} slidingUid=${slidingUid} slidingFound=${!!sliding}`);
                     
-                    if (rail) {
+                    if (path) {
                         const idx = (cmd.id !== undefined) ? cmd.id : seq.Slider;
-                        const s = this.craft.addSlider(rail, sliding, cmd.args[2], cmd.args[3], cmd.args[4], cmd.args[5], cmd.args[6]);
+                        const s = this.craft.addSlider(path, sliding, cmd.args[2], cmd.args[3], cmd.args[4]);
                         idMap.Slider[idx] = s;
                         addToRegistry('Slider', s, idx);
                         seq.Slider++;
                     } else {
-                        logger.warn(`[Engine] Slider skipped: missing rail uid=${railUid}. Available Rings: ${Object.keys(idMap.Ring)}, Girders: ${Object.keys(idMap.Girder)}`);
+                        logger.warn(`[Engine] Slider skipped: missing path uid=${pathUid}`);
+                    }
+                    break;
+                }
+                case 'Path': {
+                    const railUid = cmd.args[0];
+                    const rail = resolveRef(railUid);
+                    if (rail) {
+                        const idx = (cmd.id !== undefined) ? cmd.id : seq.Path;
+                        const p = this.craft.addPath(rail, cmd.args[1], cmd.args[2], cmd.args[3]);
+                        idMap.Path[idx] = p;
+                        addToRegistry('Path', p, idx);
+                        seq.Path++;
                     }
                     break;
                 }
@@ -211,9 +223,159 @@ export class SpaceCraftEngine {
                     seq.Ring++;
                     break;
                 }
+                case 'GetGirderCircleIntersection': {
+                    const girderUid = cmd.args[0];
+                    const center = new Vec3().setV(cmd.args[1]);
+                    const axis = new Vec3().setV(cmd.args[2]);
+                    const radius = cmd.args[3];
+                    const girder = resolveRef(girderUid);
+                    if (girder) {
+                        const p1 = new Vec3().setV(girder.nodeA.pos);
+                        const p2 = new Vec3().setV(girder.nodeB.pos);
+                        const hits = Vec3.lineCylinderIntersect(p1, p2, center, axis, radius);
+                        logger.info(`[Engine] GetGirderCircleIntersection girder=${girderUid} hits=${hits.length}`);
+                        hits.forEach((h, i) => {
+                            logger.info(`  Hit ${i}: ${h.toString()}`);
+                            this.mesh.pointCross(h);
+                        });
+                    }
+                    break;
+                }
+                case 'RingAttached': {
+                    const girderConfigs = cmd.args[0]; // Array of {uid, t, side, sideDir}
+                    const params = cmd.args[1];       // {nseg, wh, matName, st, phase, axis}
+                    
+                    const points = [];
+                    const sliders = [];
+
+                    for (const cfg of girderConfigs) {
+                        const girder = resolveRef(cfg.uid);
+                        if (!girder) continue;
+
+                        const pA = new Vec3().setV(girder.nodeA.pos);
+                        const pB = new Vec3().setV(girder.nodeB.pos);
+                        const sA = girder.nodeA.size * 0.5;
+                        const sB = girder.nodeB.size * 0.5;
+                        const t = cfg.t ?? 0.5;
+                        let side = cfg.side ?? 0;
+
+                        // Calculate side offset logic similar to Radiator
+                        const dir = new Vec3().setSub(pB, pA);
+                        const len = dir.normalize();
+                        const upHint = params.axis ? new Vec3().setV(params.axis) : new Vec3(0, 1, 0);
+                        let sideVec = new Vec3().setCross(dir, upHint);
+                        if (sideVec.norm() < 1e-6) sideVec = dir.getSomePerp();
+                        else sideVec.normalize();
+                        
+                        let upVec = new Vec3().setCross(sideVec, dir);
+                        upVec.normalize();
+
+                        const cornerDirs = [ {a:1, b:1}, {a:1, b:-1}, {a:-1, b:1}, {a:-1, b:-1} ];
+
+                        // Auto-pick side using either explicit sideDir or fallback to params.axis
+                        const sideDirInput = cfg.sideDir || params.axis;
+                        if (sideDirInput) {
+                            const targetDir = new Vec3().setV(sideDirInput);
+                            const lt = targetDir.normalize();
+                            if (lt > 1e-9) {
+                                let maxDot = -Infinity;
+                                for (let i = 0; i < 4; i++) {
+                                    const cd = cornerDirs[i];
+                                    const off = new Vec3().setV(upVec).mulScalar(cd.b).addMul(sideVec, cd.a);
+                                    const lo = off.normalize();
+                                    if (lo < 1e-9) continue;
+                                    const d = off.dot(targetDir);
+                                    if (d > maxDot) {
+                                        maxDot = d;
+                                        side = i;
+                                    }
+                                }
+                            }
+                        }
+
+                        const cd = cornerDirs[side % 4];
+                        const offMag = (1-t)*sA + t*sB;
+                        const offset = new Vec3().setV(upVec).mulScalar(cd.b * offMag).addMul(sideVec, cd.a * offMag);
+                        
+                        const pAttach = new Vec3().setAddMul(pA, new Vec3().setSub(pB, pA), t).add(offset);
+                        points.push(pAttach);
+                        sliders.push({ girder, t, side });
+                    }
+
+                    if (points.length >= 3) {
+                        const ring = this.craft.addRing3P(points[0], points[1], points[2], params.nseg, params.wh, params.matName, params.st, params.phase);
+                        const idx = (cmd.id !== undefined) ? cmd.id : seq.Ring;
+                        idMap.Ring[idx] = ring;
+                        addToRegistry('Ring', ring, idx);
+                        seq.Ring++;
+
+                        // 3. SHARED PATH: Create ONE independent Path object for this ring.
+                        // If user passed params.ringSide (>=0) we honor it; otherwise auto-pick using inverted axis sorting:
+                        // if avg attachment is "above" ring center along ring axis, choose the OPPOSITE edge (bottom) to face girders.
+                        const center = new Vec3().setV(ring.pos);
+                        let ringAxis = new Vec3().setV(ring.dir);
+                        if (ringAxis.normalize() < 1e-9) {
+                            ringAxis = params.axis ? new Vec3().setV(params.axis).normalize() : new Vec3(0, 0, 1);
+                        }
+                        let avgAttach = new Vec3();
+                        for (const p of points) avgAttach.add(p);
+                        avgAttach.mulScalar(1.0 / points.length);
+                        const distAlongAxis = new Vec3().setSub(avgAttach, center).dot(ringAxis);
+                        let ringPathSide = (distAlongAxis > 0) ? 3 : 2; // inverted selection relative to attachment half-space
+                        if (typeof params.ringSide === 'number' && params.ringSide >= 0) {
+                            ringPathSide = params.ringSide;
+                        }
+                        const ringPath = this.craft.addPath(ring, ringPathSide, true, 0.35);
+
+                        // 4. Attach Sliders.
+                        // IMPORTANT: Each slider's vertex is created as a NEW vertex in the mesh
+                        // located exactly at the interpolation point (points[i]) used for ring creation.
+                        // This ensures the wheel fits perfectly without strain.
+                        for (let i = 0; i < points.length; i++) {
+                            const sData = sliders[i];
+                            // Create slider attaching the shared 'ringPath' to the respective 'girder'
+                            const s = this.craft.addSlider(ringPath, sData.girder, 0, params.matName, -1);
+                            
+                            // This pAttach property triggers NEW vertex creation at exact coordinates in BuildCraft_blocks_js
+                            s.pAttach = points[i]; 
+                            // The weldDist controls snapping this new vertex to the girder's mesh vertices
+                            s.weldDist = params.weldDist || 0.5;
+                        }
+                    }
+                    break;
+                }
                 case 'Material':
                     // TODO: Store materials
                     break;
+                case 'Slider': {
+                    const pathUid = cmd.args[0];
+                    const slidingUid = cmd.args[1];
+                    const path = resolveRef(pathUid);
+                    const sliding = resolveRef(slidingUid);
+                    
+                    if (path) {
+                        const idx = (cmd.id !== undefined) ? cmd.id : seq.Slider;
+                        const s = this.craft.addSlider(path, sliding, cmd.args[2], cmd.args[3], cmd.args[4]);
+                        idMap.Slider[idx] = s;
+                        addToRegistry('Slider', s, idx);
+                        seq.Slider++;
+                    } else {
+                        logger.warn(`[Engine] Slider skipped: missing path uid=${pathUid}`);
+                    }
+                    break;
+                }
+                case 'Path': {
+                    const railUid = cmd.args[0];
+                    const rail = resolveRef(railUid);
+                    if (rail) {
+                        const idx = (cmd.id !== undefined) ? cmd.id : seq.Path;
+                        const p = this.craft.addPath(rail, cmd.args[1], cmd.args[2], cmd.args[3]);
+                        idMap.Path[idx] = p;
+                        addToRegistry('Path', p, idx);
+                        seq.Path++;
+                    }
+                    break;
+                }
             }
         }
 

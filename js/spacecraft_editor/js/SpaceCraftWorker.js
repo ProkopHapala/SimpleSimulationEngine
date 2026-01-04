@@ -8,7 +8,8 @@ const _counters = {
     Rope: 0,
     Plate: 0,
     Slider: 0,
-    Ring: 0
+    Ring: 0,
+    Path: 0
 };
 
 const _commands = [];
@@ -47,11 +48,16 @@ const api = {
         _commands.push({ method: 'Plate', args: [b1, b2, span1, span2, matName, 'Shield', nx, ny, nz, upA, upB, sideOff, weldDist], id: uid });
         return uid;
     },
-    // Args: railUid, slidingUid, calong, matName, slidingVertId, side, methodFlag
-    Slider: function (railUid, slidingUid = null, calong = 0.5, matName = null, slidingVertId = -1, side = 0, methodFlag = true) {
+    // Slider: attach vertex to a path
+    Slider: function (pathUid, slidingUid = null, calong = 0.5, matName = null, slidingVertId = -1) {
         const uid = newUid(); _counters.Slider++;
-        _commands.push({ method: 'Slider', args: [railUid, slidingUid, calong, matName, slidingVertId, side, methodFlag], id: uid });
-        console.log(`[Worker] api.Slider: rail=${railUid} sliding=${slidingUid} calong=${calong} side=${side}`);
+        _commands.push({ method: 'Slider', args: [pathUid, slidingUid, calong, matName, slidingVertId], id: uid });
+        return uid;
+    },
+    // Path: defined by a rail and side
+    Path: function (railUid, side = 0, methodFlag = true, radius = 0.35) {
+        const uid = newUid(); _counters.Path++;
+        _commands.push({ method: 'Path', args: [railUid, side, methodFlag, radius], id: uid });
         return uid;
     },
     Ring: function (pos, dir, up = null, R, nseg, wh, matName, st, phase = 0.0) {
@@ -63,6 +69,20 @@ const api = {
     Ring3P: function (p1, p2, p3, nseg, wh, matName, st, phase = 0.0) {
         const uid = newUid(); _counters.Ring++;
         _commands.push({ method: 'Ring3P', args: [p1, p2, p3, nseg, wh, matName, st, phase], id: uid });
+        return uid;
+    },
+
+    GetGirderCircleIntersection: function (girderUid, center, axis, radius) {
+        // This is a synchronous-looking call in the worker but it needs to be handled
+        // For now, we'll push it as a command, but if the user needs the result back 
+        // in the same script, we'd need a different mechanism (like SharedArrayBuffer or synchronous messaging).
+        // Given the current architecture, we'll assume it's for the engine to handle.
+        _commands.push({ method: 'GetGirderCircleIntersection', args: [girderUid, center, axis, radius] });
+    },
+
+    RingAttached: function (girders, params) {
+        const uid = newUid(); _counters.Ring++;
+        _commands.push({ method: 'RingAttached', args: [girders, params], id: uid });
         return uid;
     }
 };
@@ -83,6 +103,7 @@ onmessage = function (e) {
             _counters.Plate = 0;
             _counters.Slider = 0;
             _counters.Ring = 0;
+            _counters.Path = 0;
             _commands.length = 0;
 
             // Execute User Code
@@ -95,7 +116,7 @@ onmessage = function (e) {
 
             // Send commands back to main thread
             postMessage({ type: 'CMD_BATCH', cmds: _commands });
-            postMessage({ type: 'LOG', payload: `Script executed. Generated ${_counters.Node} nodes, ${_counters.Girder} girders.` });
+            postMessage({ type: 'LOG', payload: `Script executed. Generated ${_counters.Node} nodes, ${_counters.Girder} girders, ${_counters.Path} paths, ${_counters.Slider} sliders.` });
 
         } catch (err) {
             postMessage({ type: 'ERROR', payload: err.toString() });
