@@ -140,7 +140,7 @@ export function BuildCraft_blocks_js(mesh, craft) {
         const pA = new Vec3(rope.nodeA.pos[0], rope.nodeA.pos[1], rope.nodeA.pos[2]);
         const pB = new Vec3(rope.nodeB.pos[0], rope.nodeB.pos[1], rope.nodeB.pos[2]);
         const iv0 = mesh.verts.length; const ie0 = mesh.edges.length;
-        mesh.rope(pA, new Vec3().setSub(pB, pA).normalize(), new Vec3().setSub(pB, pA).norm(), rope.nseg || 10);
+        mesh.rope(pA, new Vec3().setSub(pB, pA).normalize(), new Vec3().setSub(pB, pA).norm(), rope.nseg || 10, rope.type);
         rope.pointRange = { x: iv0, y: mesh.verts.length };
         rope.stickRange = { x: ie0, y: mesh.edges.length };
     }
@@ -283,16 +283,20 @@ export function BuildCraft_aux_js(auxMesh, craft, hullMesh) {
     auxMesh.clear();
     const sliderPathStickType = 5; // Cyan
     const anchorStickType = 2;     // Green
-    // First draw all unique paths
+    // Draw all unique paths using cubic B-spline for smoothness
     for (const path of craft.paths) {
         if (path.ps.length < 2) continue;
         const rail = path.rail;
         if (!rail || rail.pointRange.x < 0) continue;
-        for (let i = 0; i < path.ps.length - (path.closed ? 0 : 1); i++) {
-            const iA = path.ps[i], iB = path.ps[(i + 1) % path.ps.length];
-            if (Number.isInteger(iA) && Number.isInteger(iB) && iA >= 0 && iA < hullMesh.verts.length && iB >= 0 && iB < hullMesh.verts.length) {
-                auxMesh.edge(auxMesh.vert(hullMesh.verts[iA].pos), auxMesh.vert(hullMesh.verts[iB].pos), sliderPathStickType);
-            }
+
+        // Number of intermediate segments to draw for smoothness
+        const drawSegments = path.ps.length * 4; 
+        let pPrev = path.interpolate(0, hullMesh.verts);
+        for (let j = 1; j <= drawSegments; j++) {
+            const t = j / drawSegments;
+            const pCurr = path.interpolate(t, hullMesh.verts);
+            auxMesh.edge(auxMesh.vert(pPrev), auxMesh.vert(pCurr), sliderPathStickType);
+            pPrev = pCurr;
         }
     }
 
@@ -300,20 +304,12 @@ export function BuildCraft_aux_js(auxMesh, craft, hullMesh) {
         const path = slider.path;
         if (!path || path.ps.length < 2) continue;
         
-        // Draw Anchor
+        // Draw Anchor using smooth interpolation
         const tRaw = (slider.calong !== undefined && slider.calong !== null) ? slider.calong : 0.5;
-        const span = path.closed ? path.ps.length : (path.ps.length - 1);
-        if (span <= 0) continue;
-        const tClamped = Math.max(0, Math.min(span - 1e-6, tRaw * span));
-        const i0 = Math.floor(tClamped) % path.ps.length, tFrac = tClamped - Math.floor(tClamped);
-        const iA = path.ps[i0], iB = path.ps[(i0 + 1) % path.ps.length];
+        const pInterp = path.interpolate(tRaw, hullMesh.verts);
         
-        if (Number.isInteger(iA) && Number.isInteger(iB) && iA >= 0 && iA < hullMesh.verts.length && iB >= 0 && iB < hullMesh.verts.length) {
-            const pA = hullMesh.verts[iA].pos, pB = hullMesh.verts[iB].pos;
-            const pInterp = new Vec3().setV(pA).addMul(new Vec3().setSub(pB, pA), tFrac);
-            if (Number.isInteger(slider.ivert) && slider.ivert >= 0 && slider.ivert < hullMesh.verts.length) {
-                auxMesh.edge(auxMesh.vert(hullMesh.verts[slider.ivert].pos), auxMesh.vert(pInterp), anchorStickType);
-            }
+        if (Number.isInteger(slider.ivert) && slider.ivert >= 0 && slider.ivert < hullMesh.verts.length) {
+            auxMesh.edge(auxMesh.vert(hullMesh.verts[slider.ivert].pos), auxMesh.vert(pInterp), anchorStickType);
         }
     }
 }

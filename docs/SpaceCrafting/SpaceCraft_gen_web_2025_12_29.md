@@ -15,12 +15,15 @@
 [x] Ring (Wheel) generation  
 [x] Slider anchors/paths (shared Path object, exact pAttach welding)  
 [x] Wheel/ring slider binding (RingAttached: one shared Path, welded pAttach verts to girders)  
+[x] Path interpolation: cubic B-spline sampling for paths/anchors (js/common_js/SplineCubic.js)  
 [ ] Shield/pusher-plate/dish (Parabola/Slab)  
 [ ] Nozzle/dish attachments (parabolic patch + connections)  
-[ ] Material/stick catalogs in JS craft  
+[x] Material/stick catalogs in JS craft (SpaceCraftWorkshop + defaults, stick areas/k/mass computed)  
+[x] JS truss export hook (SpaceCraft2Truss.js)  
 [ ] GUI hooks: run BuildCraft_blocks_js, load sample script  
 [~] Worker commands: Node/Girder/Rope/Ring/Path/Slider/Plate/Material (Material still TODO on engine side)  
 [ ] Connectivity check + OBJ export in GUI  
+
 
 Status from docs (all in `docs/SpaceCrafting`):
 - `SpaceCrafting_new.md` is the current, detailed overview of the whole pipeline (Lua → SpaceCraft → BuildCraft_blocks → Mesh::Builder2 → OBJ/truss) and open issues. It already captures legacy vs new paths, sliders, and export gaps.
@@ -195,6 +198,10 @@ Test scenario (to validate both methods)
   - **SDF picking all verts** -> reduced radius (0.05) + edge offset.
   - **GUI syntax error** from stray brace fixed.
   - **Worker/engine API** expanded to support joint-style slider parameters.
+- **Path interpolation**:
+  - Added reusable `bsplineInterpolate` helper (`js/common_js/SplineCubic.js`) and wired `Path.interpolate` to it.
+  - Closed paths (rings) wrap indices for smooth continuity; open paths clamp ends.
+  - Aux visualization uses spline sampling (4x segments) for smooth slider tracks; anchors use spline positions too.
 
 ## Session update (2026-01-04) — Path/Slider refactor & RingAttached welding
 - **Path as independent object**: Restored a standalone `Path` class; multiple sliders now share a single path (e.g., the wheel rim) rather than duplicating paths.
@@ -211,6 +218,8 @@ Test scenario (to validate both methods)
 - **Worker/Engine API**: Re-exposed `Path` command; `Slider` now takes `pathUid`. Logging updated accordingly.
 - **GUI**: Slider list resolves rail via `s.path?.rail` to avoid undefined id errors after the refactor.
 - **Mesh build**: `BuildCraft_blocks_js` uses `pAttach` to create and weld new vertices; paths are precomputed once and reused across sliders.
+- **JS material/stick catalogs**: `SpaceCraftWorkshop` now seeds default materials (Steel/Aluminum/CarbonFiber) and derives stick area, linear density, kPull/kPush, Spull/Spush, damping, and pre-strain. Stick names are resolved to indices for mesh edges so both rendering and physics share IDs. Panel materials are scaffolded but not yet used in the builder.
+- **JS truss export hook**: `SpaceCraft2Truss.js` maps `MeshBuilder` edges to simulation bonds using workshop stick types (mass split to endpoints, kPush/kPull/l0/damping). Strength limits are passed when available. Export currently assumes a `TrussDynamics`-like API; GUI/worker wiring still TODO.
 
 ### Takeaways / guardrails
 - Keep `Path` independent and shared; do not store path params on `Slider`.

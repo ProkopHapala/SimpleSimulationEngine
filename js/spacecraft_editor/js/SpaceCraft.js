@@ -1,10 +1,14 @@
+import { SpaceCraftWorkshop } from './SpaceCraftWorkshop.js';
+import { Vec3 } from '../../common_js/Vec3.js';
+import { bsplineInterpolate } from '../../common_js/SplineCubic.js';
+
 // Abstract Component Classes
 
 export class Node {
     constructor(pos, size = 1, type = 0) {
         this.pos = pos; // [x, y, z]
         this.size = size;
-        this.type = type;
+        this.type = type; // StickMaterial index
         this.id = -1; // Assigned by Engine
         this.pointRange = { x: -1, y: -1 };
         this.stickRange = { x: -1, y: -1 };
@@ -16,7 +20,7 @@ export class Girder {
     constructor(nodeA, nodeB, nseg = 1, type = 0) {
         this.nodeA = nodeA; // Node object reference
         this.nodeB = nodeB; // Node object reference
-        this.type = type;
+        this.type = type; // StickMaterial index
         this.nseg = nseg; // segments along girder
         this.up = [0, 1, 0];
         this.id = -1;
@@ -91,6 +95,71 @@ export class Path {
         this.ps = [];           // Concrete vertex indices in the mesh (populated during build)
         this.closed = (rail instanceof Ring); // Paths on rings are naturally circular
     }
+
+    interpolate(t, mesh_verts) {
+        return bsplineInterpolate(t, this.ps, this.closed, mesh_verts);
+    }
+
+    // /**
+    //  * Interpolates a point along the path using cubic B-spline or linear interpolation.
+    //  * @param {number} t - Interpolation parameter (0.0 to 1.0) along the whole path.
+    //  * @param {Vec3[]} mesh_verts - The array of vertices from the concrete mesh.
+    //  * @returns {Vec3} The interpolated position.
+    //  */
+    // interpolate(t, mesh_verts) {
+    //     if (!this.ps || this.ps.length < 2) return new Vec3();
+    //     const n = this.ps.length;
+    //     const totalSegments = this.closed ? n : n - 1;
+    //     const scaledT = t * totalSegments;
+    //     let i = Math.floor(scaledT);
+    //     let f = scaledT - i;
+
+    //     if (i >= totalSegments) {
+    //         if (this.closed) {
+    //             i = i % n;
+    //         } else {
+    //             i = totalSegments - 1;
+    //             f = 1.0;
+    //         }
+    //     }
+
+    //     const getPt = (idx) => {
+    //         if (this.closed) {
+    //             idx = (idx % n + n) % n;
+    //         } else {
+    //             idx = Math.max(0, Math.min(n - 1, idx));
+    //         }
+    //         const vIdx = this.ps[idx];
+    //         const v = mesh_verts ? mesh_verts[vIdx] : null;
+    //         // MeshBuilder stores verts as objects with a `pos` Vec3; fall back to zero vec if missing
+    //         const p = (v && v.pos) ? v.pos : v;
+    //         if (!p || !isFinite(p.x) || !isFinite(p.y) || !isFinite(p.z)) {
+    //             return new Vec3(); // safe fallback to avoid NaNs
+    //         }
+    //         return p;
+    //     };
+
+    //     // Cubic B-spline interpolation for smooth movement
+    //     const p0 = getPt(i - 1);
+    //     const p1 = getPt(i);
+    //     const p2 = getPt(i + 1);
+    //     const p3 = getPt(i + 2);
+
+    //     const f2 = f * f;
+    //     const f3 = f2 * f;
+
+    //     // B-spline basis functions
+    //     const b0 = (1 - 3 * f + 3 * f2 - f3) / 6.0;
+    //     const b1 = (4 - 6 * f2 + 3 * f3) / 6.0;
+    //     const b2 = (1 + 3 * f + 3 * f2 - 3 * f3) / 6.0;
+    //     const b3 = f3 / 6.0;
+
+    //     const res = new Vec3();
+    //     res.x = p0.x * b0 + p1.x * b1 + p2.x * b2 + p3.x * b3;
+    //     res.y = p0.y * b0 + p1.y * b1 + p2.y * b2 + p3.y * b3;
+    //     res.z = p0.z * b0 + p1.z * b1 + p2.z * b2 + p3.z * b3;
+    //     return res;
+    // }
 }
 
 /**
@@ -168,6 +237,7 @@ export class SpaceCraft {
         this.rings = [];
         this.paths = [];
         this.sliders = [];
+        this.workshop = new SpaceCraftWorkshop();
     }
 
     clear() {
