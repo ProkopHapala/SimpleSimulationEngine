@@ -92,7 +92,7 @@ class PBCsystem{ public:
         printf( "ruler.ntot %i \n", ruler.ntot );
         // alocate cells
         if(cellNs)    delete [] cellNs;    cellNs    = new int[ruler.ntot  ];
-        if(cell2atom) delete [] cell2atom; cell2atom = new int[ruler.ntot  ];
+        if(cell2atom) delete [] cell2atom; cell2atom = new int[ruler.ntot+1]; // +1 sentinel used in atomsToCells
 
         //printf( "pmin %f %f %f\n",pmin.x,pmin.y,pmin.z);
         //printf( "pmax %f %f %f\n",pmax.x,pmax.y,pmax.z );

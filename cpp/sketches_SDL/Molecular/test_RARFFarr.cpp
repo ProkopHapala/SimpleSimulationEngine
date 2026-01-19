@@ -397,7 +397,11 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:{
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
                     printf( "remove atom %i \n", ipicked );
-                    ff.ignoreAtoms[ ipicked ] = true;
+                    if(ipicked>=0 && ipicked<ff.natom){
+                        ff.ignoreAtoms[ ipicked ] = true;
+                    }else{
+                        ipicked = -1;
+                    }
                     }break;
             }
             break;

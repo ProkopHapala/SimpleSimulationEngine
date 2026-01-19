@@ -74,15 +74,17 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    mol.loadXYZ_bas( "data/CH4.bas" );
+    int nloaded = mol.loadXYZ_bas( "data/CH4.bas" );
+    if( nloaded<=0 ) nloaded = mol.loadXYZ_bas( "../../cpp/sketches_SDL/Molecular/data/CH4.bas" );
+    if( nloaded<=0 ){ fprintf(stderr,"ERROR: failed to load CH4.bas (tried data/CH4.bas and ../../cpp/sketches_SDL/Molecular/data/CH4.bas); aborting test.\n"); return; }
 
     double Rmax = 1.8;
 
     mol.findBonds_brute( Rmax );
 
     printf( "mol.nbonds %i \n", mol.nbonds );
-
-    std::vector<int> neighs[mol.natoms];
+    if( mol.natoms<=0 ){ fprintf(stderr,"ERROR: molecule has no atoms after load; aborting.\n"); return; }
+    std::vector<std::vector<int>> neighs( mol.natoms );
 
     for(int i=0; i<mol.nbonds; i++){
         Vec2i& b = mol.bond2atom[i];

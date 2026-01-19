@@ -30,6 +30,36 @@
 //#include "e2FF.h"
 
 
+/*
+
+
+
+What it’s supposed to do
+- It’s a tiny sandbox to relax four “orbital” directions (stored in `Mat4d orbs`) toward an sp³-like orthonormal set while minimizing projections onto a set of sample points `ps`. The energy per orbital is `E = K * (s + √2 p·x)²` for each point `p`, where `x` is the orbital direction and `s` its scalar part. The loop:
+  - Accumulates forces `f` from those projections.
+  - Projects `f` to be orthogonal to the current orthonormal basis (`f.makeOrthoU(orbs)`).
+  - Steps the orbitals by `orbs.add_mul(f, step)`, then re-orthonormalizes with `orbs.orthoRun`.
+- Drawing just shows the four orbit directions as arrows plus the force vectors at their tips, and the sample points.
+
+Why it never converges
+1) It never runs: `bRun` defaults to false and there is no key handling to toggle it, so the update block is skipped.
+2) The update steps the wrong way: you add `+K*cik` to the forces and then `orbs.add_mul(f, 0.1)`, i.e., you’re doing gradient ascent on a positive energy. It should be the negative gradient to descend.
+3) Step is large / no damping: fixed step 0.1 with no line search or damping; even with the right sign it can oscillate.
+4) Poor/problematic objective: `ps` contains only one randomly placed point on the unit sphere; the energy landscape is flat/degenerate for three of the four orbitals, so there’s no meaningful minimum to “converge” to.
+5) Orthonormalization is done after each step but only 10 inner iterations; if the step is large the Gram-Schmidt cleanup may not fix divergence.
+
+Minimal fixes to get convergence
+- Enable running: add an input toggle (e.g., SPACE) to flip `bRun`, or set `bRun = true` by default.
+- Use gradient descent: flip the sign of the update, e.g. `orbs.add_mul(f, -dt)` with `dt` small (try 0.01 or smaller).
+- Reduce step / normalize force: scale `f` (e.g., `f.mul(1e-2)` or use a max-norm clamp) before applying.
+- Make the objective well-defined: add multiple sample points `ps` (e.g., four tetrahedral directions) so all four orbitals feel forces; otherwise three directions are unconstrained.
+- Optionally increase orthonormalization iterations or call `orbs.normalize()` each frame if you stick with big steps.
+
+With those changes, you should see the orbit set settle to a stable orthonormal configuration; without them it stays static (bRun false) or diverges (wrong sign/step).
+
+*/
+
+
 class TestAppSp3Space: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
@@ -38,7 +68,7 @@ class TestAppSp3Space: public AppSDL2OGL_3D { public:
     bool bRun = false;
 
 
-    std::vector<Vec3d> ps{ 1,Vec3dZero };
+    std::vector<Vec3d> ps{ 4,Vec3dZero };
 
 
     Mat4d orbs;
@@ -190,13 +220,18 @@ void TestAppSp3Space::draw(){
     }
 
     f.makeOrthoU( orbs );
+
+    // optional clamp to avoid exploding steps
+    double fmax = 0.0;
+    for(int i=0;i<4;i++){ fmax=fmax>f.vecs[i].norm()?fmax:f.vecs[i].norm(); }
+    if(fmax>1.0){ f.mul(1.0/fmax); }
     //for(int i=0; i<4; i++){  // remove force component which breaks normality
     //    f.vecs[i].add_mul( orbs.vecs[i], -orbs.vecs[i].dot( f.vecs[i] ) );
     //}
 
     if(bRun){
-        orbs.add_mul( f, 0.1 );
-
+        const double dt = 0.1; // smaller, stable step
+        orbs.add_mul( f, -dt );  // descend energy
         orbs.orthoRun( 1e-6, 10 );
     }
     //orbs.orthoRun( 1e-6, 10 );

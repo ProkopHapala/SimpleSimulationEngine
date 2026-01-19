@@ -34,7 +34,7 @@ class MultipoleGrid{ public:
     void allocate( int nAtomMax_, Vec3i nxyz ){
         nAtomMax = nAtomMax_; ruler.setn(nxyz);
         cellNs    = new int [ruler.ntot];
-        cell2atom = new int [ruler.ntot];
+        cell2atom = new int [ruler.ntot+1]; // +1 for sentinel used in atomsToCells
         coefs     = new double[ruler.ntot*perCell];
         atoms     = new Atom[nAtomMax_];
         atom2cell = new int [nAtomMax_];
@@ -76,7 +76,7 @@ class MultipoleGrid{ public:
             nsum         += cellNs[i];
             cellNs[i]     = 0;
         }
-        cell2atom[ruler.ntot] = n;
+        cell2atom[ruler.ntot] = n; // sentinel
         printf("DEBUG 4 \n");
         //for(int i=0; i<ncell; i++){ printf( "cell2atom[%i] = %i \n", i, cell2atom[i] ); }
         for(int i=0; i<n; i++){

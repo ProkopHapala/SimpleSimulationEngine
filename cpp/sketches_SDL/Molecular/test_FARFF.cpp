@@ -183,6 +183,7 @@ void TestAppFARFF::draw(){
         // ToDo : We should properly convert velocities
         opt.bindOrAlloc( 3*ff.nDOF, (double*)ff.dofs, 0, (double*)ff.fdofs, 0 );
         opt.cleanVel( );
+        if(ipicked>=ff.natom) ipicked=-1;
     }
 
     perFrame=100;
@@ -297,7 +298,10 @@ void TestAppFARFF::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:{
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
                     printf( "remove atom %i \n", ipicked );
-                    ff.ignoreAtoms[ ipicked ] = true;
+                    //ff.ignoreAtoms[ ipicked ] = true;
+                    if(ipicked>=0 && ipicked<ff.natom){ 
+                        ff.ignoreAtoms[ ipicked ] = true;
+                    }
                 }break;
             }break;
         case SDL_MOUSEBUTTONUP:

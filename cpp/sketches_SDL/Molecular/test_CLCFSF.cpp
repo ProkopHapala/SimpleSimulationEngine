@@ -197,6 +197,7 @@ void test_Pauli( CLCFSF& solver, Plot2D& plot1 ){
         //printf( "[%i] x %g S %g T %g \n", i, line_E->xs[i] , Sij, Tij );
         line_E->ys[i] = Sij/(1-Sij)*( Tii + Tjj + 2*Tij/Sij );
     }
+    
 }
 
 

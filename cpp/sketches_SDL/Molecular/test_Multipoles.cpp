@@ -31,6 +31,24 @@ double  charges[nbodies];
 Vec3d   pos    [nbodies];
 
 
+/*
+
+Here’s what the `test_Multipoles` demo currently does:
+
+- Generates 16 random point charges (`charges`, `pos`) in a cube and builds a MultipoleGrid.h with a fixed 8×8×8 grid and step 8.0. It projects each charge into grid cells via atomsToCells from PBCsystem.h, accumulating multipole coefficients per cell.
+- Builds a triclinic periodic system PBCsystem (PBCsystem.h) with a random cell matrix scaled by 15, populates 50 random atom positions inside that cell, sets up a cubic ruler for neighbor search (initRuler with cutoff 6.0), then maps all periodic images that fall into the ruler box into cell lists via atomsToCells.
+- In draw() from test_FARFF.cpp it visualizes the periodic positions (`pbc_pos`) cell-by-cell over time and draws the overall ruler bounding box plus the triclinic cell extents for reference. Atom rendering is minimal (crosses), and the multipole coefficients are not visualized yet.
+
+So the demo is mainly exercising:
+1) Mapping scattered charges into a regular multipole grid (no field evaluation shown).
+2) Building periodic neighbor cell lists for a triclinic cell and visualizing which atoms/images are in a chosen cell.
+
+No additional physics (forces/energies) or GUI controls beyond the default camera/perspective toggle.
+
+*/
+
+
+
 inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );

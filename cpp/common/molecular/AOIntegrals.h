@@ -148,7 +148,12 @@ void projectFr( int nr, int nz, int nrf, double dz, double frStep, double rs_sca
                 //int    is  = (int)s+1;
                 //double dr  = s - is;
                 //f[i] = Spline_Hermite::val( dr, fr+is ) * Y;
-                f[i] = Spline_Hermite::value( r*invdr, fr ) * Y;
+                double s = r*invdr;
+                // keep spline index inside allocated samples; allow for +/-2 neighbor access
+                double smin=2.0, smax=nrf-6;
+                if(smax<smin) smax=smin; // tiny tables fallback
+                if(s<smin) s=smin; else if(s>smax) s=smax;
+                f[i] = Spline_Hermite::value( s, fr ) * Y;
                 //printf( "projectFr[%i,%i] r %g f %g |Y %g \n", ir,iz,  r,  f[i], Y );
                 //printf( "projectFr[%i,%i] xy %g z %g r %g \n", ir,iz,  rxy, z, r );
                 //printf( "projectFr[%i,%i] %g,%g,%g   %g | %g %i \n", ir,iz,  rxy, z, r, f[i],Y,   s, is );
@@ -187,8 +192,12 @@ void projectFrLaplace( int nr, int nz, int nrf, double dz, double frStep, double
                 else           { Y=M_SQRT1_2*rxy*invr; } // py   // M_SQRT1_2 comes from angular integral:  sqrt(2) = sqrt( Integral{ cos(phi)^2 } )
                 // https://en.wikipedia.org/wiki/Laplace%27s_equation#Forms_in_different_coordinate_systems
                 // L{f} =  1/r^2 d(r^2 * d f ) = 1/r^2 ( 2*r*df + r^2*ddf ) = 2*df/r + ddf
+                double s = r*invdr;
+                double smin=2.0, smax=nrf-6;
+                if(smax<smin) smax=smin;
+                if(s<smin) s=smin; else if(s>smax) s=smax;
                 double y,dy,ddy;
-                Spline_Hermite::valdd( r*invdr, fr, y, dy, ddy );
+                Spline_Hermite::valdd( s, fr, y, dy, ddy );
                 if(f) f [i] = y*Y;                  // function         ( x,y )
                 if(Lf)Lf[i] = (2*dy*invr + ddy)*Y;  // Laplace{function}( x,y )
                 //f[i] = Spline_Hermite::value( r*invdr, fr ) * Y;

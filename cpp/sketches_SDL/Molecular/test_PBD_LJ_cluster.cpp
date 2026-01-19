@@ -33,8 +33,26 @@
 // /home/prokop/git/ProbeParticleModel_OclPy3/cpp/ReactiveFF.cpp
 
 
-// ============= Global Variables
+/*
 
+- Goal: simple particle-based dynamics of clustered atoms with short-range (Lennard-Jones–like) interactions and distance constraints, visualized in 3D.
+- Core engine: NBFF_SR.owns atom positions `apos`, velocities, forces, and parameters for nonbonded collisions (`Rcol`) and LJ-like cutoff (`Rcut`, `R0_nb`, `E0_nb`, `K_nb`, `Rf`). It supports:
+  - Cluster construction: atoms grouped into clusters (see [make_atoms](test_PBD_LJ_cluster.cpp) in the test) and bonded with a Gauss–Seidel style projection (`solve_cluster_bonds_*`) to enforce roughly constant bond lengths.
+  - Brute-force short-range evaluation ([evalSortRange_brute](NBFF_SR.h)) to compute pair forces/energies inside `Rcut`.
+  - Simple collision resolution ([solve_sphere_colision_brute](NBFF_SR.h)) separating overlapping atoms within `Rcol`.
+  - Basic time stepping ([step](NBFF_SR.h), called via [run()](test_PBD_LJ_cluster.cpp) in the test) that does force eval + integration (in NBFF_SR.cpp if present; here [step](NBFF_SR.h) is invoked from the test).
+- The test app ([TestAppRARFF](test_PBD_LJ_cluster.cpp)):
+  - Builds a few clusters of atoms via [make_atoms(4, 8, 5.0, 2.0)](test_PBD_LJ_cluster.cpp)—four clusters with eight atoms each, scattered in space.
+  - Precomputes a 1D potential plot for the chosen LJ-like functions ([makePotentialPlot](test_PBD_LJ_cluster.cpp)) shown in the HUD.
+  - Each frame: if running, calls [run(1)](test_PBD_LJ_cluster.cpp) → [ff.step(0.5)](NBFF_SR.h) to advance dynamics; then draws atoms as spheres and bonds as lines.
+  - Interaction: left-click picks an atom (no drag forces wired yet); right-click placeholder is present but commented. SPACE toggles run/pause; camera/perspective toggles via inherited keys.
+  - Visuals: atoms rendered; bonds drawn; can toggle bounding boxes (commented out). HUD shows the potential curves.
+
+So this demo is a sandbox to simulate and visualize clustered atoms connected by constraints with a simple short-range repulsion/attraction and collision handling, plus a force/potential plot for reference.
+
+*/
+
+// ============= Global Variables
 
 NBFF_SR ff;
 

@@ -40,6 +40,32 @@
 //#include "eFF.h"
 //#include "e2FF.h"
 
+
+/*
+
+Summary of what test_spRotations.cpp does:
+
+- It sets up a toy molecular orbital overlap test between two “atoms” at positions `p1` and `p2` with given orbital coefficients (`psi1`, `psi2`) and decay rates (`beta1`, `beta2`). It builds functions `wf`, `wf2D_1`, `wf2D_2` for evaluating Slater-like orbitals and their products.
+- It numerically integrates overlap and related radial/angular components:
+  - Builds a radial table `frs` of exp(-βr), then uses `integrateSP` / `projectFr` (from `AOIntegrals.h`) to project those radial functions onto cylindrical grids and accumulate overlap integrals (Iss, Isz, Izs, Izz, Iyy) along z.
+  - It plots the resulting integrals via multiple `DataLine2D` lines and fits a small polynomial (`polyFit`/`polyeval`) to one component for comparison.
+- There’s an “auto-approx” demo at the bottom:
+  - Constructs `Approx::AutoApprox aaprox` with a set of powers and polynomial orders, fills sample x/weights/targets, prepares powers, tries variants, and prints chosen orders and coefficients. This is followed by `exit(0)`, so the rendering part below doesn’t run.
+- Rendering (if not exited) would:
+  - Generate an OpenGL display list drawing iso-surfaces of the orbital product `wf` inside a box, and draw axes/box.
+
+Key components by section:
+- Lines ~85–144: define atom positions/orbitals, helper lambdas for wavefunctions.
+- Lines ~128–278: set up integration grids, compute overlaps (Iss, Isz, …), fill plots, do a polynomial fit, print diagnostics.
+- Lines ~306–344: run AutoApprox fitting demo (currently exits).
+- Lines ~346 onward: OpenGL display list and draw loop (not reached due to `exit(0)`).
+
+If you want the visual/interactive part, remove or comment out the `exit(0)` near the AutoApprox block so the display list and render path execute.
+
+*/
+
+
+
 class TestAppSp3Space: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
@@ -167,7 +193,7 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //integrateCylFunc( wf2D_1, wf2D_2, 0, n, dx, Rmax, Is2D, 1., 1. );
 
     double dr   = 0.1;
-    int    nr   = Rmax/dr + 3;
+    int    nr   = Rmax/dr + 8; // extra padding to keep spline interpolation in-bounds
     double* frs = new double[nr];
 
     for(int ir=0; ir<nr; ir++){
@@ -309,7 +335,7 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
 
     int npoints = 100;
     int npows   = 4;
-    int npolys  = 15;
+    int npolys  = 16; // match initializer length
     //double pows [npows] {1,2,4,8};
     double pows [npows] {-1,-2,-4,-8};
     int    polys[npolys]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};

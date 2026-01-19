@@ -105,12 +105,13 @@ TestConfDynamics::TestConfDynamics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 	glEndList();
 
 	confWorld.init( 200 );
+    confWorld.optimizer.getForce = [](int, double*, double*){}; // avoid null callback inside DynamicOpt::optStep
 	confWorld.pos->set(2.0,2.0,0.0);
 
 	//confWorld.storeThisConf();
     //confWorld.confs[0].print();
 
-    confWorld.objectiveFuncDerivs = externalForces;
+	confWorld.objectiveFuncDerivs = externalForces;
 
 	confWorld.mutate_near();
     ((RBodyPose*)confWorld.optimizer.pos)->print();

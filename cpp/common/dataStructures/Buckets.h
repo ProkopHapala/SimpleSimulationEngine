@@ -15,6 +15,10 @@ class Buckets{ public:
     int  nobjSize=-1;
     int* obj2cell=0; 
 
+    bool bPrintInvalidEntries=true;
+    bool bExitOnInvalidEntries=true;
+
+
     inline void clean(){ for(int k=0; k<ncell; k++ ){ cellNs[k]=0; } }
     inline void cleanO2C( int icell=-1 ){ for(int i=0; i<nobj; i++ ){ obj2cell[i]=icell; } }
 
@@ -27,7 +31,11 @@ class Buckets{ public:
     inline void count( int nobj, int* obj2cell ){ 
         for(int i=0; i<nobj; i++ ){ 
             int ic = obj2cell[i]; 
-            //printf( "obj[%i ]-> cell %i \n", i, ic );
+            if((ic<0)||(ic>=ncell)){ 
+                if( bPrintInvalidEntries  )[[unlikely]]{ printf( "obj[%i ]-> cell %i \n", i, ic );}
+                if( bExitOnInvalidEntries )[[unlikely]]{ exit(1); }
+                continue; // guard invalid entries
+            }
             cellNs[ ic ]++;  
         } 
     }
@@ -58,11 +66,10 @@ class Buckets{ public:
      */
     inline void objectsToCells( int nobj, int* obj2cell ){ 
         for(int i=0; i<nobj; i++){
-            //printf( "[%i] ", i );
             int k =  obj2cell[i];
+            if((k<0)||(k>=ncell)) continue;
             int& ni = cellNs[k];
             int j =  cellI0s[k] + ni;
-            //printf( " k %i j %i | nobj %i \n", k, j, nobj );
             cell2obj[j] = i;
             ni++;
         }
