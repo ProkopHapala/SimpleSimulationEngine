@@ -7,12 +7,33 @@
         body { margin: 0; background: #111; color: white; font-family: sans-serif; overflow: hidden; }
         canvas { display: block; width: 100vw; height: 100vh; }
         #stats { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; pointer-events: none; }
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #444; display: flex; gap: 10px; flex-wrap: wrap; z-index: 10; pointer-events: auto; }
+        #controls label { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+        #controls input { width: 70px; padding: 4px; background: #222; color: #eee; border: 1px solid #555; }
+        #controls button { padding: 6px 10px; background: #444; color: #eee; border: 1px solid #666; cursor: pointer; }
+        #controls button:hover { background: #555; }
     </style>
 </head>
 <body>
+    <div id="controls">
+        <label>dt <input id="inpDt" type="number" step="0.001" min="0.001" max="1" /></label>
+        <label>damp <input id="inpDamp" type="number" step="0.001" min="0.0" max="1" /></label>
+        <label>Rcut <input id="inpRcut" type="number" step="0.1" min="0.1" max="100" /></label>
+        <label>substeps <input id="inpSub" type="number" step="1" min="1" max="16" /></label>
+        <label>mode
+            <select id="selAlg" style="background:#222;color:#eee;border:1px solid #555;padding:4px;">
+                <option value="grid" selected>Grid</option>
+                <option value="brute">Brute</option>
+            </select>
+        </label>
+        <label>N <input id="inpN" type="number" step="1024" min="64" max="65536" /></label>
+        <button id="btnApplyN">Apply N (reload)</button>
+        <button id="btnReset">Reset</button>
+    </div>
     <div id="stats">
         <div>Particles: <span id="pCount"></span></div>
         <div>FPS: <span id="fps"></span></div>
+        <div>Picked: <span id="picked"></span></div>
     </div>
     <canvas id="canvas"></canvas>
 
@@ -20,16 +41,28 @@
 // =========================================================
 // CONFIGURATION
 // =========================================================
-// Must be power of 2 for simplified Bitonic Sort logic
-const NUM_PARTICLES = 16384; 
+// Allow particle count via URL (?n=...) and clamp to power-of-two for sort
+const urlN = parseInt(new URLSearchParams(location.search).get('n') || '16384');
+const NUM_PARTICLES = Math.pow(2, Math.max(6, Math.min(16, Math.round(Math.log2(Math.max(64, Math.min(65536, urlN))))))); // [64,65536]
 const GRID_DIM = 64; // Grid resolution (64x64 buckets)
-const CELL_SIZE = 0.5; // World units per cell
+let rcutVal = 2.0; // default cutoff
+let r2maxVal = rcutVal * rcutVal;
+const CELL_SIZE = 2.0; // World units per cell (must be >= RCUT)
+if (CELL_SIZE < rcutVal) { throw new Error(`CELL_SIZE(${CELL_SIZE}) must be >= RCUT(${rcutVal}) to not miss interactions`); }
 const GRID_TOTAL_CELLS = GRID_DIM * GRID_DIM;
+const WORLD_SIZE = GRID_DIM * CELL_SIZE;
+const PARTICLE_SIZE_PX = 8.0; // render size in pixels
+
+let dtVal = 0.02;     // dt
+let dampVal = 0.95;  // damping
+let substeps = 1;
+let algMode = 'grid';
+const MAX_BRUTE = 2048;
 
 const SIM_PARAMS = new Float32Array([
-    0.02,  // dt (matches C++ dt_frame/per_frame)
-    0.996, // damping factor per step (1 - 0.2*0.02)
-    4.0,   // r2max (cutoff squared matches C++)
+    dtVal,
+    dampVal,
+    r2maxVal,
     GRID_DIM,
     CELL_SIZE
 ]);
@@ -61,6 +94,41 @@ const commonWGSL = `
     };
 `;
 
+// 5a. Brute-force forces (reference, O(N^2))
+const computeForcesBruteWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read> particlesIn : array<Particle>;
+    @group(0) @binding(2) var<storage, read_write> forces : array<vec2<f32>>;
+
+    fn pairwiseForce(pa: vec2<f32>, pb: vec2<f32>, qq: f32, r2max: f32) -> vec2<f32> {
+        let d = pa - pb;
+        let r2 = dot(d, d);
+        if (r2 < r2max && r2 > 0.0001) {
+            let mr2 = r2max - r2;
+            let fr = (1.0/(r2 + 0.01) + qq - 0.1) * mr2 * mr2;
+            return d * fr;
+        }
+        return vec2<f32>(0.0);
+    }
+
+    @compute @workgroup_size(256)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+        let index = GlobalInvocationID.x;
+        if (index >= ${NUM_PARTICLES}) { return; }
+
+        let p = particlesIn[index];
+        var force = vec2<f32>(0.0);
+        for (var j = 0u; j < ${NUM_PARTICLES}u; j++) {
+            if (j == index) { continue; }
+            let otherP = particlesIn[j];
+            let qq = p.charge * otherP.charge;
+            force += pairwiseForce(p.pos, otherP.pos, qq, params.r2max);
+        }
+        forces[index] = force;
+    }
+`;
+
 // 1. Compute Cell IDs and reset offsets
 const computeBinningWGSL = `
     ${commonWGSL}
@@ -72,9 +140,9 @@ const computeBinningWGSL = `
 
     fn getGridHash(pos: vec2<f32>) -> u32 {
         let gridPos = floor(pos / params.cellSize);
-        // Simple 2D hash/wrap to 1D index
-        let x = i32(gridPos.x) & i32(params.gridDim - 1.0);
-        let y = i32(gridPos.y) & i32(params.gridDim - 1.0);
+        // Clamp to domain [0, gridDim-1]
+        let x = i32(clamp(gridPos.x, 0.0, params.gridDim - 1.0));
+        let y = i32(clamp(gridPos.y, 0.0, params.gridDim - 1.0));
         return u32(y * i32(params.gridDim) + x);
     }
 
@@ -95,6 +163,15 @@ const computeBinningWGSL = `
         
         sortBuffer[index].key = cellID;
         sortBuffer[index].value = index;
+    }
+`;
+
+// 1b. Clear Offsets (Helper)
+const computeClearOffsetsWGSL = `
+    @group(0) @binding(0) var<storage, read_write> cellOffsets : array<u32>;
+    @compute @workgroup_size(256)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+        if (GlobalInvocationID.x < ${GRID_TOTAL_CELLS}) { cellOffsets[GlobalInvocationID.x] = 0xFFFFFFFFu; }
     }
 `;
 
@@ -169,13 +246,13 @@ const computeClearCountsWGSL = `
         }
 `;
 
-// 5. Physics Simulation
-const computePhysicsWGSL = `
+// 5. Forces (order-independent)
+const computeForcesWGSL = `
     ${commonWGSL}
 
     @group(0) @binding(0) var<uniform> params : Params;
     @group(0) @binding(1) var<storage, read> particlesIn : array<Particle>;
-    @group(0) @binding(2) var<storage, read_write> particlesOut : array<Particle>;
+    @group(0) @binding(2) var<storage, read_write> forces : array<vec2<f32>>;
     @group(0) @binding(3) var<storage, read> sortBuffer : array<SortKeyPair>;
     @group(0) @binding(4) var<storage, read> cellOffsets : array<u32>;
     @group(0) @binding(5) var<storage, read_write> cellCounts : array<atomic<u32>>;
@@ -203,15 +280,15 @@ const computePhysicsWGSL = `
 
         // Grid Traversal
         let gridPos = floor(p.pos / params.cellSize);
-        let gx = i32(gridPos.x);
-        let gy = i32(gridPos.y);
+        let gx = i32(clamp(gridPos.x, 0.0, params.gridDim - 1.0));
+        let gy = i32(clamp(gridPos.y, 0.0, params.gridDim - 1.0));
 
         // Loop over 3x3 neighbors
         for (var y = -1; y <= 1; y++) {
             for (var x = -1; x <= 1; x++) {
-                // Wrap coordinates
-                let nx = (gx + x) & i32(params.gridDim - 1.0);
-                let ny = (gy + y) & i32(params.gridDim - 1.0);
+                let nx = gx + x;
+                let ny = gy + y;
+                if (nx < 0 || ny < 0 || nx >= i32(params.gridDim) || ny >= i32(params.gridDim)) { continue; }
                 let cellKey = u32(ny * i32(params.gridDim) + nx);
 
                 let start = cellOffsets[cellKey];
@@ -232,18 +309,35 @@ const computePhysicsWGSL = `
                 }
             }
         }
+        forces[index] = force;
+    }
+`;
 
-        // Integration (Symplectic Euler-ish based on your code)
-        p.vel += force * params.dt; // Force to Velocity
+// 6. Integrate (separate pass to preserve ordering-independence)
+const computeIntegrateWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read> particlesIn : array<Particle>;
+    @group(0) @binding(2) var<storage, read> forces : array<vec2<f32>>;
+    @group(0) @binding(3) var<storage, read_write> particlesOut : array<Particle>;
+
+    @compute @workgroup_size(256)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+        let index = GlobalInvocationID.x;
+        if (index >= ${NUM_PARTICLES}) { return; }
+
+        var p = particlesIn[index];
+        let f = forces[index];
+
+        p.vel += f * params.dt;
         p.vel *= params.damping;
         p.pos += p.vel * params.dt;
 
-        // Boundary Wrap (Optional, keeps particles in view)
-        let worldSize = params.gridDim * params.cellSize;
-        if(p.pos.x < 0.0) { p.pos.x += worldSize; }
-        if(p.pos.x > worldSize) { p.pos.x -= worldSize; }
-        if(p.pos.y < 0.0) { p.pos.y += worldSize; }
-        if(p.pos.y > worldSize) { p.pos.y -= worldSize; }
+        let bound = params.gridDim * params.cellSize;
+        if(p.pos.x < 0.0) { p.pos.x = 0.0; p.vel.x *= -1.0; }
+        if(p.pos.x > bound) { p.pos.x = bound; p.vel.x *= -1.0; }
+        if(p.pos.y < 0.0) { p.pos.y = 0.0; p.vel.y *= -1.0; }
+        if(p.pos.y > bound) { p.pos.y = bound; p.vel.y *= -1.0; }
 
         particlesOut[index] = p;
     }
@@ -274,7 +368,7 @@ const renderWGSL = `
 
         // Create a quad
         var pos = vec2<f32>(0.0);
-        let size = 3.0; // pixel size
+        let size = ${PARTICLE_SIZE_PX.toFixed(1)}; // pixel size
         let corner = vIdx % 6u;
         
         // Standard quad indices: 0, 1, 2, 0, 2, 3
@@ -285,17 +379,16 @@ const renderWGSL = `
 
         output.uv = pos; // for circle drawing
 
-        // Map simulation world to NDC [-1, 1]
-        // Assuming simulation runs in [0, 32]
-        let worldScale = 1.0 / 16.0; // Zoom factor
-        let centerOffset = vec2<f32>(-1.0, -1.0);
-        
-        let screenPos = (p.pos * worldScale) + centerOffset;
-        
-        // Pixel alignment
+        // Map simulation world [0, worldSize] to NDC [-1, 1], correcting aspect
+        let worldSize = ${WORLD_SIZE.toFixed(1)};
+        var ndc = (p.pos / worldSize) * 2.0 - 1.0;
         let aspect = gridParams.x / gridParams.y;
-        let finalPos = screenPos + (pos * size / gridParams);
-        output.Position = vec4<f32>(finalPos.x / aspect, finalPos.y, 0.0, 1.0);
+        ndc.x = ndc.x / aspect;
+        
+        // Pixel-aligned quad size in NDC per axis
+        let sizeNdc = vec2<f32>(size / gridParams.x * 2.0, size / gridParams.y * 2.0);
+        let finalPos = ndc + pos * sizeNdc;
+        output.Position = vec4<f32>(finalPos, 0.0, 1.0);
 
         // Color based on charge
         if (p.charge > 0.0) {
@@ -336,29 +429,17 @@ async function init() {
     context.configure({ device, format: presentationFormat });
 
     // --- INIT PARTICLES ---
-    const particleSize = 32; // 4 floats * 2 (pos, vel) + 1 float (charge) + 1 padding = 32 bytes roughly?
-    // Actually struct is: pos(8), vel(8), charge(4), pad(4) = 24 bytes? No, alignment rules.
-    // vec2<f32> is 8 bytes, align 8. 
-    // Struct:
-    // 0: pos.x
-    // 4: pos.y
-    // 8: vel.x
-    // 12: vel.y
-    // 16: charge
-    // 20: pad
-    // Total 24 bytes. But std140/storage alignment often pads to 32 or 16. Let's assume 32 to be safe or pack manually.
-    // In WGSL `vec2<f32>` has alignment 8. Struct stride will be multiple of largest alignment (8).
-    // Let's use 32 bytes (8 floats) for simplicity on CPU side.
-    
-    const pData = new Float32Array(NUM_PARTICLES * 8); 
+    // Particle layout MUST match WGSL struct exactly:
+    // pos.xy, vel.xy, charge, pad  => 6 floats (24 bytes)
+    const pData = new Float32Array(NUM_PARTICLES * 6);
     for(let i=0; i<NUM_PARTICLES; i++) {
-        const off = i * 8;
+        const off = i * 6;
         // Pos
         pData[off + 0] = Math.random() * GRID_DIM * CELL_SIZE;
         pData[off + 1] = Math.random() * GRID_DIM * CELL_SIZE;
-        // Vel
-        pData[off + 2] = (Math.random() - 0.5) * 0.1;
-        pData[off + 3] = (Math.random() - 0.5) * 0.1;
+        // Vel (start at rest)
+        pData[off + 2] = 0.0;
+        pData[off + 3] = 0.0;
         // Charge
         pData[off + 4] = Math.random() > 0.5 ? 1.0 : -1.0;
         // Pad
@@ -368,9 +449,10 @@ async function init() {
     // --- BUFFERS ---
     const bufSize = pData.byteLength;
     
-    const bufParticlesA = device.createBuffer({ size: bufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    const bufParticlesB = device.createBuffer({ size: bufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const bufParticlesA = device.createBuffer({ size: bufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    const bufParticlesB = device.createBuffer({ size: bufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
     device.queue.writeBuffer(bufParticlesA, 0, pData);
+    device.queue.writeBuffer(bufParticlesB, 0, pData);
 
     const bufParams = device.createBuffer({ size: SIM_PARAMS.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(bufParams, 0, SIM_PARAMS);
@@ -381,8 +463,12 @@ async function init() {
     // Grid Offsets: 1 u32 per cell
     const bufOffsets = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
     const bufCounts = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const bufForces = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
 
     const bufSortUniform = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); // algo, step
+
+    // Readback buffer for picking
+    const bufReadback = device.createBuffer({ size: bufSize, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
 
     // Render Uniforms
     const bufRenderUniform = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -414,6 +500,13 @@ async function init() {
         ]
     });
 
+    // 2b. Clear Offsets
+    const modClrOff = device.createShaderModule({ code: computeClearOffsetsWGSL });
+    const pipeClrOff = device.createComputePipeline({ layout: 'auto', compute: { module: modClrOff, entryPoint: 'main' } });
+    const bindClrOff = device.createBindGroup({ layout: pipeClrOff.getBindGroupLayout(0), entries: [
+        { binding: 0, resource: { buffer: bufOffsets } }
+    ]});
+
     // 3. Clear Counts
     const modClear = device.createShaderModule({ code: computeClearCountsWGSL });
     const pipeClear = device.createComputePipeline({ layout: 'auto', compute: { module: modClear, entryPoint: 'main' } });
@@ -434,23 +527,51 @@ async function init() {
         ]
     });
 
-    // 5. Physics
-    const modPhysics = device.createShaderModule({ code: computePhysicsWGSL });
-    const pipePhysics = device.createComputePipeline({ layout: 'auto', compute: { module: modPhysics, entryPoint: 'main' } });
-    
-    const createPhysicsBindGroup = (inBuf, outBuf) => device.createBindGroup({
-        layout: pipePhysics.getBindGroupLayout(0),
+    // 5. Forces
+    const modForce = device.createShaderModule({ code: computeForcesWGSL });
+    const pipeForce = device.createComputePipeline({ layout: 'auto', compute: { module: modForce, entryPoint: 'main' } });
+    const createForceBindGroup = (inBuf) => device.createBindGroup({
+        layout: pipeForce.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: { buffer: bufParams } },
             { binding: 1, resource: { buffer: inBuf } },
-            { binding: 2, resource: { buffer: outBuf } },
+            { binding: 2, resource: { buffer: bufForces } },
             { binding: 3, resource: { buffer: bufSort } },
             { binding: 4, resource: { buffer: bufOffsets } },
             { binding: 5, resource: { buffer: bufCounts } }
         ]
     });
-    const bindPhysicsAtoB = createPhysicsBindGroup(bufParticlesA, bufParticlesB);
-    const bindPhysicsBtoA = createPhysicsBindGroup(bufParticlesB, bufParticlesA);
+    const bindForceA = createForceBindGroup(bufParticlesA);
+    const bindForceB = createForceBindGroup(bufParticlesB);
+
+    // 5a. Brute forces
+    const modForceBrute = device.createShaderModule({ code: computeForcesBruteWGSL });
+    const pipeForceBrute = device.createComputePipeline({ layout: 'auto', compute: { module: modForceBrute, entryPoint: 'main' } });
+    const createForceBruteBindGroup = (inBuf) => device.createBindGroup({
+        layout: pipeForceBrute.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: bufParams } },
+            { binding: 1, resource: { buffer: inBuf } },
+            { binding: 2, resource: { buffer: bufForces } }
+        ]
+    });
+    const bindForceBruteA = createForceBruteBindGroup(bufParticlesA);
+    const bindForceBruteB = createForceBruteBindGroup(bufParticlesB);
+
+    // 6. Integrate
+    const modIntegrate = device.createShaderModule({ code: computeIntegrateWGSL });
+    const pipeIntegrate = device.createComputePipeline({ layout: 'auto', compute: { module: modIntegrate, entryPoint: 'main' } });
+    const createIntegrateBindGroup = (inBuf, outBuf) => device.createBindGroup({
+        layout: pipeIntegrate.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: bufParams } },
+            { binding: 1, resource: { buffer: inBuf } },
+            { binding: 2, resource: { buffer: bufForces } },
+            { binding: 3, resource: { buffer: outBuf } }
+        ]
+    });
+    const bindIntegrateAtoB = createIntegrateBindGroup(bufParticlesA, bufParticlesB);
+    const bindIntegrateBtoA = createIntegrateBindGroup(bufParticlesB, bufParticlesA);
 
     // 6. Render
     const modRender = device.createShaderModule({ code: renderWGSL });
@@ -476,76 +597,163 @@ async function init() {
     let frame = 0;
     let particlesInA = true;
 
+    const clampR2 = (v)=> Math.min(CELL_SIZE*CELL_SIZE, Math.max(0.01, v));
+    const updateParams = () => {
+        SIM_PARAMS[0] = dtVal;
+        SIM_PARAMS[1] = dampVal;
+        SIM_PARAMS[2] = clampR2(r2maxVal);
+        device.queue.writeBuffer(bufParams, 0, SIM_PARAMS);
+    };
+    const updateInputs = () => {
+        document.getElementById('inpDt').value = dtVal;
+        document.getElementById('inpDamp').value = dampVal.toFixed(3);
+        document.getElementById('inpRcut').value = Math.max(0.1, rcutVal).toFixed(2);
+        document.getElementById('inpSub').value = substeps;
+        document.getElementById('inpN').value = NUM_PARTICLES;
+    };
+
     document.getElementById('pCount').innerText = NUM_PARTICLES;
+    updateInputs();
+    document.getElementById('btnReset').onclick = () => location.reload();
+    document.getElementById('inpDt').onchange = (e)=>{ dtVal = Math.max(0.001, Math.min(1.0, parseFloat(e.target.value)||dtVal)); updateParams(); updateInputs(); };
+    document.getElementById('inpDamp').onchange = (e)=>{ dampVal = Math.max(0.0, Math.min(1.0, parseFloat(e.target.value)||dampVal)); updateParams(); updateInputs(); };
+    document.getElementById('inpRcut').onchange = (e)=>{
+        rcutVal = Math.max(0.1, parseFloat(e.target.value)||rcutVal);
+        r2maxVal = rcutVal * rcutVal;
+        if (CELL_SIZE < rcutVal) { throw new Error(`CELL_SIZE(${CELL_SIZE}) must be >= RCUT(${rcutVal}) to not miss interactions`); }
+        updateParams(); updateInputs();
+    };
+    document.getElementById('inpSub').onchange = (e)=>{ substeps = Math.max(1, Math.min(16, parseInt(e.target.value)||substeps)); updateInputs(); };
+    document.getElementById('selAlg').onchange = (e)=>{
+        algMode = e.target.value;
+        if(algMode === 'brute' && NUM_PARTICLES > MAX_BRUTE){
+            algMode = 'grid';
+            e.target.value = 'grid';
+            throw new Error(`Brute mode is O(N^2) and disabled for N>${MAX_BRUTE} (N=${NUM_PARTICLES})`);
+        }
+    };
+    document.getElementById('btnApplyN').onclick = ()=>{
+        const n = parseInt(document.getElementById('inpN').value)||NUM_PARTICLES;
+        const nClamped = Math.pow(2, Math.max(6, Math.min(16, Math.round(Math.log2(Math.max(64, Math.min(65536, n)))))));
+        const url = new URL(window.location.href);
+        url.searchParams.set('n', nClamped.toString());
+        window.location.href = url.toString();
+    };
+    updateParams();
+
+    let lastParticles = null;
+    let mappingInFlight = false;
+    const READBACK_INTERVAL = 10; // frames between readbacks to avoid flashing
+    let readbackCounter = 0;
 
     function frameStep() {
-        const cmd = device.createCommandEncoder();
+        updateParams();
 
-        // 1. Binning (Calculate Keys)
-        // Note: We always read from the *current* input buffer to calculate sorting keys
-        const bindBinningCurr = device.createBindGroup({
-            layout: pipeBinning.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: bufParams } },
-                { binding: 1, resource: { buffer: particlesInA ? bufParticlesA : bufParticlesB } },
-                { binding: 2, resource: { buffer: bufSort } },
-                { binding: 3, resource: { buffer: bufOffsets } }
-            ]
-        });
+        for (let s = 0; s < substeps; s++) {
+            if(algMode === 'grid'){
+                // NOTE: queue.writeBuffer() is not recorded into a command encoder.
+                // To guarantee each bitonic stage sees the correct (k,j), we must submit
+                // each stage separately (like debug_nbody_sort.html).
 
-        {
-            const pass = cmd.beginComputePass();
-            pass.setPipeline(pipeBinning);
-            pass.setBindGroup(0, bindBinningCurr);
-            pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
-            pass.end();
-        }
+                // 0+1+3: clearOffsets + binning + clearCounts (single submission)
+                {
+                    const enc = device.createCommandEncoder();
 
-        // 2. Bitonic Sort
-        // This requires multiple passes
-        for (let k = 2; k <= NUM_PARTICLES; k <<= 1) {
-            for (let j = k >> 1; j > 0; j >>= 1) {
-                // Update uniform for this step
-                device.queue.writeBuffer(bufSortUniform, 0, new Uint32Array([k, j]));
-                
-                const pass = cmd.beginComputePass();
-                pass.setPipeline(pipeSort);
-                pass.setBindGroup(0, bindSort);
+                    const pass0 = enc.beginComputePass();
+                    pass0.setPipeline(pipeClrOff);
+                    pass0.setBindGroup(0, bindClrOff);
+                    pass0.dispatchWorkgroups(Math.ceil(GRID_TOTAL_CELLS / 256));
+                    pass0.end();
+
+                    const bindBinningCurr = device.createBindGroup({
+                        layout: pipeBinning.getBindGroupLayout(0),
+                        entries: [
+                            { binding: 0, resource: { buffer: bufParams } },
+                            { binding: 1, resource: { buffer: particlesInA ? bufParticlesA : bufParticlesB } },
+                            { binding: 2, resource: { buffer: bufSort } },
+                            { binding: 3, resource: { buffer: bufOffsets } }
+                        ]
+                    });
+
+                    const pass1 = enc.beginComputePass();
+                    pass1.setPipeline(pipeBinning);
+                    pass1.setBindGroup(0, bindBinningCurr);
+                    pass1.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
+                    pass1.end();
+
+                    const pass3 = enc.beginComputePass();
+                    pass3.setPipeline(pipeClear);
+                    pass3.setBindGroup(0, bindClear);
+                    pass3.dispatchWorkgroups(Math.ceil(GRID_TOTAL_CELLS / 256));
+                    pass3.end();
+
+                    device.queue.submit([enc.finish()]);
+                }
+
+                // 2: Bitonic sort stages (each stage submitted separately)
+                for (let k = 2; k <= NUM_PARTICLES; k <<= 1) {
+                    for (let j = k >> 1; j > 0; j >>= 1) {
+                        device.queue.writeBuffer(bufSortUniform, 0, new Uint32Array([k, j]));
+                        const encSort = device.createCommandEncoder();
+                        const pass = encSort.beginComputePass();
+                        pass.setPipeline(pipeSort);
+                        pass.setBindGroup(0, bindSort);
+                        pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
+                        pass.end();
+                        device.queue.submit([encSort.finish()]);
+                    }
+                }
+
+                // 4+5: offsets + forces (single submission)
+                {
+                    const enc2 = device.createCommandEncoder();
+
+                    const pass4 = enc2.beginComputePass();
+                    pass4.setPipeline(pipeOffsets);
+                    pass4.setBindGroup(0, bindOffsets);
+                    pass4.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
+                    pass4.end();
+
+                    const pass5 = enc2.beginComputePass();
+                    pass5.setPipeline(pipeForce);
+                    pass5.setBindGroup(0, particlesInA ? bindForceA : bindForceB);
+                    pass5.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
+                    pass5.end();
+
+                    device.queue.submit([enc2.finish()]);
+                }
+            } else {
+                // Brute: forces (single submission)
+                {
+                    const enc = device.createCommandEncoder();
+                    const pass = enc.beginComputePass();
+                    pass.setPipeline(pipeForceBrute);
+                    pass.setBindGroup(0, particlesInA ? bindForceBruteA : bindForceBruteB);
+                    pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
+                    pass.end();
+                    device.queue.submit([enc.finish()]);
+                }
+            }
+
+            // 6. Integrate
+            {
+                const enc = device.createCommandEncoder();
+                const pass = enc.beginComputePass();
+                pass.setPipeline(pipeIntegrate);
+                pass.setBindGroup(0, particlesInA ? bindIntegrateAtoB : bindIntegrateBtoA);
                 pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
                 pass.end();
+                device.queue.submit([enc.finish()]);
             }
+
+            // Swap for next substep
+            particlesInA = !particlesInA;
         }
 
-        // 3. Clear Counts
-        {
-            const pass = cmd.beginComputePass();
-            pass.setPipeline(pipeClear);
-            pass.setBindGroup(0, bindClear);
-            pass.dispatchWorkgroups(Math.ceil(GRID_TOTAL_CELLS / 256));
-            pass.end();
-        }
-
-        // 4. Build Offsets from sorted keys
-        {
-            const pass = cmd.beginComputePass();
-            pass.setPipeline(pipeOffsets);
-            pass.setBindGroup(0, bindOffsets);
-            pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
-            pass.end();
-        }
-
-        // 5. Compute Physics
-        {
-            const pass = cmd.beginComputePass();
-            pass.setPipeline(pipePhysics);
-            pass.setBindGroup(0, particlesInA ? bindPhysicsAtoB : bindPhysicsBtoA);
-            pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 256));
-            pass.end();
-        }
-
-        // 6. Render
+        // 7. Render
         device.queue.writeBuffer(bufRenderUniform, 0, new Float32Array([canvas.width, canvas.height]));
         {
+            const cmd = device.createCommandEncoder();
             const pass = cmd.beginRenderPass({
                 colorAttachments: [{
                     view: context.getCurrentTexture().createView(),
@@ -555,16 +763,27 @@ async function init() {
                 }]
             });
             pass.setPipeline(pipeRender);
-            // Render the buffer we just wrote to
-            pass.setBindGroup(0, particlesInA ? bindRenderB : bindRenderA); 
-            pass.draw(6, NUM_PARTICLES, 0, 0); // 6 vertices per quad, N instances
+            pass.setBindGroup(0, particlesInA ? bindRenderA : bindRenderB);
+            pass.draw(6, NUM_PARTICLES, 0, 0);
             pass.end();
+
+            const doReadback = (!mappingInFlight) && (readbackCounter % READBACK_INTERVAL === 0);
+            if(doReadback){
+                cmd.copyBufferToBuffer(particlesInA ? bufParticlesA : bufParticlesB, 0, bufReadback, 0, bufSize);
+                device.queue.submit([cmd.finish()]);
+
+                mappingInFlight = true;
+                bufReadback.mapAsync(GPUMapMode.READ).then(()=>{
+                    const arr = new Float32Array(bufReadback.getMappedRange());
+                    lastParticles = new Float32Array(arr);
+                    bufReadback.unmap();
+                }).catch(()=>{}).finally(()=>{ mappingInFlight = false; });
+            } else {
+                device.queue.submit([cmd.finish()]);
+            }
+            readbackCounter++;
         }
 
-        device.queue.submit([cmd.finish()]);
-
-        // Swap
-        particlesInA = !particlesInA;
         frame++;
         requestAnimationFrame(frameStep);
     }
@@ -577,6 +796,50 @@ async function init() {
         frame = 0;
         lastTime = now;
     }, 1000);
+
+    // Picking + drag (match debug_nbody style)
+    const pickedSpan = document.getElementById('picked');
+    const STRIDE = 6;
+    const worldFromMouse = (evt)=>{
+        const rect = canvas.getBoundingClientRect();
+        const x = ((evt.clientX - rect.left) / rect.width) * WORLD_SIZE;
+        const y = (1.0 - (evt.clientY - rect.top ) / rect.height) * WORLD_SIZE;
+        return {x,y};
+    };
+    const writeParticlePos = (idx, x, y)=>{
+        const offset = idx * STRIDE * 4;
+        const q = lastParticles ? lastParticles[idx*STRIDE+4] : 1.0;
+        const tmp = new Float32Array([x,y,0,0,q,0]);
+        device.queue.writeBuffer(bufParticlesA, offset, tmp);
+        device.queue.writeBuffer(bufParticlesB, offset, tmp);
+    };
+
+    let picked = -1;
+    canvas.addEventListener('mousedown',(e)=>{
+        if(!lastParticles) return;
+        const m = worldFromMouse(e);
+        let best=-1, bestR2=1e9;
+        const radWorld = PARTICLE_SIZE_PX / canvas.width * WORLD_SIZE; // use render radius as pick radius
+        const thr2 = radWorld*radWorld;
+        for(let i=0;i<NUM_PARTICLES;i++){
+            const px=lastParticles[i*STRIDE], py=lastParticles[i*STRIDE+1];
+            const dx=px-m.x, dy=py-m.y;
+            const r2=dx*dx+dy*dy;
+            if(r2<bestR2 && r2<thr2){bestR2=r2;best=i;}
+        }
+        picked=best;
+        if(picked>=0){
+            writeParticlePos(picked,m.x,m.y);
+            pickedSpan.textContent = `${picked} pos=(${m.x.toFixed(2)},${m.y.toFixed(2)})`;
+        }
+    });
+    canvas.addEventListener('mousemove',(e)=>{
+        if(picked<0) return;
+        const m = worldFromMouse(e);
+        writeParticlePos(picked,m.x,m.y);
+        pickedSpan.textContent = `${picked} pos=(${m.x.toFixed(2)},${m.y.toFixed(2)})`;
+    });
+    window.addEventListener('mouseup',()=>{picked=-1;});
 
     frameStep();
 }

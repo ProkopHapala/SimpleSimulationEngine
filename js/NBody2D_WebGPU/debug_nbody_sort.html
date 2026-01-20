@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGPU Grid Sort Verifier</title>
+    <style>
+        body { margin: 0; background: #111; color: #eee; font-family: monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #controls { padding: 10px; background: #222; border-bottom: 1px solid #444; display: flex; gap: 15px; align-items: center; }
+        button { background: #444; color: white; border: 1px solid #666; padding: 5px 10px; cursor: pointer; }
+        button:hover { background: #666; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        #main { flex: 1; display: flex; gap: 6px; overflow: hidden; }
+        #work-area { flex: 2; display: flex; flex-direction: column; position: relative; min-width: 480px; }
+        
+        .viewport { position: relative; border: 1px solid #555; margin: 5px; }
+        #view-spatial { aspect-ratio: 1 / 1; }
+        .viewport label { position: absolute; top: 0; left: 0; background: rgba(0,0,0,0.8); padding: 4px; font-size: 12px; pointer-events: none; }
+        
+        canvas { display: block; width: 100%; height: 100%; }
+        #logs { background: #111; color: #eee; font-family: monospace; padding: 10px; border: 1px solid #444; white-space: pre-wrap; overflow-y: auto; flex: 1; min-width: 340px; resize: horizontal; }
+        
+        #view-spatial { flex: 2; }
+        #view-sort { flex: 1; min-height: 150px; }
+
+        #tooltip { position: absolute; pointer-events: none; background: rgba(0,0,0,0.8); padding: 5px; display: none; border: 1px solid #777; }
+    </style>
+</head>
+<body>
+
+<div id="controls">
+    <div>
+        <strong>1. Sort: </strong>
+        <button id="btnStep">Step Sort (1 Pass)</button>
+        <button id="btnFinish">Finish Sort</button>
+        <button id="btnReset">Reset / Shuffle</button>
+    </div>
+    <div style="border-left: 1px solid #555; padding-left: 15px;">
+        <strong>2. Verify: </strong>
+        <span>Radius: <input type="number" id="inpRad" step="0.1" min="0.1" max="5.0" value="2.0" style="width:60px;padding:4px;background:#222;color:#eee;border:1px solid #555;"> <span id="valRad">2.0</span></span>
+        <span id="statusTxt" style="color:#aaa; margin-left:10px;">Status: Unsorted</span>
+    </div>
+    <div style="border-left: 1px solid #555; padding-left: 15px;">
+        <strong>3. Config: </strong>
+        <span>N: <input type="number" id="inpN" step="256" min="256" max="65536" value="16384" style="width:70px;padding:4px;background:#222;color:#eee;border:1px solid #555;"></span>
+        <span>Grid: <input type="number" id="inpGrid" step="8" min="8" max="128" value="64" style="width:50px;padding:4px;background:#222;color:#eee;border:1px solid #555;"></span>
+    </div>
+</div>
+
+<div id="main">
+    <div id="work-area">
+        <!-- View 1: 2D Spatial World -->
+        <div id="view-spatial" class="viewport">
+            <label>SPATIAL VIEW (Click to Select Particle)</label>
+            <canvas id="canvasSpatial"></canvas>
+        </div>
+        
+        <!-- View 2: Memory/Sort Visualization -->
+        <div id="view-sort" class="viewport">
+            <label>SORT BUFFER VISUALIZATION (Key: Cell ID)</label>
+            <canvas id="canvasSort"></canvas>
+        </div>
+    </div>
+    <div id="logs">Select a particle to inspect once sorting is finished.</div>
+</div>
+<div id="tooltip"></div>
+
+<script type="module">
+
+// CONFIG
+// =========================================================
+const loadConfig = () => {
+    const n = parseInt(localStorage.getItem('dbgNParticles')||'16384',10);
+    const g = parseInt(localStorage.getItem('dbgGridDim')||'64',10);
+    const num = Math.min(65536, Math.max(256, isNaN(n)?16384:n));
+    const grid = Math.min(128, Math.max(8, isNaN(g)?64:g));
+    return { num, grid };
+};
+
+const cfg = loadConfig();
+let NUM_PARTICLES = cfg.num;
+let GRID_DIM = cfg.grid;
+let WORLD_SIZE = 64.0;
+let CELL_SIZE = WORLD_SIZE / GRID_DIM;
+const KEY_EMPTY = 0xFFFFFFFF >>> 0;
+
+const COLORS = {
+    IDLE: [0.3, 0.3, 0.3, 1.0],
+    SELECTED: [1.0, 1.0, 1.0, 1.0],
+    CORRECT: [0.0, 1.0, 0.0, 1.0],     // Found by Grid AND Brute
+    BUG_MISS: [1.0, 0.0, 0.0, 1.0],   // Found by Brute, MISSED by Grid
+    FALSE_POS: [0.0, 0.5, 1.0, 0.5]   // Found by Grid, not Brute (OK for broadphase)
+};
+
+const wgslVec4 = (c) => `vec4<f32>(${c.map(v => v.toFixed(3)).join(', ')})`;
+const COLOR_SELECTED_VEC = wgslVec4(COLORS.SELECTED);
+const COLOR_CORRECT_VEC = wgslVec4(COLORS.CORRECT);
+const COLOR_BUG_VEC = wgslVec4(COLORS.BUG_MISS);
+const COLOR_FALSE_VEC = wgslVec4(COLORS.FALSE_POS);
+
+const clampGridCoord = (v) => Math.min(Math.max(v, 0), GRID_DIM - 1);
+const clampRadius = (val) => Math.max(0.1, Math.min(val, CELL_SIZE));
+const cellFromPos = (x, y) => {
+    const gx = clampGridCoord(Math.floor(x / CELL_SIZE));
+    const gy = clampGridCoord(Math.floor(y / CELL_SIZE));
+    return { gx, gy, key: gy * GRID_DIM + gx };
+};
+const keyToCoord = (key) => ({ gx: key % GRID_DIM, gy: Math.floor(key / GRID_DIM) });
+const labelForCode = (code) => {
+    switch (code) {
+        case 4: return 'SELECTED';
+        case 3: return 'BRUTE+HASH';
+        case 2: return 'HASH_ONLY';
+        case 1: return 'BRUTE_ONLY';
+        default: return 'NONE';
+    }
+};
+
+// =========================================================
+// SHADERS
+// =========================================================
+
+const commonWGSL = `
+    struct SortKeyPair {
+        key: u32,   // Cell ID
+        value: u32, // Particle Index
+    };
+    
+    struct SimParams {
+        gridDim: f32,
+        cellSize: f32,
+        searchRadius: f32,
+        selectedIdx: i32,
+    };
+`;
+
+// 1. Binning (Calculate Hash)
+const shdBinning = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<storage, read> pos : array<vec2<f32>>;
+    @group(0) @binding(1) var<storage, read_write> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(2) var<uniform> params : SimParams;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+        
+        let p = pos[idx];
+        let gx = i32(floor(p.x / params.cellSize));
+        let gy = i32(floor(p.y / params.cellSize));
+        
+        // Clamp to ensure valid hash
+        let cx = clamp(gx, 0, i32(params.gridDim)-1);
+        let cy = clamp(gy, 0, i32(params.gridDim)-1);
+        
+        let cellID = u32(cy * i32(params.gridDim) + cx);
+        
+        sortBuf[idx].key = cellID;
+        sortBuf[idx].value = idx;
+    }
+`;
+
+// 2. Bitonic Sort Step
+const shdSort = `
+    ${commonWGSL}
+    struct SortUniforms { algo: u32, step: u32 };
+    @group(0) @binding(0) var<storage, read_write> data : array<SortKeyPair>;
+    @group(0) @binding(1) var<uniform> uSort : SortUniforms;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let i = id.x;
+        let j = i ^ uSort.step;
+        
+        if (j <= i) { return; } // Only one thread per pair
+
+        // Load
+        var a = data[i];
+        var b = data[j];
+
+        let dir = ((i & uSort.algo) != 0u);
+        let cmp = a.key > b.key;
+
+        if (dir == cmp) {
+            data[i] = b;
+            data[j] = a;
+        }
+    }
+`;
+
+// 3. Build Offsets (Standard Grid Construction)
+const shdOffsets = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<storage, read> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(1) var<storage, read_write> offsets : array<u32>;
+    @group(0) @binding(2) var<storage, read_write> counts : array<atomic<u32>>;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+
+        let key = sortBuf[idx].key;
+        let prevKey = sortBuf[max(idx - 1u, 0u)].key;
+
+        if (idx == 0u || key != prevKey) {
+            offsets[key] = idx;
+        }
+        atomicAdd(&counts[key], 1u);
+    }
+`;
+
+const shdClearOffsets = `
+    @group(0) @binding(0) var<storage, read_write> offsets : array<u32>;
+    @group(0) @binding(1) var<storage, read_write> counts : array<atomic<u32>>;
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${GRID_DIM*GRID_DIM}) { return; }
+        offsets[idx] = 0xFFFFFFFFu;
+        atomicStore(&counts[idx], 0u);
+    }
+`;
+
+// 4. VERIFICATION LOGIC (The Core Request)
+// Compares Brute Force vs Grid result for the selected particle
+const shdVerify = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<storage, read> pos : array<vec2<f32>>;
+    @group(0) @binding(1) var<storage, read> offsets : array<u32>;
+    @group(0) @binding(2) var<storage, read_write> counts : array<atomic<u32>>;
+    @group(0) @binding(3) var<storage, read_write> debugFlags : array<u32>; // 0=None, 1=BruteOnly, 2=GridOnly, 3=Both
+    @group(0) @binding(4) var<uniform> params : SimParams;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+        
+        let selIdx = params.selectedIdx;
+        if (selIdx < 0) { debugFlags[idx] = 0u; return; }
+
+        let pSelf = pos[idx];
+        let pSel = pos[u32(selIdx)];
+        
+        // 1. Check Brute Force (Ground Truth)
+        let d = pSelf - pSel;
+        let dist2 = dot(d,d);
+        let r2 = params.searchRadius * params.searchRadius;
+        let isBrute = (dist2 <= r2);
+
+        // 2. Check Grid Acceleration
+        // We simulate the grid lookup exactly as the simulation would
+        var isGrid = false;
+        
+        // Only run grid check logic if we are not the selected particle (avoid self)
+        if (i32(idx) != selIdx) {
+            let gridPos = floor(pSel / params.cellSize);
+            let gx = i32(gridPos.x);
+            let gy = i32(gridPos.y);
+
+            // Iterate 3x3 neighbors
+            for (var y = -1; y <= 1; y++) {
+                for (var x = -1; x <= 1; x++) {
+                    let nx = gx + x;
+                    let ny = gy + y;
+                    if(nx >= 0 && nx < i32(params.gridDim) && ny >= 0 && ny < i32(params.gridDim)){
+                        let cellKey = u32(ny * i32(params.gridDim) + nx);
+                        let start = offsets[cellKey];
+                        let count = atomicLoad(&counts[cellKey]);
+
+                        if (start != 0xFFFFFFFFu) {
+                            let myGx = i32(floor(pSelf.x / params.cellSize));
+                            let myGy = i32(floor(pSelf.y / params.cellSize));
+                            
+                            if (myGx == nx && myGy == ny) {
+                                isGrid = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Encode Result
+        // 0: Idle
+        // 1: Missed by Grid (Error) -> Brute=True, Grid=False
+        // 2: False Positive (Info) -> Brute=False, Grid=True
+        // 3: Correct Match         -> Brute=True, Grid=True
+        
+        var code = 0u;
+        if (i32(idx) == selIdx) {
+            code = 4u; // Selected
+        } else if (isBrute && isGrid) {
+            code = 3u; // Green
+        } else if (isBrute && !isGrid) {
+            code = 1u; // Red (BUG!)
+        } else if (!isBrute && isGrid) {
+            code = 2u; // Blue (Broadphase accept)
+        }
+        
+        debugFlags[idx] = code;
+    }
+`;
+
+// 5. Visualizers
+
+// Spatial View (Particles)
+const shdRenderSpatial = `
+    struct VertexOut { @builtin(position) pos : vec4<f32>, @location(0) color : vec4<f32> };
+    @group(0) @binding(0) var<storage, read> pos : array<vec2<f32>>;
+    @group(0) @binding(1) var<storage, read> debugFlags : array<u32>;
+    @group(0) @binding(2) var<uniform> params : vec2<f32>; // Canvas size
+
+    @vertex
+    fn vs(@builtin(vertex_index) vIdx : u32, @builtin(instance_index) iIdx : u32) -> VertexOut {
+        let p = pos[iIdx];
+        let code = debugFlags[iIdx];
+        
+        var color = vec4<f32>(1.0, 1.0, 1.0, 1.0); // White
+        var size = 1.0;
+        
+        if (code == 4u) { color = vec4<f32>(1.0, 1.0, 0.0, 1.0); size=2.0; } // Yellow selected
+        else if (code == 3u) { color = vec4<f32>(0.0, 1.0, 0.0, 1.0); size=1.5; } // Green correct
+        else if (code == 1u) { color = vec4<f32>(1.0, 0.0, 0.0, 1.0); size=1.5; } // Red bug
+        else if (code == 2u) { color = vec4<f32>(0.0, 0.5, 1.0, 0.5); size=1.0; } // Blue false pos
+
+        let corner = vIdx % 6u;
+        var offset = vec2<f32>(0.);
+        if (corner==0u || corner==3u) { offset = vec2<f32>(-1., -1.); }
+        else if (corner==1u) { offset = vec2<f32>(1., -1.); }
+        else { offset = vec2<f32>(1., 1.); }
+        if (corner==5u) { offset = vec2<f32>(-1., 1.); }
+
+        // NDC Map [0, 64] -> [-1, 1]
+        let ndcPos = (p / 64.0) * 2.0 - 1.0;
+        
+        // Pixel size correction
+        let pxSize = size / params;
+        
+        var out : VertexOut;
+        out.pos = vec4<f32>(ndcPos + offset * pxSize * 2.0, 0.0, 1.0);
+        out.color = color;
+        return out;
+    }
+    @fragment fn fs(@location(0) c : vec4<f32>) -> @location(0) vec4<f32> { return c; }
+`;
+
+const shdGrid = `
+    @vertex fn vs(@builtin(vertex_index) v : u32) -> @builtin(position) vec4<f32> {
+        let dim = ${GRID_DIM}u;
+        let lineIdx = v / 2u;
+        let isVert = lineIdx < (dim + 1u);
+        let k = f32(lineIdx % (dim + 1u)) / f32(dim);
+        var pos = vec2<f32>(0.);
+        if(isVert) { pos.x = k * 2.0 - 1.0; pos.y = (f32(v % 2u) * 2.0) - 1.0; }
+        else { pos.y = k * 2.0 - 1.0; pos.x = (f32(v % 2u) * 2.0) - 1.0; }
+        return vec4<f32>(pos, 0., 1.);
+    }
+    @fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(0.4, 0.4, 0.4, 1.); }
+`;
+
+// Circle overlay for selected particle
+const shdCircle = `
+    struct Circle { center: vec2<f32>, radius: f32, pad: f32 };
+    @group(0) @binding(0) var<uniform> u : Circle;
+    @vertex fn vs(@builtin(vertex_index) v : u32) -> @builtin(position) vec4<f32> {
+        let seg = v / 2u;
+        let isEnd = (v % 2u) == 1u;
+        let total = 64u;
+        let a0 = 6.2831853 * f32(seg) / f32(total);
+        let a1 = 6.2831853 * f32((seg + 1u) % total) / f32(total);
+        let ang = select(a0, a1, isEnd);
+        let dir = vec2<f32>(cos(ang), sin(ang));
+        let p = (u.center + dir * u.radius) / 64.0 * 2.0 - 1.0;
+        return vec4<f32>(p, 0.0, 1.0);
+    }
+    @fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(1.0, 1.0, 0.0, 1.0); }
+`;
+
+// Sort View (The Strip) - Based on your sample request
+const shdRenderSort = `
+    struct SortKeyPair { key: u32, value: u32 };
+    @group(0) @binding(0) var<storage, read> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(1) var<uniform> count : f32; // Num particles
+    @group(0) @binding(2) var<uniform> texSize : vec2<f32>; // texture width, height
+
+    @vertex fn vs(@builtin(vertex_index) v : u32) -> @builtin(position) vec4<f32> {
+        var pos = vec2<f32>(0.,0.);
+        if(v==0u) { pos = vec2<f32>(-1., -1.); }
+        else if(v==1u) { pos = vec2<f32>(1., -1.); }
+        else if(v==2u) { pos = vec2<f32>(-1., 1.); }
+        else if(v==3u) { pos = vec2<f32>(1., 1.); }
+        return vec4<f32>(pos, 0.0, 1.0);
+    }
+
+    @fragment fn fs(@builtin(position) fragCoord : vec4<f32>) -> @location(0) vec4<f32> {
+        let x = u32(fragCoord.x);
+        let y = u32(fragCoord.y);
+        let texW = u32(texSize.x);
+        let idx = y * texW + x;
+        
+        if (idx >= u32(count)) { discard; }
+
+        let key = sortBuf[idx].key;
+        
+        let t = f32(key) / 4096.0;
+        let r = (f32(key % 64u) / 64.0);
+        let g = (f32((key / 64u) % 64u) / 64.0);
+        let b = t;
+        
+        return vec4<f32>(r, g, b, 1.0);
+    }
+`;
+
+// =========================================================
+// APP LOGIC
+// =========================================================
+
+async function init() {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    
+    const cvSpatial = document.getElementById('canvasSpatial');
+    const ctxSpatial = cvSpatial.getContext('webgpu');
+    ctxSpatial.configure({ device, format: 'bgra8unorm' });
+    
+    const cvSort = document.getElementById('canvasSort');
+    const ctxSort = cvSort.getContext('webgpu');
+    ctxSort.configure({ device, format: 'bgra8unorm' });
+    const logPanel = document.getElementById('logs');
+
+    // --- Data Init ---
+    const dataPos = new Float32Array(NUM_PARTICLES * 2);
+    for(let i=0; i<NUM_PARTICLES; i++){
+        dataPos[i*2] = Math.random() * WORLD_SIZE;
+        dataPos[i*2+1] = Math.random() * WORLD_SIZE;
+    }
+
+    // Buffers
+    const bufPos = device.createBuffer({ size: dataPos.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(bufPos, 0, dataPos);
+
+    const bufSort = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    
+    const bufOffsets = device.createBuffer({ size: GRID_DIM*GRID_DIM*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    const bufCounts = device.createBuffer({ size: GRID_DIM*GRID_DIM*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    
+    const bufDebug = device.createBuffer({ size: NUM_PARTICLES * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC }); // Flags
+
+    const paramsSize = 4*4; // 4 floats/ints
+    const bufParams = device.createBuffer({ size: paramsSize, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    const bufSortUniform = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    // --- Pipelines ---
+    const mkPipe = (code, label) => device.createComputePipeline({ label, layout:'auto', compute:{ module: device.createShaderModule({code}), entryPoint:'main'} });
+    const mkRender = (code, fmt) => device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: device.createShaderModule({code}), entryPoint: 'vs' },
+        fragment: { module: device.createShaderModule({code}), entryPoint: 'fs', targets: [{format:fmt}] },
+        primitive: { topology: 'triangle-strip' }
+    });
+
+    const piBin = mkPipe(shdBinning, 'Binning');
+    const piSort = mkPipe(shdSort, 'Sort');
+    const piOff = mkPipe(shdOffsets, 'Offsets');
+    const piClr = mkPipe(shdClearOffsets, 'ClrOffsets');
+    const piVer = mkPipe(shdVerify, 'Verify');
+    
+    const piRnSpat = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: device.createShaderModule({code:shdRenderSpatial}), entryPoint: 'vs' },
+        fragment: { module: device.createShaderModule({code:shdRenderSpatial}), entryPoint: 'fs', targets: [{format:'bgra8unorm', blend:{color:{srcFactor:'src-alpha', dstFactor:'one-minus-src-alpha', operation:'add'}, alpha:{srcFactor:'one', dstFactor:'one', operation:'add'}}}] },
+        primitive: { topology: 'triangle-list' }
+    });
+    
+    const piRnGrid = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: device.createShaderModule({code:shdGrid}), entryPoint: 'vs' },
+        fragment: { module: device.createShaderModule({code:shdGrid}), entryPoint: 'fs', targets: [{format:'bgra8unorm'}] },
+        primitive: { topology: 'line-list' }
+    });
+    
+    const piCircle = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: device.createShaderModule({code:shdCircle}), entryPoint: 'vs' },
+        fragment: { module: device.createShaderModule({code:shdCircle}), entryPoint: 'fs', targets: [{format:'bgra8unorm'}] },
+        primitive: { topology: 'line-list' }
+    });
+    
+    const piRnSort = mkRender(shdRenderSort, 'bgra8unorm');
+
+    // --- Bind Groups ---
+    const bgBin = device.createBindGroup({ layout: piBin.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufPos}}, { binding:1, resource:{buffer:bufSort}}, { binding:2, resource:{buffer:bufParams}}
+    ]});
+
+    const bgSort = device.createBindGroup({ layout: piSort.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufSort}}, { binding:1, resource:{buffer:bufSortUniform}}
+    ]});
+
+    const bgClr = device.createBindGroup({ layout: piClr.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufOffsets}}, { binding:1, resource:{buffer:bufCounts}}
+    ]});
+
+    const bgOff = device.createBindGroup({ layout: piOff.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufSort}}, { binding:1, resource:{buffer:bufOffsets}}, { binding:2, resource:{buffer:bufCounts}}
+    ]});
+
+    const bgVer = device.createBindGroup({ layout: piVer.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufPos}},
+        { binding:1, resource:{buffer:bufOffsets}},
+        { binding:2, resource:{buffer:bufCounts}},
+        { binding:3, resource:{buffer:bufDebug}},
+        { binding:4, resource:{buffer:bufParams}}
+    ]});
+    
+    // Render BGs
+    const bufScreen = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const bgRnSpat = device.createBindGroup({ layout: piRnSpat.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufPos}}, { binding:1, resource:{buffer:bufDebug}}, { binding:2, resource:{buffer:bufScreen}}
+    ]});
+    
+    const bufCountUni = device.createBuffer({ size: 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(bufCountUni, 0, new Float32Array([NUM_PARTICLES]));
+    const bufTexSize = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const texW = Math.ceil(Math.sqrt(NUM_PARTICLES));
+    device.queue.writeBuffer(bufTexSize, 0, new Float32Array([texW, Math.ceil(NUM_PARTICLES / texW)]));
+    const bgRnSort = device.createBindGroup({ layout: piRnSort.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufSort}}, { binding:1, resource:{buffer:bufCountUni}}, { binding:2, resource:{buffer:bufTexSize}}
+    ]});
+
+    const bufCircle = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const bgCircle = device.createBindGroup({ layout: piCircle.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufCircle} }
+    ]});
+
+
+    // --- State ---
+    let state = {
+        radius: clampRadius(2.0),
+        selectedIdx: -1,
+        sortK: 2,
+        sortJ: 1,
+        sorted: false
+    };
+
+    function updateParams() {
+        const arr = new Float32Array([GRID_DIM, CELL_SIZE, state.radius, 0]);
+        const i32 = new Int32Array(arr.buffer);
+        i32[3] = state.selectedIdx;
+        device.queue.writeBuffer(bufParams, 0, arr);
+    }
+
+    const updateCircle = () => {
+        if(state.selectedIdx < 0) return;
+        const px = dataPos[state.selectedIdx*2];
+        const py = dataPos[state.selectedIdx*2+1];
+        device.queue.writeBuffer(bufCircle, 0, new Float32Array([px, py, state.radius, 0]));
+    };
+    
+    function reset() {
+        // Shuffle positions
+        for(let i=0; i<NUM_PARTICLES; i++){
+            dataPos[i*2] = Math.random() * WORLD_SIZE;
+            dataPos[i*2+1] = Math.random() * WORLD_SIZE;
+        }
+        device.queue.writeBuffer(bufPos, 0, dataPos);
+        
+        // Reset Logic
+        state.sortK = 2; state.sortJ = 1; state.sorted = false;
+        state.selectedIdx = -1;
+        document.getElementById('statusTxt').innerText = "Status: Random Data (Binning Needed)";
+        document.getElementById('btnStep').disabled = false;
+        document.getElementById('btnFinish').disabled = false;
+        
+        // Run Binning once
+        const enc = device.createCommandEncoder();
+        updateParams();
+        const p1 = enc.beginComputePass();
+        p1.setPipeline(piBin);
+        p1.setBindGroup(0, bgBin);
+        p1.dispatchWorkgroups(Math.ceil(NUM_PARTICLES/64));
+        p1.end();
+        
+        // Clear debug flags
+        const zeros = new Uint32Array(NUM_PARTICLES);
+        device.queue.writeBuffer(bufDebug, 0, zeros);
+        
+        device.queue.submit([enc.finish()]);
+        render();
+    }
+
+    function sortStep() {
+        if(state.sorted) return;
+
+        const enc = device.createCommandEncoder();
+        
+        // One pass of bitonic
+        device.queue.writeBuffer(bufSortUniform, 0, new Uint32Array([state.sortK, state.sortJ]));
+        const p = enc.beginComputePass();
+        p.setPipeline(piSort);
+        p.setBindGroup(0, bgSort);
+        p.dispatchWorkgroups(Math.ceil(NUM_PARTICLES/64));
+        p.end();
+        
+        device.queue.submit([enc.finish()]);
+        
+        // Advance logic
+        state.sortJ >>= 1;
+        if (state.sortJ === 0) {
+            state.sortK <<= 1;
+            state.sortJ = state.sortK >> 1;
+        }
+        
+        if (state.sortK > NUM_PARTICLES) {
+            state.sorted = true;
+            document.getElementById('statusTxt').innerText = "Status: SORTED. Verification Ready.";
+            document.getElementById('btnStep').disabled = true;
+            document.getElementById('btnFinish').disabled = true;
+            buildGridStructure(); // Build offsets now that it is sorted
+        } else {
+            document.getElementById('statusTxt').innerText = `Status: Sorting (k=${state.sortK}, j=${state.sortJ})`;
+        }
+        
+        render();
+    }
+
+    function buildGridStructure() {
+        const enc = device.createCommandEncoder();
+        // Clear Offsets
+        const p1 = enc.beginComputePass();
+        p1.setPipeline(piClr);
+        p1.setBindGroup(0, bgClr);
+        p1.dispatchWorkgroups(Math.ceil((GRID_DIM*GRID_DIM)/64));
+        p1.end();
+        
+        // Build Offsets
+        const p2 = enc.beginComputePass();
+        p2.setPipeline(piOff);
+        p2.setBindGroup(0, bgOff);
+        p2.dispatchWorkgroups(Math.ceil(NUM_PARTICLES/64));
+        p2.end();
+        device.queue.submit([enc.finish()]);
+        
+        // Trigger verify immediately if something selected
+        if(state.selectedIdx >= 0) runVerify();
+    }
+
+    function runVerify() {
+        if(!state.sorted) return;
+        updateParams();
+        const enc = device.createCommandEncoder();
+        const p = enc.beginComputePass();
+        p.setPipeline(piVer);
+        p.setBindGroup(0, bgVer);
+        p.dispatchWorkgroups(Math.ceil(NUM_PARTICLES/64));
+        p.end();
+        device.queue.submit([enc.finish()]);
+        
+        // Read back debug flags for console output
+        const bufReadback = device.createBuffer({ size: NUM_PARTICLES * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+        const enc2 = device.createCommandEncoder();
+        enc2.copyBufferToBuffer(bufDebug, 0, bufReadback, 0, NUM_PARTICLES * 4);
+        device.queue.submit([enc2.finish()]);
+        
+        bufReadback.mapAsync(GPUMapMode.READ).then(() => {
+            const flags = new Uint32Array(bufReadback.getMappedRange());
+            const selIdx = state.selectedIdx;
+            if(selIdx < 0) { bufReadback.unmap(); return; }
+            
+            const selX = dataPos[selIdx * 2];
+            const selY = dataPos[selIdx * 2 + 1];
+            const selCell = cellFromPos(selX, selY);
+            
+            let html = `<b>SELECTED PARTICLE ${selIdx}</b>\n`;
+            html += `Pos: (${selX.toFixed(2)}, ${selY.toFixed(2)})\n`;
+            html += `Cell: (${selCell.gx}, ${selCell.gy}) key=${selCell.key}\n`;
+            html += `Search Radius: ${state.radius.toFixed(2)}\n\n`;
+            
+            html += `IDX | POS           | BRUTE | HASH | STATUS\n`;
+            html += `----|---------------|-------|------|--------\n`;
+            
+            const r2 = state.radius * state.radius;
+            let bruteCount = 0, gridCount = 0, bothCount = 0, missedCount = 0, falsePosCount = 0;
+            
+            for(let i = 0; i < NUM_PARTICLES; i++) {
+                if(i === selIdx) continue;
+                const dx = dataPos[i * 2] - selX;
+                const dy = dataPos[i * 2 + 1] - selY;
+                const dist2 = dx * dx + dy * dy;
+                const isBrute = dist2 <= r2;
+                
+                const code = flags[i];
+                const isGrid = (code === 3 || code === 2);
+                const status = labelForCode(code);
+                
+                if(isBrute) bruteCount++;
+                if(isGrid) gridCount++;
+                if(isBrute && isGrid) bothCount++;
+                if(isBrute && !isGrid) missedCount++;
+                if(!isBrute && isGrid) falsePosCount++;
+                
+                if(isBrute || isGrid) {
+                    const px = dataPos[i*2].toFixed(2).padStart(5);
+                    const py = dataPos[i*2+1].toFixed(2).padStart(5);
+                    const b = isBrute ? 'X' : ' ';
+                    const g = isGrid ? 'X' : ' ';
+                    html += `${i.toString().padStart(3)} | (${px}, ${py}) | ${b}     | ${g}    | ${status}\n`;
+                }
+            }
+            
+            html += `\n<b>SUMMARY</b>\n`;
+            html += `Brute Force Found: ${bruteCount}\n`;
+            html += `Grid Found: ${gridCount}\n`;
+            html += `Both (Correct): ${bothCount}\n`;
+            html += `<span style='color:#f66'>Missed by Grid (BUG): ${missedCount}</span>\n`;
+            html += `False Positives: ${falsePosCount}\n`;
+            
+            logPanel.innerHTML = html;
+            bufReadback.unmap();
+        });
+        
+        render();
+    }
+
+    function render() {
+        // Resize check
+        // Enforce square viewport for spatial view
+        const rect = cvSpatial.getBoundingClientRect();
+        const size = Math.floor(Math.min(rect.width, rect.height));
+        cvSpatial.width = size; cvSpatial.height = size;
+        cvSpatial.style.width = `${size}px`; cvSpatial.style.height = `${size}px`;
+
+        cvSort.width = cvSort.clientWidth; cvSort.height = cvSort.clientHeight;
+        device.queue.writeBuffer(bufScreen, 0, new Float32Array([cvSpatial.width, cvSpatial.height]));
+
+        const enc = device.createCommandEncoder();
+        
+        // 1. Spatial
+        const passS = enc.beginRenderPass({
+            colorAttachments: [{ view: ctxSpatial.getCurrentTexture().createView(), clearValue: {r:0.1,g:0.1,b:0.1,a:1}, loadOp:'clear', storeOp:'store' }]
+        });
+        passS.setPipeline(piRnGrid);
+        passS.draw((GRID_DIM + 1) * 4);
+        passS.setPipeline(piRnSpat);
+        passS.setBindGroup(0, bgRnSpat);
+        passS.draw(6, NUM_PARTICLES);
+        if(state.selectedIdx >= 0){
+            passS.setPipeline(piCircle);
+            passS.setBindGroup(0, bgCircle);
+            passS.draw(128);
+        }
+        passS.end();
+        
+        // 2. Sort View
+        const passSo = enc.beginRenderPass({
+            colorAttachments: [{ view: ctxSort.getCurrentTexture().createView(), clearValue: {r:0,g:0,b:0,a:1}, loadOp:'clear', storeOp:'store' }]
+        });
+        passSo.setPipeline(piRnSort);
+        passSo.setBindGroup(0, bgRnSort);
+        passSo.draw(4);
+        passSo.end();
+
+        device.queue.submit([enc.finish()]);
+    }
+
+    // --- Inputs ---
+    
+    document.getElementById('btnStep').onclick = sortStep;
+    document.getElementById('btnFinish').onclick = () => {
+        while(!state.sorted) sortStep();
+    };
+    document.getElementById('btnReset').onclick = reset;
+    
+    const updateRadiusDisplay = () => {
+        document.getElementById('inpRad').value = state.radius.toFixed(1);
+        document.getElementById('valRad').innerText = state.radius.toFixed(1);
+    };
+
+    document.getElementById('inpRad').oninput = (e) => {
+        state.radius = clampRadius(parseFloat(e.target.value) || state.radius);
+        updateRadiusDisplay();
+        if(state.selectedIdx >= 0 && state.sorted) runVerify();
+    };
+    updateRadiusDisplay();
+
+    const inpN = document.getElementById('inpN');
+    const inpGrid = document.getElementById('inpGrid');
+    inpN.value = NUM_PARTICLES;
+    inpGrid.value = GRID_DIM;
+
+    inpN.onchange = (e) => {
+        const val = Math.max(256, Math.min(65536, parseInt(e.target.value) || NUM_PARTICLES));
+        e.target.value = val;
+        localStorage.setItem('dbgNParticles', val.toString());
+        location.reload();
+    };
+
+    inpGrid.onchange = (e) => {
+        const val = Math.max(8, Math.min(128, parseInt(e.target.value) || GRID_DIM));
+        e.target.value = val;
+        localStorage.setItem('dbgGridDim', val.toString());
+        location.reload();
+    };
+
+    // Mouse Picking
+    cvSpatial.addEventListener('mousedown', async (e) => {
+        const rect = cvSpatial.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * WORLD_SIZE;
+        const y = (1.0 - (e.clientY - rect.top) / rect.height) * WORLD_SIZE;
+        
+        // Find closest on CPU (simple enough for debug tool)
+        let minD = 99999;
+        let idx = -1;
+        for(let i=0; i<NUM_PARTICLES; i++) {
+            const dx = dataPos[i*2] - x;
+            const dy = dataPos[i*2+1] - y;
+            const d = dx*dx + dy*dy;
+            if (d < minD && d < 1.0) { minD = d; idx = i; }
+        }
+        
+        state.selectedIdx = idx;
+        updateCircle();
+        
+        if (state.sorted && idx >= 0) {
+            runVerify();
+        } else if (!state.sorted && idx >= 0) {
+            // Just highlight selection, no verification yet
+            updateParams();
+            // Clear previous results manually
+            const zeros = new Uint32Array(NUM_PARTICLES);
+            zeros[idx] = 4; // Selected code
+            device.queue.writeBuffer(bufDebug, 0, zeros);
+            render();
+        }
+    });
+
+    reset();
+}
+
+init();
+
+</script>
+</body>
+</html>

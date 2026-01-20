@@ -15,13 +15,36 @@ DOCROOT="${2:-.}"
 echo "running serever on http://localhost:${PORT}"
 echo "serving from ${DOCROOT}"
 
-# Find any process listening on PORT (requires `lsof`)
-PIDS="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+# Kill anything already on PORT (prefer lsof; fall back to fuser)
+kill_listen(){
+  local pids
+  pids="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -n "${pids}" ]]; then
+    echo "Killing existing server(s) on port ${PORT}: ${pids}" >&2
+    kill ${pids} 2>/dev/null || true
+    return 0
+  fi
+  if command -v fuser >/dev/null 2>&1; then
+    # fuser prints PIDs to stderr
+    if fuser -k "${PORT}/tcp" >/dev/null 2>&1; then
+      echo "Killed via fuser on port ${PORT}" >&2
+      return 0
+    fi
+  fi
+  return 1
+}
 
-if [[ -n "${PIDS}" ]]; then
-  echo "Killing existing server(s) on port ${PORT}: ${PIDS}" >&2
-  kill ${PIDS} 2>/dev/null || true
-  sleep 0.5
+for _ in {1..5}; do
+  kill_listen || true
+  sleep 0.2
+  if ! lsof -tiTCP:"${PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
+    break
+  fi
+done
+
+if lsof -tiTCP:"${PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "Port ${PORT} still busy after kill attempts. Aborting." >&2
+  exit 1
 fi
 
 # Get the directory of this script

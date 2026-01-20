@@ -26,6 +26,14 @@
     <label>damp <input id="inpDamp" type="number" step="0.001" min="0.8" max="1.0" /></label>
     <label>r2max <input id="inpR2" type="number" step="0.1" min="0.1" max="64" /></label>
     <label>substeps <input id="inpSub" type="number" step="1" min="1" max="32" /></label>
+    <label>mode
+        <select id="selAlg" style="background:#222;color:#eee;border:1px solid #555;padding:6px;">
+            <option value="brute" selected>Brute</option>
+            <option value="grid">Grid</option>
+        </select>
+    </label>
+    <input id="forceDiffBox" type="text" readonly style="width:520px; padding:6px; background:#111; color:#eee; border:1px solid #555;" value="" />
+    <button id="btnCopyDiff">CopyDiff</button>
     <span id="status">Status: Ready</span>
 </div>
 
@@ -79,6 +87,63 @@ const commonWGSL = `
         key: u32,
         value: u32,
     };
+`;
+
+const computeForcesGridWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read> particlesIn : array<Particle>;
+    @group(0) @binding(2) var<storage, read_write> forces : array<vec2<f32>>;
+    @group(0) @binding(3) var<storage, read> sortBuffer : array<SortKeyPair>;
+    @group(0) @binding(4) var<storage, read> cellOffsets : array<u32>;
+    @group(0) @binding(5) var<storage, read_write> cellCounts : array<atomic<u32>>;
+
+    fn pairwiseForce(pa: vec2<f32>, pb: vec2<f32>, qq: f32, r2max: f32) -> vec2<f32> {
+        let d = pa - pb;
+        let r2 = dot(d, d);
+        if (r2 < r2max && r2 > 0.0001) {
+            let mr2 = r2max - r2;
+            let fr = (1.0/(r2 + 0.01) + qq - 0.1) * mr2 * mr2;
+            return d * fr;
+        }
+        return vec2<f32>(0.0);
+    }
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+        let index = GlobalInvocationID.x;
+        if (index >= ${NUM_PARTICLES}) { return; }
+
+        let p = particlesIn[index];
+        var force = vec2<f32>(0.0);
+
+        let gridPos = floor(p.pos / params.cellSize);
+        let gx = i32(clamp(gridPos.x, 0.0, params.gridDim - 1.0));
+        let gy = i32(clamp(gridPos.y, 0.0, params.gridDim - 1.0));
+
+        for (var y = -1; y <= 1; y++) {
+            for (var x = -1; x <= 1; x++) {
+                let nx = gx + x;
+                let ny = gy + y;
+                if (nx < 0 || ny < 0 || nx >= i32(params.gridDim) || ny >= i32(params.gridDim)) { continue; }
+                let cellKey = u32(ny * i32(params.gridDim) + nx);
+
+                let start = cellOffsets[cellKey];
+                let count = atomicLoad(&cellCounts[cellKey]);
+
+                if (start != 0xFFFFFFFFu) {
+                    for (var i = 0u; i < count; i++) {
+                        let otherIdx = sortBuffer[start + i].value;
+                        if (otherIdx == index) { continue; }
+                        let otherP = particlesIn[otherIdx];
+                        let qq = p.charge * otherP.charge;
+                        force += pairwiseForce(p.pos, otherP.pos, qq, params.r2max);
+                    }
+                }
+            }
+        }
+        forces[index] = force;
+    }
 `;
 
 // 1. Binning
@@ -169,6 +234,14 @@ const computeClearCountsWGSL = `
     @compute @workgroup_size(64)
     fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
         if (GlobalInvocationID.x < ${GRID_TOTAL_CELLS}) { atomicStore(&cellCounts[GlobalInvocationID.x], 0u); }
+    }
+`;
+
+const computeClearOffsetsWGSL = `
+    @group(0) @binding(0) var<storage, read_write> cellOffsets : array<u32>;
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+        if (GlobalInvocationID.x < ${GRID_TOTAL_CELLS}) { cellOffsets[GlobalInvocationID.x] = 0xFFFFFFFFu; }
     }
 `;
 
@@ -346,30 +419,80 @@ async function init() {
     const bufParams = device.createBuffer({ size: SIM_PARAMS.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(bufParams, 0, SIM_PARAMS);
 
-    const bufForces = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const bufForcesBrute = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    const bufForcesGrid  = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    const bufForcesReadbackBrute = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    const bufForcesReadbackGrid  = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+    // Grid buffers (for grid-accelerated forces)
+    const bufSort = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE });
+    const bufOffsets = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const bufCounts  = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const bufSortUniform = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
 
     // --- 2. Pipelines ---
 
     const mkPipe = (code, ent) => device.createComputePipeline({layout:'auto',compute:{module:device.createShaderModule({code}), entryPoint:ent}});
     
     const pipeForce = mkPipe(computeForcesWGSL, 'main');
+    const pipeForceGrid = mkPipe(computeForcesGridWGSL, 'main');
     const pipeIntegrate = mkPipe(computeIntegrateWGSL, 'main');
+
+    const pipeBinning = mkPipe(computeBinningWGSL, 'main');
+    const pipeSort = mkPipe(computeSortWGSL, 'main');
+    const pipeClearCounts = mkPipe(computeClearCountsWGSL, 'main');
+    const pipeClearOffsets = mkPipe(computeClearOffsetsWGSL, 'main');
+    const pipeOffsets = mkPipe(computeOffsetsWGSL, 'main');
 
     // BindGroups
     const mkBG = (layout, entries) => device.createBindGroup({ layout, entries });
     
     const bgForceA = mkBG(pipeForce.getBindGroupLayout(0), [
-        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForces}}
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForcesBrute}}
     ]);
     const bgForceB = mkBG(pipeForce.getBindGroupLayout(0), [
-        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForces}}
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForcesBrute}}
     ]);
 
-    const bgIntegrateAB = mkBG(pipeIntegrate.getBindGroupLayout(0), [
-        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForces}}, {binding:3, resource:{buffer:bufB}}
+    const bgIntegrateAB_Brute = mkBG(pipeIntegrate.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForcesBrute}}, {binding:3, resource:{buffer:bufB}}
     ]);
-    const bgIntegrateBA = mkBG(pipeIntegrate.getBindGroupLayout(0), [
-        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForces}}, {binding:3, resource:{buffer:bufA}}
+    const bgIntegrateBA_Brute = mkBG(pipeIntegrate.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForcesBrute}}, {binding:3, resource:{buffer:bufA}}
+    ]);
+    const bgIntegrateAB_Grid = mkBG(pipeIntegrate.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForcesGrid}}, {binding:3, resource:{buffer:bufB}}
+    ]);
+    const bgIntegrateBA_Grid = mkBG(pipeIntegrate.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForcesGrid}}, {binding:3, resource:{buffer:bufA}}
+    ]);
+
+    const bgClearOffsets = mkBG(pipeClearOffsets.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufOffsets}}
+    ]);
+    const bgClearCounts = mkBG(pipeClearCounts.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufCounts}}
+    ]);
+    const bgBinningA = mkBG(pipeBinning.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufSort}}, {binding:3, resource:{buffer:bufOffsets}}
+    ]);
+    const bgBinningB = mkBG(pipeBinning.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufSort}}, {binding:3, resource:{buffer:bufOffsets}}
+    ]);
+    const bgSort = mkBG(pipeSort.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufSortUniform}}, {binding:1, resource:{buffer:bufSort}}
+    ]);
+    const bgOffsets = mkBG(pipeOffsets.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufSort}}, {binding:1, resource:{buffer:bufOffsets}}, {binding:2, resource:{buffer:bufCounts}}
+    ]);
+
+    const bgForceGridA = mkBG(pipeForceGrid.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufA}}, {binding:2, resource:{buffer:bufForcesGrid}},
+        {binding:3, resource:{buffer:bufSort}}, {binding:4, resource:{buffer:bufOffsets}}, {binding:5, resource:{buffer:bufCounts}}
+    ]);
+    const bgForceGridB = mkBG(pipeForceGrid.getBindGroupLayout(0), [
+        {binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufB}}, {binding:2, resource:{buffer:bufForcesGrid}},
+        {binding:3, resource:{buffer:bufSort}}, {binding:4, resource:{buffer:bufOffsets}}, {binding:5, resource:{buffer:bufCounts}}
     ]);
 
     // Render Pipeline
@@ -400,25 +523,140 @@ async function init() {
     let autoRun = false;
     let running = false;
     let substeps = 1;
+    let algMode = 'brute';
     let picked = -1;
     let lastParticles = null;
+    let lastForceDiff = '';
 
-    const updateParams = () => { device.queue.writeBuffer(bufParams, 0, SIM_PARAMS); document.getElementById('status').innerText = `dt=${SIM_PARAMS[0].toFixed(3)} damp=${SIM_PARAMS[1].toFixed(3)} r2=${SIM_PARAMS[2].toFixed(1)}`; };
+    function userSelectingText(){
+        const sel = window.getSelection?.();
+        return sel && sel.type === 'Range' && sel.toString().length > 0;
+    }
 
-    async function stepOnce(cmd, wg){
-        // Forces
-        const passForce = cmd.beginComputePass();
-        passForce.setPipeline(pipeForce);
-        passForce.setBindGroup(0, inA ? bgForceA : bgForceB);
-        passForce.dispatchWorkgroups(wg);
-        passForce.end();
+    const updateParams = () => {
+        device.queue.writeBuffer(bufParams, 0, SIM_PARAMS);
+        if(!userSelectingText()) document.getElementById('status').innerText = `dt=${SIM_PARAMS[0].toFixed(3)} damp=${SIM_PARAMS[1].toFixed(3)} r2=${SIM_PARAMS[2].toFixed(1)}`;
+    };
 
-        // Integrate
-        const passInt = cmd.beginComputePass();
-        passInt.setPipeline(pipeIntegrate);
-        passInt.setBindGroup(0, inA ? bgIntegrateAB : bgIntegrateBA);
-        passInt.dispatchWorkgroups(wg);
-        passInt.end();
+    function compareForces(brute, grid){
+        let maxD2 = 0.0;
+        let maxI = -1;
+        let maxBx = 0.0, maxBy = 0.0, maxGx = 0.0, maxGy = 0.0;
+        for(let i=0; i<NUM_PARTICLES; i++){
+            const ox = i*2;
+            const bx = brute[ox], by = brute[ox+1];
+            const gx = grid[ox],  gy = grid[ox+1];
+            const dx = bx-gx, dy = by-gy;
+            const d2 = dx*dx + dy*dy;
+            if(d2 > maxD2){ maxD2=d2; maxI=i; maxBx=bx; maxBy=by; maxGx=gx; maxGy=gy; }
+        }
+        return { maxD: Math.sqrt(maxD2), idx: maxI, bx:maxBx, by:maxBy, gx:maxGx, gy:maxGy };
+    }
+
+    async function stepOnce(wg){
+        if(algMode === 'grid'){
+            // IMPORTANT: queue.writeBuffer() is not recorded into a command encoder.
+            // Therefore, each sort stage must be submitted separately to guarantee
+            // the GPU sees the correct (k,j) uniforms.
+
+            // Phase 0: clearOffsets + binning + clearCounts (single submission)
+            {
+                const enc = device.createCommandEncoder();
+                const passClrO = enc.beginComputePass();
+                passClrO.setPipeline(pipeClearOffsets);
+                passClrO.setBindGroup(0, bgClearOffsets);
+                passClrO.dispatchWorkgroups(Math.ceil(GRID_TOTAL_CELLS/64));
+                passClrO.end();
+
+                const passBin = enc.beginComputePass();
+                passBin.setPipeline(pipeBinning);
+                passBin.setBindGroup(0, inA ? bgBinningA : bgBinningB);
+                passBin.dispatchWorkgroups(wg);
+                passBin.end();
+
+                const passClrC = enc.beginComputePass();
+                passClrC.setPipeline(pipeClearCounts);
+                passClrC.setBindGroup(0, bgClearCounts);
+                passClrC.dispatchWorkgroups(Math.ceil(GRID_TOTAL_CELLS/64));
+                passClrC.end();
+
+                device.queue.submit([enc.finish()]);
+            }
+
+            // Phase 1: bitonic sort (each stage submitted separately)
+            for (let k = 2; k <= NUM_PARTICLES; k <<= 1) {
+                for (let j = k >> 1; j > 0; j >>= 1) {
+                    device.queue.writeBuffer(bufSortUniform, 0, new Uint32Array([k, j]));
+                    const encSort = device.createCommandEncoder();
+                    const pass = encSort.beginComputePass();
+                    pass.setPipeline(pipeSort);
+                    pass.setBindGroup(0, bgSort);
+                    pass.dispatchWorkgroups(wg);
+                    pass.end();
+                    device.queue.submit([encSort.finish()]);
+                }
+            }
+
+            // Phase 2: offsets + forces + parity copy (single submission)
+            {
+                const enc2 = device.createCommandEncoder();
+
+                const passOff = enc2.beginComputePass();
+                passOff.setPipeline(pipeOffsets);
+                passOff.setBindGroup(0, bgOffsets);
+                passOff.dispatchWorkgroups(wg);
+                passOff.end();
+
+                const passForce = enc2.beginComputePass();
+                passForce.setPipeline(pipeForceGrid);
+                passForce.setBindGroup(0, inA ? bgForceGridA : bgForceGridB);
+                passForce.dispatchWorkgroups(wg);
+                passForce.end();
+
+                // Also compute brute forces on the same input state for parity check
+                const passForceBrute = enc2.beginComputePass();
+                passForceBrute.setPipeline(pipeForce);
+                passForceBrute.setBindGroup(0, inA ? bgForceA : bgForceB);
+                passForceBrute.dispatchWorkgroups(wg);
+                passForceBrute.end();
+
+                enc2.copyBufferToBuffer(bufForcesBrute, 0, bufForcesReadbackBrute, 0, NUM_PARTICLES*8);
+                enc2.copyBufferToBuffer(bufForcesGrid,  0, bufForcesReadbackGrid,  0, NUM_PARTICLES*8);
+
+                device.queue.submit([enc2.finish()]);
+            }
+        } else {
+            // Brute: force (single submission)
+            const enc = device.createCommandEncoder();
+            const passForce = enc.beginComputePass();
+            passForce.setPipeline(pipeForce);
+            passForce.setBindGroup(0, inA ? bgForceA : bgForceB);
+            passForce.dispatchWorkgroups(wg);
+            passForce.end();
+
+            // Integrate
+            const passInt = enc.beginComputePass();
+            passInt.setPipeline(pipeIntegrate);
+            passInt.setBindGroup(0, inA ? bgIntegrateAB_Brute : bgIntegrateBA_Brute);
+            passInt.dispatchWorkgroups(wg);
+            passInt.end();
+
+            device.queue.submit([enc.finish()]);
+            inA = !inA;
+            stepCount++;
+            return;
+        }
+
+        // Grid: integrate (separate submission after force buffers were produced)
+        {
+            const encInt = device.createCommandEncoder();
+            const passInt = encInt.beginComputePass();
+            passInt.setPipeline(pipeIntegrate);
+            passInt.setBindGroup(0, inA ? bgIntegrateAB_Grid : bgIntegrateBA_Grid);
+            passInt.dispatchWorkgroups(wg);
+            passInt.end();
+            device.queue.submit([encInt.finish()]);
+        }
 
         inA = !inA;
         stepCount++;
@@ -429,12 +667,12 @@ async function init() {
         const wg = Math.ceil(NUM_PARTICLES / 64);
 
         for(let s=0; s<substeps; s++){
-            const cmd = device.createCommandEncoder();
-            await stepOnce(cmd, wg);
+            await stepOnce(wg);
 
-            // Render only on last substep
+            // Render only on last substep (separate command buffer)
             if(s === substeps-1){
-                const passRender = cmd.beginRenderPass({
+                const encR = device.createCommandEncoder();
+                const passRender = encR.beginRenderPass({
                     colorAttachments: [{
                         view: ctx.getCurrentTexture().createView(),
                         clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
@@ -448,10 +686,9 @@ async function init() {
                 passRender.draw(6, NUM_PARTICLES);
                 passRender.end();
 
-                cmd.copyBufferToBuffer(inA ? bufB : bufA, 0, bufReadback, 0, bufSize);
+                encR.copyBufferToBuffer(inA ? bufB : bufA, 0, bufReadback, 0, bufSize);
+                device.queue.submit([encR.finish()]);
             }
-
-            device.queue.submit([cmd.finish()]);
         }
 
         // Debug Read (CPU) after final substep
@@ -461,6 +698,20 @@ async function init() {
         printLog(stepCount-1, resP, new Uint32Array());
         bufReadback.unmap();
 
+        if(algMode === 'grid'){
+            await bufForcesReadbackBrute.mapAsync(GPUMapMode.READ);
+            await bufForcesReadbackGrid.mapAsync(GPUMapMode.READ);
+            const fB = new Float32Array(bufForcesReadbackBrute.getMappedRange());
+            const fG = new Float32Array(bufForcesReadbackGrid.getMappedRange());
+            const c = compareForces(fB, fG);
+            lastForceDiff = `ForceDiff max=${c.maxD.toExponential(3)} @i=${c.idx} brute=(${c.bx.toExponential(3)},${c.by.toExponential(3)}) grid=(${c.gx.toExponential(3)},${c.gy.toExponential(3)})`;
+            bufForcesReadbackBrute.unmap();
+            bufForcesReadbackGrid.unmap();
+            const box = document.getElementById('forceDiffBox');
+            if(box) box.value = lastForceDiff;
+            if(!userSelectingText()) document.getElementById('status').innerText = `GRID ${lastForceDiff}`;
+        }
+
         running = false;
         if(autoRun) requestAnimationFrame(()=>step());
     }
@@ -468,8 +719,10 @@ async function init() {
     // --- UI Logic ---
 
     function printLog(frame, particles, sortKeys) {
+        if(userSelectingText()) return;
         const log = document.getElementById('logs');
         let html = `<b>FRAME ${frame}</b>\n`;
+        if(lastForceDiff) html += `<b>${lastForceDiff}</b>\n\n`;
         html += `IDX | POS (X, Y)     | VEL (X, Y)     | Q  | CellID (Key)\n`;
         html += `--------------------------------------------------------\n`;
 
@@ -517,6 +770,8 @@ async function init() {
     const inpDamp = document.getElementById('inpDamp');
     const inpR2 = document.getElementById('inpR2');
     const inpSub = document.getElementById('inpSub');
+    const selAlg = document.getElementById('selAlg');
+    const btnCopyDiff = document.getElementById('btnCopyDiff');
     inpDt.value = SIM_PARAMS[0];
     inpDamp.value = SIM_PARAMS[1];
     inpR2.value = SIM_PARAMS[2];
@@ -526,6 +781,22 @@ async function init() {
     inpDamp.oninput = () => { SIM_PARAMS[1] = clamp(parseFloat(inpDamp.value)||SIM_PARAMS[1],0.0,1.0); updateParams(); };
     inpR2.oninput = () => { SIM_PARAMS[2] = clamp(parseFloat(inpR2.value)||SIM_PARAMS[2],0.1,128.0); updateParams(); };
     inpSub.oninput = () => { substeps = Math.max(1, Math.min(32, parseInt(inpSub.value)||substeps)); };
+    selAlg.onchange = () => { algMode = selAlg.value; };
+    btnCopyDiff.onclick = async () => {
+        const box = document.getElementById('forceDiffBox');
+        const txt = (box && box.value) ? box.value : lastForceDiff;
+        if(!txt) return;
+        try {
+            await navigator.clipboard.writeText(txt);
+        } catch (e) {
+            // Fallback for older contexts
+            if(box){
+                box.focus();
+                box.select();
+                document.execCommand('copy');
+            }
+        }
+    };
     updateParams();
 
     // Mouse picking/dragging

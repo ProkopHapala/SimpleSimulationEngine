@@ -1,0 +1,1075 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGPU 3D RARFF (Reactive Forcefield)</title>
+    <style>
+        body { margin: 0; background: #050505; color: white; font-family: monospace; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #444; pointer-events: auto; display: inline-block; }
+        #ui select, #ui input, #ui button { pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>Particles: <span id="pCount"></span></div>
+        <div>FPS: <span id="fps"></span></div>
+        <div style="font-size: 0.8em; color: #aaa;">WASD to Move, Arrows to Rotate</div>
+        <div>Mode: 
+            <select id="modeSel">
+                <option value="grid">Grid (spatial hash)</option>
+                <option value="brute" selected>Brute (all pairs)</option>
+            </select>
+        </div>
+        <div>
+            dt <input id="inpDt" type="number" step="0.001" style="width:70px;" />
+            damp <input id="inpDamp" type="number" step="0.001" style="width:70px;" />
+            rb0 <input id="inpRb0" type="number" step="0.1" style="width:70px;" />
+            aM <input id="inpAM" type="number" step="0.1" style="width:70px;" />
+            bM <input id="inpBM" type="number" step="0.1" style="width:70px;" />
+            rcut <input id="inpRcut" type="number" step="0.1" style="width:70px;" />
+            N <input id="inpN" type="number" min="64" max="32768" step="64" style="width:80px;" />
+            <button id="btnApplyN" style="pointer-events:auto;">Apply N (reload)</button>
+        </div>
+        <div>Picked: <span id="picked"></span></div>
+    </div>
+    <canvas id="canvas"></canvas>
+
+<script type="module">
+
+// =========================================================
+// CONFIGURATION
+// =========================================================
+const urlN = parseInt(new URLSearchParams(location.search).get('n') || '1024');
+const NUM_PARTICLES = Math.pow(2, Math.max(6, Math.min(15, Math.round(Math.log2(Math.max(64, urlN)))))); // clamp to [64, 32768]
+const GRID_DIM = 32;        // 32x32x32 grid
+const WORLD_SIZE = 40.0;    // Simulation bounds
+const CELL_SIZE = WORLD_SIZE / GRID_DIM;
+const GRID_TOTAL_CELLS = GRID_DIM * GRID_DIM * GRID_DIM;
+
+// Physics Parameters (pair-type combined; C++ defaults combine -> rbond0=1.0, aMorse=16.0, bMorse=-1.4)
+const PARAMS = new Float32Array([
+    0.002, // dt (smaller step for stability)
+    0.95,  // damping (lin + ang)
+    1.0,   // rbond0 (equilibrium dist)
+    16.0,  // aMorse
+   -1.4,   // bMorse
+    5.0,   // RcutMax
+    WORLD_SIZE, 
+    GRID_DIM,
+    CELL_SIZE
+]);
+
+// sp3 Bond Geometry (Tetrahedral)
+// Normalized vectors from center to corners of tetrahedron
+const SP3_BONDS = new Float32Array([
+     1.000000000000,  0.00000000000,  0.00000000000, 0,
+    -0.33380685923,   0.94264149109,  0.00000000000, 0,
+    -0.33380685923,  -0.47132074554, -0.81635147794, 0,
+    -0.33380685923,  -0.47132074554,  0.81635147794, 0
+]);
+
+// =========================================================
+// SHADER: COMMON & STRUCTS
+// =========================================================
+const commonWGSL = `
+    struct Params {
+        dt: f32,
+        damping: f32,
+        rbond0: f32,
+        aMorse: f32,
+        bMorse: f32,
+        rcut: f32,
+        worldSize: f32,
+        gridDim: f32,
+        cellSize: f32,
+    };
+
+    struct Particle {
+        pos: vec4<f32>,   // .w = mass (unused here, assumed 1)
+        quat: vec4<f32>,  // Orientation
+        vel: vec4<f32>,   // .w = padding
+        angVel: vec4<f32> // Angular Velocity
+    };
+
+    struct DerivedData {
+        // We store the 4 rotated bond vectors here to avoid calculating q*v*q' 
+        // 16 times per pair in the force kernel.
+        // Layout: bond0, bond1, bond2, bond3
+        bonds: mat4x4<f32> 
+    };
+
+    struct ForceTorque {
+        force: vec4<f32>, // .w padding
+        torque: vec4<f32>
+    };
+
+    struct SortKeyPair {
+        key: u32,
+        value: u32,
+    };
+
+    // Helper: Rotate vector by quaternion
+    fn rotate_vector(v: vec3<f32>, q: vec4<f32>) -> vec3<f32> {
+        let t = 2.0 * cross(q.xyz, v);
+        return v + q.w * t + cross(q.xyz, t);
+    }
+
+    // Helper: Quaternion multiplication
+    fn q_mul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+        return vec4<f32>(
+            a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz),
+            a.w * b.w - dot(a.xyz, b.xyz)
+        );
+    }
+
+    // === from fastmath.h::finiteExp (exact port)
+    // returns (y, dy/dx) for y=(1-C*x)^17*(1-B*x)^2
+    fn finiteExp(x: f32, beta: f32, rcut: f32) -> vec2<f32> {
+        let k: f32 = 17.0;
+        let RN: f32 = rcut * 0.5 * k;
+        let cor: f32 = 1.15 / RN;
+        let C: f32 = beta / k - cor;
+        let B: f32 = 1.0 / rcut;
+        let y1: f32 = 1.0 - x * C;
+        var y: f32 = y1 * y1; // ^2
+        y = y * y; // ^4
+        y = y * y; // ^8
+        y = y * y; // ^16
+        let ycut: f32 = 1.0 - x * B;
+        y = y * ycut;
+        let dy: f32 = y * ( -2.0*B - k*C + (k+2.0)*B*C*x );
+        y = y * ycut;
+        return vec2<f32>(y * y1, dy);
+    }
+
+    // === from SMat3.h::fromDeriv + dot_to (exact port)
+    fn Dij_dot(dij: vec3<f32>, sc: f32, v: vec3<f32>) -> vec3<f32> {
+        let xx_: f32 = dij.x*dij.x;
+        let yy_: f32 = dij.y*dij.y;
+        let zz_: f32 = dij.z*dij.z;
+        let xy: f32 = -dij.x*dij.y*sc;
+        let xz: f32 = -dij.x*dij.z*sc;
+        let yz: f32 = -dij.y*dij.z*sc;
+        let xx: f32 = (yy_+zz_) * sc;
+        let yy: f32 = (xx_+zz_) * sc;
+        let zz: f32 = (xx_+yy_) * sc;
+        return vec3<f32>(
+            xx*v.x + xy*v.y + xz*v.z,
+            xy*v.x + yy*v.y + yz*v.z,
+            xz*v.x + yz*v.y + zz*v.z
+        );
+    }
+`;
+
+// =========================================================
+// SHADER 4b: FORCE CALCULATION (BRUTE, NO GRID)
+// =========================================================
+const forceBruteWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read> particles : array<Particle>;
+    @group(0) @binding(2) var<storage, read_write> forces : array<ForceTorque>;
+    @group(0) @binding(3) var<storage, read> derived : array<DerivedData>;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+
+        let p_i = particles[idx];
+        let bonds_i = derived[idx].bonds;
+        var f_accum = vec3<f32>(0.0);
+        var t_accum = vec3<f32>(0.0);
+        let r2cut = params.rcut * params.rcut;
+        let RcutMax = params.rcut;
+
+        for (var otherIdx = 0u; otherIdx < ${NUM_PARTICLES}; otherIdx++) {
+            if (otherIdx == idx) { continue; }
+            let p_j = particles[otherIdx];
+            var dij = p_j.pos.xyz - p_i.pos.xyz;
+            if(dij.x > params.worldSize*0.5) { dij.x -= params.worldSize; } else if(dij.x < -params.worldSize*0.5) { dij.x += params.worldSize; }
+            if(dij.y > params.worldSize*0.5) { dij.y -= params.worldSize; } else if(dij.y < -params.worldSize*0.5) { dij.y += params.worldSize; }
+            if(dij.z > params.worldSize*0.5) { dij.z -= params.worldSize; } else if(dij.z < -params.worldSize*0.5) { dij.z += params.worldSize; }
+            let r2 = dot(dij, dij);
+            if (r2 < r2cut && r2 > 1e-8) {
+                let rij = sqrt(r2);
+                let hij = dij / rij;
+                let inv_rir2 = 1.0 / (rij * r2);
+
+                // === C++: expr = finiteExp( rij - rbond0, dexpr, -bMorse, RcutMax-rbond0 )
+                let x = rij - params.rbond0;
+                let fe = finiteExp(x, -params.bMorse, RcutMax - params.rbond0);
+                let expr = fe.x;
+                let dexpr = fe.y;
+                var E = params.aMorse * expr * expr;
+                let fr = 2.0 * params.aMorse * expr * dexpr;
+                let Eb  = -2.0 * params.aMorse * expr;
+                let frb = -2.0 * params.aMorse * dexpr;
+                var force = hij * fr;
+
+                let bonds_j = derived[otherIdx].bonds;
+                for(var ib=0u; ib<4u; ib++) {
+                    let hi = bonds_i[ib].xyz;
+                    let ci = dot(hij, hi);
+                    if (ci < 0.0) { continue; }
+                    for(var jb=0u; jb<4u; jb++) {
+                        let hj = bonds_j[jb].xyz;
+                        let cj  = dot(hij, hj);
+                        let cij = dot(hi, hj);
+                        if (cj > 0.0 || cij > 0.0) { continue; }
+
+                        let cc  = ci*cj*cij;
+                        let cc2 = cc*cc;
+                        let e_ang = cc2*cc2;
+                        let de = 4.0*cc2*cc;
+
+                        let eEb  = e_ang * Eb;
+                        E += eEb;
+
+                        let deEb = de * Eb;
+                        let cicj = ci*cj;
+                        let cijcideEb = cij*ci*deEb;
+                        let cijcjdeEb = cij*cj*deEb;
+
+                        // bond forces (C++ fi/fj arrays)
+                        var fi = hij * (-cijcjdeEb) + hj * (-cicj*deEb);
+
+                        // torque accumulation like evalTorques(): fi.makeOrthoU(hi); torq += hi x fi
+                        fi = fi - hi * dot(hi, fi);
+                        t_accum += cross(hi, fi);
+
+                        // translational force (C++: Dij.dot_to(hi,hv); force.add_mul(hv,cijcjdeEb); etc)
+                        let hv_i = Dij_dot(dij, inv_rir2, hi);
+                        let hv_j = Dij_dot(dij, inv_rir2, hj);
+                        force += hv_i * cijcjdeEb;
+                        force += hv_j * cijcideEb;
+                        force += hij  * (frb * e_ang);
+                    }
+                }
+
+                f_accum += force;
+            }
+        }
+        forces[idx].force  = vec4<f32>(f_accum, 0.0);
+        forces[idx].torque = vec4<f32>(t_accum, 0.0);
+    }
+`;
+
+// =========================================================
+// SHADER 1: INTEGRATION & BINNING (PRE-CALC)
+// =========================================================
+const integrateWGSL = `
+    ${commonWGSL}
+
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read_write> particles : array<Particle>;
+    @group(0) @binding(2) var<storage, read> forces : array<ForceTorque>;
+    @group(0) @binding(3) var<storage, read_write> derived : array<DerivedData>;
+    @group(0) @binding(4) var<storage, read_write> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(5) var<storage, read_write> offsets : array<u32>; // Reset this here too
+    @group(0) @binding(6) var<uniform> sp3 : mat4x4<f32>; // The 4 base vectors
+
+    fn getGridHash(pos: vec3<f32>) -> u32 {
+        let gridPos = floor(pos / params.cellSize);
+        let gx = i32(clamp(gridPos.x, 0.0, params.gridDim - 1.0));
+        let gy = i32(clamp(gridPos.y, 0.0, params.gridDim - 1.0));
+        let gz = i32(clamp(gridPos.z, 0.0, params.gridDim - 1.0));
+        // 3D index: x + y*w + z*w*h
+        let dim = i32(params.gridDim);
+        return u32(gz * dim * dim + gy * dim + gx);
+    }
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        
+        // 1. Reset Offsets (Sparse clear - optimized)
+        if (idx < ${GRID_TOTAL_CELLS}) {
+            offsets[idx] = 0xFFFFFFFFu;
+        }
+
+        if (idx >= ${NUM_PARTICLES}) { return; }
+
+        var p = particles[idx];
+        let ft = forces[idx];
+
+        // --- OVERDAMPED RELAXATION (like C++ move() / moveMDdamp but without inertia) ---
+        // No velocity state => no oscillations/jerking; stable relaxation to local minima.
+        // Use damping as step scale.
+        let dt = params.dt * params.damping;
+        p.pos += ft.force * dt;
+        // Rotate directly by torque (treat torque as omega-like step)
+        let w = ft.torque.xyz;
+        let q = p.quat;
+        let dQ = vec4<f32>(w, 0.0);
+        let spin = q_mul(dQ, q) * 0.5;
+        p.quat += spin * dt;
+        p.quat = normalize(p.quat);
+        // keep explicit velocity state at zero
+        p.vel = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+        p.angVel = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+
+        // Boundary Wrap
+        let ws = params.worldSize;
+        if(p.pos.x < 0.0) { p.pos.x += ws; } if(p.pos.x > ws) { p.pos.x -= ws; }
+        if(p.pos.y < 0.0) { p.pos.y += ws; } if(p.pos.y > ws) { p.pos.y -= ws; }
+        if(p.pos.z < 0.0) { p.pos.z += ws; } if(p.pos.z > ws) { p.pos.z -= ws; }
+
+        particles[idx] = p;
+
+        // --- PRE-CALC BOND VECTORS ---
+        // Rotate the 4 sp3 vectors into world space for this atom
+        // This optimizes the N^2 force loop later
+        var bondMat : mat4x4<f32>;
+        bondMat[0] = vec4<f32>(rotate_vector(sp3[0].xyz, p.quat), 0.0);
+        bondMat[1] = vec4<f32>(rotate_vector(sp3[1].xyz, p.quat), 0.0);
+        bondMat[2] = vec4<f32>(rotate_vector(sp3[2].xyz, p.quat), 0.0);
+        bondMat[3] = vec4<f32>(rotate_vector(sp3[3].xyz, p.quat), 0.0);
+        derived[idx].bonds = bondMat;
+
+        // --- BINNING ---
+        let cellID = getGridHash(p.pos.xyz);
+        sortBuf[idx].key = cellID;
+        sortBuf[idx].value = idx;
+    }
+`;
+
+// =========================================================
+// SHADER 2: BITONIC SORT
+// =========================================================
+const sortWGSL = `
+    ${commonWGSL}
+    struct SortUniforms { algo: u32, step: u32 };
+    @group(0) @binding(0) var<storage, read_write> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(1) var<uniform> uSort : SortUniforms;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let i = id.x;
+        let j = i ^ uSort.step;
+        if (j <= i) { return; }
+
+        var a = sortBuf[i];
+        var b = sortBuf[j];
+
+        let dir = ((i & uSort.algo) != 0u);
+        let cmp = a.key > b.key;
+
+        if (dir == cmp) {
+            sortBuf[i] = b;
+            sortBuf[j] = a;
+        }
+    }
+`;
+
+// =========================================================
+// SHADER 3: BUILD OFFSETS
+// =========================================================
+const offsetWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<storage, read> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(1) var<storage, read_write> offsets : array<u32>;
+    @group(0) @binding(2) var<storage, read_write> counts : array<atomic<u32>>;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+
+        let key = sortBuf[idx].key;
+        let prevKey = sortBuf[max(idx - 1u, 0u)].key;
+
+        if (idx == 0u || key != prevKey) {
+            offsets[key] = idx;
+        }
+        atomicAdd(&counts[key], 1u);
+    }
+`;
+
+// =========================================================
+// SHADER 4: FORCE CALCULATION (RARFF LOGIC, GRID)
+// =========================================================
+const forceWGSL = `
+    ${commonWGSL}
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var<storage, read> particles : array<Particle>;
+    @group(0) @binding(2) var<storage, read_write> forces : array<ForceTorque>;
+    @group(0) @binding(3) var<storage, read> derived : array<DerivedData>;
+    @group(0) @binding(4) var<storage, read> sortBuf : array<SortKeyPair>;
+    @group(0) @binding(5) var<storage, read> offsets : array<u32>;
+    @group(0) @binding(6) var<storage, read_write> counts : array<atomic<u32>>;
+
+    @compute @workgroup_size(64)
+    fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+        let idx = id.x;
+        if (idx >= ${NUM_PARTICLES}) { return; }
+
+        let p_i = particles[idx];
+        let bonds_i = derived[idx].bonds;
+
+        var f_accum = vec3<f32>(0.0);
+        var t_accum = vec3<f32>(0.0);
+
+        let gridPos = floor(p_i.pos.xyz / params.cellSize);
+        let gx = i32(gridPos.x);
+        let gy = i32(gridPos.y);
+        let gz = i32(gridPos.z);
+        let dim = i32(params.gridDim);
+
+        let r2cut = params.rcut * params.rcut;
+
+        // Iterate 3x3x3 Neighbors
+        for (var z = -1; z <= 1; z++) {
+        for (var y = -1; y <= 1; y++) {
+        for (var x = -1; x <= 1; x++) {
+            
+            // Wrap coordinates
+            let nx = (gx + x + dim) % dim;
+            let ny = (gy + y + dim) % dim;
+            let nz = (gz + z + dim) % dim;
+
+            let cellKey = u32(nz * dim * dim + ny * dim + nx);
+            let start = offsets[cellKey];
+            let count = atomicLoad(&counts[cellKey]);
+
+            if (start != 0xFFFFFFFFu) {
+                for (var k = 0u; k < count; k++) {
+                    let otherIdx = sortBuf[start + k].value;
+                    
+                    if (otherIdx != idx) {
+                        let p_j = particles[otherIdx];
+                        
+                        // Distance check
+                        var dij = p_j.pos.xyz - p_i.pos.xyz;
+                        
+                        // Wrap distance (Minimum Image Convention)
+                        if(dij.x > params.worldSize*0.5) { dij.x -= params.worldSize; }
+                        else if(dij.x < -params.worldSize*0.5) { dij.x += params.worldSize; }
+                        if(dij.y > params.worldSize*0.5) { dij.y -= params.worldSize; }
+                        else if(dij.y < -params.worldSize*0.5) { dij.y += params.worldSize; }
+                        if(dij.z > params.worldSize*0.5) { dij.z -= params.worldSize; }
+                        else if(dij.z < -params.worldSize*0.5) { dij.z += params.worldSize; }
+
+                        let r2 = dot(dij, dij);
+
+                        if (r2 < r2cut && r2 > 0.0001) {
+                            let rij = sqrt(r2);
+                            let hij = dij / rij; // normalized direction i -> j
+
+                            // --- 1. MORSE POTENTIAL ---
+                            // E = exp( -2a(r-r0)) - 2 exp( -a(r-r0) )
+                            // Force is derivative
+                            let dr = rij - params.rbond0;
+                            let expr1 = exp(-params.aMorse * dr); // using params as a
+                            let expr2 = exp(-2.0 * params.aMorse * dr); // actually need width param
+                            // Standard Morse Force approximation:
+                            // F = 2*D*a * (exp(-a*dr) - exp(-2*a*dr))
+                            // Using simplified from provided code structure
+                            // The C++ logic: E = a*expr*expr, fr = 2*a*expr*dexpr
+                            
+                            // Let's implement the specific logic from C++ pairEF:
+                            // double expr = exp( -bMorse * (rij - rbond0) )
+                            let ex = exp( -params.bMorse * dr );
+                            let E = params.aMorse * ex * ex; 
+                            let fr = -2.0 * params.aMorse * params.bMorse * (ex * ex - ex); 
+                            
+                            // Base Radial Force
+                            // But wait, the C++ code accumulates Eb and frb for angular calculation
+                            let Eb = -2.0 * params.aMorse * ex; // The bond strength factor
+                            let frb = 2.0 * params.aMorse * params.bMorse * ex;
+
+                            f_accum += hij * fr;
+
+                            // --- 2. ANGULAR / BOND LOGIC ---
+                            let bonds_j = derived[otherIdx].bonds;
+                            
+                            // We need to iterate 4x4 bonds
+                            // Loops unrolled or fixed size 4
+                            for(var ib=0u; ib<4u; ib++) {
+                                let hi = bonds_i[ib].xyz;
+                                let ci = dot(hij, hi); // cos(angle at i)
+                                if (ci < 0.0) { continue; } // Bond must face neighbor
+
+                                for(var jb=0u; jb<4u; jb++) {
+                                    let hj = bonds_j[jb].xyz;
+                                    let cj = dot(hij, hj);
+                                    let cij = dot(hi, hj);
+
+                                    // Check facing logic from C++: if( (cj>0)||(cij>0) ) continue;
+                                    // hj should oppose hij (point back from j to i?)
+                                    // hij points i->j. hj points out of j. 
+                                    // ideally hj points towards i, so dot(hij, hj) should be roughly -1.
+                                    if (cj > 0.0 || cij > 0.0) { continue; }
+
+                                    // E = (ci * cj * cij)^4 * Eb
+                                    let cc = ci * cj * cij;
+                                    let cc2 = cc * cc;
+                                    let e_ang = cc2 * cc2;
+                                    let de = 4.0 * cc2 * cc; // Derivative w.r.t product
+
+                                    // Forces on translation (via hij derivative)
+                                    // Dij logic: derivative of direction vector
+                                    // d(hij)/d(r) ... approximated
+                                    
+                                    // Force on i due to bond bend
+                                    let deEb = de * Eb;
+                                    let cicj = ci * cj;
+                                    
+                                    // C++ Logic:
+                                    // fi.add_mul( hij, -cijcjdeEb ); fi.add_mul( hj, -cicj*deEb );
+                                    // fj...
+                                    // force.add_mul( hv_i, ... )
+                                    
+                                    // Translation Force (complex angular dependence)
+                                    // Simplified: Just applying the 'frb * e' part along hij
+                                    // And the orthogonal parts
+                                    
+                                    let term1 = frb * e_ang; 
+                                    
+                                    // Approximate the angular forces on Position (Transalational)
+                                    // Correct derivation requires the tensor Dij = (I - r*rT)/r
+                                    let vec_u = (hi - ci * hij) / rij; // Part of gradient
+                                    let vec_v = (hj - cj * hij) / rij; 
+                                    
+                                    // Force contributions from angular gradients
+                                    // d(ci)/dr = ...
+                                    // Accumulating to f_accum
+                                    
+                                    // From C++: 
+                                    // force.add_mul( hv, cijcjdeEb ); 
+                                    // force.add_mul( hv, cijcideEb );
+                                    // force.add_mul( hij, frb*e );
+                                    
+                                    f_accum += hij * term1;
+                                    
+                                    // Using the projected vectors (hi projected onto plane perp to hij)
+                                    let h_orth_i = hi - ci*hij;
+                                    let h_orth_j = hj - cj*hij;
+                                    
+                                    f_accum += (h_orth_i * (deEb * cj * cij / rij));
+                                    f_accum += (h_orth_j * (deEb * ci * cij / rij));
+
+                                    // --- TORQUES ---
+                                    // Torque on i = hi x Force_on_hi
+                                    // Force on bond hi direction: -cicj*deEb * hj - cijcjdeEb * hij ...
+                                    // Essentially torque comes from trying to align hi
+                                    // C++: fi.add_mul( hj, -cicj*deEb ); fi.add_mul( hij, -cijcjdeEb );
+                                    // Torque i = hi x fi
+                                    
+                                    let fi_eff = hj * (-cicj * deEb) + hij * (-cij * cj * deEb);
+                                    t_accum += cross(hi, fi_eff);
+
+                                    // Note: In C++ logic, they accumulate 'fi' and 'fj' on the bonds, 
+                                    // then cross them at the end. Here we do it per interaction.
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }}} // End loops
+
+        forces[idx].force = vec4<f32>(f_accum, 0.0);
+        forces[idx].torque = vec4<f32>(t_accum, 0.0);
+    }
+`;
+
+// =========================================================
+// SHADER 5: RENDERER
+// =========================================================
+const renderWGSL = `
+    struct Uniforms {
+        viewProj: mat4x4<f32>,
+        cameraPos: vec3<f32>,
+        selected: u32,
+    };
+    @group(0) @binding(0) var<uniform> u : Uniforms;
+    @group(0) @binding(1) var<storage, read> particles : array<vec4<f32>>; // Reads pos
+    
+    struct VertexOut {
+        @builtin(position) pos : vec4<f32>,
+        @location(0) uv : vec2<f32>,
+        @location(1) color : vec3<f32>,
+        @location(2) worldPos : vec3<f32>,
+        @location(3) normal : vec3<f32>
+    };
+
+    // Simple Sphere impostor
+    @vertex
+    fn vs_main(@builtin(vertex_index) vIdx : u32, @builtin(instance_index) iIdx : u32) -> VertexOut {
+        let p = particles[iIdx]; // Position
+        
+        // Quad coords
+        var pos = vec2<f32>(0.0);
+        let idx = vIdx % 6u;
+        if(idx==0u || idx==3u) { pos = vec2<f32>(-1., -1.); }
+        else if(idx==1u) { pos = vec2<f32>(1., -1.); }
+        else if(idx==2u || idx==4u) { pos = vec2<f32>(1., 1.); }
+        else { pos = vec2<f32>(-1., 1.); }
+
+        let radius = 0.4;
+        
+        // Billboard logic
+        let camRight = vec3<f32>(u.viewProj[0][0], u.viewProj[1][0], u.viewProj[2][0]);
+        let camUp = vec3<f32>(u.viewProj[0][1], u.viewProj[1][1], u.viewProj[2][1]);
+        
+        let worldPos = p.xyz + (camRight * pos.x + camUp * pos.y) * radius;
+        
+        var out : VertexOut;
+        out.pos = u.viewProj * vec4<f32>(worldPos, 1.0);
+        out.uv = pos;
+        out.worldPos = worldPos;
+        
+        // Color based on velocity roughly? Or ID.
+        let r = sin(f32(iIdx)*0.1)*0.5 + 0.5;
+        let g = cos(f32(iIdx)*0.13)*0.5 + 0.5;
+        var col = vec3<f32>(r, g, 1.0 - r);
+        if (iIdx == u.selected) { col = vec3<f32>(1.0, 0.2, 0.8); }
+        out.color = col;
+        
+        return out;
+    }
+
+    @fragment
+    fn fs_main(in : VertexOut) -> @location(0) vec4<f32> {
+        let r2 = dot(in.uv, in.uv);
+        if (r2 > 1.0) { discard; }
+        
+        // Fake lighting
+        let z = sqrt(1.0 - r2);
+        let normal = vec3<f32>(in.uv, z);
+        let light = normalize(vec3<f32>(0.5, 1.0, 1.0));
+        let diff = max(dot(normal, light), 0.1);
+        
+        return vec4<f32>(in.color * diff, 1.0);
+    }
+`;
+
+// Helper to draw bonds
+const bondRenderWGSL = `
+    struct Uniforms { viewProj: mat4x4<f32> };
+    struct Derived { bonds: mat4x4<f32> };
+    @group(0) @binding(0) var<uniform> u : Uniforms;
+    @group(0) @binding(1) var<storage, read> particles : array<vec4<f32>>;
+    @group(0) @binding(2) var<storage, read> derived : array<Derived>;
+    
+    @vertex
+    fn vs(@builtin(vertex_index) vIdx : u32, @builtin(instance_index) iIdx : u32) -> @builtin(position) vec4<f32> {
+        let p = particles[iIdx];
+        let b = derived[iIdx].bonds;
+        
+        // 4 bonds per atom, 2 vertices per bond = 8 vertices total
+        let bondIdx = vIdx / 2u; // 0..3
+        let vertIdx = vIdx % 2u; // 0=center, 1=tip
+        
+        var pos = p.xyz;
+        if (vertIdx == 1u) {
+            // Select bond vector
+            var dir = vec3<f32>(0.0);
+            if(bondIdx==0u) { dir = b[0].xyz; }
+            if(bondIdx==1u) { dir = b[1].xyz; }
+            if(bondIdx==2u) { dir = b[2].xyz; }
+            if(bondIdx==3u) { dir = b[3].xyz; }
+            pos += dir * 0.5; // Bond length visual
+        }
+        
+        return u.viewProj * vec4<f32>(pos, 1.0);
+    }
+
+    @fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(1.0, 1.0, 1.0, 1.0); }
+`;
+
+// =========================================================
+// JS APPLICATION
+// =========================================================
+async function init() {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('webgpu');
+    const format = navigator.gpu.getPreferredCanvasFormat();
+
+    function resize(){
+        const dpr = devicePixelRatio || 1;
+        canvas.width  = Math.floor(innerWidth  * dpr);
+        canvas.height = Math.floor(innerHeight * dpr);
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+        ctx.configure({ device, format, alphaMode:'opaque', usage: GPUTextureUsage.RENDER_ATTACHMENT });
+        depthTexture = device.createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
+    }
+
+    let depthTexture;
+    resize();
+    addEventListener('resize', resize);
+
+    // --- DATA INIT ---
+    // Particle: pos(4), quat(4), vel(4), angVel(4) = 16 floats
+    const pData = new Float32Array(NUM_PARTICLES * 16);
+    // Place atoms on a lattice to avoid catastrophic overlaps at start
+    const spacing = Math.max(1.8*PARAMS[2], 1.5); // ~1.8*rbond0
+    const nSide = Math.ceil(Math.cbrt(NUM_PARTICLES));
+    for(let i=0; i<NUM_PARTICLES; i++) {
+        const off = i*16;
+        const ix = i % nSide;
+        const iy = Math.floor(i / nSide) % nSide;
+        const iz = Math.floor(i / (nSide*nSide));
+        pData[off+0] = (ix + 0.5) * spacing;
+        pData[off+1] = (iy + 0.5) * spacing;
+        pData[off+2] = (iz + 0.5) * spacing;
+        // wrap into world
+        pData[off+0] = pData[off+0] % WORLD_SIZE;
+        pData[off+1] = pData[off+1] % WORLD_SIZE;
+        pData[off+2] = pData[off+2] % WORLD_SIZE;
+        pData[off+3] = 1.0; // mass
+        // Quat (Random rotation)
+        // Simple random axis
+        const axis = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
+        const len = Math.hypot(...axis);
+        const ang = Math.random() * Math.PI * 2;
+        const s = Math.sin(ang/2);
+        pData[off+4] = (axis[0]/len)*s;
+        pData[off+5] = (axis[1]/len)*s;
+        pData[off+6] = (axis[2]/len)*s;
+        pData[off+7] = Math.cos(ang/2);
+        // Vel (start at rest)
+        pData[off+8] = 0.0;
+        pData[off+9] = 0.0;
+        pData[off+10] = 0.0;
+        // AngVel (start at rest)
+        pData[off+12] = 0.0;
+        pData[off+13] = 0.0;
+        pData[off+14] = 0.0;
+    }
+
+    // Buffers
+    const bufParticles = device.createBuffer({ size: pData.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(bufParticles, 0, pData);
+
+    const bufForces = device.createBuffer({ size: NUM_PARTICLES * 32, usage: GPUBufferUsage.STORAGE }); // Force(4)+Torque(4)
+    // Derived: 4 vec4s per particle = 64 bytes per particle
+    const bufDerived = device.createBuffer({ size: NUM_PARTICLES * 64, usage: GPUBufferUsage.STORAGE });
+    
+    // Sort Buffers
+    const bufSort = device.createBuffer({ size: NUM_PARTICLES * 8, usage: GPUBufferUsage.STORAGE }); // Key(4)+Val(4)
+    const bufOffsets = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE });
+    const bufCounts = device.createBuffer({ size: GRID_TOTAL_CELLS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST }); // Clear need
+    // Make sure to clear counts initially
+    device.queue.writeBuffer(bufCounts, 0, new Uint32Array(GRID_TOTAL_CELLS));
+
+    const bufParams = device.createBuffer({ size: PARAMS.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(bufParams, 0, PARAMS);
+    
+    const bufSp3 = device.createBuffer({ size: SP3_BONDS.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(bufSp3, 0, SP3_BONDS);
+
+    const bufSortUni = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    // --- PIPELINES ---
+    const mkPipe = (code, ent) => device.createComputePipeline({ layout:'auto', compute: { module: device.createShaderModule({code}), entryPoint:ent } });
+    
+    const piInteg = mkPipe(integrateWGSL, 'main');
+    const piSort = mkPipe(sortWGSL, 'main');
+    const piOffset = mkPipe(offsetWGSL, 'main');
+    const piForce = mkPipe(forceWGSL, 'main');
+    const piForceBrute = mkPipe(forceBruteWGSL, 'main');
+
+    // Bind Groups
+    const bgInteg = device.createBindGroup({ layout: piInteg.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufParticles}},
+        { binding:2, resource:{buffer:bufForces}}, {binding:3, resource:{buffer:bufDerived}},
+        { binding:4, resource:{buffer:bufSort}}, {binding:5, resource:{buffer:bufOffsets}},
+        { binding:6, resource:{buffer:bufSp3}}
+    ]});
+
+    const bgSort = device.createBindGroup({ layout: piSort.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufSort}}, {binding:1, resource:{buffer:bufSortUni}}
+    ]});
+
+    const bgOffset = device.createBindGroup({ layout: piOffset.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufSort}}, {binding:1, resource:{buffer:bufOffsets}}, {binding:2, resource:{buffer:bufCounts}}
+    ]});
+
+    const bgForce = device.createBindGroup({ layout: piForce.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufParticles}},
+        { binding:2, resource:{buffer:bufForces}}, {binding:3, resource:{buffer:bufDerived}},
+        { binding:4, resource:{buffer:bufSort}}, {binding:5, resource:{buffer:bufOffsets}}, {binding:6, resource:{buffer:bufCounts}}
+    ]});
+
+    const bgForceBrute = device.createBindGroup({ layout: piForceBrute.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufParams}}, {binding:1, resource:{buffer:bufParticles}},
+        { binding:2, resource:{buffer:bufForces}}, {binding:3, resource:{buffer:bufDerived}}
+    ]});
+
+    // Render Pipeline
+    const modRender = device.createShaderModule({code:renderWGSL});
+    const piRender = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: modRender, entryPoint: 'vs_main' },
+        fragment: { module: modRender, entryPoint: 'fs_main', targets: [{format}] },
+        primitive: { topology: 'triangle-list' },
+        depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
+    });
+    
+    // Bond Render Pipeline
+    const modBond = device.createShaderModule({code:bondRenderWGSL});
+    const piBond = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: { module: modBond, entryPoint: 'vs' },
+        fragment: { module: modBond, entryPoint: 'fs', targets: [{format}] },
+        primitive: { topology: 'line-list' },
+        depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
+    });
+
+    const bufView = device.createBuffer({ size: 16*4 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST }); // Mat4 + vec3
+    const bgRender = device.createBindGroup({ layout: piRender.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufView}},
+        { binding:1, resource:{buffer:bufParticles}}
+    ]});
+    
+    // For bond render we need derived buffer
+    const bgBond = device.createBindGroup({ layout: piBond.getBindGroupLayout(0), entries: [
+        { binding:0, resource:{buffer:bufView}},
+        { binding:1, resource:{buffer:bufParticles}},
+        { binding:2, resource:{buffer:bufDerived}}
+    ]});
+
+    depthTexture = device.createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
+
+    // --- LOOP ---
+    const viewMat = new Float32Array(16);
+    const projMat = new Float32Array(16);
+    const vpMat = new Float32Array(16);
+    
+    // Camera
+    let camPos = [WORLD_SIZE/2, WORLD_SIZE/2, WORLD_SIZE*1.5];
+    let camYaw = 0, camPitch = 0;
+    
+    // Matrix Utils
+    function mat4Perspective(out, fovy, aspect, near, far) {
+        const f = 1.0 / Math.tan(fovy / 2);
+        out.fill(0);
+        out[0] = f / aspect; out[5] = f; out[10] = (far + near) * (1 / (near - far));
+        out[11] = -1; out[14] = (2 * far * near) * (1 / (near - far));
+    }
+    function mat4LookAt(out, eye, center, up) {
+        const z0=eye[0]-center[0], z1=eye[1]-center[1], z2=eye[2]-center[2];
+        const len = 1/Math.hypot(z0,z1,z2);
+        const zx=z0*len, zy=z1*len, zz=z2*len;
+        const x0=up[1]*zz - up[2]*zy, x1=up[2]*zx - up[0]*zz, x2=up[0]*zy - up[1]*zx;
+        const lx = 1/Math.hypot(x0,x1,x2);
+        const xx=x0*lx, xy=x1*lx, xz=x2*lx;
+        const y0=zy*xz - zz*xy, y1=zz*xx - zx*xz, y2=zx*xy - zy*xx;
+        out[0]=xx; out[1]=y0; out[2]=zx; out[3]=0;
+        out[4]=xy; out[5]=y1; out[6]=zy; out[7]=0;
+        out[8]=xz; out[9]=y2; out[10]=zz; out[11]=0;
+        out[12]=-(xx*eye[0]+xy*eye[1]+xz*eye[2]);
+        out[13]=-(y0*eye[0]+y1*eye[1]+y2*eye[2]);
+        out[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);
+        out[15]=1;
+    }
+    function mat4Mul(out, a, b) {
+        for(let i=0;i<4;i++){ for(let j=0;j<4;j++){
+            let s=0; for(let k=0;k<4;k++) s+=a[i*4+k]*b[k*4+j];
+            out[i*4+j]=s;
+        }}
+    }
+
+    const keys = {};
+    window.onkeydown = e => keys[e.code] = true;
+    window.onkeyup = e => keys[e.code] = false;
+
+    let useGrid = false;
+    const modeSel = document.getElementById('modeSel');
+    if (modeSel) {
+        modeSel.value = 'brute';
+        modeSel.onchange = (e)=>{ useGrid = (e.target.value === 'grid'); };
+    }
+
+    // Wire UI inputs to params buffer
+    const inpDt   = document.getElementById('inpDt');
+    const inpDamp = document.getElementById('inpDamp');
+    const inpRb0  = document.getElementById('inpRb0');
+    const inpAM   = document.getElementById('inpAM');
+    const inpBM   = document.getElementById('inpBM');
+    const inpRcut = document.getElementById('inpRcut');
+    const inpN    = document.getElementById('inpN');
+    const btnApplyN = document.getElementById('btnApplyN');
+
+    function syncInputs(){
+        if(inpDt)   inpDt.value   = PARAMS[0].toString();
+        if(inpDamp) inpDamp.value = PARAMS[1].toString();
+        if(inpRb0)  inpRb0.value  = PARAMS[2].toString();
+        if(inpAM)   inpAM.value   = PARAMS[3].toString();
+        if(inpBM)   inpBM.value   = PARAMS[4].toString();
+        if(inpRcut) inpRcut.value = PARAMS[5].toString();
+        if(inpN)    inpN.value    = NUM_PARTICLES.toString();
+    }
+
+    function updateParamsFromUI(){
+        if(inpDt)   PARAMS[0] = parseFloat(inpDt.value)   || PARAMS[0];
+        if(inpDamp) PARAMS[1] = parseFloat(inpDamp.value) || PARAMS[1];
+        if(inpRb0)  PARAMS[2] = parseFloat(inpRb0.value)  || PARAMS[2];
+        if(inpAM)   PARAMS[3] = parseFloat(inpAM.value)   || PARAMS[3];
+        if(inpBM)   PARAMS[4] = parseFloat(inpBM.value)   || PARAMS[4];
+        if(inpRcut) PARAMS[5] = parseFloat(inpRcut.value) || PARAMS[5];
+        device.queue.writeBuffer(bufParams, 0, PARAMS);
+    }
+
+    syncInputs();
+    [inpDt, inpDamp, inpRb0, inpAM, inpBM, inpRcut].forEach((el)=>{
+        if(el) el.addEventListener('change', updateParamsFromUI);
+    });
+    if(btnApplyN && inpN){
+        btnApplyN.addEventListener('click', ()=>{
+            const n = parseInt(inpN.value)||NUM_PARTICLES;
+            const clamped = Math.pow(2, Math.max(6, Math.min(15, Math.round(Math.log2(Math.max(64, n))))));
+            const params = new URLSearchParams(location.search);
+            params.set('n', clamped.toString());
+            location.search = params.toString();
+        });
+    }
+
+    document.getElementById('pCount').innerText = NUM_PARTICLES;
+
+    let frame = 0;
+    let lastTime = performance.now();
+
+    function step() {
+        // Cam Logic
+        const speed = 0.5;
+        if(keys['KeyW']) camPos[2] -= speed;
+        if(keys['KeyS']) camPos[2] += speed;
+        if(keys['KeyA']) camPos[0] -= speed;
+        if(keys['KeyD']) camPos[0] += speed;
+        if(keys['ArrowLeft']) camYaw += 0.05;
+        if(keys['ArrowRight']) camYaw -= 0.05;
+        
+        const target = [
+            camPos[0] + Math.sin(camYaw), 
+            camPos[1], 
+            camPos[2] - Math.cos(camYaw)
+        ];
+
+        mat4Perspective(projMat, Math.PI/3, canvas.width/canvas.height, 0.1, 1000.0);
+        mat4LookAt(viewMat, camPos, target, [0,1,0]);
+        // Simple manual multiply (proj * view) - column major order mess
+        // Using a library would be better, doing quick manual
+        // Transpose for WGSL? No WGSL is column major.
+        // My manual mul above is row-major style logic?
+        // Let's just trust typical GL matrix logic
+        
+        // Re-implement multiply correctly for column-major
+        const pm = projMat, vm = viewMat;
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                vpMat[j*4+i] = pm[0*4+i]*vm[j*4+0] + pm[1*4+i]*vm[j*4+1] + pm[2*4+i]*vm[j*4+2] + pm[3*4+i]*vm[j*4+3];
+            }
+        }
+        device.queue.writeBuffer(bufView, 0, vpMat);
+
+        // Phase 1: Integrate (and reset offsets/counts); always needed
+        {
+            const cmd = device.createCommandEncoder();
+            device.queue.writeBuffer(bufCounts, 0, new Uint32Array(GRID_TOTAL_CELLS));
+            const pass = cmd.beginComputePass();
+            pass.setPipeline(piInteg);
+            pass.setBindGroup(0, bgInteg);
+            pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 64));
+            pass.end();
+            device.queue.submit([cmd.finish()]);
+        }
+
+        if (useGrid) {
+            // Phase 2: Bitonic sort (multi-pass)
+            for (let k = 2; k <= NUM_PARTICLES; k <<= 1) {
+                for (let j = k >> 1; j > 0; j >>= 1) {
+                    device.queue.writeBuffer(bufSortUni, 0, new Uint32Array([k, j]));
+                    const cmdSort = device.createCommandEncoder();
+                    const pass = cmdSort.beginComputePass();
+                    pass.setPipeline(piSort);
+                    pass.setBindGroup(0, bgSort);
+                    pass.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 64));
+                    pass.end();
+                    device.queue.submit([cmdSort.finish()]);
+                }
+            }
+        }
+
+        // Phase 3: offsets (if grid), forces, render
+        {
+            const cmdFinal = device.createCommandEncoder();
+
+            if (useGrid) {
+                const passOff = cmdFinal.beginComputePass();
+                passOff.setPipeline(piOffset);
+                passOff.setBindGroup(0, bgOffset);
+                passOff.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 64));
+                passOff.end();
+
+                const passForce = cmdFinal.beginComputePass();
+                passForce.setPipeline(piForce);
+                passForce.setBindGroup(0, bgForce);
+                passForce.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 64));
+                passForce.end();
+            } else {
+                const passForce = cmdFinal.beginComputePass();
+                passForce.setPipeline(piForceBrute);
+                passForce.setBindGroup(0, bgForceBrute);
+                passForce.dispatchWorkgroups(Math.ceil(NUM_PARTICLES / 64));
+                passForce.end();
+            }
+
+            const texView = ctx.getCurrentTexture().createView();
+            const depthView = depthTexture.createView();
+
+            const passRender = cmdFinal.beginRenderPass({
+                colorAttachments: [{
+                    view: texView,
+                    clearValue: { r: 0.05, g: 0.05, b: 0.05, a: 1 },
+                    loadOp: 'clear',
+                    storeOp: 'store'
+                }],
+                depthStencilAttachment: {
+                    view: depthView,
+                    depthClearValue: 1.0,
+                    depthLoadOp: 'clear',
+                    depthStoreOp: 'store'
+                }
+            });
+
+            passRender.setPipeline(piRender);
+            passRender.setBindGroup(0, bgRender);
+            passRender.draw(6, NUM_PARTICLES);
+
+            passRender.setPipeline(piBond);
+            passRender.setBindGroup(0, bgBond);
+            passRender.draw(8, NUM_PARTICLES);
+
+            passRender.end();
+
+            device.queue.submit([cmdFinal.finish()]);
+        }
+
+        // FPS Calculation
+        frame++;
+        const now = performance.now();
+        if(now - lastTime >= 1000) {
+            document.getElementById('fps').innerText = frame;
+            frame = 0;
+            lastTime = now;
+        }
+
+        requestAnimationFrame(step);
+    }
+
+    step();
+}
+
+init();
+
+</script>
+</body>
+</html>
