@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL2 Flow Field Tool</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(0, 0, 0, 0.8); padding: 15px;
+            border-radius: 8px; border: 1px solid #444;
+            pointer-events: auto;
+        }
+        .control { margin-bottom: 10px; }
+        label { display: inline-block; width: 120px; font-size: 14px; }
+        input[type="range"] { vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h3>Flow Field Tool</h3>
+    <div class="control">
+        <label>Mode:</label>
+        <select id="modeSelect">
+            <option value="INSTANCED">Instant Curves (Stateless)</option>
+            <option value="TRANSFORM">Particle Flow (Feedback)</option>
+        </select>
+    </div>
+    <div class="control">
+        <label>Flow Speed (dt):</label>
+        <input type="range" id="dtRange" min="0.001" max="0.05" step="0.001" value="0.01">
+    </div>
+    <div class="control">
+        <label>Line Segments:</label>
+        <input type="range" id="segRange" min="10" max="100" step="10" value="50">
+    </div>
+    <div class="control">
+        <label>Line Alpha:</label>
+        <input type="range" id="lineAlphaRange" min="0.01" max="1.0" step="0.01" value="0.3">
+    </div>
+    <div class="control">
+        <label>Fade Alpha:</label>
+        <input type="range" id="fadeAlphaRange" min="0.0" max="0.2" step="0.001" value="0.02">
+    </div>
+    <div class="control">
+        <button id="clearButton">Clear</button>
+    </div>
+    <div style="font-size: 12px; color: #aaa;">
+        * Mouse Move: Moves the Vortex<br>
+        * Left Click: Moves the Repulsor
+    </div>
+</div>
+
+<canvas id="glcanvas"></canvas>
+
+<!-- ========================================================================= -->
+<!-- SHADER CHUNK: PHYSICS LOGIC (Shared between both approaches)              -->
+<!-- ========================================================================= -->
+<script type="x-shader/x-header" id="shader-physics">
+    #version 300 es
+    precision highp float;
+
+    // Basis Function Definition
+    // p1.xyz = position, p1.w = type (0: Directional, 1: Vortex, 2: Repulse)
+    // p2.xyz = vector/orientation, p2.w = strength
+    struct Basis {
+        vec4 p1; 
+        vec4 p2;
+    };
+
+    // We use a Uniform Block or Array. For this demo, a simple array.
+    uniform Basis u_basis[4]; 
+    uniform int u_basisCount;
+
+    vec3 getVelocity(vec3 pos) {
+        vec3 totalVel = vec3(0.0);
+
+        for(int i = 0; i < 4; i++) {
+            if(i >= u_basisCount) break;
+
+            vec3 center = u_basis[i].p1.xyz;
+            int type = int(u_basis[i].p1.w);
+            vec3 param = u_basis[i].p2.xyz;
+            float strength = u_basis[i].p2.w;
+
+            vec3 diff = pos - center;
+            float dist = length(diff);
+
+            // 0: Constant Directional
+            if (type == 0) {
+                totalVel += param * strength;
+            } 
+            // 1: Vortex (Cross product)
+            else if (type == 1) {
+                vec3 rot = cross(normalize(diff), vec3(0,0,1));
+                // Falloff based on distance
+                totalVel += rot * strength / (dist + 0.1); 
+            }
+            // 2: Repulsor/Attractor
+            else if (type == 2) {
+                totalVel += normalize(diff) * strength / (dist * dist + 0.1);
+            }
+        }
+        return totalVel;
+    }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-tf-line">
+    #version 300 es
+    layout(location = 0) in vec3 a_prev;
+    layout(location = 1) in vec3 a_curr;
+    layout(location = 2) in float a_currSpeed;
+    uniform mat4 u_matrix;
+    void main() {
+        bool reset = a_currSpeed < 0.0;
+        vec3 p = (gl_VertexID == 0 && !reset) ? a_prev : a_curr;
+        gl_Position = u_matrix * vec4(p, 1.0);
+    }
+</script>
+
+<!-- ========================================================================= -->
+<!-- APPROACH 1: INSTANCED RENDERING SHADERS                                   -->
+<!-- ========================================================================= -->
+<script type="x-shader/x-vertex" id="vs-instanced">
+    // Physics chunk injected here via JS
+    
+    layout(location = 0) in vec3 a_startPos; // Per Instance
+    
+    uniform mat4 u_matrix;
+    uniform float u_dt;
+    uniform int u_segments; // Current vertex index roughly maps to time
+
+    out float v_speed;
+    out float v_life;
+
+    void main() {
+        // gl_VertexID counts 0...SegmentsPerLine
+        int steps = gl_VertexID;
+        
+        vec3 currentPos = a_startPos;
+        vec3 velocity = vec3(0.0);
+
+        // NUMERICAL INTEGRATION LOOP
+        // We simulate the path from t=0 up to this specific vertex
+        for(int i = 0; i < 200; i++) {
+            if(i >= steps) break;
+
+            // Runge-Kutta 2 Integration for better stability
+            vec3 v1 = getVelocity(currentPos);
+            vec3 v2 = getVelocity(currentPos + v1 * u_dt * 0.5);
+            velocity = v2;
+            currentPos += v2 * u_dt;
+        }
+
+        // Pass data to fragment
+        v_speed = length(velocity);
+        v_life = float(steps) / float(u_segments);
+
+        gl_Position = u_matrix * vec4(currentPos, 1.0);
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fs-instanced">
+    #version 300 es
+    precision highp float;
+    
+    in float v_speed;
+    in float v_life;
+    out vec4 outColor;
+
+    void main() {
+        // Color based on speed and position along the line
+        vec3 col = mix(vec3(0.0, 1.0, 1.0), vec3(1.0, 0.0, 0.5), v_speed * 0.5);
+        
+        // Fade out tail
+        float alpha = 1.0 - smoothstep(0.5, 1.0, v_life);
+        
+        outColor = vec4(col, alpha);
+    }
+</script>
+
+
+<!-- ========================================================================= -->
+<!-- APPROACH 2: TRANSFORM FEEDBACK SHADERS                                    -->
+<!-- ========================================================================= -->
+<script type="x-shader/x-vertex" id="vs-tf-update">
+    // Physics chunk injected here via JS
+    
+    layout(location = 0) in vec3 a_pos;
+    
+    uniform float u_dt;
+    uniform vec3 u_resetBoundMin;
+    uniform vec3 u_resetBoundMax;
+    
+    // Output variable captured by Transform Feedback
+    out vec3 v_newPos;
+    out float v_speed;
+
+    // Simple pseudo-random for resetting
+    float rand(vec2 co){
+        return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    void main() {
+        vec3 vel = getVelocity(a_pos);
+        vec3 nextPos = a_pos + vel * u_dt;
+        v_speed = length(vel);
+
+        // Bounds check - reset if particle flies off screen
+        if (nextPos.x < u_resetBoundMin.x || nextPos.x > u_resetBoundMax.x ||
+            nextPos.y < u_resetBoundMin.y || nextPos.y > u_resetBoundMax.y) {
+            // Reset to random position (simplified hack for demo)
+            float r1 = rand(nextPos.xy);
+            float r2 = rand(nextPos.yz);
+            nextPos.x = mix(u_resetBoundMin.x, u_resetBoundMax.x, r1);
+            nextPos.y = mix(u_resetBoundMin.y, u_resetBoundMax.y, r2);
+            v_speed = -1.0; // flag reset so line collapses
+        }
+
+        v_newPos = nextPos;
+        gl_Position = vec4(nextPos, 1.0); // Not used for rasterization
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fs-tf-update">
+    #version 300 es
+    precision highp float;
+    out vec4 outColor;
+    void main() {
+        // Discarding is strictly not necessary if rasterizer is disabled, 
+        // but good practice.
+        discard; 
+    }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-tf-render">
+    #version 300 es
+    layout(location = 0) in vec3 a_pos;
+    
+    uniform mat4 u_matrix;
+    
+    void main() {
+        gl_PointSize = 2.0;
+        gl_Position = u_matrix * vec4(a_pos, 1.0);
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fs-tf-render">
+    #version 300 es
+    precision highp float;
+    uniform float u_alpha;
+    out vec4 outColor;
+    void main() {
+        outColor = vec4(1.0, 0.7, 0.2, u_alpha);
+    }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-fade">
+    #version 300 es
+    const vec2 quad[4] = vec2[](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
+    void main() { gl_Position = vec4(quad[gl_VertexID], 0.0, 1.0); }
+</script>
+<script type="x-shader/x-fragment" id="fs-fade">
+    #version 300 es
+    precision highp float;
+    uniform float u_alpha;
+    out vec4 outColor;
+    void main() { outColor = vec4(0.05, 0.05, 0.05, u_alpha); }
+</script>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT APPLICATION                                                    -->
+<!-- ========================================================================= -->
+<script>
+const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+
+if (!gl) { alert("WebGL 2 not supported"); }
+
+// --- CONFIGURATION ---
+const NUM_INSTANCES = 5000;
+const BOUNDS = 2.0; // View goes from -2 to +2
+
+let config = {
+    mode: 'INSTANCED', // or 'TRANSFORM'
+    dt: 0.01,
+    segments: 50,
+    lineAlpha: 0.3,
+    fadeAlpha: 0.02
+};
+
+let prevW = 0, prevH = 0;
+
+// --- DATA STRUCTURES ---
+// Basis: { p1: [x,y,z, type], p2: [dirX, dirY, dirZ, strength] }
+let flowBasis = [
+    { p1: [0, 0, 0, 0], p2: [1, 0, 0, 0.5] },       // Base wind
+    { p1: [0, 0, 0, 1], p2: [0, 0, 0, 2.0] },       // Mouse Vortex
+    { p1: [-1, -0.5, 0, 2], p2: [0, 0, 0, 0.8] },   // Static Repulsor
+    { p1: [1, 0.5, 0, 1], p2: [0, 0, 0, -1.5] },    // Static Sink
+];
+
+// --- SHADER COMPILATION UTILS ---
+const physicsChunk = document.getElementById('shader-physics').text;
+
+function createProgram(vsSource, fsSource, varyings = null, varyingsMode = gl.SEPARATE_ATTRIBS) {
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    const stripVersion = src => src.replace(/^\s*#version[^\n]*\n/, '').trimStart();
+    const versionLine = '#version 300 es\n';
+    const vsBody = stripVersion(vsSource);
+    const chunkBody = stripVersion(physicsChunk);
+    const fullVs = versionLine + chunkBody + "\n" + vsBody;
+
+    gl.shaderSource(vs, fullVs);
+    gl.compileShader(vs);
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(vs));
+
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    const fsBody = stripVersion(fsSource);
+    const fullFs = versionLine + fsBody;
+    gl.shaderSource(fs, fullFs);
+    gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(fs));
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+
+    if (varyings) {
+        gl.transformFeedbackVaryings(prog, varyings, varyingsMode);
+    }
+
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(prog));
+    return prog;
+}
+
+// --- SETUP PROGRAMS ---
+// 1. Instanced Program
+const progInstanced = createProgram(
+    document.getElementById('vs-instanced').text,
+    document.getElementById('fs-instanced').text
+);
+
+// 2. Transform Feedback Update Program
+const progTFUpdate = createProgram(
+    document.getElementById('vs-tf-update').text,
+    document.getElementById('fs-tf-update').text,
+    ['v_newPos', 'v_speed'],
+    gl.INTERLEAVED_ATTRIBS
+);
+
+// 3. Transform Feedback Render Program (Simple pass through)
+const progTFRender = createProgram(
+    document.getElementById('vs-tf-render').text,
+    document.getElementById('fs-tf-render').text
+);
+
+// Transform Feedback Line Program
+const progTFLine = createProgram(
+    document.getElementById('vs-tf-line').text,
+    document.getElementById('fs-tf-render').text
+);
+
+// Fade Program
+const progFade = createProgram(
+    document.getElementById('vs-fade').text,
+    document.getElementById('fs-fade').text
+);
+
+// --- BUFFER SETUP ---
+
+// Generate random start positions (with speed padding for TF interleaved buffer)
+const startPosData = new Float32Array(NUM_INSTANCES * 3);
+const startTFData = new Float32Array(NUM_INSTANCES * 4);
+for (let i = 0; i < NUM_INSTANCES; i++) {
+    const x = (Math.random() * 2 - 1) * BOUNDS;
+    const y = (Math.random() * 2 - 1) * BOUNDS;
+    const z = 0.0;
+    startPosData[i*3+0] = x;
+    startPosData[i*3+1] = y;
+    startPosData[i*3+2] = z; // 2D flow for clarity
+
+    const base = i*4;
+    startTFData[base+0] = x;
+    startTFData[base+1] = y;
+    startTFData[base+2] = z;
+    startTFData[base+3] = 0.0; // speed
+}
+
+// Setup Instanced VAO
+const vaoInstanced = gl.createVertexArray();
+gl.bindVertexArray(vaoInstanced);
+const bufStart = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, bufStart);
+gl.bufferData(gl.ARRAY_BUFFER, startPosData, gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+gl.vertexAttribDivisor(0, 1); // IMPORTANT: Advance once per instance
+
+// Setup Transform Feedback VAOs (Double buffering)
+// We need two buffers: A and B. We read from A, write to B, then swap.
+const tfBuffers = [gl.createBuffer(), gl.createBuffer()];
+const tfVaos = [gl.createVertexArray(), gl.createVertexArray()];
+const vaoTFLine = gl.createVertexArray();
+const vaoFade = gl.createVertexArray();
+
+tfBuffers.forEach((buf, i) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, startTFData, gl.DYNAMIC_COPY);
+    
+    gl.bindVertexArray(tfVaos[i]);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 4, 0);
+});
+
+let tfCurrentIndex = 0; // 0 or 1
+let frameCount = 0;
+
+// --- UNIFORM UPDATER ---
+function updateBasisUniforms(program) {
+    gl.useProgram(program);
+    gl.uniform1i(gl.getUniformLocation(program, "u_basisCount"), flowBasis.length);
+    for(let i=0; i<flowBasis.length; i++) {
+        gl.uniform4fv(gl.getUniformLocation(program, `u_basis[${i}].p1`), flowBasis[i].p1);
+        gl.uniform4fv(gl.getUniformLocation(program, `u_basis[${i}].p2`), flowBasis[i].p2);
+    }
+}
+
+// --- RENDER LOOP ---
+function render(time) {
+    // Resize only when needed (avoid implicit clears)
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (w !== prevW || h !== prevH) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+        prevW = w;
+        prevH = h;
+    }
+
+    // View Matrix (Simple Ortho)
+    const aspect = canvas.width / canvas.height;
+    const scale = 1.0 / BOUNDS;
+    // Scale X by aspect to keep square
+    const matrix = [
+        scale / aspect, 0, 0, 0,
+        0, scale, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    ];
+
+    if (config.mode === 'INSTANCED') {
+        // -- MODE 1: INSTANCED --
+        // Clear fully
+        gl.clearColor(0.05, 0.05, 0.05, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(progInstanced);
+        updateBasisUniforms(progInstanced);
+        
+        gl.uniformMatrix4fv(gl.getUniformLocation(progInstanced, "u_matrix"), false, matrix);
+        gl.uniform1f(gl.getUniformLocation(progInstanced, "u_dt"), config.dt);
+        gl.uniform1i(gl.getUniformLocation(progInstanced, "u_segments"), config.segments);
+
+        gl.bindVertexArray(vaoInstanced);
+        
+        // Draw Segments+1 vertices per instance, NUM_INSTANCES instances
+        // We use gl_VertexID in shader, so no need for an index buffer
+        gl.drawArraysInstanced(gl.LINE_STRIP, 0, config.segments, NUM_INSTANCES);
+
+    } else {
+        // -- MODE 2: TRANSFORM FEEDBACK --
+        
+        // Clear only on first frame
+        if (frameCount === 0) { gl.clearColor(0.05, 0.05, 0.05, 1.0); gl.clear(gl.COLOR_BUFFER_BIT); }
+
+        // Fade pass
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(progFade);
+        gl.uniform1f(gl.getUniformLocation(progFade, "u_alpha"), config.fadeAlpha);
+        gl.bindVertexArray(vaoFade);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+
+        // 1. UPDATE STEP (Physics)
+        gl.useProgram(progTFUpdate);
+        updateBasisUniforms(progTFUpdate);
+        gl.uniform1f(gl.getUniformLocation(progTFUpdate, "u_dt"), config.dt);
+        gl.uniform3f(gl.getUniformLocation(progTFUpdate, "u_resetBoundMin"), -BOUNDS*aspect, -BOUNDS, -1);
+        gl.uniform3f(gl.getUniformLocation(progTFUpdate, "u_resetBoundMax"), BOUNDS*aspect, BOUNDS, 1);
+
+        // Bind source VAO
+        gl.bindVertexArray(tfVaos[tfCurrentIndex]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBuffers[tfCurrentIndex]);
+        
+        // Bind destination Buffer
+        const nextIndex = (tfCurrentIndex + 1) % 2;
+        gl.bindBuffer(gl.ARRAY_BUFFER, null); // ensure dest not bound as ARRAY_BUFFER
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, tfBuffers[nextIndex]);
+
+        // Perform Transform Feedback
+        gl.enable(gl.RASTERIZER_DISCARD); // Don't draw pixels
+        gl.beginTransformFeedback(gl.POINTS);
+        gl.drawArrays(gl.POINTS, 0, NUM_INSTANCES);
+        gl.endTransformFeedback();
+        gl.disable(gl.RASTERIZER_DISCARD);
+
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // 2. RENDER STEP (Lines between previous and current positions)
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        gl.useProgram(progTFLine);
+        gl.uniformMatrix4fv(gl.getUniformLocation(progTFLine, "u_matrix"), false, matrix);
+        gl.uniform1f(gl.getUniformLocation(progTFLine, "u_alpha"), config.lineAlpha);
+
+        gl.bindVertexArray(vaoTFLine);
+        gl.enableVertexAttribArray(0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBuffers[tfCurrentIndex]); // prev
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 4, 0);
+        gl.vertexAttribDivisor(0, 1);
+
+        gl.enableVertexAttribArray(1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBuffers[nextIndex]); // curr
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 4, 0);
+        gl.vertexAttribDivisor(1, 1);
+
+        gl.enableVertexAttribArray(2);
+        gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4 * 4, 12);
+        gl.vertexAttribDivisor(2, 1);
+
+        gl.drawArraysInstanced(gl.LINES, 0, 2, NUM_INSTANCES);
+        gl.disable(gl.BLEND);
+
+        // Swap indices
+        tfCurrentIndex = nextIndex;
+    }
+
+    frameCount++;
+
+    requestAnimationFrame(render);
+}
+
+// --- INPUT HANDLING ---
+const uiMode = document.getElementById('modeSelect');
+const uiDt = document.getElementById('dtRange');
+const uiSeg = document.getElementById('segRange');
+const uiClear = document.getElementById('clearButton');
+
+uiMode.addEventListener('change', e => config.mode = e.target.value);
+uiDt.addEventListener('input', e => config.dt = parseFloat(e.target.value));
+uiSeg.addEventListener('input', e => config.segments = parseInt(e.target.value));
+document.getElementById('lineAlphaRange').addEventListener('input', e => config.lineAlpha = parseFloat(e.target.value));
+document.getElementById('fadeAlphaRange').addEventListener('input', e => config.fadeAlpha = parseFloat(e.target.value));
+uiClear.addEventListener('click', () => { gl.clearColor(0.05, 0.05, 0.05, 1.0); gl.clear(gl.COLOR_BUFFER_BIT); });
+
+window.addEventListener('mousemove', e => {
+    // Map screen to -BOUNDS..BOUNDS
+    const aspect = canvas.width / canvas.height;
+    const x = (e.clientX / canvas.width * 2 - 1) * BOUNDS * aspect;
+    const y = -(e.clientY / canvas.height * 2 - 1) * BOUNDS; // Flip Y
+    
+    // Update the Mouse Vortex (Index 1)
+    flowBasis[1].p1[0] = x;
+    flowBasis[1].p1[1] = y;
+});
+
+window.addEventListener('mousedown', e => {
+     // Map screen to -BOUNDS..BOUNDS
+    const aspect = canvas.width / canvas.height;
+    const x = (e.clientX / canvas.width * 2 - 1) * BOUNDS * aspect;
+    const y = -(e.clientY / canvas.height * 2 - 1) * BOUNDS;
+
+    // Update the Repulsor (Index 2)
+    flowBasis[2].p1[0] = x;
+    flowBasis[2].p1[1] = y;
+});
+
+// Start
+requestAnimationFrame(render);
+
+</script>
+</body>
+</html>
