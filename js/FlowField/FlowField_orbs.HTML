@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Flow Visualizer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #1e1e1e; color: #ddd; font-family: monospace; display: flex; }
+
+        #sidebar {
+            width: 400px; height: 100vh; background: #252526; border-right: 1px solid #333;
+            display: flex; flex-direction: column; overflow-y: auto; z-index: 10;
+        }
+        
+        .section { padding: 10px; border-bottom: 1px solid #444; }
+        .section h4 { margin: 0 0 5px 0; color: #4ec9b0; }
+        textarea {
+            width: 100%; height: 80px; background: #1e1e1e; color: #dcdcaa;
+            border: 1px solid #444; font-family: 'Consolas', monospace; font-size: 12px;
+            resize: vertical; white-space: pre; overflow: auto;
+        }
+        
+        #canvas-container { flex-grow: 1; position: relative; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        select, input[type="range"] { width: 100%; margin-bottom: 5px; background: #333; color: white; border: 1px solid #555; }
+        label { font-size: 11px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="section">
+        <h4>1. Basis Set Definition</h4>
+        <label>Format: name type x y z exponent</label>
+        <textarea id="txtBasis" spellcheck="false">
+// Hydrogen 1 at -1.0
+H1 gs -1.0 0.0 0.0 1.0
+// Hydrogen 2 at +1.0
+H2 gs  1.0 0.0 0.0 1.0
+// P-orbital above
+Ox gpy 0.0 1.0 0.0 2.0
+</textarea>
+    </div>
+
+    <div class="section">
+        <h4>2. Psi 1 (Linear Combo)</h4>
+        <label>Format: name weight</label>
+        <textarea id="txtPsi1" spellcheck="false">
+Ox  2.5
+</textarea>
+    </div>
+
+    <div class="section">
+        <h4>3. Psi 2 (Linear Combo)</h4>
+        <label>Format: name weight</label>
+        <textarea id="txtPsi2" spellcheck="false">
+H1   1.0
+H2  -1.0
+</textarea>
+    </div>
+
+    <div class="section">
+        <h4>Controls</h4>
+        <label>Visualization Mode</label>
+        <select id="modeSelect">
+            <option value="0">Current Density (j = p1*Gp2 - p2*Gp1)</option>
+            <option value="1">Gradient Psi 1</option>
+            <option value="2">Gradient Psi 2</option>
+            <option value="3">Cross Product (Grad 1 x Grad 2)</option>
+        </select>
+        
+        <label>Render Style</label>
+        <select id="renderStyle">
+            <option value="TRANSFORM">Animated Particles</option>
+            <option value="INSTANCED">Instant Streamlines</option>
+        </select>
+
+        <label>Simulation Step (dt)</label>
+        <input type="range" id="dtRange" min="0.001" max="0.05" step="0.001" value="0.01">
+        
+        <label>Streamline Length</label>
+        <input type="range" id="segRange" min="10" max="200" step="10" value="50">
+
+        <label>Particle Count</label>
+        <input type="range" id="particleRange" min="1000" max="50000" step="1000" value="10000">
+
+        <label>Reseed Interval (frames)</label>
+        <input type="range" id="reseedIntervalRange" min="100" max="5000" step="50" value="1000">
+
+        <label>Line Alpha</label>
+        <input type="range" id="lineAlphaRange" min="0" max="1" step="0.01" value="0.3">
+
+        <label>Fade Alpha</label>
+        <input type="range" id="fadeAlphaRange" min="0" max="0.2" step="0.005" value="0.02">
+
+        <label>Orbital Overlay</label>
+        <select id="overlayModeSelect" value="1">
+            <option value="0">Off</option>
+            <option value="1">Psi 1</option>
+            <option value="2">Psi 2</option>
+            <option value="3">Product (Psi 1 * Psi 2)</option>
+        </select>
+
+        <label>Overlay Saturation</label>
+        <input type="range" id="overlaySaturationRange" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="section" style="font-size: 10px; color: #888;">
+        Types: <br>
+        gs (Gaussian S), gpx, gpy, gpz<br>
+        ss (Slater S), spx, spy, spz
+    </div>
+</div>
+
+<div id="canvas-container">
+    <canvas id="glcanvas"></canvas>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SHADER: QUANTUM PHYSICS ENGINE                                            -->
+<!-- ========================================================================= -->
+<script type="x-shader/x-header" id="shader-physics">
+    precision highp float;
+
+    // --- DATA STRUCTURES ---
+    // Basis definitions
+    // p1 = vec4(x, y, z, exponent)
+    // type = int (stored in parallel array or bitpacked, here strictly mapped)
+    #define MAX_BASIS 32
+    
+    uniform vec4 u_basisGeom[MAX_BASIS]; // xyz, exponent
+    uniform int  u_basisType[MAX_BASIS]; // enum type
+    
+    // Linear Combination Coefficients for Psi1 and Psi2
+    uniform float u_coeff1[MAX_BASIS];
+    uniform float u_coeff2[MAX_BASIS];
+    uniform int   u_count;
+    uniform int   u_vizMode; // 0=Current, 1=Grad1, 2=Grad2, 3=Cross
+
+    // Types
+    #define TYPE_GS  0 // Gaussian S
+    #define TYPE_GPX 1 // Gaussian Px
+    #define TYPE_GPY 2 // Gaussian Py
+    #define TYPE_GPZ 3 // Gaussian Pz
+    #define TYPE_SS  4 // Slater S
+    #define TYPE_SPX 5 // Slater Px
+    #define TYPE_SPY 6 // Slater Py
+    #define TYPE_SPZ 7 // Slater Pz
+
+    struct Result {
+        float val;
+        vec3 grad;
+    };
+
+    // Calculate Value and Gradient of a single primitive
+    Result calcPrimitive(vec3 pos, vec4 geom, int type) {
+        vec3 center = geom.xyz;
+        float alpha = geom.w; // Exponent (alpha for Gaussian, zeta for Slater)
+        
+        vec3 d = pos - center;
+        float r = length(d) + 1e-6; // Avoid div by zero
+        float r2 = r*r;
+        
+        float val = 0.0;
+        vec3 grad = vec3(0.0);
+
+        // --- GAUSSIAN (e^-ar^2) ---
+        if (type <= 3) {
+            float expPart = exp(-alpha * r2);
+            
+            // S-Orbital: e^-ar^2
+            if (type == TYPE_GS) {
+                val = expPart;
+                grad = -2.0 * alpha * d * expPart;
+            }
+            // P-Orbitals: (x|y|z) * e^-ar^2
+            else {
+                float coord = (type==TYPE_GPX) ? d.x : ((type==TYPE_GPY) ? d.y : d.z);
+                vec3 unit = vec3(0.0);
+                if(type==TYPE_GPX) unit.x = 1.0;
+                if(type==TYPE_GPY) unit.y = 1.0;
+                if(type==TYPE_GPZ) unit.z = 1.0;
+
+                val = coord * expPart;
+                // Product rule: grad(x)*exp + x*grad(exp)
+                grad = unit * expPart + (d * (-2.0 * alpha * val)); 
+            }
+        }
+        // --- SLATER (e^-zr) ---
+        else {
+            float expPart = exp(-alpha * r);
+            
+            // S-Orbital: e^-zr
+            if (type == TYPE_SS) {
+                val = expPart;
+                grad = -alpha * (d/r) * expPart;
+            }
+            // P-Orbitals: (x|y|z) * e^-zr
+            else {
+                float coord = (type==TYPE_SPX) ? d.x : ((type==TYPE_SPY) ? d.y : d.z);
+                vec3 unit = vec3(0.0);
+                if(type==TYPE_SPX) unit.x = 1.0;
+                if(type==TYPE_SPY) unit.y = 1.0;
+                if(type==TYPE_SPZ) unit.z = 1.0;
+
+                val = coord * expPart;
+                // Product rule
+                grad = unit * expPart + (d * (-alpha * val / r));
+            }
+        }
+
+        return Result(val, grad);
+    }
+
+    // Evaluate linear combination
+    Result evalPsi(vec3 pos, float coefficients[MAX_BASIS]) {
+        Result total;
+        total.val = 0.0;
+        total.grad = vec3(0.0);
+
+        for(int i=0; i<MAX_BASIS; i++) {
+            if (i >= u_count) break;
+            if (coefficients[i] == 0.0) continue;
+
+            Result r = calcPrimitive(pos, u_basisGeom[i], u_basisType[i]);
+            total.val += r.val * coefficients[i];
+            total.grad += r.grad * coefficients[i];
+        }
+        return total;
+    }
+
+    // MAIN PHYSICS FUNCTION
+    vec3 getVelocity(vec3 pos) {
+        // Evaluate Psi1 and Psi2
+        // Note: passing array uniforms to functions is tricky in some GLSL versions,
+        // so we unroll or access global logic if needed. 
+        // Here we just replicate the loop logic or use global access.
+        
+        // Manual expansion to avoid array passing issues in WebGL2
+        Result p1; p1.val=0.0; p1.grad=vec3(0.0);
+        for(int i=0; i<MAX_BASIS; i++) {
+            if(i>=u_count) break;
+            if(u_coeff1[i] == 0.0) continue;
+            Result r = calcPrimitive(pos, u_basisGeom[i], u_basisType[i]);
+            p1.val += r.val * u_coeff1[i];
+            p1.grad += r.grad * u_coeff1[i];
+        }
+
+        Result p2; p2.val=0.0; p2.grad=vec3(0.0);
+        for(int i=0; i<MAX_BASIS; i++) {
+            if(i>=u_count) break;
+            if(u_coeff2[i] == 0.0) continue;
+            Result r = calcPrimitive(pos, u_basisGeom[i], u_basisType[i]);
+            p2.val += r.val * u_coeff2[i];
+            p2.grad += r.grad * u_coeff2[i];
+        }
+
+        // --- VISUALIZATION MODES ---
+        
+        // 0: Current Density: j = p1 * grad(p2) - p2 * grad(p1)
+        if (u_vizMode == 0) {
+            return (p1.val * p2.grad) - (p2.val * p1.grad);
+        }
+        // 1: Gradient Psi 1
+        else if (u_vizMode == 1) {
+            return p1.grad;
+        }
+        // 2: Gradient Psi 2
+        else if (u_vizMode == 2) {
+            return p2.grad;
+        }
+        // 3: Cross Product of Gradients
+        else if (u_vizMode == 3) {
+            return cross(p1.grad, p2.grad);
+        }
+        
+        return vec3(0.0);
+    }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-composite">
+#version 300 es
+const vec2 quad[4] = vec2[](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
+out vec2 v_uv;
+void main(){ vec2 clip = quad[gl_VertexID]; gl_Position = vec4(clip,0.0,1.0); v_uv = clip*0.5 + 0.5; }
+</script>
+<script type="x-shader/x-fragment" id="fs-composite">
+#version 300 es
+precision highp float;
+uniform sampler2D u_accumTex;
+uniform sampler2D u_overlayTex;
+uniform int u_overlayEnabled;
+in vec2 v_uv;
+out vec4 outColor;
+void main(){ vec4 accum = texture(u_accumTex, v_uv); vec4 overlay = texture(u_overlayTex, v_uv); vec3 color = accum.rgb; if(u_overlayEnabled > 0) color = mix(color, overlay.rgb, clamp(overlay.a, 0.0, 1.0)); outColor = vec4(color, 1.0); }
+</script>
+
+<!-- ========================================================================= -->
+<!-- SHADERS: RENDERING (Reused Structure)                                     -->
+<!-- ========================================================================= -->
+<script type="x-shader/x-vertex" id="vs-instanced">
+#version 300 es
+// Physics injected here
+layout(location = 0) in vec3 a_startPos;
+    uniform mat4 u_matrix;
+    uniform float u_dt;
+    uniform int u_segments;
+    out float v_speed;
+    out float v_life;
+
+    void main() {
+        int steps = gl_VertexID;
+        vec3 currentPos = a_startPos;
+        vec3 vel = vec3(0.0);
+
+        // Limit RK2 integration to prevent freezes on complex math
+        for(int i = 0; i < 200; i++) {
+            if(i >= steps) break;
+            vec3 k1 = getVelocity(currentPos);
+            // Normalize velocity for streamlines to see Direction clearly, 
+            // or keep it raw to see Magnitude. Let's dampen it.
+            // k1 = clamp(k1, -5.0, 5.0); 
+            
+            vec3 k2 = getVelocity(currentPos + k1 * u_dt * 0.5);
+            vel = k2;
+            currentPos += vel * u_dt;
+        }
+
+        v_speed = length(vel);
+        v_life = float(steps) / float(u_segments);
+        gl_Position = u_matrix * vec4(currentPos, 1.0);
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fs-instanced">
+    #version 300 es
+    precision highp float;
+    in float v_speed;
+    in float v_life;
+    out vec4 outColor;
+    void main() {
+        // Heatmap coloring
+        vec3 col = mix(vec3(0.0, 0.2, 0.5), vec3(0.0, 1.0, 1.0), smoothstep(0.0, 0.5, v_speed));
+        col = mix(col, vec3(1.0, 1.0, 0.0), smoothstep(0.5, 2.0, v_speed));
+        
+        float alpha = 1.0 - pow(v_life, 3.0); 
+        outColor = vec4(col, alpha);
+    }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-tf-update">
+#version 300 es
+// Physics injected here
+layout(location = 0) in vec4 a_state;
+    uniform float u_dt;
+    uniform vec3 u_bounds;
+    uniform float u_lifeMax;
+    uniform float u_randSeed;
+    out vec4 v_state;
+    out float v_flag;
+    
+    float rand(vec2 co){ return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453); }
+
+    void main() {
+        vec3 pos = a_state.xyz;
+        float life = a_state.w;
+        vec3 vel = getVelocity(pos);
+        vec3 p = pos + vel * u_dt;
+        float flag = 1.0;
+        float limitX = u_bounds.x * u_bounds.y;
+        float limitY = u_bounds.y;
+        float jitter = rand(vec2(float(gl_VertexID) + u_randSeed, life + u_randSeed));
+        if(jitter < 0.5) life += 1.0;
+        bool needReseed = (abs(p.x) > limitX) || (abs(p.y) > limitY) || (life >= u_lifeMax);
+        if (needReseed) {
+            p.x = (rand(p.xy) * 2.0 - 1.0) * limitX;
+            p.y = (rand(p.yz) * 2.0 - 1.0) * limitY;
+            life = 0.0;
+            flag = -1.0;
+        }
+        v_state = vec4(p, life);
+        v_flag = flag;
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fs-dummy">
+    #version 300 es
+    precision highp float;
+    out vec4 c; void main(){ c=vec4(0); }
+</script>
+<script type="x-shader/x-vertex" id="vs-tf-render">
+    #version 300 es
+    layout(location = 0) in vec3 a_pos;
+    uniform mat4 u_matrix;
+    void main() { gl_PointSize = 1.0; gl_Position = u_matrix * vec4(a_pos, 1.0); }
+</script>
+<script type="x-shader/x-fragment" id="fs-tf-render">
+    #version 300 es
+    precision highp float;
+    out vec4 outColor;
+    void main() { outColor = vec4(1.0, 0.8, 0.4, 0.6); }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-tf-line">
+    #version 300 es
+    layout(location = 0) in vec3 a_prev;
+    layout(location = 1) in vec3 a_curr;
+    layout(location = 2) in float a_prevFlag;
+    layout(location = 3) in float a_currFlag;
+    uniform mat4 u_matrix;
+    void main(){ bool reset = (a_prevFlag < 0.0) || (a_currFlag < 0.0); vec3 p = (gl_VertexID==0 && !reset)?a_prev:a_curr; gl_Position = u_matrix*vec4(p,1.0); }
+</script>
+<script type="x-shader/x-fragment" id="fs-tf-line">
+    #version 300 es
+    precision highp float;
+    uniform float u_alpha;
+    out vec4 outColor;
+    void main(){ outColor = vec4(1.0,0.7,0.2,u_alpha); }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-fade">
+#version 300 es
+const vec2 quad[4] = vec2[](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
+void main(){ gl_Position = vec4(quad[gl_VertexID],0.0,1.0); }
+</script>
+<script type="x-shader/x-fragment" id="fs-fade">
+#version 300 es
+precision highp float;
+uniform float u_alpha;
+out vec4 outColor;
+void main(){ outColor = vec4(0.05,0.05,0.05,u_alpha); }
+</script>
+
+<script type="x-shader/x-vertex" id="vs-overlay">
+#version 300 es
+const vec2 quad[4] = vec2[](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
+uniform vec2 u_overlayLimits;
+out vec2 v_world;
+void main(){
+    vec2 clip = quad[gl_VertexID];
+    gl_Position = vec4(clip,0.0,1.0);
+    v_world = clip * u_overlayLimits;
+}
+</script>
+<script type="x-shader/x-fragment" id="fs-overlay">
+#version 300 es
+precision highp float;
+// Physics injected here
+uniform int u_overlayMode;
+uniform float u_saturation;
+in vec2 v_world;
+out vec4 outColor;
+
+void main(){
+    vec3 pos = vec3(v_world, 0.0);
+    float psi1 = 0.0;
+    float psi2 = 0.0;
+    for(int i=0; i<MAX_BASIS; i++){
+        if(i>=u_count) break;
+        bool need1 = (u_coeff1[i] != 0.0);
+        bool need2 = (u_coeff2[i] != 0.0);
+        if(!need1 && !need2) continue;
+        Result r = calcPrimitive(pos, u_basisGeom[i], u_basisType[i]);
+        if(need1) psi1 += r.val * u_coeff1[i];
+        if(need2) psi2 += r.val * u_coeff2[i];
+    }
+    float val = 0.0;
+    if(u_overlayMode == 1) val = psi1;
+    else if(u_overlayMode == 2) val = psi2;
+    else if(u_overlayMode == 3) val = psi1 * psi2;
+    float s = clamp(abs(val) * u_saturation, 0.0, 1.0);
+    vec3 color = vec3(0.0);
+    if(val < 0.0) color = mix(vec3(0.0), vec3(1.0,0.0,0.0), s);
+    else if(val > 0.0) color = mix(vec3(0.0), vec3(0.0,0.0,1.0), s);
+    outColor = vec4(color, s);
+}
+</script>
+
+<!-- ========================================================================= -->
+<!-- JS LOGIC                                                                  -->
+<!-- ========================================================================= -->
+<script>
+const TYPE_MAP = {
+    'gs': 0, 'gpx': 1, 'gpy': 2, 'gpz': 3,
+    'ss': 4, 'spx': 5, 'spy': 6, 'spz': 7
+};
+
+const MAX_BASIS = 32;
+const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+if(!gl) alert("WebGL2 required");
+const physicsSrc = document.getElementById('shader-physics').textContent.trim() + '\n';
+const shaderText = id => document.getElementById(id).textContent.trim();
+
+// State
+let state = {
+    basisGeom: new Float32Array(MAX_BASIS * 4), // x,y,z,exp
+    basisType: new Int32Array(MAX_BASIS),
+    coeff1: new Float32Array(MAX_BASIS),
+    coeff2: new Float32Array(MAX_BASIS),
+    count: 0,
+    dt: 0.01,
+    segments: 50,
+    vizMode: 0,
+    renderStyle: 'TRANSFORM',
+    bounds: 2.5,
+    numParticles: 10000,
+    reseedInterval: 1000,
+    lineAlpha: 0.3,
+    fadeAlpha: 0.02,
+    overlayMode: 0,
+    overlaySaturation: 0.5
+};
+
+// --- PARSER ---
+function parseAll() {
+    // 1. Parse Basis Definition
+    const txtBasis = document.getElementById('txtBasis').value;
+    const nameToIndex = {}; // Map 'H1' -> 0
+    let idx = 0;
+    
+    // Reset
+    state.basisGeom.fill(0);
+    state.basisType.fill(0);
+    state.coeff1.fill(0);
+    state.coeff2.fill(0);
+
+    txtBasis.split('\n').forEach(line => {
+        const clean = line.split('//')[0].trim();
+        if(!clean) return;
+        if(idx >= MAX_BASIS) return;
+
+        // Format: name type x y z exp
+        const p = clean.split(/\s+/);
+        if(p.length < 6) return;
+
+        const name = p[0];
+        const typeStr = p[1].toLowerCase();
+        const typeId = TYPE_MAP[typeStr] !== undefined ? TYPE_MAP[typeStr] : 0;
+        const x = parseFloat(p[2]);
+        const y = parseFloat(p[3]);
+        const z = parseFloat(p[4]);
+        const exp = parseFloat(p[5]);
+
+        state.basisGeom[idx*4+0] = x;
+        state.basisGeom[idx*4+1] = y;
+        state.basisGeom[idx*4+2] = z;
+        state.basisGeom[idx*4+3] = exp;
+        state.basisType[idx] = typeId;
+
+        nameToIndex[name] = idx;
+        idx++;
+    });
+    state.count = idx;
+
+    // 2. Parse Psi 1
+    document.getElementById('txtPsi1').value.split('\n').forEach(line => {
+        const clean = line.split('//')[0].trim();
+        if(!clean) return;
+        const p = clean.split(/\s+/);
+        const name = p[0];
+        const w = parseFloat(p[1]);
+        if(nameToIndex[name] !== undefined) {
+            state.coeff1[nameToIndex[name]] = w;
+        }
+    });
+
+    // 3. Parse Psi 2
+    document.getElementById('txtPsi2').value.split('\n').forEach(line => {
+        const clean = line.split('//')[0].trim();
+        if(!clean) return;
+        const p = clean.split(/\s+/);
+        const name = p[0];
+        const w = parseFloat(p[1]);
+        if(nameToIndex[name] !== undefined) {
+            state.coeff2[nameToIndex[name]] = w;
+        }
+    });
+}
+
+// --- WEBGL SETUP (Standard boilerplate) ---
+function createProgram(vsSrc, fsSrc, xform, injectPhysics=false, varyMode=gl.SEPARATE_ATTRIBS) {
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    let vertexSource = vsSrc;
+    let fragmentSource = fsSrc;
+    if(injectPhysics) {
+        if(vertexSource.indexOf('// Physics injected here') >= 0) vertexSource = vertexSource.replace('// Physics injected here', physicsSrc);
+        if(fragmentSource.indexOf('// Physics injected here') >= 0) fragmentSource = fragmentSource.replace('// Physics injected here', physicsSrc);
+    }
+    gl.shaderSource(vs, vertexSource);
+    gl.shaderSource(fs, fragmentSource);
+    gl.compileShader(vs); if(!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(vs));
+    gl.compileShader(fs); if(!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(fs));
+    const p = gl.createProgram();
+    gl.attachShader(p, vs); gl.attachShader(p, fs);
+    if(xform) gl.transformFeedbackVaryings(p, xform, varyMode);
+    gl.linkProgram(p); return p;
+}
+
+const progInst = createProgram(shaderText('vs-instanced'), shaderText('fs-instanced'), undefined, true);
+const progUpd  = createProgram(shaderText('vs-tf-update'), shaderText('fs-dummy'), ['v_state','v_flag'], true, gl.INTERLEAVED_ATTRIBS);
+const progLine = createProgram(shaderText('vs-tf-line'), shaderText('fs-tf-line'));
+const progFade = createProgram(shaderText('vs-fade'), shaderText('fs-fade'));
+const progOverlay = createProgram(shaderText('vs-overlay'), shaderText('fs-overlay'), undefined, true);
+const progComposite = createProgram(shaderText('vs-composite'), shaderText('fs-composite'));
+
+const vaoInst = gl.createVertexArray();
+const bInst = gl.createBuffer();
+gl.bindVertexArray(vaoInst);
+gl.bindBuffer(gl.ARRAY_BUFFER, bInst);
+gl.bufferData(gl.ARRAY_BUFFER, state.numParticles * 3 * 4, gl.DYNAMIC_DRAW);
+gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribDivisor(0, 1);
+gl.bindVertexArray(null);
+gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+const tfBufs = [gl.createBuffer(), gl.createBuffer()];
+const tfVaos = [gl.createVertexArray(), gl.createVertexArray()];
+const TF_STRIDE = 5 * 4;
+tfBufs.forEach((b,i) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, state.numParticles * TF_STRIDE, gl.DYNAMIC_COPY);
+    gl.bindVertexArray(tfVaos[i]);
+    gl.vertexAttribPointer(0, 4, gl.FLOAT, false, TF_STRIDE, 0);
+    gl.enableVertexAttribArray(0);
+});
+gl.bindVertexArray(null);
+gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+const vaoLines = gl.createVertexArray();
+const vaoQuad = gl.createVertexArray();
+
+const accumTex = gl.createTexture();
+const overlayTex = gl.createTexture();
+const accumFbo = gl.createFramebuffer();
+const overlayFbo = gl.createFramebuffer();
+let rtWidth = 0;
+let rtHeight = 0;
+
+let tfIdx = 0;
+let particleCount = state.numParticles;
+let particlesDirty = true;
+let frameCount = 0;
+let prevW = 0, prevH = 0;
+
+// --- RENDER ---
+function updateUniforms(p) {
+    gl.useProgram(p);
+    gl.uniform1i(gl.getUniformLocation(p, "u_count"), state.count);
+    gl.uniform1i(gl.getUniformLocation(p, "u_vizMode"), state.vizMode);
+    gl.uniform4fv(gl.getUniformLocation(p, "u_basisGeom"), state.basisGeom);
+    gl.uniform1iv(gl.getUniformLocation(p, "u_basisType"), state.basisType);
+    gl.uniform1fv(gl.getUniformLocation(p, "u_coeff1"), state.coeff1);
+    gl.uniform1fv(gl.getUniformLocation(p, "u_coeff2"), state.coeff2);
+}
+
+function reseedParticles() {
+    particleCount = state.numParticles;
+    const aspect = canvas.height ? canvas.width / canvas.height : 1.0;
+    const limitX = state.bounds * aspect;
+    const limitY = state.bounds;
+    const rawPos = new Float32Array(particleCount * 3);
+    const tfData = new Float32Array(particleCount * 5);
+    for (let i = 0; i < particleCount; i++) {
+        const x = (Math.random() * 2 - 1) * limitX;
+        const y = (Math.random() * 2 - 1) * limitY;
+        const b3 = i * 3;
+        rawPos[b3 + 0] = x;
+        rawPos[b3 + 1] = y;
+        rawPos[b3 + 2] = 0;
+        const b5 = i * 5;
+        tfData[b5 + 0] = x;
+        tfData[b5 + 1] = y;
+        tfData[b5 + 2] = 0;
+        tfData[b5 + 3] = 0;
+        tfData[b5 + 4] = -1.0;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, bInst);
+    gl.bufferData(gl.ARRAY_BUFFER, rawPos, gl.DYNAMIC_DRAW);
+    tfBufs.forEach(buf => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, tfData, gl.DYNAMIC_COPY);
+    });
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    tfIdx = 0;
+    particlesDirty = false;
+}
+
+function ensureRenderTargets(w, h) {
+    if(w === rtWidth && h === rtHeight) return;
+    rtWidth = w;
+    rtHeight = h;
+    const targets = [
+        { tex: accumTex, fbo: accumFbo, clear: [0.05,0.05,0.08,1.0] },
+        { tex: overlayTex, fbo: overlayFbo, clear: [0.0,0.0,0.0,0.0] }
+    ];
+    targets.forEach(({tex,fbo}) => {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    });
+    targets.forEach(({fbo, clear}) => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.clearColor(clear[0], clear[1], clear[2], clear[3]);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    frameCount = 0;
+}
+
+function render() {
+    parseAll(); // Hot-reload data
+
+    if (particlesDirty) {
+        reseedParticles();
+    }
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w !== prevW || h !== prevH) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+        prevW = w;
+        prevH = h;
+        ensureRenderTargets(w, h);
+    }
+    ensureRenderTargets(w, h);
+
+    const aspect = canvas.width / canvas.height;
+    const s = 1.0/state.bounds;
+    const m = [s/aspect,0,0,0, 0,s,0,0, 0,0,1,0, 0,0,0,1];
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, accumFbo);
+    gl.viewport(0, 0, w, h);
+
+    if(state.renderStyle === 'INSTANCED') {
+        gl.clearColor(0.05, 0.05, 0.08, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(progInst);
+        updateUniforms(progInst);
+        gl.uniformMatrix4fv(gl.getUniformLocation(progInst, "u_matrix"), false, m);
+        gl.uniform1f(gl.getUniformLocation(progInst, "u_dt"), state.dt);
+        gl.uniform1i(gl.getUniformLocation(progInst, "u_segments"), state.segments);
+        gl.bindVertexArray(vaoInst);
+        gl.drawArraysInstanced(gl.LINE_STRIP, 0, state.segments, particleCount);
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    } else {
+        if(frameCount === 0) { gl.clearColor(0.05, 0.05, 0.08, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(progFade);
+        gl.uniform1f(gl.getUniformLocation(progFade, "u_alpha"), state.fadeAlpha);
+        gl.bindVertexArray(vaoQuad);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+
+        gl.useProgram(progUpd);
+        updateUniforms(progUpd);
+        gl.uniform1f(gl.getUniformLocation(progUpd, "u_dt"), state.dt);
+        gl.uniform3f(gl.getUniformLocation(progUpd, "u_bounds"), aspect, state.bounds, 0);
+        const lifeMax = Math.max(1, state.reseedInterval);
+        if(frameCount % 120 === 0) console.log(`reseed interval=${lifeMax}, particles=${particleCount}`);
+        gl.uniform1f(gl.getUniformLocation(progUpd, "u_lifeMax"), lifeMax);
+        gl.uniform1f(gl.getUniformLocation(progUpd, "u_randSeed"), frameCount + Math.random());
+
+        gl.bindVertexArray(tfVaos[tfIdx]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBufs[tfIdx]);
+        const nextIdx = 1 - tfIdx;
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, tfBufs[nextIdx]);
+        gl.enable(gl.RASTERIZER_DISCARD);
+        gl.beginTransformFeedback(gl.POINTS);
+        gl.drawArrays(gl.POINTS, 0, particleCount);
+        gl.endTransformFeedback();
+        gl.disable(gl.RASTERIZER_DISCARD);
+        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+        gl.bindVertexArray(null);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(progLine);
+        gl.uniformMatrix4fv(gl.getUniformLocation(progLine, "u_matrix"), false, m);
+        gl.uniform1f(gl.getUniformLocation(progLine, "u_alpha"), state.lineAlpha);
+
+        gl.bindVertexArray(vaoLines);
+        gl.enableVertexAttribArray(0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBufs[tfIdx]);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, TF_STRIDE, 0);
+        gl.vertexAttribDivisor(0, 1);
+
+        gl.enableVertexAttribArray(1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBufs[nextIdx]);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, TF_STRIDE, 0);
+        gl.vertexAttribDivisor(1, 1);
+
+        gl.enableVertexAttribArray(2);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBufs[tfIdx]);
+        gl.vertexAttribPointer(2, 1, gl.FLOAT, false, TF_STRIDE, 16);
+        gl.vertexAttribDivisor(2, 1);
+
+        gl.enableVertexAttribArray(3);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBufs[nextIdx]);
+        gl.vertexAttribPointer(3, 1, gl.FLOAT, false, TF_STRIDE, 16);
+        gl.vertexAttribDivisor(3, 1);
+
+        gl.drawArraysInstanced(gl.LINES, 0, 2, particleCount);
+        gl.disable(gl.BLEND);
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        tfIdx = nextIdx;
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, overlayFbo);
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    if(state.overlayMode > 0){
+        gl.useProgram(progOverlay);
+        updateUniforms(progOverlay);
+        gl.uniform1i(gl.getUniformLocation(progOverlay, "u_overlayMode"), state.overlayMode);
+        gl.uniform1f(gl.getUniformLocation(progOverlay, "u_saturation"), state.overlaySaturation);
+        gl.uniform2f(gl.getUniformLocation(progOverlay, "u_overlayLimits"), state.bounds * aspect, state.bounds);
+        gl.bindVertexArray(vaoQuad);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.disable(gl.BLEND);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progComposite);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, accumTex);
+    gl.uniform1i(gl.getUniformLocation(progComposite, "u_accumTex"), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, overlayTex);
+    gl.uniform1i(gl.getUniformLocation(progComposite, "u_overlayTex"), 1);
+    gl.uniform1i(gl.getUniformLocation(progComposite, "u_overlayEnabled"), state.overlayMode > 0 ? 1 : 0);
+    gl.bindVertexArray(vaoQuad);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    frameCount++;
+    requestAnimationFrame(render);
+}
+
+// Bindings
+function syncControlsToState(){
+    state.dt = parseFloat(document.getElementById('dtRange').value);
+    state.segments = parseInt(document.getElementById('segRange').value);
+    state.vizMode = parseInt(document.getElementById('modeSelect').value);
+    state.renderStyle = document.getElementById('renderStyle').value;
+    state.numParticles = parseInt(document.getElementById('particleRange').value);
+    state.reseedInterval = parseInt(document.getElementById('reseedIntervalRange').value);
+    state.lineAlpha = parseFloat(document.getElementById('lineAlphaRange').value);
+    state.fadeAlpha = parseFloat(document.getElementById('fadeAlphaRange').value);
+    state.overlayMode = parseInt(document.getElementById('overlayModeSelect').value);
+    state.overlaySaturation = parseFloat(document.getElementById('overlaySaturationRange').value);
+}
+
+document.getElementById('dtRange').oninput=e=>state.dt=parseFloat(e.target.value);
+document.getElementById('segRange').oninput=e=>state.segments=parseInt(e.target.value);
+document.getElementById('modeSelect').onchange=e=>state.vizMode=parseInt(e.target.value);
+document.getElementById('renderStyle').onchange=e=>{ state.renderStyle=e.target.value; if(state.renderStyle==='TRANSFORM') particlesDirty=true; };
+document.getElementById('particleRange').oninput=e=>{ state.numParticles=parseInt(e.target.value); particlesDirty=true; };
+document.getElementById('reseedIntervalRange').oninput=e=>{ state.reseedInterval=parseInt(e.target.value); };
+document.getElementById('lineAlphaRange').oninput=e=>state.lineAlpha=parseFloat(e.target.value);
+document.getElementById('fadeAlphaRange').oninput=e=>state.fadeAlpha=parseFloat(e.target.value);
+document.getElementById('overlayModeSelect').onchange=e=>state.overlayMode=parseInt(e.target.value);
+document.getElementById('overlaySaturationRange').oninput=e=>state.overlaySaturation=parseFloat(e.target.value);
+
+syncControlsToState();
+reseedParticles();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

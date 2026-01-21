@@ -112,10 +112,11 @@
     #version 300 es
     layout(location = 0) in vec3 a_prev;
     layout(location = 1) in vec3 a_curr;
-    layout(location = 2) in float a_currSpeed;
+    layout(location = 2) in float a_prevFlag;
+    layout(location = 3) in float a_currFlag;
     uniform mat4 u_matrix;
     void main() {
-        bool reset = a_currSpeed < 0.0;
+        bool reset = (a_prevFlag < 0.0) || (a_currFlag < 0.0);
         vec3 p = (gl_VertexID == 0 && !reset) ? a_prev : a_curr;
         gl_Position = u_matrix * vec4(p, 1.0);
     }
@@ -534,8 +535,14 @@ function render(time) {
         gl.vertexAttribDivisor(1, 1);
 
         gl.enableVertexAttribArray(2);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBuffers[tfCurrentIndex]);
         gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 4 * 4, 12);
         gl.vertexAttribDivisor(2, 1);
+
+        gl.enableVertexAttribArray(3);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tfBuffers[nextIndex]);
+        gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 4 * 4, 12);
+        gl.vertexAttribDivisor(3, 1);
 
         gl.drawArraysInstanced(gl.LINES, 0, 2, NUM_INSTANCES);
         gl.disable(gl.BLEND);
