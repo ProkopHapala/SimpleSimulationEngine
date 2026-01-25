@@ -6,6 +6,12 @@ export class MapAlgorithm {
         this.inputs = inputs;
         this.outputs = outputs;
 
+        const sampleTypeFor = (f) => {
+            const fmt = f?.format ?? 'r32float';
+            if (fmt.includes('float')) return 'unfilterable-float';
+            return 'float';
+        };
+
         let header = `\n// --- Auto-Generated Bindings ---\n`;
         let bIdx = 0;
         inputs.forEach((f, i) => header += `@group(1) @binding(${bIdx++}) var in_${i} : texture_2d<f32>;\n`);
@@ -15,9 +21,9 @@ export class MapAlgorithm {
         
         const entries = [];
         bIdx = 0;
-        inputs.forEach(() => entries.push({ 
-            binding: bIdx++, visibility: GPUShaderStage.COMPUTE, 
-            texture: { sampleType: 'unfilterable-float', viewDimension: '2d' } 
+        inputs.forEach((f) => entries.push({
+            binding: bIdx++, visibility: GPUShaderStage.COMPUTE,
+            texture: { sampleType: sampleTypeFor(f), viewDimension: '2d' }
         }));
         outputs.forEach(f => entries.push({ 
             binding: bIdx++, visibility: GPUShaderStage.COMPUTE, 

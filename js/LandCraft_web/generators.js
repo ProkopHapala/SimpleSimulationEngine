@@ -245,4 +245,164 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }`;
         }
     }
+    ,
+    elevated_ref: {
+        id: 'elevated_ref',
+        label: 'Elevated (Ref)',
+        params: [
+            {name: 'octaves', label: 'Octaves', type: 'int', min: 1, max: 16, default: 16},
+            {name: 'scale', label: 'Scale', type: 'float', min: 1, max: 100, default: 4},
+            {name: 'period', label: 'Period', type: 'float', min: 64, max: 1024, default: 256},
+            { name: 'grow', label: 'Grow', type: 'float', min: 0.5, max: 3.0, default: 2.0 },
+            { name: 'anisotropy', label: 'Anisotropy', type: 'float', min: 0.2, max: 2.0, default: 1.0 },
+            { name: 'rotation', label: 'Rotation', type: 'float', min: 0, max: 360, default: 0 },
+            { name: 'skew', label: 'Skew', type: 'float', min: -1.0, max: 1.0, default: 0.0 },
+            { name: 'smoothNoise', label: 'Smooth Noise', type: 'int', min: 0, max: 1, default: 0 }
+        ],
+        extraInputs: ({ noise256 }) => [noise256],
+        wgsl: (p) => {
+            const matrixSnippet = `let baseMat = mat2x2f(0.8, -0.6, 0.6, 0.8);
+${buildOctaveMatrixSnippet({ ...p, rotation: p.rotation ?? 0, grow: p.grow ?? 2.0, anisotropy: p.anisotropy ?? 1.0, skew: p.skew ?? 0.0 }, 'octMat', 'baseMat')}`;
+            const useSmooth = Number(p.smoothNoise ?? 0) ? 1 : 0;
+            return `fn noised(x: vec2f) -> vec3f {
+    let f = fract(x);
+    var u: vec2f;
+    var du: vec2f;
+    if (${useSmooth} == 0) {
+        u = f*f*(3.0-2.0*f);
+        du = 6.0*f*(1.0-f);
+    } else {
+        u = f*f*f*(f*(f*6.0-15.0)+10.0);
+        du = 30.0*f*f*(f*(f-2.0)+1.0);
+    }
+    let pi = vec2<i32>(floor(x));
+    let mask256 = vec2<i32>(255, 255);
+    let a = textureLoad(in_0, (pi + vec2<i32>(0,0)) & mask256, 0).x;
+    let b = textureLoad(in_0, (pi + vec2<i32>(1,0)) & mask256, 0).x;
+    let c = textureLoad(in_0, (pi + vec2<i32>(0,1)) & mask256, 0).x;
+    let d = textureLoad(in_0, (pi + vec2<i32>(1,1)) & mask256, 0).x;
+    return vec3f(a+(b-a)*u.x+(c-a)*u.y+(a-b-c+d)*u.x*u.y, du*(vec2f(b-a,c-a)+(a-b-c+d)*u.yx));
+}
+fn terrainH(x: vec2f, octaves: i32) -> f32 {
+    var p = x*0.003/250.0;
+    var a = 0.0; var b = 1.0; var d = vec2f(0.0);
+${matrixSnippet}
+    for (var i=0; i<octaves; i++) {
+        let n = noised(p);
+        d += n.yz;
+        a += b*n.x/(1.0 + dot(d,d));
+        b *= 0.5;
+        p = octMat * p;
+    }
+    if (${useSmooth} == 1) { a *= 0.9; }
+    return 250.0*120.0*a;
+}
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    let centered = (vec2f(id.xy) - vec2f(globals.resX, globals.resY)*0.5) * ${p.scale};
+    let raw = terrainH(centered, ${p.octaves});
+    let h = raw * 0.00002 + 0.35;
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(h, 0.0, 0.0, 1.0));
+}`;
+        }
+    },
+    sirenian_ref: {
+        id: 'sirenian_ref',
+        label: 'Sirenian Dawn (Ref)',
+        params: [
+            { name: 'octaves', label: 'Octaves', type: 'int', min: 1, max: 8, default: 5 },
+            { name: 'scale', label: 'Scale', type: 'float', min: 1, max: 100, default: 4 },
+            { name: 'period', label: 'Period', type: 'float', min: 64, max: 1024, default: 256 },
+            { name: 'grow', label: 'Grow', type: 'float', min: 0.5, max: 4.0, default: 2.95 },
+            { name: 'anisotropy', label: 'Anisotropy', type: 'float', min: 0.2, max: 2.0, default: 1.0 },
+            { name: 'rotation', label: 'Rotation', type: 'float', min: 0, max: 360, default: 0 },
+            { name: 'skew', label: 'Skew', type: 'float', min: -1.0, max: 1.0, default: 0.0 }
+        ],
+        extraInputs: ({ noise256 }) => [noise256],
+        wgsl: (p) => {
+            const matrixSnippet = `let baseMat = mat2x2f(0.80, 0.60, -0.60, 0.80);
+${buildOctaveMatrixSnippet({ ...p, rotation: p.rotation ?? 0, grow: p.grow ?? 2.95, anisotropy: p.anisotropy ?? 1.0, skew: p.skew ?? 0.0 }, 'octMat', 'baseMat')}`;
+            return `fn noised(x: vec2f) -> vec3f {
+    let p = floor(x);
+    let f = fract(x);
+    let u = f*f*(3.0-2.0*f);
+    let ip = vec2<i32>(p);
+    let mask256 = vec2<i32>(255, 255);
+    let a = textureLoad(in_0, (ip + vec2<i32>(0,0)) & mask256, 0).x;
+    let b = textureLoad(in_0, (ip + vec2<i32>(1,0)) & mask256, 0).x;
+    let c = textureLoad(in_0, (ip + vec2<i32>(0,1)) & mask256, 0).x;
+    let d = textureLoad(in_0, (ip + vec2<i32>(1,1)) & mask256, 0).x;
+    let du = 6.0*f*(1.0-f);
+    return vec3f(a+(b-a)*u.x+(c-a)*u.y+(a-b-c+d)*u.x*u.y, du*(vec2f(b-a,c-a)+(a-b-c+d)*u.yx));
+}
+fn terrain(pIn: vec2f, octaves: i32) -> f32 {
+    var p = pIn;
+    var rz = 0.0; var z = 1.0; var d = vec2f(0.0); var zscl = -0.4; var zz = 5.0;
+${matrixSnippet}
+    for (var i=0; i<octaves; i++) {
+        let n = noised(p);
+        d += pow(abs(n.yz), vec2f(zz));
+        d -= vec2f(smoothstep(-0.5, 1.5, n.y), smoothstep(-0.5, 1.5, n.z));
+        zz -= 1.0;
+        rz += z*n.x/(dot(d,d)+0.85);
+        z *= zscl;
+        zscl *= 0.8;
+        p = octMat * p;
+    }
+    return rz/(smoothstep(1.5, -0.5, rz)+0.75);
+}
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    let uv = vec2f(id.xy) / vec2f(globals.resX, globals.resY);
+    let pos = uv * ${p.scale} * 6.0;
+    var h = terrain(pos, ${p.octaves});
+    let dist = distance(uv, vec2f(0.5));
+    h -= smoothstep(0.3, 0.5, dist);
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(h, 0.0, 0.0, 1.0));
+}`;
+        }
+    },
+    canyo_ref: {
+        id: 'canyo_ref',
+        label: 'Canyo (Ref)',
+        params: [
+            { name: 'scale', label: 'Scale', type: 'float', min: 1, max: 100, default: 4 },
+            { name: 'period', label: 'Period', type: 'float', min: 64, max: 1024, default: 256 }
+        ],
+        extraInputs: ({ noise1024 }) => [noise1024],
+        wgsl: (p) => {
+            return `fn textureGood(uvIn: vec2f) -> vec4f {
+    let uv = uvIn*1024.0 - 0.5;
+    let iuv = floor(uv);
+    let f = fract(uv);
+    let p1 = vec2<i32>(i32(iuv.x+0.5), i32(iuv.y+0.5));
+    let p2 = vec2<i32>(i32(iuv.x+1.5), i32(iuv.y+0.5));
+    let p3 = vec2<i32>(i32(iuv.x+0.5), i32(iuv.y+1.5));
+    let p4 = vec2<i32>(i32(iuv.x+1.5), i32(iuv.y+1.5));
+    let mask1024 = vec2<i32>(1023, 1023);
+    let rg1 = textureLoad(in_0, p1 & mask1024, 0);
+    let rg2 = textureLoad(in_0, p2 & mask1024, 0);
+    let rg3 = textureLoad(in_0, p3 & mask1024, 0);
+    let rg4 = textureLoad(in_0, p4 & mask1024, 0);
+    return mix(mix(rg1, rg2, f.x), mix(rg3, rg4, f.x), f.y);
+}
+fn terrain(q: vec2f) -> f32 {
+    let th = smoothstep(0.0, 0.7, textureGood(0.001*q).x);
+    let rr = smoothstep(0.1, 0.5, textureGood(2.0*0.03*q).y);
+    var h = 1.9;
+    h += th*7.0;
+    h += 0.3*rr;
+    return -h;
+}
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    let centered = (vec2f(id.xy) - vec2f(globals.resX, globals.resY)*0.5) * ${p.scale};
+    let h = terrain(centered);
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(h, 0.0, 0.0, 1.0));
+}`;
+        }
+    }
 };

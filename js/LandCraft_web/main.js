@@ -1,10 +1,26 @@
-import { GPUContext, Field, VisualField } from './gpu-core.js';
+import { GPUContext, Field, VisualField, StaticTexture } from './gpu-core.js';
 import { MapAlgorithm } from './compute.js';
 import { ViewportRenderer, LineRenderer } from './renderers.js';
 import { TextRenderer } from './text-renderer.js';
 import { GENERATORS } from './generators.js';
 import { buildParamControls } from './gui-builder.js';
 import { NOISE_FLAVORS } from './noise-lib.js';
+
+function makeRgbaNoise(size, channels = 1, seed = 1337) {
+    let s = seed >>> 0;
+    const rnd = () => { s = (1664525 * s + 1013904223) >>> 0; return s / 4294967296; };
+    const data = new Uint8Array(size * size * 4);
+    for (let i = 0; i < size * size; i++) {
+        const r = Math.floor(rnd() * 256);
+        const g = channels >= 2 ? Math.floor(rnd() * 256) : r;
+        const b = channels >= 3 ? Math.floor(rnd() * 256) : r;
+        data[i * 4 + 0] = r;
+        data[i * 4 + 1] = g;
+        data[i * 4 + 2] = b;
+        data[i * 4 + 3] = 255;
+    }
+    return data;
+}
 
 // --- Colormap presets and shader builder ---
 const COLORMAPS = {
@@ -50,6 +66,12 @@ async function main() {
     const heightMap = new Field(gpu, 'Height');
     const displayMap = new VisualField(gpu, 'Display', 'rgba8unorm');
 
+    // Reference noise lookup textures (Shadertoy-style iChannel)
+    const noise256 = new StaticTexture(gpu, 'Noise256', 256, 256, 'rgba8unorm');
+    noise256.uploadRGBA8(makeRgbaNoise(256, 1, 1337));
+    const noise1024 = new StaticTexture(gpu, 'Noise1024', 1024, 1024, 'rgba8unorm');
+    noise1024.uploadRGBA8(makeRgbaNoise(1024, 2, 424242));
+
     // Setup UI
     const select = document.getElementById('generator-select');
     const colormapSelect = document.getElementById('colormap-select');
@@ -94,7 +116,8 @@ async function main() {
     select.value = currentGenerator.id;
     let currentColormap = colormapKeys[0];
     colormapSelect.value = currentColormap;
-    let genAlgo = new MapAlgorithm(gpu, currentGenerator.wgsl(currentParams, currentFlavor), [], [heightMap]);
+    const extraInputsFor = (gen) => (gen.extraInputs ? gen.extraInputs({ noise256, noise1024 }) : []);
+    let genAlgo = new MapAlgorithm(gpu, currentGenerator.wgsl(currentParams, currentFlavor), extraInputsFor(currentGenerator), [heightMap]);
     let colorAlgo = new MapAlgorithm(gpu, buildColorizeShader(COLORMAPS[currentColormap]), [heightMap], [displayMap]);
     gpu.views.heightRange[0] = 0.0;
     gpu.views.heightRange[1] = 1.0;
@@ -111,7 +134,7 @@ async function main() {
     function rebuildGeneratorShader() {
         const flavorKey = initFlavor(currentGenerator);
         const wgsl = currentGenerator.wgsl.length >= 2 ? currentGenerator.wgsl(currentParams, flavorKey) : currentGenerator.wgsl(currentParams);
-        genAlgo = new MapAlgorithm(gpu, wgsl, [], [heightMap]);
+        genAlgo = new MapAlgorithm(gpu, wgsl, extraInputsFor(currentGenerator), [heightMap]);
     }
 
     function updateGenerator() {

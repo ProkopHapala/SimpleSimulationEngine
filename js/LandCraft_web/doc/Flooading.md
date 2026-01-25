@@ -138,3 +138,71 @@ The biggest risk with skipping (rays or hierarchy) is "tunneling" through a thin
 
 Would you like to explore how to implement the **Pointer Jumping** (Step 3) logic specifically? It's often the "eureka" moment for people moving from CPU flooding to GPU topological analysis.
 
+---
+
+## USER
+
+My map will be definitely megapixels ( maybe 4k times 4k , maybe bigger)
+
+What exactly is borůvka algorithm?
+
+I was thinking like find in my supercells 16x16 pixels minimum and find path of lowest barier (saddle point) between them. But maybe it is not necessary maybe the points can be defined on the boundaries of the cells doesn't matter. 
+
+In any case I want tu runs small djiskra or A* path finding like algorithm I'm these small cells in group local memory. And then gradually build map of lowest saddle point map for higher order supercells in multiple levels of the minimap.
+
+The question is if placement of my nodes should be determined by my subdivision (e.g. power of two spacing between node pixels of each level) or rather by inherent topology of the terrain which we found (e.g. minimum of level 1, minimum of level 2, level 3 etc region.) i.g should we place nodes to initial subdivision position or relax them to minimum of local subdivision tile
+
+---
+
+## Gemini-3-Flash
+
+Building a flood-fill system for a 16-megapixel ($4000 \times 4000$) map requires moving away from local pixel-by-pixel updates and toward **topological graph reduction**. 
+
+At this scale, the \"water\" doesn't care about 99% of your pixels; it only cares about the **Saddle Points** (the lowest points on the ridges) and the **Sinks** (the local minima).
+
+### 1. What is Borůvka’s Algorithm?
+You can think of Borůvka’s as the \"most parallel\" way to find a Minimum Spanning Tree (MST). While Dijkstra or Prim grow a single tree one edge at a time, Borůvka’s grows **every node simultaneously**.
+
+* **Phase 1:** Every node (pixel or tile) looks at its neighbors and picks the \"cheapest\" connection (in your case, the lowest spill point).
+* **Phase 2:** You \"contract\" the graph. All connected nodes merge into one \"super-node.\"
+* **Repeat:** You treat the super-nodes as new individual nodes and repeat.
+* **Why it’s perfect for GPUs:** It’s $O(\log V)$ iterations. For a $4000 \times 4000$ map, you can theoretically reduce the entire terrain to a single drainage basin in about 12–15 steps.
+
+### 2. Node Placement: Grid Spacing vs. Topological Minima
+This is the heart of your design choice. You have two main options for where to place the \"representative\" nodes of your hierarchy:
+
+#### Option A: Regular Subdivision (HPA* style)
+You keep nodes at the centers or corners of your $16 \times 16$ tiles.
+* **Pros:** Data access is perfectly coalesced. You can use simple array math to find neighbors. 
+* **Cons:** As you noted, it's **pathological**. A \"river\" might zig-zag across a tile boundary in a way that the grid-node doesn't \"see\" the true lowest path. You end up having to store \"boundary interface\" data for every edge of every tile.
+
+#### Option B: Topological Minima (The \"Morphological\" approach)
+You find the local minimum within each $16 \times 16$ tile and \"relax\" your node to that exact pixel.
+* **Pros:** It is **computationally robust**. Since water naturally flows toward the minimum, your nodes now represent the \"bottom\" of the local basin. The edges between nodes represent the **Saddle Points** (the mountain passes).
+* **Cons:** Non-uniform data access. Your nodes are now scattered at arbitrary $(x, y)$ coordinates.
+
+**The Hybrid Winner:** The most efficient GPU design is usually **Grid-Aligned Storage with Topological Logic**. 
+1.  Keep the $16 \times 16$ grid for memory management.
+2.  Inside each tile, find the absolute lowest pixel (the **Sink**).
+3.  Store that pixel's $(x, y)$ and height in the tile's metadata. 
+4.  The \"edges\" in your Borůvka graph are the lowest points on the boundaries between adjacent $16 \times 16$ tiles.
+
+### 3. The GPU \"Super-Cell\" Workflow
+To handle a 4k map efficiently, use a **three-tier** approach:
+
+1.  **Local \"Small Dijkstra\" (Shared Memory):**
+    Each GPU Thread Group takes one $16 \times 16$ or $32 \times 32$ tile. Using **Shared Memory** (fast on-chip cache), you compute the \"intra-tile connectivity.\" Specifically, you find the cost (max height encountered) to get from the local minimum to each of the 4 edges of the tile.
+    
+
+2.  **Saddle-Point Reduction (Global Memory):**
+    You now have a \"Graph of Tiles.\" The edges between tiles are the lowest points on their shared boundaries. You run 2-3 passes of **Borůvka contraction**. In each pass, tiles merge with their lowest neighbor.
+
+3.  **The \"Flood\" Pass:**
+    Once the global connectivity is known (i.e., you know the \"Spill Level\" for every super-tile), you run a final kernel that broadcasts these levels back down to the individual pixels. 
+
+
+
+### Why this beats simple rays:
+Your ray-casting idea is great for \"skipping\" empty space, but it can still get stuck in a \"U-shaped\" valley. A hierarchical graph doesn't care about the shape of the valley; it only cares about the **bottleneck height** of the exit.
+
+**Would you like me to explain how to efficiently find the \"Saddle Points\" (the lowest point on the boundary) using GPU Parallel Reduction?**

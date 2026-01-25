@@ -241,3 +241,29 @@ export class VisualField {
         this.format = format;
     }
 }
+
+// Static texture resource (single texture, CPU-uploadable, filterable depending on format)
+export class StaticTexture {
+    constructor(gpu, label = 'StaticTexture', width = 256, height = 256, format = 'rgba8unorm') {
+        this.gpu = gpu;
+        this.width = width;
+        this.height = height;
+        this.format = format;
+        this.tex = gpu.device.createTexture({
+            label,
+            size: [width, height],
+            format,
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+        });
+        this.view = this.tex.createView();
+    }
+
+    uploadRGBA8(data) {
+        this.gpu.device.queue.writeTexture(
+            { texture: this.tex },
+            data,
+            { bytesPerRow: this.width * 4, rowsPerImage: this.height },
+            { width: this.width, height: this.height, depthOrArrayLayers: 1 }
+        );
+    }
+}
