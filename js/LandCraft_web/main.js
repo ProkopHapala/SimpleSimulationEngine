@@ -65,6 +65,20 @@ async function main() {
 
     const heightMap = new Field(gpu, 'Height');
     const displayMap = new VisualField(gpu, 'Display', 'rgba8unorm');
+    const accumBuffer = new Field(gpu, 'Accumulator');
+
+    const clearShader = `@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(0.0, 0.0, 0.0, 0.0));
+}`;
+    const clearAlgo = new MapAlgorithm(gpu, clearShader, [], [accumBuffer]);
+
+    function resetAccumulator() {
+        const cmd = gpu.device.createCommandEncoder();
+        clearAlgo.run(cmd);
+        gpu.device.queue.submit([cmd.finish()]);
+    }
 
     // Reference noise lookup textures (Shadertoy-style iChannel)
     const noise256 = new StaticTexture(gpu, 'Noise256', 256, 256, 'rgba8unorm');
@@ -134,7 +148,19 @@ async function main() {
     function rebuildGeneratorShader() {
         const flavorKey = initFlavor(currentGenerator);
         const wgsl = currentGenerator.wgsl.length >= 2 ? currentGenerator.wgsl(currentParams, flavorKey) : currentGenerator.wgsl(currentParams);
-        genAlgo = new MapAlgorithm(gpu, wgsl, extraInputsFor(currentGenerator), [heightMap]);
+        const inputs = extraInputsFor(currentGenerator);
+        const outputs = [heightMap];
+        const wasProgressive = isProgressive;
+        isProgressive = currentGenerator.progressive && currentParams.progressive;
+        if (isProgressive) {
+            inputs.push(accumBuffer);
+            outputs.push(accumBuffer);
+            if (!wasProgressive || needsAccumReset) { resetAccumulator(); }
+            progressiveFrame = 0;
+            progressiveTotalFrames = Math.ceil(currentParams.samples / currentParams.samplesPerFrame);
+            needsAccumReset = false;
+        }
+        genAlgo = new MapAlgorithm(gpu, wgsl, inputs, outputs);
     }
 
     function updateGenerator() {
@@ -165,13 +191,17 @@ async function main() {
             flavorRow.appendChild(selectEl);
             paramsContainer.appendChild(flavorRow);
         }
-        if (currentGenerator.params) buildParamControls(paramsContainer, currentGenerator.params, (name, value) => { currentParams[name] = value; requestGeneration(); }, currentParams);
+        if (currentGenerator.params) buildParamControls(paramsContainer, currentGenerator.params, (name, value) => {
+            currentParams[name] = value;
+            if (currentGenerator.progressive) needsAccumReset = true;
+            rebuildGeneratorShader();
+            requestGeneration();
+        }, currentParams);
     }
 
     function requestGeneration() { needsGeneration = true; }
 
     generateBtn.addEventListener('click', () => {
-        rebuildGeneratorShader();
         requestGeneration();
     });
 
@@ -197,7 +227,20 @@ async function main() {
 
     let heightStatsPromise = null;
     let lastHeightStats = { min: 0.0, max: 1.0 };
+    const enableAutoHeightStats = true;
+    let lastGenTime = 0;
+    let progressiveFrame = 0;
+    let progressiveTotalFrames = 0;
+    let isProgressive = false;
+    let needsAccumReset = false;
+
+    function autoStatsEnabled() {
+        return enableAutoHeightStats && currentGenerator.id !== 'procErosionHeightmap_ref';
+    }
+
     function kickHeightStats() {
+        if (!autoStatsEnabled()) return;
+        if (isProgressive && progressiveFrame < progressiveTotalFrames) return;
         if (heightStatsPromise || !heightMap.pendingReadback) return;
         heightStatsPromise = heightMap.collectReadback().then(data => {
             heightStatsPromise = null;
@@ -226,11 +269,28 @@ async function main() {
         gpu.update();
         const cmd = gpu.device.createCommandEncoder();
         if (needsGeneration) {
+            const t0 = performance.now();
             genAlgo.run(cmd);
-            if (!heightMap.pendingReadback) {
-                heightMap.encodeReadback(cmd);
+            const t1 = performance.now();
+            console.log(`Compute pass: ${(t1 - t0).toFixed(2)} ms`);
+            lastGenTime = t1 - t0;
+
+            if (isProgressive) {
+                progressiveFrame++;
+                const progress = progressiveFrame / progressiveTotalFrames;
+                console.log(`Progressive: ${progressiveFrame}/${progressiveTotalFrames} (${(progress * 100).toFixed(1)}%)`);
+                if (progressiveFrame >= progressiveTotalFrames) {
+                    isProgressive = false;
+                    console.log('Progressive accumulation complete');
+                    if (autoStatsEnabled() && !heightMap.pendingReadback) { heightMap.encodeReadback(cmd); }
+                    needsGeneration = false;
+                } else {
+                    needsGeneration = true;
+                }
+            } else {
+                if (autoStatsEnabled() && !heightMap.pendingReadback) { heightMap.encodeReadback(cmd); }
+                needsGeneration = false;
             }
-            needsGeneration = false;
             needsColorize = true;
         }
         if (needsColorize) {

@@ -404,5 +404,147 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     textureStore(out_0, vec2<i32>(id.xy), vec4f(h, 0.0, 0.0, 1.0));
 }`;
         }
+    },
+
+    procErosionHeightmap_ref: {
+        id: 'procErosionHeightmap_ref',
+        label: 'Procedural Erosion Heightmap (Ref)',
+        params: [
+            { name: 'samples', label: 'Total Samples', type: 'int', min: 1, max: 64, default: 16 },
+            { name: 'range', label: 'Range', type: 'int', min: 4, max: 32, default: 16 },
+            { name: 'thresholdMin', label: 'Thr Min', type: 'float', min: 0.0, max: 1.0, default: 0.0 },
+            { name: 'thresholdMax', label: 'Thr Max', type: 'float', min: 0.0, max: 1.0, default: 1.0 },
+            { name: 'domainScale', label: 'Domain Scale', type: 'float', min: 0.5, max: 20.0, default: 4.0 },
+            { name: 'samplesPerFrame', label: 'Samples/Frame', type: 'int', min: 1, max: 16, default: 4 },
+            { name: 'progressive', label: 'Progressive', type: 'bool', default: false }
+        ],
+        extraInputs: ({ noise1024 }) => [noise1024],
+        progressive: true,
+        wgsl: (p) => {
+            const samples = Math.max(1, Math.min(64, Number(p.samples ?? 16) | 0));
+            const samplesPerFrame = Math.max(1, Math.min(16, Number(p.samplesPerFrame ?? 4) | 0));
+            const range = Math.max(1, Math.min(64, Number(p.range ?? 16) | 0));
+            const thrMin = toF32(p.thresholdMin ?? 0.0);
+            const thrMax = toF32(p.thresholdMax ?? 1.0);
+            const domainScale = toF32(p.domainScale ?? 4.0);
+            const progressive = !!p.progressive;
+            const common = `fn hash11(x: f32) -> f32 { return fract(sin(x) * 43758.5453123); }
+fn hash31(x: f32) -> vec3f { return vec3f(hash11(x + 0.1), hash11(x + 1.7), hash11(x + 2.9)); }
+
+fn perlin(uv: vec2f) -> f32 {
+    let dim = vec2f(textureDimensions(in_0));
+    var base = (uv * ${domainScale} + vec2f(8.2813, 1.42114)) / 4.0;
+    var occ = vec2f(0.0);
+    var a = 1.0;
+    for (var i = 0; i < 7; i++) {
+        let uvTex = base * dim - vec2f(0.5);
+        let iuv = floor(uvTex);
+        let f = fract(uvTex);
+        let p1 = vec2<i32>(i32(iuv.x + 0.5), i32(iuv.y + 0.5));
+        let p2 = vec2<i32>(i32(iuv.x + 1.5), i32(iuv.y + 0.5));
+        let p3 = vec2<i32>(i32(iuv.x + 0.5), i32(iuv.y + 1.5));
+        let p4 = vec2<i32>(i32(iuv.x + 1.5), i32(iuv.y + 1.5));
+        let mask = vec2<i32>(i32(dim.x) - 1, i32(dim.y) - 1);
+        let v1 = textureLoad(in_0, p1 & mask, 0).x;
+        let v2 = textureLoad(in_0, p2 & mask, 0).x;
+        let v3 = textureLoad(in_0, p3 & mask, 0).x;
+        let v4 = textureLoad(in_0, p4 & mask, 0).x;
+        let vx0 = mix(v1, v2, f.x);
+        let vx1 = mix(v3, v4, f.x);
+        let v = mix(vx0, vx1, f.y);
+        occ += vec2f(v, 1.0) * a;
+        base *= 0.5;
+        a *= 2.0;
+    }
+    var v = occ.x / occ.y;
+    v = v * 2.0 - 1.0;
+    v = tanh(v * 2.0);
+    v = v * 0.5 + 0.5;
+    v *= v;
+    return v;
+}
+
+fn occAt(coord: vec2<i32>) -> f32 {
+    let uv = vec2f(coord) / vec2f(f32(textureDimensions(in_0).x), f32(textureDimensions(in_0).y));
+    return perlin(uv);
+}
+
+fn isIn(coord: vec2<i32>, threshold: f32) -> bool { return occAt(coord) > threshold; }
+
+fn sampleDistanceToEdge(center: vec2f, threshold: f32, iRange: i32) -> f32 {
+    let start = vec2<i32>(floor(center));
+    let fragIsIn = isIn(start, threshold);
+    let rangeF = f32(iRange);
+    let maxSqr = rangeF * rangeF;
+    var best = maxSqr;
+
+    for (var dx = -iRange; dx <= iRange; dx++) {
+        for (var dy = -iRange; dy <= iRange; dy++) {
+            let delta = vec2f(f32(dx), f32(dy));
+            let d2 = dot(delta, delta);
+            if (d2 >= maxSqr) { continue; }
+            if (d2 >= best) { continue; }
+            let scan = start + vec2<i32>(dx, dy);
+            let scanIsIn = isIn(scan, threshold);
+            if (scanIsIn != fragIsIn) { best = d2; }
+        }
+    }
+
+    var dist = sqrt(best);
+    dist -= 0.5;
+    if (fragIsIn) { dist = -dist; }
+    dist /= rangeF * 2.0;
+    dist = 0.5 - dist;
+    dist = smoothstep(0.0, 1.0, dist);
+    return dist;
+}
+`;            if (progressive) {
+                return common + `
+
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    let frag = vec2f(id.xy);
+    var acc = 0.0;
+    let baseIdx: u32 = globals.frame * u32(${samplesPerFrame});
+    for (var i: u32 = 0u; i < u32(${samplesPerFrame}); i++) {
+        let sampleIdx: u32 = baseIdx + i;
+        if (sampleIdx >= u32(${samples})) { break; }
+        let seed = f32(sampleIdx) * 1.618033 + f32(i) * 0.7548776662;
+        var n = hash31(seed);
+        let jitter = n.xy - vec2f(0.5);
+        let thr = mix(${thrMin}, ${thrMax}, n.z);
+        let center = frag + jitter;
+        acc += sampleDistanceToEdge(center, thr, ${range});
+    }
+    let h = acc / f32(${samplesPerFrame});
+    let prevH = textureLoad(in_1, vec2<i32>(id.xy), 0).x;
+    let totalFrames = (${samples} + ${samplesPerFrame} - 1) / ${samplesPerFrame};
+    let currentFrame = globals.frame + 1u;
+    let hAvg = (prevH * f32(currentFrame - 1u) + h) / f32(currentFrame);
+    textureStore(out_1, vec2<i32>(id.xy), vec4f(hAvg, 0.0, 0.0, 1.0));
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(hAvg, 0.0, 0.0, 1.0));
+}`;
+            }
+            // Non-progressive single-pass
+            return common + `
+
+@compute @workgroup_size(8,8)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
+    let frag = vec2f(id.xy);
+    var acc = 0.0;
+    for (var i = 0; i < ${samples}; i++) {
+        let seed = f32(i) * 1.618033 + f32(i) * 0.7548776662;
+        var n = hash31(seed);
+        let jitter = n.xy - vec2f(0.5);
+        let thr = mix(${thrMin}, ${thrMax}, n.z);
+        let center = frag + jitter;
+        acc += sampleDistanceToEdge(center, thr, ${range});
+    }
+    let h = acc / f32(${samples});
+    textureStore(out_0, vec2<i32>(id.xy), vec4f(h, 0.0, 0.0, 1.0));
+}`;
+        }
     }
 };
