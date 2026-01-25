@@ -1,3 +1,5 @@
+
+
 ## USER
 
 I want to make simulation game called LandCraft in raw WebGPU (no use of Three.js or anything) which is based on operation of woth terrain height maps, and hydraulics (flooding, path finding, river basins etc.). Your task now it to make some general framework for that. The goal is not to implement individual algorithms (hydraulic errosion, A*, diffusion limited agregation, fluid dynamics, outflow, flooding), I already have copied thse algorithms (e.g. from Shadertoy). Your job is to thing nabout some general framework or helpers, which allow us to esaily make interface for many such algorithms without code redudancy/duplicity, it shioud be somewhat streamlined as all these algorithms woull be kinda similar working with 2D grids/textures/eventually particle buffers and list of indexes on that map (1D arrays of 2D coordinates which define polylines like pahts, river streams, railroads, etc.). Do not start to program yet just think ith throug, the general architecture and desing decisions.
@@ -295,3 +297,37 @@ Notable gaps / next steps
 4. `LandCraft_main.html` hosts a parallel prototype (duplicated logic). Decide which entry point to keep and reconcile assets.
 
 Let me know if you want me to switch to Code mode to start fixing the missing renderers and reconcile the WGSL bindings.
+
+---
+
+
+## Session Review – 25 Jan 2026
+
+1. **Noise/Generator refactor** – `generators.js` now injects any WGSL flavor (sin/value/simplex/grad/orbit) into FBM, Elevated, and Sirenian via a common mix-in. All redundant `wrapCoord` usage was removed so the terrains operate in open domain while still remaining periodic thanks to analytically periodic noise bodies.
+2. **Transform controls** – Added per-generator parameters (`grow`, `anisotropy`, `rotation`, `skew`) that build a user-defined 2×2 matrix (`octMat`) applied every octave, replacing ad-hoc scalars. This exposes precise octave spacing/aniso control for debugging seams or emphasizing features.
+3. **UI + persistence** – `main.js` wires the new parameters and flavor selectors into the existing `buildParamControls`, persisting selection per generator. Noise flavor dropdown appears for every generator that defines `noiseFlavor`.
+4. **Height-map diagnostics** – The render loop now triggers asynchronous texture readback (`heightMap.collectReadback`), logs min/max heights per generation, updates global uniforms, and automatically re-runs the colorizer so visualization tracks normalization instantaneously.
+5. **Colorizer normalization** – The color-pass WGSL normalizes heights using the GPU-computed min/max before applying colormaps, isolines, and lighting to prevent clamp artifacts when terrains go negative.
+6. **Framework hygiene** – `MapAlgorithm` continues to manage globals + ping-pong, but its use in generators has been standardized (no manual bindings). Elevated/Sirenian now align with FBM in both API surface and shader structure, simplifying further erosion/water integrations.
+
+### Noise flavors now share a single injection path
+- `NOISE_FLAVORS` exposes analytic sine, value, simplex, gradient, and orbit noise. Each is fully periodic in WGSL (hash-based or analytic), so we operate in open space instead of wrapping UVs on the CPU.
+- `buildNoiseFlavorSnippet()` plugs any flavor into FBM/Elevated/Sirenian by emitting the body + alias (`fn noise(p)`). No more conditional `wrapCoord`—periodicity is inherent to the flavor.
+
+### Generator behaviors & ideas
+- **FBM (classic height)**: still a scalar height accumulator with amplitude halving per octave. The per-octave transform is now a full 2×2 matrix derived from `grow`, `anisotropy`, `rotation`, `skew`, so frequency growth is no longer axis-aligned. Best for smooth dunes/mountain ranges.
+- **Elevated (sharpened ridges)**: retains the derivative-aware accumulation (`d += n.yz`), which amplifies slope and yields cliffy shapes. Because it samples the same `noise()` as FBM, switching to smoother flavors (simplex/orbit) reduces grid artifacts while rough flavors accentuate terraces.
+- **Sirenian Dawn (derivative-driven raymarch-inspired terrain)**: keeps its complex `rz`/`d` loop. It is sensitive to the continuity of the injected flavor: sin/simplex minimize the “blocky” look; value/grad emphasize square cells due to their lattice interpolation. Adjust `grow/rotation/skew` to de-align the sampling lattice if seams reappear.
+
+### Smoothness & periodicity notes
+- Seam artifacts were previously caused by wrapping UVs before multiplying by large octave matrices. Now the UVs stay unwrapped, and only the noise hash enforces periodicity, avoiding “falling off the cliff” edges.
+- Smoother flavors (analytic sin, simplex, orbit) are preferable for Sirenian and Elevated when you want continuous derivatives. Value/grad flavors preserve their discrete grid, which is useful for debugging but will look blocky; pick them intentionally.
+
+### Tooling / diagnostics updates
+- Added min/max readback in `main.js`, updating global uniforms and triggering automatic recolorization so the normalized view always matches the generated range.
+- The colorizer shader now explicitly normalizes heights using those min/max values before applying colormaps + isolines, preventing dark/bright clipping when the terrain crosses zero.
+
+### Why these changes matter
+- All generators now share the same UI affordances (noise flavor dropdown + transform sliders) and can be hot-swapped without re-wiring WGSL.
+- The new matrix parameters make it easy to test anisotropic growth (e.g., star-like Sirenian rays vs. isotropic FBM) from the GUI without editing shaders.
+- Open-domain sampling simplifies future erosion/hydraulics passes; we can inject additional noises or domain warps without worrying about double wrapping.

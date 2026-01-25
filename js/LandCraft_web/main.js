@@ -2,69 +2,46 @@ import { GPUContext, Field, VisualField } from './gpu-core.js';
 import { MapAlgorithm } from './compute.js';
 import { ViewportRenderer, LineRenderer } from './renderers.js';
 import { TextRenderer } from './text-renderer.js';
+import { GENERATORS } from './generators.js';
+import { buildParamControls } from './gui-builder.js';
+import { NOISE_FLAVORS } from './noise-lib.js';
 
-// --- Shaders ---
+// --- Colormap presets and shader builder ---
+const COLORMAPS = {
+    grayscaleIso: `fn colorMap(h: f32) -> vec3f { let base = vec3f(h); let lines = smoothstep(0.0, 0.002, abs(fract(h*20.0) - 0.5)); let iso = mix(base, vec3f(1.0, 0.8, 0.4), lines*0.35); return iso; }`,
+    heat: `fn colorMap(h: f32) -> vec3f { let t = clamp(h,0.0,1.0); return mix(vec3f(0.05,0.02,0.1), vec3f(1.0,0.9,0.2), t); }`,
+    terrain: `fn colorMap(h: f32) -> vec3f { let sea = mix(vec3f(0.02,0.08,0.25), vec3f(0.0,0.4,0.6), smoothstep(0.0,0.3,h)); let land = mix(vec3f(0.12,0.5,0.2), vec3f(0.5,0.4,0.35), smoothstep(0.35,0.7,h)); let snow = mix(land, vec3f(0.95,0.95,1.0), smoothstep(0.7,0.95,h)); var col = snow; if(h < 0.3) { col = sea; } return col; }`
+};
 
-const WGSL_GEN = `
-fn hash(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(12.9898, 78.233))) * 43758.5453); }
-fn noise(p: vec2f) -> f32 {
-    let i = floor(p); let f = fract(p); let u = f*f*(3.0-2.0*f);
-    return mix(mix(hash(i), hash(i+vec2f(1,0)), u.x), mix(hash(i+vec2f(0,1)), hash(i+1.0), u.x), u.y);
+function buildColorizeShader(colormapBody) {
+    return `
+${colormapBody}
+fn isoOverlay(h: f32, freq: f32, sharp: f32) -> f32 {
+    // exp(-B*sin) comb to sharpen isolines
+    let s = sin(h * freq * 6.28318530718);
+    return exp(-sharp * abs(s));
 }
-fn fbm(p: vec2f) -> f32 {
-    var v=0.0; var a=0.5; var x=p;
-    for(var i=0;i<6;i++){ v+=noise(x)*a; x*=2.0; a*=0.5; }
-    return v;
-}
-
-@compute @workgroup_size(8,8)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
-    let uv = vec2f(id.xy) / vec2f(globals.resX, globals.resY);
-    
-    var h = fbm(uv * 4.0 + vec2f(globals.time * 0.05, 0.0)); // Slowly moving noise
-    h = h * 1.5 - 0.2;
-    
-    textureStore(out_0, vec2<i32>(id.xy), vec4f(max(h, 0.0), 0.0, 0.0, 1.0));
-}
-`;
-
-const WGSL_COLORIZE = `
 @compute @workgroup_size(8,8)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if(id.x >= u32(globals.resX) || id.y >= u32(globals.resY)) { return; }
     let xy = vec2<i32>(id.xy);
-    
-    let h = textureLoad(in_0, xy, 0).r;
-    
-    // Nice Palette
-    let deep = vec3f(0.01, 0.05, 0.2);
-    let shallow = vec3f(0.0, 0.4, 0.6);
-    let sand = vec3f(0.86, 0.8, 0.6);
-    let grass = vec3f(0.1, 0.5, 0.2);
-    let rock = vec3f(0.4, 0.35, 0.3);
-    let snow = vec3f(0.95, 0.95, 1.0);
-    
-    var col = mix(deep, shallow, clamp(h*3.0, 0.0, 1.0));
-    if(h > 0.3) { col = sand; }
-    if(h > 0.35) { col = grass; }
-    if(h > 0.6) { col = rock; }
-    if(h > 0.8) { col = snow; }
-    
-    // Fake Normal mapping
-    let hR = textureLoad(in_0, xy + vec2<i32>(1,0), 0).r;
-    let hU = textureLoad(in_0, xy + vec2<i32>(0,1), 0).r;
+    let invRange = 1.0 / max(globals.maxHeight - globals.minHeight, 1e-6);
+    let hRaw = textureLoad(in_0, xy, 0).r;
+    var h = clamp((hRaw - globals.minHeight) * invRange, 0.0, 1.0);
+    var col = colorMap(h);
+    let iso = isoOverlay(h, 10.0, 8.0);
+    col = mix(col, vec3f(1.0, 0.2, 0.1), iso * 0.25);
+    let hR = clamp((textureLoad(in_0, xy + vec2<i32>(1,0), 0).r - globals.minHeight) * invRange, 0.0, 1.0);
+    let hU = clamp((textureLoad(in_0, xy + vec2<i32>(0,1), 0).r - globals.minHeight) * invRange, 0.0, 1.0);
     let ddx = (hR - h) * 40.0;
     let ddy = (hU - h) * 40.0;
     let n = normalize(vec3f(-ddx, -ddy, 1.0));
     let light = normalize(vec3f(-1.0, -1.0, 1.0));
     let diff = max(dot(n, light), 0.0);
-    
-    if(h > 0.3) { col *= (0.6 + 0.4*diff); } // Apply light only to land
-
+    col *= (0.55 + 0.45 * diff);
     textureStore(out_0, xy, vec4f(col, 1.0));
 }
-`;
+`; }
 
 async function main() {
     const gpu = new GPUContext('gpuCanvas');
@@ -73,52 +50,186 @@ async function main() {
     const heightMap = new Field(gpu, 'Height');
     const displayMap = new VisualField(gpu, 'Display', 'rgba8unorm');
 
-    // 1. Terrain Generator
-    // Note: We run this every frame to show animation, or once for static
-    const genAlgo = new MapAlgorithm(gpu, WGSL_GEN, [], [heightMap]);
-    
-    // 2. Colorizer (Converts R32F -> RGBA8 for Rendering)
-    const colorAlgo = new MapAlgorithm(gpu, WGSL_COLORIZE, [heightMap], [displayMap]);
+    // Setup UI
+    const select = document.getElementById('generator-select');
+    const colormapSelect = document.getElementById('colormap-select');
+    const generateBtn = document.getElementById('generate-btn');
+    const paramsContainer = document.createElement('div');
+    paramsContainer.id = 'params-container';
+    paramsContainer.style.marginTop = '10px';
+    document.getElementById('sidebar').appendChild(paramsContainer);
+    const generatorKeys = Object.keys(GENERATORS);
+    generatorKeys.forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = GENERATORS[key].label;
+        select.appendChild(opt);
+    });
+
+    const colormapKeys = Object.keys(COLORMAPS);
+    colormapKeys.forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key;
+        colormapSelect.appendChild(opt);
+    });
+
+    const generatorParams = {};
+    const generatorFlavors = {};
+    function initParams(gen) {
+        if (!generatorParams[gen.id]) {
+            const obj = {}; gen.params?.forEach(p => obj[p.name] = p.default); generatorParams[gen.id] = obj;
+        }
+        return generatorParams[gen.id];
+    }
+    function initFlavor(gen) {
+        if (!gen.noiseFlavor) return undefined;
+        if (!generatorFlavors[gen.id]) generatorFlavors[gen.id] = gen.noiseFlavor;
+        return generatorFlavors[gen.id];
+    }
+
+    let currentGenerator = GENERATORS[generatorKeys[0]];
+    let currentParams = initParams(currentGenerator);
+    let currentFlavor = initFlavor(currentGenerator);
+    select.value = currentGenerator.id;
+    let currentColormap = colormapKeys[0];
+    colormapSelect.value = currentColormap;
+    let genAlgo = new MapAlgorithm(gpu, currentGenerator.wgsl(currentParams, currentFlavor), [], [heightMap]);
+    let colorAlgo = new MapAlgorithm(gpu, buildColorizeShader(COLORMAPS[currentColormap]), [heightMap], [displayMap]);
+    gpu.views.heightRange[0] = 0.0;
+    gpu.views.heightRange[1] = 1.0;
+    let needsGeneration = false;
+    let needsColorize = true;
 
     const terrainRenderer = new ViewportRenderer(gpu);
     const lineRenderer = new LineRenderer(gpu);
     const textRenderer = new TextRenderer(gpu);
 
-    // Mock Data
     const rivers = new Float32Array([512, 512, 600, 600, 600, 600, 700, 550]);
     lineRenderer.updateData(rivers);
 
+    function rebuildGeneratorShader() {
+        const flavorKey = initFlavor(currentGenerator);
+        const wgsl = currentGenerator.wgsl.length >= 2 ? currentGenerator.wgsl(currentParams, flavorKey) : currentGenerator.wgsl(currentParams);
+        genAlgo = new MapAlgorithm(gpu, wgsl, [], [heightMap]);
+    }
+
+    function updateGenerator() {
+        paramsContainer.innerHTML = '';
+        if (currentGenerator.noiseFlavor) {
+            const flavorRow = document.createElement('div');
+            flavorRow.style.marginBottom = '10px';
+            const label = document.createElement('label');
+            label.textContent = 'Noise Flavor:';
+            label.style.display = 'block';
+            label.style.fontSize = '12px';
+            flavorRow.appendChild(label);
+            const selectEl = document.createElement('select');
+            Object.entries(NOISE_FLAVORS).forEach(([key, meta]) => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = meta.label;
+                selectEl.appendChild(opt);
+            });
+            selectEl.value = initFlavor(currentGenerator);
+            selectEl.addEventListener('change', () => {
+                generatorFlavors[currentGenerator.id] = selectEl.value;
+                currentFlavor = selectEl.value;
+                rebuildGeneratorShader();
+                requestGeneration();
+            });
+            selectEl.style.width = '100%';
+            flavorRow.appendChild(selectEl);
+            paramsContainer.appendChild(flavorRow);
+        }
+        if (currentGenerator.params) buildParamControls(paramsContainer, currentGenerator.params, (name, value) => { currentParams[name] = value; requestGeneration(); }, currentParams);
+    }
+
+    function requestGeneration() { needsGeneration = true; }
+
+    generateBtn.addEventListener('click', () => {
+        rebuildGeneratorShader();
+        requestGeneration();
+    });
+
+    select.addEventListener('change', () => {
+        const key = select.value;
+        currentGenerator = GENERATORS[key];
+        currentParams = initParams(currentGenerator);
+        currentFlavor = initFlavor(currentGenerator);
+        rebuildGeneratorShader();
+        updateGenerator();
+        requestGeneration();
+    });
+
+    colormapSelect.addEventListener('change', () => {
+        currentColormap = colormapSelect.value;
+        colorAlgo = new MapAlgorithm(gpu, buildColorizeShader(COLORMAPS[currentColormap]), [heightMap], [displayMap]);
+        needsColorize = true;
+    });
+
+    // Initial generation
+    updateGenerator();
+    requestGeneration();
+
+    let heightStatsPromise = null;
+    let lastHeightStats = { min: 0.0, max: 1.0 };
+    function kickHeightStats() {
+        if (heightStatsPromise || !heightMap.pendingReadback) return;
+        heightStatsPromise = heightMap.collectReadback().then(data => {
+            heightStatsPromise = null;
+            if (!data) return;
+            let min = data[0]; let max = data[0];
+            for (let i = 1; i < data.length; i++) {
+                const v = data[i];
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+            if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+            if (max - min < 1e-6) { max = min + 1e-6; }
+            gpu.views.heightRange[0] = min;
+            gpu.views.heightRange[1] = max;
+            lastHeightStats.min = min;
+            lastHeightStats.max = max;
+            console.log('Height stats', { min, max });
+            needsColorize = true;
+        }).catch(err => {
+            console.error('Height readback failed', err);
+            heightStatsPromise = null;
+        });
+    }
+
     function frame() {
         gpu.update();
-        
         const cmd = gpu.device.createCommandEncoder();
-        
-        // Sim Steps
-        genAlgo.run(cmd);   // Updates HeightMap
-        colorAlgo.run(cmd); // Updates DisplayMap (Filterable)
-        
-        // Render Steps
+        if (needsGeneration) {
+            genAlgo.run(cmd);
+            if (!heightMap.pendingReadback) {
+                heightMap.encodeReadback(cmd);
+            }
+            needsGeneration = false;
+            needsColorize = true;
+        }
+        if (needsColorize) {
+            colorAlgo.run(cmd);
+            needsColorize = false;
+        }
         const pass = gpu.getRenderPass(cmd);
-        
-        // Draw Terrain (smoothly filtered)
         terrainRenderer.draw(pass, displayMap);
-        
-        // Draw Vectors
         lineRenderer.draw(pass);
-        
-        // Draw Text
         textRenderer.begin();
         textRenderer.addText(`Time: ${gpu.views.time[0].toFixed(2)}`, 10, 10);
         textRenderer.addText(`Zoom: ${gpu.camera.zoom.toFixed(2)}`, 10, 40);
+        textRenderer.addText(`Height min ${lastHeightStats.min.toFixed(3)} max ${lastHeightStats.max.toFixed(3)}`, 10, 70);
         textRenderer.addText(`River Alpha`, 512, 512, 0.8);
         textRenderer.addText(`Target`, 700, 550, 0.8);
         textRenderer.draw(pass);
-        
         pass.end();
         gpu.device.queue.submit([cmd.finish()]);
-        
+        kickHeightStats();
         requestAnimationFrame(frame);
     }
+    requestGeneration();
     requestAnimationFrame(frame);
 }
 

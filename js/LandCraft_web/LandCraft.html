@@ -8,12 +8,26 @@
         body { margin: 0; background: #111; overflow: hidden; color: white; font-family: sans-serif; }
         canvas { display: block; width: 100vw; height: 100vh; }
         #ui { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; }
+        #sidebar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 4px; min-width: 200px; }
+        #sidebar h3 { margin: 0 0 10px 0; font-size: 14px; }
+        #sidebar label { display: block; margin-bottom: 5px; font-size: 12px; }
+        #sidebar select { width: 100%; padding: 5px; margin-bottom: 10px; background: #222; color: white; border: 1px solid #444; }
+        #sidebar button { width: 100%; padding: 8px; background: #4a6fa5; color: white; border: none; cursor: pointer; border-radius: 3px; }
+        #sidebar button:hover { background: #5a7fb5; }
     </style>
 </head>
 <body>
     <div id="ui">
         <h3>LandCraft Core</h3>
         <p>Pan: Drag Mouse | Zoom: Scroll Wheel</p>
+    </div>
+    <div id="sidebar">
+        <h3>Terrain Generator</h3>
+        <label for="generator-select">Algorithm:</label>
+        <select id="generator-select"></select>
+        <label for="colormap-select">Colormap:</label>
+        <select id="colormap-select"></select>
+        <button id="generate-btn">Generate Terrain</button>
     </div>
     <canvas id="gpuCanvas"></canvas>
     

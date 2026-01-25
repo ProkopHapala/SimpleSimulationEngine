@@ -9,7 +9,9 @@ struct GlobalParams {
     mouseY: f32,
     camX: f32,
     camY: f32,
-    zoom: f32
+    zoom: f32,
+    minHeight: f32,
+    maxHeight: f32
 };
 @group(0) @binding(0) var<uniform> globals : GlobalParams;
 `;
@@ -27,7 +29,7 @@ export class GPUContext {
         this.camera = { x: 512, y: 512, zoom: 1.0 }; // Start centered
         this.mouse = { screenX: 0, screenY: 0, worldX: 0, worldY: 0, down: false };
         
-        this.uniformValues = new ArrayBuffer(48);
+        this.uniformValues = new ArrayBuffer(64);
         this.views = {
             time: new Float32Array(this.uniformValues, 0, 1),
             dt: new Float32Array(this.uniformValues, 4, 1),
@@ -36,6 +38,7 @@ export class GPUContext {
             mouse: new Float32Array(this.uniformValues, 20, 2),
             cam: new Float32Array(this.uniformValues, 28, 2),
             zoom: new Float32Array(this.uniformValues, 36, 1),
+            heightRange: new Float32Array(this.uniformValues, 40, 2)
         };
         
         this.frameCount = 0;
@@ -51,7 +54,7 @@ export class GPUContext {
         this._resizeCanvas(true);
         
         this.uniformBuffer = this.device.createBuffer({
-            size: 48, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
         this.globalLayout = this.device.createBindGroupLayout({
@@ -167,13 +170,16 @@ export class Field {
             label: label,
             size: [this.width, this.height],
             format: format,
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC
         };
         
         this.texA = gpu.device.createTexture(desc);
         this.texB = gpu.device.createTexture(desc);
         this.readTex = this.texA;
         this.writeTex = this.texB;
+        this.readBuffer = null;
+        this.readBufferSize = 0;
+        this.pendingReadback = false;
     }
 
     swap() {
@@ -181,9 +187,44 @@ export class Field {
         this.readTex = this.writeTex;
         this.writeTex = t;
     }
-    
+
     getReadView() { return this.readTex.createView(); }
     getWriteView() { return this.writeTex.createView(); }
+
+    _ensureReadBuffer() {
+        const size = this.width * this.height * 4;
+        if (!this.readBuffer || this.readBufferSize !== size) {
+            this.readBuffer?.destroy?.();
+            this.readBuffer = this.gpu.device.createBuffer({
+                size,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+            });
+            this.readBufferSize = size;
+        }
+        return this.readBuffer;
+    }
+
+    encodeReadback(commandEncoder) {
+        if (this.pendingReadback) { return false; }
+        const buffer = this._ensureReadBuffer();
+        commandEncoder.copyTextureToBuffer(
+            { texture: this.readTex },
+            { buffer, bytesPerRow: this.width * 4, rowsPerImage: this.height },
+            { width: this.width, height: this.height, depthOrArrayLayers: 1 }
+        );
+        this.pendingReadback = true;
+        return true;
+    }
+
+    async collectReadback() {
+        if (!this.pendingReadback || !this.readBuffer) { return null; }
+        await this.readBuffer.mapAsync(GPUMapMode.READ);
+        const mapped = this.readBuffer.getMappedRange();
+        const copy = mapped.slice(0);
+        this.readBuffer.unmap();
+        this.pendingReadback = false;
+        return new Float32Array(copy);
+    }
 }
 
 // Visual Container (Single texture, filterable)
