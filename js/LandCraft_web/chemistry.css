@@ -1,0 +1,79 @@
+:root {
+    --bg: #1e1e1e;
+    --card: #252526;
+    --text: #d4d4d4;
+    --accent: #007acc;
+    --border: #333;
+}
+
+body { font-family: 'Segoe UI', monospace, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+.container { max-width: 900px; margin: 0 auto; }
+h1, h2, h3 { color: #fff; margin-top: 0; }
+
+.result-item {
+    background: #f8f9fa;
+    border: 1px solid #e2e5e9;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1565c0;
+}
+
+.result-item + .result-item {
+    margin-top: 6px;
+}
+
+.result-item:hover {
+    text-decoration: underline;
+    background: #eef5ff;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#detailClose {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+.hidden { display: none; }
+
+/* Input */
+.input-section { display: flex; gap: 10px; margin-bottom: 20px; }
+textarea { flex-grow: 1; background: #333; color: white; border: 1px solid #555; padding: 10px; font-family: monospace; font-size: 1.1em; }
+button { background: var(--accent); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+button:hover { opacity: 0.9; }
+
+/* Equation */
+.equation-text { font-size: 1.5em; font-weight: bold; color: #4ec9b0; text-align: center; font-family: monospace; }
+
+/* DB Info */
+.info-card { background: #2d2d30; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.full-width { grid-column: span 2; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+th { text-align: left; border-bottom: 2px solid #444; padding: 8px; color: #9cdcfe; }
+td { border-bottom: 1px solid #333; padding: 8px; vertical-align: top; }
+.row-in td { color: #ce9178; } /* Reactants Orange */
+.row-out td { color: #b5cea8; } /* Products Green */
+.formula { font-weight: bold; font-size: 1.1em; }
+
+/* Badges */
+.badge { display: inline-block; padding: 2px 6px; font-size: 0.75em; border-radius: 4px; color: #000; margin-right: 4px; font-weight: bold;}
+.badge.poison { background: #ff5252; }
+.badge.explosive, .badge.primary_explosive { background: #e040fb; }
+.badge.flammable { background: #ffab40; }
+.badge.acid { background: #ffff00; }
+.badge.base { background: #69f0ae; }
+.subtext { font-size: 0.85em; color: #888; margin-bottom: 2px; }
+.note { font-size: 0.8em; font-style: italic; color: #aaa; margin-top: 4px; }
+#error { background: #5a1e1e; color: #ffcccc; padding: 10px; margin-bottom: 20px; border-left: 5px solid red; }

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chemical Reaction Evaluator</title>
+    <link rel="stylesheet" href="chemistry.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🧪 Reaction Evaluator</h1>
+        <p>Stoichiometry, Safety & Database Search</p>
+    </header>
+
+    <div class="input-section">
+        <textarea id="reactionInput" placeholder="e.g. CaC2 + H2O -> C2H2 + Ca(OH)2"></textarea>
+        <button id="evalBtn">Evaluate Reaction</button>
+    </div>
+
+    <div class="card">
+        <h3>Search</h3>
+        <div class="grid-2">
+            <input id="searchInput" type="text" placeholder="e.g. CaC2, water, H2SO4">
+            <button id="searchBtn">Search</button>
+        </div>
+        <div class="search-options">
+            <label>Scope
+                <select id="searchScope">
+                    <option value="any" selected>Any</option>
+                    <option value="reactant">Reactants</option>
+                    <option value="product">Products</option>
+                </select>
+            </label>
+            <label>Mode
+                <select id="searchMode">
+                    <option value="reactions" selected>Reactions</option>
+                    <option value="compounds">Compounds</option>
+                    <option value="both">Both</option>
+                </select>
+            </label>
+            <label>Logic
+                <select id="searchLogic">
+                    <option value="and" selected>AND</option>
+                    <option value="or">OR</option>
+                </select>
+            </label>
+            <label><input type="checkbox" id="searchFuzzy" checked> Fuzzy</label>
+            <label><input type="checkbox" id="searchTokensToggle"> Show tokens</label>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+        <div id="searchTokens" class="search-results"></div>
+        <div id="detailCard" class="card hidden detail-card">
+            <div class="card-header">
+                <h3 id="detailTitle"></h3>
+                <button id="detailClose" aria-label="Close">×</button>
+            </div>
+            <div id="detailBody"></div>
+        </div>
+    </div>
+
+    <div id="error" class="hidden"></div>
+
+    <div id="results" class="hidden">
+        <!-- 1. The Main Equation -->
+        <div class="card equation-card">
+            <h3>Balanced Equation</h3>
+            <div id="balancedDisplay" class="equation-text"></div>
+        </div>
+
+        <!-- 2. Database Info (if found) -->
+        <div id="dbInfo" class="card hidden info-card">
+            <h3>📂 Database Match</h3>
+            <div class="grid-2">
+                <div><strong>Difficulty:</strong> <span id="dbDiff"></span></div>
+                <div><strong>Temp:</strong> <span id="dbTemp"></span></div>
+                <div class="full-width"><strong>Notes:</strong> <span id="dbNotes"></span></div>
+            </div>
+        </div>
+
+        <!-- 3. Stoichiometry Table -->
+        <div class="card">
+            <h3>Stoichiometry & Properties</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Coeff</th>
+                        <th>Formula</th>
+                        <th>Molar Mass (g/mol)</th>
+                        <th>Reaction Mass (g)</th>
+                        <th>Mass Fraction</th>
+                        <th>Properties / Hazards</th>
+                    </tr>
+                </thead>
+                <tbody id="stoichTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { setup } from './chemistry_client.js';
+    setup();
+</script>
+</body>
+</html>

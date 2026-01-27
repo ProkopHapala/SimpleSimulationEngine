@@ -1,0 +1,79 @@
+equation,temperature_C,difficulty,notes
+
+#Primary Explosives
+
+"AgNO3    +   C2H2          -> Ag2C2 v    + 2 HNO3"        ,25,      Easy,   "silver acetylide precipitate; shock sensitive"
+"Cu(NO3)2 +   C2H2          -> Cu2C2 v    + 2 HNO3"        ,25,      Easy,   "copper acetylide precipitate; shock sensitive"
+"Hg + 4 HNO3 + C2H5OH       -> Hg(CNO)2 v + byproducts"    ,60,      Hard,   "mercury fulminate formation; cooling needed; primary explosive"
+"Ag + 4 HNO3 + C2H5OH       -> AgCNO v    + byproducts"    ,60,      Hard,   "silver fulminate; extremely sensitive"
+"NaN3      + Pb(NO3)2       -> Pb(N3)2 v + 2 NaNO3"        ,25,      Hard,   "lead azide precipitate; primary"
+
+#(secondary)Explosives
+
+"C3H8O3    + 3 HNO3 + H2SO4 -> C3H5N3O9  + 3 H2O"          ,5,       Hard,   "nitroglycerin; slow add, cooled"
+"C2H5OH    + HNO3           -> C2H5NO3   +   H2O"          ,0,       Medium, "ethyl nitrite formation; vented"
+
+# Deflagrants (rocket propellants, gunpowder)
+
+"sucrose + KNO3           -> RocketCandy"                ,100,     Easy,   "solid propellant blend; ratio ~65/35"
+"3 KNO3    + 2 S + 10 C     -> BlackPowder"                ,60,      Easy,   "grind and mix; propellant/explosive"
+"C6H10O5   + 3 HNO3 + H2SO4 -> C6H7O2(ONO2)3 + byproducts" ,0,       Hard,   "guncotton nitration; ice bath"
+
+# Chemical Warfare Agents
+
+"C2H4      + SCl2          -> C4H8Cl2S"                    ,30,      Hard,   "sulfur mustard (Levinstein); controlled temp"
+"C2HCl3    + H2S            -> chlorovinyl sulfides mix"   ,80,      Hard,   "crude mustard-like agents; less persistent"
+
+# Precursors
+
+"CaCO3     +          (heat)-> CaO       + CO2"            ,1200,    Hard,   "calcination; yields calcium oxide"
+"CaO       + H2O            -> Ca(OH)2  "                  ,1200,    Hard,   "yields calcium hydroxide"
+"CaSO4     + C        (heat)-> CaS       + CO2"            ,1200,    Hard,   "calcination; yields calcium sulfide"
+"CaSO4     + C        (heat)-> CaS       + CO2"            ,1200,    Hard,   "calcination; yields calcium sulfide"
+"CaS       + 2 HCl          -> CaCl2     + H2S"            ,25,      Easy,   "H2S generation from stink stone"
+"CaC2      + 2 H2O           -> C2H2       + Ca(OH)2"      ,25,      Easy,   "acetylene generation; gas evolution"
+"FeS2      + 2 H2SO4        -> Fe2(SO4)3 + 2 H2S"          ,25,      Easy,   "pyrite + acid gives H2S"
+"Ca3(PO4)2 + 3 H2SO4        -> 3 CaSO4   + 2 H3PO4"        ,80,      Easy,   "phosphoric acid from bones"
+"Ca3(PO4)2 + 3 SiO2 + 5 C   -> 3 CaSiO3  + 5 CO + 2 P"     ,1500,    Hard,   "white phosphorus retort; collect under water"
+"Ca3P2     + 6 H2O          -> 3 Ca(OH)2 + 2 PH3"          ,25,      Easy,   "phosphine release; toxic/pyrophoric"
+"CaC2      + 2 HCl          -> C2H2      +   CaCl2"        ,25,      Easy,   "acid + carbide gas generation"
+"CaCN2     + 3 H2O          -> CaCO3     + 2 NH3"          ,80,      Easy,   "ammonia release from cyanamide"
+"Ca(OCl)2  + acetone      -> CHCl3     + other products" ,25,      Easy,   "haloform reaction; chloroform generation"
+"NH3       + NaOCl          -> N2H4      +   NaCl + H2O"   ,40,      Medium, "hydrazine path; hazardous"
+
+"C + CO    + Cl2            -> COCl2"                      ,150,     Medium, "phosgene formation over charcoal"
+"C2H5OH    + H2SO4 + (heat) -> C2H4      + H2O"            ,170,     Medium, "alcohol dehydration to ethylene"
+
+# Utility
+
+"Ca(OH)2 +  butter           -> glycerine + Ca(C3H5O2)2"    ,100,       Hard,   "butter to glycerine"
+"NaOH    +  C3H5(C18H35O2)3  -> glycerine + Na(C18H35O2)2"  ,100,       Hard,   "soap making"
+
+
+
+# Household / scavenged conversions
+"C7H8 + 3 HNO3 + H2SO4 -> C7H5N3O6 + 3 H2O"                  ,80,      Hard,   "toluene nitration to TNT; controlled acids"
+"C10H8 + 3 HNO3 + H2SO4 -> C10H5N3O6 + 3 H2O"                ,80,      Hard,   "naphthalene nitration; fuming acids"
+"MgSO4           (heat) -> MgO       + SO3"                  ,700,     Medium, "Epsom salt decomposition; SO3 + H2O => H2SO4"
+"NaOCl     (boil)      -> NaClO3    + NaCl"                  ,100,     Easy,   "bleach disproportionation to chlorate"
+"NaClO3    (electrolysis)-> NaClO4   "                       ,50,      Medium, "perchlorate via DC cell"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
