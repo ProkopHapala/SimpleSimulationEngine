@@ -1,119 +1,19 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+os.environ.setdefault("PYOPENCL_CTX", "1")
 from terrain import GPUTerrainSolver, unpack
+import importlib.util
 
-
-def smoothstep(t):
-    return t*t*(3.0 - 2.0*t)
-
-
-def hash_u32(x):
-    x = (x ^ (x >> 16)) & 0xFFFFFFFF
-    x = (x * 0x7feb352d) & 0xFFFFFFFF
-    x = (x ^ (x >> 15)) & 0xFFFFFFFF
-    x = (x * 0x846ca68b) & 0xFFFFFFFF
-    x = (x ^ (x >> 16)) & 0xFFFFFFFF
-    return x
-
-
-def value_noise_2d(x, y, seed=1):
-    xi = np.floor(x).astype(np.int64)
-    yi = np.floor(y).astype(np.int64)
-    xf = (x - xi).astype(np.float32)
-    yf = (y - yi).astype(np.float32)
-    u = smoothstep(xf)
-    v = smoothstep(yf)
-    def rnd(ix, iy):
-        h = (np.uint32(ix) * np.uint32(0x9e3779b1) + np.uint32(iy) * np.uint32(0x85ebca6b) + np.uint32(seed) * np.uint32(0x27d4eb2d)) & np.uint32(0xFFFFFFFF)
-        r = hash_u32(h)
-        return (r.astype(np.float32) / np.float32(0xFFFFFFFF))
-    v00 = rnd(xi + 0, yi + 0)
-    v10 = rnd(xi + 1, yi + 0)
-    v01 = rnd(xi + 0, yi + 1)
-    v11 = rnd(xi + 1, yi + 1)
-    vx0 = v00*(1.0 - u) + v10*u
-    vx1 = v01*(1.0 - u) + v11*u
-    return vx0*(1.0 - v) + vx1*v
-
-
-def fbm_value_noise(W, H, octaves=6, base_freq=2.0, lacunarity=2.0, gain=0.5, warp=0.0, seed=1):
-    X, Y = np.meshgrid(np.linspace(0.0, 1.0, W, endpoint=False), np.linspace(0.0, 1.0, H, endpoint=False))
-    x = (X * base_freq).astype(np.float32)
-    y = (Y * base_freq).astype(np.float32)
-    h = np.zeros((H, W), dtype=np.float32)
-    amp = 1.0
-    freq = 1.0
-    ang = (seed * 12.9898) % (2.0*np.pi)
-    c, s = np.cos(ang), np.sin(ang)
-    for i in range(octaves):
-        rx = (c*x - s*y) * freq
-        ry = (s*x + c*y) * freq
-        if warp != 0.0:
-            wx = value_noise_2d(rx + 13.1, ry + 7.7, seed + 101 + i)
-            wy = value_noise_2d(rx - 9.2, ry + 21.3, seed + 211 + i)
-            rx = rx + warp*(wx - 0.5)
-            ry = ry + warp*(wy - 0.5)
-        h += amp * (value_noise_2d(rx, ry, seed + i) * 2.0 - 1.0)
-        amp *= gain
-        freq *= lacunarity
-    h -= h.min()
-    h /= h.max() if h.max() != 0 else 1.0
-    return h.astype(np.float32)
-
-
-def get_pixel_path(start_coord, parents, max_steps=2000):
-    path = [start_coord]
-    curr = start_coord
-    for _ in range(max_steps):
-        packed = parents[curr[1], curr[0]]
-        nxt = unpack(packed)
-        path.append(nxt)
-        if nxt == curr:
-            break
-        curr = nxt
-    return np.array(path)
-
-
-def compute_tile_sinks(sinks, W, H, tile_size=16):
-    nx = W // tile_size
-    ny = H // tile_size
-    sink_xy = np.zeros((ny, nx, 2), dtype=np.int32)
-    for it, sp in enumerate(sinks):
-        tx = it % nx
-        ty = it // nx
-        sink_xy[ty, tx, :] = unpack(sp)
-    return sink_xy
-
-
-def compute_gates(costs, tile_size=16):
-    H, W = costs.shape
-    nx = W // tile_size
-    ny = H // tile_size
-    gates = []
-    for ty in range(ny):
-        y0 = ty * tile_size
-        ys = slice(y0, y0 + tile_size)
-        for tx in range(nx - 1):
-            xL = (tx + 1) * tile_size - 1
-            xR = xL + 1
-            cL = costs[ys, xL]
-            cR = costs[ys, xR]
-            b = np.maximum(cL, cR)
-            i = int(b.argmin())
-            gates.append({'a': (tx, ty), 'b': (tx + 1, ty), 'pA': (xL, y0 + i), 'pB': (xR, y0 + i), 'barrier': float(b[i])})
-    for ty in range(ny - 1):
-        yT = (ty + 1) * tile_size - 1
-        yB = yT + 1
-        for tx in range(nx):
-            x0 = tx * tile_size
-            xs = slice(x0, x0 + tile_size)
-            cT = costs[yT, xs]
-            cB = costs[yB, xs]
-            b = np.maximum(cT, cB)
-            i = int(b.argmin())
-            gates.append({'a': (tx, ty), 'b': (tx, ty + 1), 'pA': (x0 + i, yT), 'pB': (x0 + i, yB), 'barrier': float(b[i])})
-    return gates
+_utils_path = os.path.join(os.path.dirname(__file__), "../terrain_ocl_2/terrain.py")
+_spec = importlib.util.spec_from_file_location("terrain_utils", _utils_path)
+terrain_utils = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(terrain_utils)
+fbm_value_noise = terrain_utils.fbm_value_noise
+compute_gates = terrain_utils.compute_gates
+compute_tile_sinks = terrain_utils.compute_tile_sinks
+get_pixel_path = terrain_utils.get_pixel_path
 
 
 def main():
