@@ -1,96 +1,23 @@
 import numpy as np
 import pyopencl as cl
 import matplotlib.pyplot as plt
-import argparse, importlib.util, os, heapq
+import argparse, os, heapq, sys, importlib.util
 os.environ.setdefault("PYOPENCL_CTX", "1")
 
-# Robustly import terrain_utils from the sibling directory or similar
-# Assuming the user has the 'terrain.py' (wrapper) and 'terrain.cl' in the same folder as this script
-# We will use the local files if possible
-import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
-
-try:
-    from terrain import GPUTerrainSolver, unpack, pack
-except ImportError:
-    # Fallback to the user's specific path if local import fails
-    _utils_path = os.path.join(current_dir, "../terrain_ocl_2/terrain.py")
-    if os.path.exists(_utils_path):
-        _spec = importlib.util.spec_from_file_location("terrain_utils", _utils_path)
-        terrain_utils = importlib.util.module_from_spec(_spec)
-        _spec.loader.exec_module(terrain_utils)
-        GPUTerrainSolver = terrain_utils.GPUTerrainSolver
-        unpack = terrain_utils.unpack
-        pack = terrain_utils.pack
-    else:
-        raise ImportError("Could not find terrain.py in local folder or ../terrain_ocl_2/")
-
-# Local reimplementation of utilities to ensure this script is self-contained
-# (User asked for minimal changes, but external deps were breaking. This is safer)
-def smoothstep(t): return t*t*(3.0 - 2.0*t)
-def value_noise_2d(x, y, seed=1):
-    xi = np.floor(x).astype(np.int64); yi = np.floor(y).astype(np.int64)
-    xf = x - xi; yf = y - yi
-    u = smoothstep(xf); v = smoothstep(yf)
-    def hash_u32(x):
-        x = np.uint64(x); x = (x ^ (x >> 32)) * 0x45d9f3b
-        x = ((x ^ (x >> 32)) * 0x45d9f3b) & 0xFFFFFFFF
-        return x.astype(np.uint32)
-    def rnd(ix, iy):
-        h = (np.uint64(ix)*0x9e3779b1 + np.uint64(iy)*0x85ebca6b + np.uint64(seed)*0x27d4eb2d)
-        return (hash_u32(h).astype(np.float32) / 4294967295.0)
-    return rnd(xi,yi)*(1-u)*(1-v) + rnd(xi+1,yi)*u*(1-v) + rnd(xi,yi+1)*(1-u)*v + rnd(xi+1,yi+1)*u*v
-
-def fbm_value_noise(W, H, octaves=6, base_freq=2.0, lacunarity=2.0, gain=0.5, warp=0.0, seed=1):
-    X, Y = np.meshgrid(np.linspace(0,1,W,False), np.linspace(0,1,H,False))
-    x, y = X*base_freq, Y*base_freq
-    h = np.zeros((H,W),np.float32); amp=1.0
-    for _ in range(octaves):
-        h += amp * (value_noise_2d(x, y, seed)*2-1); amp *= gain; x*=lacunarity; y*=lacunarity
-    h -= h.min(); h /= h.max()
-    return h
-
-# Shared tile graph minimax path helper (imported to avoid duplication)
-_tg_spec = importlib.util.spec_from_file_location("terrain_utils_tile", os.path.join(current_dir, "../terrain_ocl_2/terrain.py"))
-_tg_mod = importlib.util.module_from_spec(_tg_spec)
-_tg_spec.loader.exec_module(_tg_mod)
-tile_graph_shortest = _tg_mod.tile_graph_shortest
-compute_gates = _tg_mod.compute_gates
-solve_relaxation_numpy = getattr(_tg_mod, "solve_relaxation_numpy", None)
-
-def compute_tile_sinks(sinks_packed, W, H, tile_size=16, unpack_fn=unpack):
-    nx, ny = W//tile_size, H//tile_size
-    grid = np.zeros((ny, nx, 2), dtype=np.int32)
-    for i, s in enumerate(sinks_packed):
-        grid[i//nx, i%nx] = unpack_fn(s)
-    return grid
-
-def global_dijkstra(grid, start, end):
-    H, W = grid.shape
-    dist = np.full_like(grid, np.inf, dtype=np.float32)
-    parent = {}
-    dist[start[1], start[0]] = grid[start[1], start[0]]
-    pq = [(float(grid[start[1], start[0]]), start)]
-    while pq:
-        d, (cx, cy) = heapq.heappop(pq)
-        if (cx, cy) == end: break
-        if d > dist[cy, cx]: continue
-        for dx in (-1,0,1):
-            for dy in (-1,0,1):
-                if dx==0 and dy==0: continue
-                nx = cx + dx; ny = cy + dy
-                if 0 <= nx < W and 0 <= ny < H:
-                    cand = max(d, grid[ny, nx])
-                    if cand < dist[ny, nx]:
-                        dist[ny, nx] = cand
-                        parent[(nx, ny)] = (cx, cy)
-                        heapq.heappush(pq, (cand, (nx, ny)))
-    path = [end]
-    while path[-1] != start:
-        path.append(parent[path[-1]])
-    path.reverse()
-    return np.array(path), dist[end[1], end[0]]
+from terrain import (
+    GPUTerrainSolver,
+    unpack, pack,
+    fbm_value_noise_2,
+    #compute_gates_simple,
+    compute_gates_diag as compute_gates,
+    compute_tile_sinks,
+    tile_graph_shortest,
+    get_pixel_path,
+    global_dijkstra,
+    solve_relaxation_numpy,
+)
 
 def get_pixel_path(start, parents, unpack_fn, max_steps=2000):
     path = [start]; curr = start
@@ -113,7 +40,7 @@ def log_ref(name, path, cost, verb=0):
             print(f"{name} full: {pts}")
 
 ap = argparse.ArgumentParser(description="Verify tile solver with fbm terrain")
-ap.add_argument('--seed',       type=int,   default=9, help='random seed for fbm')
+ap.add_argument('--seed',       type=int,   default=1, help='random seed for fbm')
 ap.add_argument('--octaves',    type=int,   default=6)
 ap.add_argument('--base-freq',  type=float, default=2.0)
 ap.add_argument('--lacunarity', type=float, default=2.0)
@@ -124,12 +51,12 @@ ap.add_argument('--height',     type=int,   default=32)
 ap.add_argument('--start-tile', type=str,   default='0,1', help='start tile as tx,ty')
 ap.add_argument('--end-tile',   type=str,   default='1,1', help='end tile as tx,ty')
 ap.add_argument('--verbosity',  type=int,   default=2, help='0: quiet, 1: endpoints, 2: full paths')
-ap.add_argument('--ref',        type=str,   default='dijkstra', choices=['dijkstra','relax'], help='CPU reference: dijkstra or relax')
+ap.add_argument('--ref',        type=str,   default='relax', choices=['dijkstra','relax'], help='CPU reference: dijkstra or relax')
 args = ap.parse_args()
 
 # 1. TERRAIN GENERATION (32x32)
 W, H = args.width, args.height
-terrain = fbm_value_noise(W, H, octaves=args.octaves, base_freq=args.base_freq, lacunarity=args.lacunarity, gain=args.gain, warp=args.warp, seed=args.seed)
+terrain = fbm_value_noise_2(W, H, octaves=args.octaves, base_freq=args.base_freq, lacunarity=args.lacunarity, gain=args.gain, warp=args.warp, seed=args.seed)
 
 # 3. GPU TILE SOLVER
 solver = GPUTerrainSolver(W, H)
@@ -155,15 +82,11 @@ if args.ref == 'relax':
     ref_path = solve_relaxation_numpy(terrain, start_sink, end_sink, epsilon=0.001, max_iter=500)
     ref_cost = max(terrain[y, x] for x, y in ref_path) if len(ref_path) > 0 else np.inf
 else:
-    ref_path, ref_cost = global_dijkstra(terrain, start_sink, end_sink)
+    ref_path = global_dijkstra(terrain, start_sink, end_sink)
+    ref_cost = max(terrain[y, x] for x, y in ref_path) if len(ref_path) > 0 else np.inf
 
-# 4. HIERARCHICAL GATE FINDING
+# 4. HIERARCHICAL GATE FINDING (diag/height-aware)
 gates = compute_gates(cost_map, terrain, tile_size=16)
-# Normalize gates to include tile ids if missing
-for g in gates:
-    if 'a' not in g or 'b' not in g:
-        g['a'] = (g['pA'][0] // tile_size, g['pA'][1] // tile_size)
-        g['b'] = (g['pB'][0] // tile_size, g['pB'][1] // tile_size)
 tile_path, gate_seq, tile_path_cost = tile_graph_shortest(gates, start_tile, end_tile)
 best_gate = gate_seq[0]
 last_gate = gate_seq[-1]
