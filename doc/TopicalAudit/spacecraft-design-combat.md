@@ -27,6 +27,12 @@ Spacecraft design pipeline: Lua scripts → `SpaceCraft` component model → `Me
 | JS | `js/spacecraft_editor/` | active | Web-based spacecraft editor |
 | JS | `js/spacecraft_editor/multiagent_plan.md` | active | Multi-agent development plan for web editor |
 | Python | `projects/SpaceCombat/` | active | Jupyter notebooks: combat calculations, maneuverability, industry models |
+| Python | `python/pyTruss/` | active | GPU truss dynamics with OpenCL: 12 kernels (`truss.cl`), VBD/Jacobi/GS solvers, graph coloring, Chebyshev acceleration, projective dynamics, cloth tests |
+| Python | `python/Radiosity/` | active | 3D radiosity solver: view factors, occlusion (GPU), temperature calculation, hex rasterization |
+| Python | `python/pyScatter/` | active | Spacecraft scattering: X-ray attenuation (GPU), Monte Carlo, spacecraft geometry generator |
+| Python | `python/particleCollisions2D/` | active | Particle collision with OpenCL: unified bond+collision neighbors, broad-phase spatial groups |
+| Python | `python/constrain_solver.py` | active | Conjugate gradient solver (matrix-free option) |
+| Python | `python/pyMolecular/OCL/OpenCLBase.py` | active | Base class for OpenCL buffer management, kernel arg generation |
 | Doc | `docs/SpaceCrafting/SpaceCrafting_new.md` | active | High-level overview: Lua → mesh → simulation pipeline (35KB, comprehensive) |
 | Doc | `docs/SpaceCrafting/SpaceCraftConstructionProblems.md` | active | Detailed construction problems: telescopic truss recoil damper, plates, welds, SDF selection (49KB, WIP) |
 | Doc | `docs/SpaceCrafting/SpaceCraft_web.md` | active | Web spacecraft editor documentation |
@@ -58,9 +64,10 @@ Spacecraft design pipeline: Lua scripts → `SpaceCraft` component model → `Me
 ## Parity Status
 
 - **C++ spacecraft model ↔ JS web editor**: Both implement same component hierarchy. JS is newer/active development per construction problems doc. C++ is the reference.
-- **C++ `spaceCraftDynamics` ↔ `spaceCraftDynamicsOCL`**: CPU vs GPU dynamics. OCL version experimental.
-- **Truss dynamics**: spacecraft mesh feeds into `TrussDynamics_d` (see [soft-body-truss-dynamics.md](soft-body-truss-dynamics.md))
-- **Radiosity/scattering**: spacecraft surfaces feed into radiosity and scattering solvers (see [radiosity-raytracing-scattering.md](radiosity-raytracing-scattering.md))
+- **C++ `spaceCraftDynamics` ↔ `spaceCraftDynamicsOCL` ↔ Python `pyTruss`**: CPU vs GPU dynamics. C++ OCL experimental. Python `pyTruss` has most complete OpenCL solver suite (12 kernels: VBD, Jacobi×4, GS×3, momentum, precompute). Graph coloring (Vivace) only in Python.
+- **Truss dynamics**: spacecraft mesh feeds into `TrussDynamics_d` (see [soft-body-truss-dynamics.md](soft-body-truss-dynamics.md)). Python `pyTruss` mirrors architecture with CPU + GPU solvers.
+- **Radiosity/scattering**: spacecraft surfaces feed into radiosity and scattering solvers (see [radiosity-raytracing-scattering.md](radiosity-raytracing-scattering.md)). Python `Radiosity/` and `pyScatter/` provide standalone implementations with OpenCL GPU acceleration.
+- **Collision**: C++ has `Buckets` spatial hashing (partial). Python `particleCollisions2D/` has OpenCL unified bond+collision neighbor system.
 - **Damage model**: projectile clouds as line segments, intersected with mesh via `TriangleRayTracer`. Nuclear/radiative damage reuses radiosity/scattering tools.
 
 ## Open Issues
@@ -68,8 +75,12 @@ Spacecraft design pipeline: Lua scripts → `SpaceCraft` component model → `Me
 - Telescopic truss recoil damper (P1) — main focus per construction problems doc, hexagonal outer + triangular inner tube
 - Plates on girders/ropes (P2) — triangular/quad plates between polylines, tessellation matching
 - Welds and automatic connections (P3) — weld manager, rigid vs soft connections
-- `spaceCraftDynamicsOCL` status unclear — experimental GPU version
+- `spaceCraftDynamicsOCL` status unclear — experimental GPU version. Python `pyTruss` OpenCL kernels could be ported.
+- Python `pyTruss` not integrated with spacecraft component model — standalone truss solver only
+- Python `Radiosity3D.py` not integrated with C++ `Radiosity.h` — could be used for validation
+- Python `pyScatter` has test spacecraft geometry (`generate_christmas_tree`) not connected to `SpaceCraft` model
 - Multiple `docs/SpaceCrafting/` files overlap significantly (Bak-GPT5, Bak-K2 versions are backups)
 - JS editor has many completed tasks (J0-J8) but J2, J7 still pending
 - Spacecraft mesh export CLI documented but integration with simulation pipeline incomplete
 - See `docs/SpaceCrafting/SpaceCraftConstructionProblems.md` for full TODO checklist
+- See `doc/ToDos/SpacecraftSimulator.todo.md` for prioritized TODO list with Python references

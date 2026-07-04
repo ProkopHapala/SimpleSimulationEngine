@@ -17,6 +17,7 @@ We develop rigorous scientific software where debuggability, physical consistenc
 - Never delete or rearrange existing code without explicit permission
 - Never perform unrelated aesthetic/style edits
 - Never apply quick-fixes that hide root causes (e.g. hard-coded outputs)
+- Never reinvent functionality already implemented. Inventory fist, check the provided examples and references, base classs etc.
 
 ## Debugging & Testing
 

@@ -16,8 +16,76 @@
 
 Build*/
 
-tmp
+# C++ build artifacts
+cpp/build/
+cpp/Build
+cpp/Build-asan/
+cpp/Build-dbg/
+cpp/Build-opt/
+
+# IDE / tooling caches
+.cpp_cache/
+cpp/.cache/
+.clangd
+compile_commands.json
+cpp/compile_commands.json
+
+# Debug artifacts (plots, snapshots, logs from test runs)
+debug/
+
+# Lock files
+.~lock.*
+
+**/tmp/**
 
 *.log
 *.xsf
 *.npy
+# Image / plot artifacts
+*.png
+*.svg
+
+# 3D mesh / simulation export artifacts
+*.obj
+*.truss
+*.xyz
+*.xls
+
+# Test/run output files
+OUT-*
+OUT
+
+ text files
+LDLT_*.txt
+
+
+# Node.js
+node_modules/
+
+# IDE / agent configs
+.claude/
+.codex/
+.cursor/
+.devin/
+.windsurf/
+
+# Backup / copy files
+*copy.*
+*_bak.*
+*-bak.*
+*.bak
+*_bak/
+Bak-*/
+
+# Export directory
+export/
+
+
+
+# Broken / dev symlinks
+common_resources
+cpp/common_resources/common_resources
+tests_bash/*/common_resources
+tests_bash/*/data
+tests_bash/*/*/common_resources
+tests_bash/*/*/data

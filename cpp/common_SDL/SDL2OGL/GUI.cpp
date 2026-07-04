@@ -819,9 +819,14 @@ GUIAbstractPanel* TreeView::onMouse( int x, int y, const SDL_Event& event, GUI& 
                     i=_max(i,0);
                     iSelected = i;
                 }
-                if(event.button.clicks > 1 ){ // double click
+                if(event.button.clicks >= 1 ){ // single click
                     if(iSelected<lines.size()){
-                        lines[iSelected]->content.open^=true;
+                        TreeViewTree* sel = lines[iSelected];
+                        if(sel->content.bDir){
+                            sel->content.open^=true;
+                        }else{
+                            if(onActivate) onActivate(sel);
+                        }
                         redraw=true;
                     }
                 }

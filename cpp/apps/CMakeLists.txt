@@ -23,6 +23,7 @@ add_subdirectory (NavalBattle)
 add_subdirectory (SwordPlay)
 add_subdirectory (MolecularEditor)
 #add_subdirectory (MolecularEditor2)
+add_subdirectory (MeshViewer)
 add_subdirectory (DemoCrat)
 
 if( WITH_MUSIC)

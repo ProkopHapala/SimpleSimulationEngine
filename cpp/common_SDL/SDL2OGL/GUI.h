@@ -472,6 +472,8 @@ class TreeViewItem{ public:
     int level=0;
     int nth_line=0;
     std::string caption;
+    std::string path;  // full filesystem path (for file browsers)
+    bool bDir=false;   // is directory?
 
     TreeViewItem(){};
     TreeViewItem( std::string caption_){ caption=caption_; };
@@ -486,6 +488,7 @@ class TreeView : public GUIAbstractPanel { public:
     int nSlots = 5;
     TreeViewTree root;
     std::vector<TreeViewTree*> lines;
+    std::function<void(TreeViewTree*)> onActivate; // called on double-click (leaf) or Enter
 
 
     virtual void view()                                                                   override;

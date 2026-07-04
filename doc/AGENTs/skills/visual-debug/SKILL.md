@@ -25,6 +25,7 @@ Before writing ad-hoc debugging/plotting code, check these existing modules:
 
 **C++ Testing/Diagnostics:**
 - `cpp/common/testUtils.h` - Print arrays/vectors/matrices, compareVecs, derivative checking (checkDeriv, checkDeriv3d), timing (StopWatch), error macros (TEST_ERROR_PROC_N, SPEED_TEST_FUNC)
+- `cpp/apps/MeshViewer/MeshFileFormats.h` - `writeSVG()` / `writeSVGMulti()` for headless 2D SVG export from `CMesh` objects. Supports faces (with opacity, backface culling), edges, points, vertex/edge number labels, face normals, multi-mesh composition, tight bbox fit. Use for fast topology verification without GUI. See `test_svg_export.cpp` for batch usage. The interactive `meshViewer` app provides 3D rendering + SVG export with live toggles.
 
 ## Test Artifacts
 
