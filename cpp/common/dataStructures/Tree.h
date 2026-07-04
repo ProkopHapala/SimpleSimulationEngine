@@ -2,6 +2,21 @@
 #ifndef Tree_h
 #define Tree_h
 
+/// @file Tree.h
+/// @brief CRTP-based recursive tree template for hierarchical structures.
+///
+/// The challenge with recursive tree types in C++ is that a Tree<T> needs to contain
+/// vector<Tree<T>>, but Tree<T> is incomplete at that point. TreeGen solves this with
+/// a two-template-parameter CRTP pattern: TreeGen<T, TreeT> holds the branches as
+/// vector<TreeT>, and the concrete types fix TreeT to themselves.
+///
+/// - Tree<T> inherits TreeGen<T, Tree<T>> — value-based tree, branches stored by value.
+/// - PTree<T> inherits TreeGen<T, PTree<T>*> — pointer-based tree with parent back-links,
+///   branches stored as pointers. This allows shared subtrees and upward traversal.
+///
+/// Used for scene graphs, BVH hierarchies, and nested mesh group structures where
+/// you need to traverse both down (branches) and up (parent).
+
 #include <vector>
 
 // this is able to generate properly inheriatable trees

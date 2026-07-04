@@ -1,6 +1,18 @@
 #ifndef  Solids_h
 #define  Solids_h
 
+/// @file Solids.h
+/// @brief Static CMesh definitions of platonic solids — the geometric primitives for ConstructionBlock and mesh generation.
+///
+/// Each solid (Tetrahedron, Octahedron, Cube, Icosahedron, Dodecahedron) is defined as compile-time
+/// static arrays of vertices, edges, triangles, and faces, wrapped in a CMesh struct. This means
+/// zero allocation — the CMesh just points to static data. The solids use the "alternating vertices
+/// of unit cube" convention (e.g. tetrahedron vertices at {±1,±1,±1} with even parity).
+///
+/// Some solids also define "planes" — sets of coplanar vertices forming the regular polygon cross-
+/// sections (e.g. octahedron has 3 square planes: xy, yz, zx). These are used by ConstructionBlock
+/// to identify insertion faces and by mesh generators to create symmetric structures.
+
 #include "Vec2.h"
 #include "Vec3.h"
 #include "CMesh.h"

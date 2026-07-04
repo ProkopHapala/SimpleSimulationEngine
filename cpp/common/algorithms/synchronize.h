@@ -2,6 +2,14 @@
 #ifndef  synchronize_h
 #define  synchronize_h
 
+/// @file synchronize.h
+/// @brief Double-buffer synchronizer for ping-pong time-stepped simulations.
+///
+/// Ptr2<T> holds paired read/write pointers; Synchronizer maintains a list of such pairs
+/// and copies y→x on read(), x→y on write(). This decouples the "which buffer is current"
+/// logic from the simulation code — the solver always reads from x and writes to y,
+/// then calls read() to swap. (Note: currently a prototype — syntax errors present.)
+
 #include <vector>
 #include "macroUtils.h"
 

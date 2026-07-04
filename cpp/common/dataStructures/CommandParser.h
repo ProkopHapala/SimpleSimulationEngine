@@ -2,6 +2,15 @@
 #ifndef CommandParser_h
 #define CommandParser_h
 
+/// @file CommandParser.h
+/// @brief Minimal command-line interpreter: `command arg1 arg2;` with function pointer dispatch.
+///
+/// Each application registers its own call table (name -> FunctionObj with arg types and
+/// callback). Commands are separated by `;`, first word is the command name, remaining
+/// tokens are constant primitive arguments. No variables, no expressions — just direct
+/// function calls. This simplicity is intentional: it's for config files and REPL commands
+/// where a full scripting language would be overkill.
+
 #include <stdlib.h>
 
 // simple command parser

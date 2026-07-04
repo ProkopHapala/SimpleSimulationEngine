@@ -2,6 +2,21 @@
 #ifndef  SDfuncs_h
 #define  SDfuncs_h
 
+/// @file SDfuncs.h
+/// @brief Signed distance functions (SDF) as functor objects for selection and collision tests.
+///
+/// Each SDF is a struct with operator()(Vec3d p) -> double, returning signed distance:
+/// negative inside, positive outside, zero on the surface. This makes them composable —
+/// you can pass any SDF to selectVertsBySDF/selectEdgesBySDF and the selection code
+/// doesn't need to know the shape.
+///
+/// The functor pattern (vs. virtual functions) lets the compiler inline the distance
+/// evaluation, which matters when selecting across thousands of vertices per frame.
+///
+/// Currently provides: SDF_point2 (squared distance), SDF_Sphere, SDF_AABB (box),
+/// SDF_Cylinder (capped or infinite). Extending with new shapes is trivial — just
+/// add a struct with operator().
+
 #include "Vec3.h"
 
 

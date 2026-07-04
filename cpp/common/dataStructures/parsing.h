@@ -2,6 +2,17 @@
 #ifndef parsing_h
 #define parsing_h
 
+/// @file parsing.h
+/// @brief Shared parser primitives: ParserItem struct and ASCII character classification.
+///
+/// ParserItem is the universal token type used by all parsers in this folder (LispParser,
+/// StructParser, TreeParser, AST). It records: character span (ibeg, nch), name length
+/// before opening brace (nch_name), branch count (nbranch), and total contained items
+/// (nitem) — enough to reconstruct tree structure without storing pointers.
+///
+/// charTypes[] is a 128-entry LUT classifying each ASCII character (letter, digit, operator,
+/// bracket, etc.) so parsers can tokenize in one pass without per-character if-else chains.
+
 namespace parsing{
 //
 //static const char ascii_mask_[] = "";

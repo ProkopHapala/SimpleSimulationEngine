@@ -2,6 +2,25 @@
 #ifndef BatchBuff_h
 #define BatchBuff_h
 
+/// @file BatchBuff.h
+/// @brief Chunked sparse array — random access to a huge index range without allocating all slots.
+///
+/// Problem: you need random read/write access to indices up to N (e.g. 10^9) but only
+/// a fraction of slots are ever touched. A flat array of size N is impossible (memory),
+/// and a hash map is too slow (cache misses per access).
+///
+/// Solution: split the index range into fixed-size batches. A vector<T*> holds pointers
+/// to batches, allocated lazily on first write. Access is O(1): batch = i / batch_size,
+/// offset = i % batch_size. Unallocated batches are nullptr — you get O(1) "is this
+/// slot initialized" check (null pointer test).
+///
+/// BatchBuffPow2 uses power-of-2 batch size so division becomes bit-shift and modulo
+/// becomes bitmask — faster on architectures without hardware divide. BatchBuff uses
+/// arbitrary batch size with integer division.
+///
+/// Used in particle simulations where entity IDs are sparse but must be looked up
+/// in O(1) per timestep.
+
 #include <vector>
 
 template<typename T>

@@ -2,6 +2,17 @@
 #ifndef Slots_h
 #define Slots_h
 
+/// @file Slots.h
+/// @brief Fixed-capacity stack array for the specific case where each element has a small, bounded number of associations.
+///
+/// Born from the edge-loop sorting problem: when sorting N edges into a loop, each vertex
+/// has at most 2 incident edges from that loop. Using a heap-allocated vector<int> per vertex
+/// would be wildly wasteful (heap allocation, cache misses, fragmentation). Slots<int,2>
+/// stores exactly 2 ints on the stack, with sentinel-based emptiness (-1).
+///
+/// The swap-with-last remove strategy preserves contiguity — important when iterating
+/// the slots in order. This is a classic "small size optimization" applied to associative storage.
+
 template <typename T, int N, T empty_=-1>
 class Slots{ public:
     static const T   empty = empty_;

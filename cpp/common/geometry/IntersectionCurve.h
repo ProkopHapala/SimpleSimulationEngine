@@ -2,6 +2,19 @@
 #ifndef  IntersectionCurve_h
 #define  IntersectionCurve_h
 
+/// @file IntersectionCurve.h
+/// @brief Traces the 1D curve emerging from the intersection of multiple implicit surfaces.
+///
+/// Given N implicit surfaces F_i(p) = C_i, their simultaneous intersection is generally a curve
+/// (or point set). This class traces that curve by: (1) relaxing a point onto all surfaces using
+/// gradient descent on the combined residual (F_i - C_i)^2, (2) stepping along the curve direction
+/// (computed as the cross product of surface normals), and (3) re-relaxing after each step.
+///
+/// The relaxation uses Newton-like updates with the gradient dF/dp provided by the FieldFunc callback.
+/// Curvature prediction (fCurvPred) adjusts step size based on local curvature — smaller steps on
+/// tight bends to avoid divergence. This is the same principle used in molecular dynamics reaction-
+/// path following (NEB/string methods), applied here to geometric implicit surfaces.
+
 // Maybe rather call it "Implicit Curve Tracer" later
 //
 //  It traces 1D implicity function (a curve) emerging from intersection of several implicit surfaces defined as

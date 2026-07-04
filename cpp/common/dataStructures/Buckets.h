@@ -2,6 +2,21 @@
 #ifndef  Buckets_h
 #define  Buckets_h
 
+/// @file Buckets.h
+/// @brief Counting-sort / CSR layout for static bucketing — the precursor to NeighChunks.
+///
+/// Buckets implements the classic three-array CSR (compressed sparse row) pattern:
+/// cellNs (counts), cellI0s (offsets), cell2obj (flat data). This is the same layout used
+/// in sparse matrices and in finite-element adjacency structures.
+///
+/// The key insight: this is a TWO-PASS structure. First pass counts objects per cell,
+/// second pass scatters them into pre-computed offsets. This avoids per-element push_back
+/// (which would cause O(n log n) reallocations) and produces a cache-friendly contiguous layout.
+///
+/// In Builder2, edgesOfVerts uses Buckets to answer "which edges touch vertex i?" in O(1)
+/// (just read cellI0s[i]..cellI0s[i+1]). This is the static-mode predecessor to NeighChunks —
+/// simpler and faster for read-only access, but cannot handle overflow or dynamic insertion.
+
 #include "macroUtils.h"
 
 class Buckets{ public:

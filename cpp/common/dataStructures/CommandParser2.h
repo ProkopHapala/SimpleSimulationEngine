@@ -2,6 +2,15 @@
 #ifndef CommandParser2_h
 #define CommandParser2_h
 
+/// @file CommandParser2.h
+/// @brief Extended scripting language with variables, typed callbacks, and typeless macros.
+///
+/// Builds on CommandParser with: variable assignment (`$out = Func(in1, in2)`), multiple
+/// return values (`$out1,out2 = Func(...)`), two function types (type-checked low-level
+/// callbacks + typeless high-level macros), and three notation styles. Designed for
+/// easy integration with strongly-typed C++ — the typed callbacks ensure the script
+/// can't call C++ functions with wrong argument types.
+
 #include <string>
 
 /*

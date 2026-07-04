@@ -5,6 +5,22 @@
 #ifndef  geom2D_h
 #define  geom2D_h
 
+/// @file geom2D.h
+/// @brief 2D computational geometry: point-in-shape tests, line/segment intersection, convex hull, polygon operations.
+///
+/// The 2D companion to geom3D.h. Provides templated functions for:
+/// - **Containment tests**: pointInRect, pointInCircle, pointInTriangle (using barycentric or
+///   half-plane tests — the half-plane version is more numerically robust for thin triangles)
+/// - **Area**: triangleArea via the cross-product formula (signed area — sign indicates winding)
+/// - **Line intersection**: segment-segment, line-line, with parametric t values for clipping
+/// - **Distance**: point-to-line, point-to-segment (with closest-point projection)
+/// - **Convex hull**: incremental construction
+///
+/// All functions are templates on Vec2T<T> so they work with float, double, or int coordinates.
+/// The comment about "Static vs dynamic data" (Line2d with pointers vs values) reflects an
+/// unresolved design question about whether geometry primitives should reference external data
+/// or own it — the answer depends on whether you're constructing or analyzing.
+
 //#include "macroUtils.h"
 #include <math.h>
 #include <cstdlib>

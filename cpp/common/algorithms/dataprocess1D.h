@@ -2,6 +2,17 @@
 #ifndef  dataprocess1D_h
 #define  dataprocess1D_h
 
+/// @file dataprocess1D.h
+/// @brief 1D signal processing: fractal noise generation and windowed extrema.
+///
+/// bisecNoise1D generates fractal midpoint-displacement noise (the classic Diamond-Square
+/// algorithm in 1D): at each scale level, midpoints are interpolated + perturbed by random
+/// noise scaled to the level. This produces self-similar terrain profiles with controllable
+/// roughness (frndMin/frndMax set the noise amplitude per level).
+///
+/// runningMax/runningMin compute windowed extrema over a sliding window of size m —
+/// used for feature detection and adaptive sampling in terrain and signal analysis.
+
 #include "macroUtils.h"
 
 void bisecNoise1D( int npow, double * hs, double frndMin, double frndMax ){

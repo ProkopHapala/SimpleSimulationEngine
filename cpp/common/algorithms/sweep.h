@@ -2,6 +2,26 @@
 #ifndef  sweep_h
 #define  sweep_h
 
+/// @file sweep.h
+/// @brief Sweep-and-prune broadphase collision detection using sorted interval endpoints.
+///
+/// The classic problem: given N objects with bounding intervals [xmin, xmax], find all
+/// overlapping pairs. Brute force is O(N²). Sweep-and-prune sorts objects by xmin, then
+/// walks the sorted list — for each object, it only checks forward until xmax is exceeded
+/// (early break). This is O(N·k) where k is the average number of overlaps per object,
+/// which is near O(N) for sparse scenes.
+///
+/// Two variants:
+/// - **collideSelf()**: all objects in one set, find self-collisions. Requires the input
+///   to be pre-sorted by xmin (permut array). The early break (`bounds[j].xmin > spani.xmax`)
+///   is the key optimization — since the array is sorted, all subsequent j also can't collide.
+/// - **collideCross()**: two different sets (e.g. particles vs. mesh faces). Uses a
+///   two-pointer walk: advances a base pointer jj0 to skip objects that can't overlap,
+///   then scans forward. Called both directions (A->B and B->A) to catch all pairs.
+///
+/// The Span struct stores only xmin/xmax (float, 8 bytes) to keep the sort cache-efficient.
+/// The caller provides the permutation array — this decouples sorting strategy from collision.
+
 struct Int2{
     int i,j;
 };

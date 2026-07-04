@@ -2,6 +2,27 @@
 #ifndef  arrayAlgs_h
 #define  arrayAlgs_h
 
+/// @file arrayAlgs.h
+/// @brief Array algorithms for simulation: sorting, pruning, sparse export, and CSR bucketing.
+///
+/// These are hand-written array algorithms optimized for the small-to-medium array sizes
+/// typical in mesh and particle operations (n=10..10000). The design philosophy is:
+/// no heap allocation in the hot path, template-based for type generality, and both
+/// in-place and permutation-based variants where appropriate.
+///
+/// Key algorithms:
+/// - **prune()**: compaction by predicate using two-pointer swap-from-end — O(n), no alloc.
+///   Used to remove dead elements from neighbor lists and candidate sets.
+/// - **insertSort()**: both in-place and permutation variants. Preferred over quickSort
+///   for small or nearly-sorted arrays (n<32) because it has no recursion overhead and
+///   is cache-friendly with backward scan. sort_permut() dispatches based on bAlmostSorted.
+/// - **quickSort()**: Lomuto partition with permutation array — keeps original data intact.
+/// - **objects2cells()**: the CSR counting-sort used by Buckets — two-pass scatter.
+/// - **binSearchBetween()**: finds the interval [xs[i], xs[i+1]) containing x — used for
+///   interpolation in lookup tables and piecewise functions.
+/// - **exportNonZero()**: extracts sparse entries (value + index) from a dense array —
+///   used to convert dense force arrays to sparse format for neighbor communication.
+
 // from here  http://stackoverflow.com/questions/3982348/implement-generic-swap-macro-in-c
 //#define SWAP(x, y, TYPE) {TYPE tmp = x; x = y; y = tmp;}
 

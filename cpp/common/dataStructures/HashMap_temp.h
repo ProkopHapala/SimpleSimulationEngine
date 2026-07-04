@@ -2,6 +2,14 @@
 #ifndef  HashMap_temp_h
 #define  HashMap_temp_h
 
+/// @file HashMap_temp.h
+/// @brief Experimental hash map variants — historical test bed for hash function comparison.
+///
+/// Contains HashMapField (bucket-based storage with object pointers) and multiple hash
+/// function implementations tested side-by-side. The comments document which functions
+/// were tried (FNV, Knuth, Wang, multiply-shift variants) and which worked best
+/// (Knuth's multiplicative method won). Prefer HashMap.h / HashMapT64.h for production use.
+
 #include <stdio.h>
 
 

@@ -2,6 +2,15 @@
 #ifndef LispParser_h
 #define LispParser_h
 
+/// @file LispParser.h
+/// @brief S-expression (Lisp-style) parser inspired by jsmn's minimal tokenization approach.
+///
+/// Parses parenthesized lists into a flat vector of ParserItem tokens. Configurable
+/// delimiters (default: `()` for nesting, `,` for separation) make it reusable for
+/// JSON-like formats, Lisp syntax, or custom DSLs. The jsmn-inspired design means
+/// tokens are just spans into the original string — no string copying, no allocation
+/// per token. The parser builds a tree structure via nbranch/nitem counts in ParserItem.
+
 #include <vector>
 #include <cstdio>
 #include <cstring>

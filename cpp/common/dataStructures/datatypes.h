@@ -2,6 +2,18 @@
 #ifndef datatypes_h
 #define datatypes_h
 
+/// @file datatypes.h
+/// @brief Bare POD structs for GPU buffers and C-style interchange — intentionally separate from Vec2T/Vec3T/Quat4T.
+///
+/// The Vec*T templates in math/ have methods, unions, and aliases — great for CPU code but
+/// problematic for GPU kernel arguments and C-style file I/O where layout must be exactly
+/// what you expect with no compiler-specific union padding. These structs (float4, int4, ...)
+/// are guaranteed-layout POD types that map directly to OpenCL float4/int4 and to raw binary.
+///
+/// float8 and float16 exist because OpenCL wavefronts and SIMD groups naturally process
+/// these widths — e.g. a single particle's full state (position, velocity, force, mass) fits
+/// in a float8 or float16. double8 is the natural width for VertT<double> (8 doubles = 64 bytes).
+
 template <typename T> struct vec2{
     union{
         struct{ T x,y; };

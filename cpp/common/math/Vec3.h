@@ -2,6 +2,19 @@
 #ifndef  Vec3_h
 #define  Vec3_h
 
+/// @file Vec3.h
+/// @brief 3D vector template — the workhorse type of the entire engine.
+///
+/// Same POD-union design as Vec2T: no constructors, multiple named aliases ({x,y,z},
+/// {a,b,c}, {i,j,k}), so it can live inside anonymous unions. This is why VertT can
+/// overlay pos with pos_pad, and why Quat4T can overlay {f,e} with {lo,hi}.
+///
+/// The lack of constructors is a feature, not a bug: it enables brace-initialization
+/// (Vec3d{1,2,3}), C-style casts ((Vec3f){x,y,z}), and reinterpretation through unions —
+/// all of which are used extensively in Builder2 and the physics solvers.
+/// Conversion between precisions is explicit (operator Vec3T<float>()) to prevent
+/// accidental precision loss in simulation code.
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>

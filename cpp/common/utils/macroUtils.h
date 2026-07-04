@@ -2,6 +2,26 @@
 #ifndef  macroUtils_h
 #define  macroUtils_h
 
+/// @file macroUtils.h
+/// @brief Low-level macros and inline templates for memory, swapping, and loop sugar.
+///
+/// This is the lowest-level utility header — included by fastmath.h, which is included
+/// by nearly everything. Everything here must be dependency-free (no includes).
+///
+/// Key contents:
+/// - SWAP macro (type-safe via TYPE parameter, used in all sorting code)
+/// - _minit/_maxit/_setmin/_setmax — branchless-style update macros that avoid
+///   re-evaluating expressions (important in tight loops with array access)
+/// - circ_inc/circ_dec — modular increment/decrement for ring buffers and edge loops
+/// - Buf<T> and Arr<T> — thin RAII wrappers over raw pointers with optional ownership.
+///   Buf<T> is just a pointer (no size); Arr<T> carries size n. Both track ownership
+///   via bool own and delete[] on destruction. Used in C-style code that needs
+///   exception safety without std::vector's reallocation overhead.
+/// - _alloc/_realloc/_dealloc — C-style memory management macros that null-check
+///   before delete, avoiding double-free. _bindOrRealloc is the key pattern: if
+///   external data is provided, bind to it (no copy); otherwise allocate.
+/// - _forN/_for0N — compact loop macros (stylistic, used in performance-critical code)
+
 #define SWAP( a, b, TYPE ) { TYPE t = (a); (a) = (b); (b) = (t); }
 //#define _max(a,b)      ((a>b)?a:b)
 //#define _min(a,b)      ((a<b)?a:b)

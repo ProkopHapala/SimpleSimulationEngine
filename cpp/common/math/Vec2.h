@@ -2,6 +2,18 @@
 #ifndef  Vec2_h
 #define  Vec2_h
 
+/// @file Vec2.h
+/// @brief 2D vector template designed as a POD union for interoperability with C and GPU code.
+///
+/// Deliberately has NO constructors — this allows it to be used inside anonymous unions
+/// (critical for VertT's dual-mode layout and Quat4T's multiple access patterns).
+/// This is a deliberate trade-off: you lose constructor safety but gain the ability to
+/// overlay different interpretations of the same bytes, which is the foundation of
+/// Builder2's zero-cost static/dynamic vertex switching.
+///
+/// The union provides named aliases {x,y}, {a,b}, {i,j} so the same type serves as
+/// coordinates, edge endpoints, or grid indices without conversion.
+
 #include "fastmath.h"
 
 //template <class T,class VEC>

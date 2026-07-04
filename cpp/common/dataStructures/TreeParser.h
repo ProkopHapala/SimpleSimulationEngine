@@ -2,6 +2,20 @@
 #ifndef TreeParser_h
 #define TreeParser_h
 
+/// @file TreeParser.h
+/// @brief Expression tree parser with 4-level operator precedence via coupling strength.
+///
+/// The key insight: expression structure can be captured by 4 coupling levels
+/// (decreasing strength = increasing split priority):
+/// 1. Name-string binding (identifiers, parenthesized groups)
+/// 2. Void-binding (juxtaposition: `a_a`, `a_()`)
+/// 3. Operator binding (`a+b`, `a*b+c`)
+/// 4. Tuple separators (`a,b`)
+///
+/// The parser splits at the weakest coupling first, recursively building a tree.
+/// This unified approach handles function calls, operator precedence, and tuples
+/// in one pass without separate grammar rules for each construct.
+
 #include <vector>
 #include <cstdio>
 #include <cstring>

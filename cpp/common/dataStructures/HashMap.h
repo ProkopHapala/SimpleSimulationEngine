@@ -1,5 +1,24 @@
+
 #ifndef HashMap_h
 #define HashMap_h
+
+/// @file HashMap.h
+/// @brief Open-addressing hash map for spatial bucketing — optimized for box-indexed lookups.
+///
+/// Unlike std::unordered_map (separate chaining with linked lists), this uses open addressing
+/// with linear probing. The key insight: this map is designed for spatial hash tables where
+/// the key is a cell/box index (integer), not an arbitrary object. This enables:
+///
+/// - **Knuth multiplicative hashing** (i * 2654435761 >> 16): one multiply, one shift —
+///   much faster than generic hash functions, and distributes integer keys well.
+/// - **Power-of-2 capacity** with bitmask instead of modulo: resize doubles capacity.
+/// - **hits[] array**: tracks how many entries hash to each slot, so getAllInBox() can
+///   stop early after finding all entries with that hash — no need to scan the entire
+///   probe sequence. This is the key optimization over naive open addressing.
+/// - **iboxs[] stores the original box index**: needed because multiple boxes can hash
+///   to the same slot, so we must compare the actual box index, not just the hash.
+///
+/// Auto-resizes when load factor > 50% (filled << 1 > capacity) to keep probe sequences short.
 
 template <class TYPE1 > class HashMap{ public:
 	int power;

@@ -2,6 +2,28 @@
 #ifndef  raytrace_h
 #define  raytrace_h
 
+/// @file raytrace.h
+/// @brief Ray-shape intersection primitives: the foundation for picking, raytracing, and collision queries.
+///
+/// Every interactive 3D operation (mouse picking, line-of-sight, raycast weapons) reduces to
+/// "does this ray hit this shape, and where?" This file provides those primitives:
+///
+/// - **rayPointDistance2**: projects a point onto a ray, returns perpendicular distance squared
+///   and parametric t — used for picking (closest object to ray)
+/// - **Ray-sphere**: quadratic solve, returns nearest positive root (entry point)
+/// - **Ray-plane**: single dot product divide — the cheapest intersection test
+/// - **Ray-triangle (Möller–Trumbore)**: the standard algorithm — 2 cross products + 2 dot
+///   products, no precomputation needed. Returns barycentric coords for interpolation.
+/// - **Ray-AABB (slab method)**: tests intersection with 3 axis-aligned slabs, returns entry/exit t
+/// - **Ray-cylinder, ray-cone**: quadratic intersection for curved surfaces
+///
+/// t_inf (1e+300) is used as "no hit" sentinel — large enough to be effectively infinite but
+/// not DBL_MAX (which would cause NaN in arithmetic). This is a common raytracing convention.
+///
+/// The file also includes quadric intersection references — quadrics (sphere, cone, cylinder,
+/// hyperboloid) share a common quadratic form, so one solver handles all of them with different
+/// coefficient matrices.
+
 /*
 
 Quadric intersection:

@@ -2,6 +2,23 @@
 #ifndef  Selection_h
 #define  Selection_h
 
+/// @file Selection.h
+/// @brief Dual-storage selection (ordered vector + hash map) for interactive mesh editing.
+///
+/// The key design decision: maintain BOTH a vector (for ordered iteration) and a hash map
+/// (for O(1) membership test). This costs 2× memory per selection but solves a real problem:
+/// edge loop selection needs ordered vertices (to walk the loop), while duplicate prevention
+/// needs fast lookup. Using only a vector would make contains() O(n); using only a set would
+/// lose ordering.
+///
+/// remove() marks the slot as -1 in the vector rather than erasing — this preserves the
+/// indices of remaining elements (important when selection indices are referenced by
+/// ongoing operations). The -1 entries are cleaned up lazily.
+///
+/// SelectionBanks provides multiple named selections because an interactive editor needs
+/// to keep several selections alive simultaneously (e.g. "selected verts" + "edge loop" +
+/// "brush mask") and switch between them without losing state.
+
 
 #include <unordered_set>
 #include <unordered_map>

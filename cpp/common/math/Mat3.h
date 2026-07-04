@@ -2,6 +2,18 @@
 #ifndef  Mat3_h
 #define  Mat3_h
 
+/// @file Mat3.h
+/// @brief 3×3 rotation matrix with dual interpretation: row-major components and basis vectors.
+///
+/// The union lets you access the same 9 numbers as either raw scalars (xx,xy,...) or as
+/// three Vec3 rows. The {lf,up,fw} alias is particularly important: it makes the matrix
+/// a coordinate frame (left, up, forward basis vectors), which is how the engine represents
+/// orientations of spacecraft, camera views, and local coordinate systems.
+///
+/// dot_to(v, result) transforms a vector by the matrix — this is the most-called operation
+/// in rendering and physics, so it's kept inline. The matrix is row-major (not OpenGL's
+/// column-major), matching the basis-vector interpretation: M * v = a*v.x + b*v.y + c*v.z.
+
 #include <math.h>
 #include <cstdlib>
 #include <stdint.h>

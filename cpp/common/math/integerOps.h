@@ -1,6 +1,24 @@
 #ifndef  integerOps_h
 #define  integerOps_h
 
+/// @file integerOps.h
+/// @brief Integer bit-packing, index wrapping, and hash functions for spatial hashing and GPU data.
+///
+/// Three categories of operations that are needed across the engine but have no natural home:
+///
+/// **Index wrapping** (wrap_index, clamp_index): for periodic boundary conditions in grid-based
+/// simulations and for circular access in edge loops. The "fast" variants use branch-and-add
+/// instead of modulo, which is faster on CPUs where integer division is expensive.
+///
+/// **Bit packing** (pack32/unpack32/pack64): pack multiple small ints into one large int.
+/// Used for: encoding 2D grid coordinates into a single hash key, packing RGBA colors into
+/// uint32, encoding vertex index pairs into uint64 for edge lookup (vert2edge map in Builder2).
+///
+/// **Integer hashing** (hash_Knuth, hash_Wang, rand_hash): deterministic hash functions for
+/// spatial hash tables. Knuth's multiplicative method (i * 2654435761 >> 16) is the default
+/// — it's one multiply + one shift, distributes well for power-of-2 table sizes, and is used
+/// in HashMap.h. Wang's hash provides better avalanche for non-uniform input distributions.
+
 // ========= index poerations and modulo-math ===========
 
 inline int wrap_index_fast( int i, int n){

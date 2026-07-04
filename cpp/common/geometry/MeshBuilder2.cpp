@@ -15,6 +15,188 @@ namespace Mesh {
 void Builder2::clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
 void Builder2::printSizes()const{printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
 
+void Builder2::setDynamicMode(bool b){
+    bDynamicMode = b;
+    if(b){
+        // assign UIDs to existing elements if not already done
+        for(int i=0; i<(int)verts.size(); i++){ if(verts[i].uid == 0) verts[i].uid = ++nextUID_vert; verts[i].flags |= 1; }
+        for(int i=0; i<(int)edges.size(); i++){ if(edges[i].w  == 0) edges[i].w  = ++nextUID_edge; }
+    }
+}
+
+void Builder2::removeVertSoft(int iv){
+    verts[iv].flags &= ~1; // clear alive bit
+    // remove from neighbor lists of adjacent verts
+    int* ch = ngVerts.chunk(verts[iv].i0ngVert);
+    // TODO: walk overflow chain and remove iv from each neighbor's list
+}
+
+void Builder2::removeEdgeSoft(int ie){
+    edges[ie].w &= ~1; // clear alive bit (assuming bit 0 of .w is alive flag)
+}
+
+void Builder2::removeTriSoft(int it){
+    tris[it].w &= ~1;
+}
+
+void Builder2::buildDynNeighbors(){
+    int nv = verts.size();
+    int ne = edges.size();
+    int nt = tris.size();
+    ngVerts.realloc(nv);
+    ngEdges.realloc(nv);
+    ngPolys.realloc(nv);
+    // edges -> vertex neighbors + edge incidence
+    for(int ie=0; ie<ne; ie++){
+        if(bDynamicMode && !(edges[ie].w & 1)) continue; // skip dead edges
+        int a = edges[ie].x;
+        int b = edges[ie].y;
+        ngVerts.add(a, b);
+        ngVerts.add(b, a);
+        ngEdges.add(a, ie);
+        ngEdges.add(b, ie);
+    }
+    // tris -> face incidence
+    for(int it=0; it<nt; it++){
+        if(bDynamicMode && !(tris[it].w & 1)) continue;
+        int a = tris[it].x, b = tris[it].y, c = tris[it].z;
+        ngPolys.add(a, it);
+        ngPolys.add(b, it);
+        ngPolys.add(c, it);
+    }
+    // store slot indices into verts
+    for(int iv=0; iv<nv; iv++){
+        verts[iv].i0ngVert = (int16_t)iv;  // primary slot = vertex index
+        verts[iv].i0ngEdge = (int16_t)iv;
+        verts[iv].i0ngPoly = (int16_t)iv;
+    }
+}
+
+int Builder2::countAliveVerts() const {
+    int n = 0;
+    for(int i=0; i<(int)verts.size(); i++) if(verts[i].flags & 1) n++;
+    return n;
+}
+
+int Builder2::countAliveEdges() const {
+    int n = 0;
+    for(int i=0; i<(int)edges.size(); i++) if(edges[i].w & 1) n++;
+    return n;
+}
+
+void Builder2::compactDead(){
+    int nv_old = verts.size();
+    int ne_old = edges.size();
+    int nt_old = tris.size();
+    int nch_old = chunks.size();
+
+    // --- 1. build old->new index maps ---
+    std::vector<int> vmap(nv_old, -1);
+    std::vector<int> emap(ne_old, -1);
+    std::vector<int> tmap(nt_old, -1);
+    int nv_new=0, ne_new=0, nt_new=0;
+    for(int i=0; i<nv_old; i++){ if(verts[i].flags & 1) vmap[i] = nv_new++; }
+    for(int i=0; i<ne_old; i++){ if(edges[i].w  & 1) emap[i] = ne_new++; }
+    for(int i=0; i<nt_old; i++){ if(tris[i].w   & 1) tmap[i] = nt_new++; }
+
+    // --- 2. compact verts ---
+    for(int i=0; i<nv_old; i++){
+        if(vmap[i] >= 0 && vmap[i] != i){
+            verts[vmap[i]] = verts[i];
+        }
+    }
+    verts.resize(nv_new);
+
+    // --- 3. compact edges + remap vertex indices ---
+    for(int i=0; i<ne_old; i++){
+        if(emap[i] >= 0){
+            Quat4i& e = edges[i];
+            e.x = vmap[e.x];
+            e.y = vmap[e.y];
+            // e.w keeps alive bit + type/uid; clear dead bit if set on copied
+            if(emap[i] != i) edges[emap[i]] = e;
+        }
+    }
+    edges.resize(ne_new);
+
+    // --- 4. compact tris + remap vertex indices ---
+    for(int i=0; i<nt_old; i++){
+        if(tmap[i] >= 0){
+            Quat4i& t = tris[i];
+            t.x = vmap[t.x];
+            t.y = vmap[t.y];
+            t.z = vmap[t.z];
+            // t.w = chunk index, will remap in step 6
+            if(tmap[i] != i) tris[tmap[i]] = t;
+        }
+    }
+    tris.resize(nt_new);
+
+    // --- 5. remap strips (vertex indices then edge indices) ---
+    for(int ich=0; ich<nch_old; ich++){
+        Quat4i& ch = chunks[ich];
+        if(ch.w != (int)ChunkType::face) continue;
+        int n = ch.z;
+        for(int i=0; i<n; i++){
+            int& iv = strips[ch.x + i];       // vertex index
+            iv = (iv >= 0 && iv < nv_old) ? vmap[iv] : -1;
+        }
+        for(int i=0; i<n; i++){
+            int& ie = strips[ch.x + n + i];   // edge index
+            ie = (ie >= 0 && ie < ne_old) ? emap[ie] : -1;
+        }
+    }
+
+    // --- 6. compact chunks (remove chunks with any dead vert) ---
+    std::vector<int> chmap(nch_old, -1);
+    int nch_new = 0;
+    // build new strips and chunks
+    std::vector<Quat4i> chunks_new; chunks_new.reserve(nch_old);
+    std::vector<int>    strips_new; strips_new.reserve(strips.size());
+    for(int ich=0; ich<nch_old; ich++){
+        Quat4i& ch = chunks[ich];
+        if(ch.w != (int)ChunkType::face) continue; // TODO: handle other chunk types
+        int n = ch.z;
+        // check all verts alive
+        bool bDead = false;
+        for(int i=0; i<n; i++){ if(strips[ch.x + i] < 0){ bDead = true; break; } }
+        if(bDead) continue;
+        // copy to new strips
+        int i0_new = strips_new.size();
+        for(int i=0; i<n;       i++) strips_new.push_back(strips[ch.x + i]);     // verts
+        for(int i=0; i<n;       i++) strips_new.push_back(strips[ch.x + n + i]); // edges
+        chunks_new.push_back(Quat4i{i0_new, i0_new+n, n, ch.w});
+        chmap[ich] = nch_new++;
+    }
+    chunks = std::move(chunks_new);
+    strips = std::move(strips_new);
+
+    // remap tri.w (chunk index) to new chunk indices
+    for(int i=0; i<nt_new; i++){
+        int ich_old = tris[i].w;
+        if(ich_old >= 0 && ich_old < nch_old) tris[i].w = chmap[ich_old];
+        else tris[i].w = -1;
+    }
+
+    // --- 7. update blocks (start indices) ---
+    // blocks store {ivert, iedge, itri, ichunk} as counts at time of block creation
+    // after compaction these counts are wrong; recompute from alive counts
+    // simplest: clear blocks (they are just markers, not critical for mesh integrity)
+    // TODO: proper block remapping if needed
+    blocks.clear();
+
+    // --- 8. clear vert2edge map (stale, needs rebuild) ---
+    vert2edge.clear();
+
+    // --- 9. rebuild neighbor lists with new indices ---
+    if(bDynamicMode){
+        buildDynNeighbors();
+    }
+
+    printf("compactDead: verts %i->%i, edges %i->%i, tris %i->%i, chunks %i->%i\n",
+           nv_old, nv_new, ne_old, ne_new, nt_old, nt_new, nch_old, nch_new);
+}
+
 // int Builder2::getOtherEdgeVert(int ie, int iv){
 //     Quat4i& e = edges[ie];
 //     return e.x==iv ? e.y : e.x;

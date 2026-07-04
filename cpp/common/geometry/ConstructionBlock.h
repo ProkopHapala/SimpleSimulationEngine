@@ -2,7 +2,19 @@
 #ifndef  ConstructionBlock_h
 #define  ConstructionBlock_h
 
-/// @brief This file defines the ConstructionBlock class used for building and eddition 3D structures like trusses from platonic solids in a way similar to ZomeTool construction set 
+/// @file ConstructionBlock.h
+/// @brief ZomeTool-like construction set for building trusses and space frames from platonic solid connectors.
+///
+/// Inspired by ZomeTool: a physical construction toy where nodes are platonic-solid-shaped connectors
+/// with struts inserted at specific angles. Here, each "block" is a platonic solid (cube, octahedron,
+/// tetrahedron) whose faces/edges/vertices define insertion points and directions for beams.
+///
+/// The cubeIndex3D() function packs a 4D cube element identifier (vertex/edge/face) into 8 bits using
+/// axis-presence bits + sign bits — this compact encoding lets the construction system reference any
+/// structural element of the platonic solid in one byte. iface() maps a direction to the nearest face.
+///
+/// ConstructionBlock assembles these primitives into editable 3D structures: place a block, insert beams
+/// along allowed directions, and the system tracks connectivity for downstream truss simulation.
 
 
 #include <vector>

@@ -2,6 +2,20 @@
 #ifndef  UVfuncs_h
 #define  UVfuncs_h
 
+/// @file UVfuncs.h
+/// @brief Parametric surface generators: map (u,v) → Vec3f for procedural mesh creation.
+///
+/// Each UV function defines a parametric surface as a mapping from 2D parameters to 3D position.
+/// This is the standard way to generate smooth surfaces (spheres, cones, cylinders, paraboloids,
+/// tori, bicubic patches) without storing vertex data — the surface is sampled at UV grid points.
+///
+/// getUVFuncNormal() computes the surface normal at any UV point by finite differences: sample
+/// the function at ±eps in both U and V, take the cross product of the tangent vectors. This
+/// avoids needing an analytic normal formula per surface type.
+///
+/// The TODO notes suggest extending to Vec3d (double precision) and adding a height parameter
+/// for offset along the normal — this would enable shell/solid generation from a surface.
+
 
 // ToDo: 
 // 1) UVfunc should return Vec3d 

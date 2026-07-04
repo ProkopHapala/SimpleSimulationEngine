@@ -1,6 +1,24 @@
 ﻿#ifndef Voronoi_h
 #define Voronoi_h
 
+/// @file Voronoi.h
+/// @brief Fortune's algorithm for 2D Voronoi diagrams — beach-line tree with priority queue events.
+///
+/// Fortune's algorithm computes a Voronoi diagram in O(N log N) by sweeping a horizontal line
+/// downward and maintaining a "beach line" — the boundary between processed and unprocessed sites.
+/// The beach line is a balanced BST of parabola arcs (VParabola), where leaves are site parabolas
+/// and internal nodes are Voronoi edges being traced.
+///
+/// Two event types drive the sweep:
+/// - **Site event**: sweep line reaches a new site — split the arc above it into two
+/// - **Circle event**: three consecutive arcs converge — the middle one disappears, creating
+///   a Voronoi vertex at the circle center
+///
+/// The implementation uses pointer-based tree (VParabola with parent/left/right) and a priority
+/// queue of VEvents. Based on Ivan Kuckovic's implementation (blog.ivank.net).
+/// Voronoi diagrams are used for: terrain partitioning, procedural city layout, nearest-neighbor
+/// queries, and mesh generation from point clouds.
+
 #include <list>
 #include <queue>
 #include <set>

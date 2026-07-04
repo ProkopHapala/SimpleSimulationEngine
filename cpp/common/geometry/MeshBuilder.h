@@ -2,6 +2,18 @@
 #ifndef  MeshBuilder_h
 #define  MeshBuilder_h
 
+/// @file MeshBuilder.h
+/// @brief Lightweight render-ready mesh builder — the predecessor to MeshBuilder2.
+///
+/// Mesh::Builder stores vertex positions (Vec3f), normals, UVs, and indices in flat std::vectors,
+/// designed for direct upload to OpenGL/OpenCL. It supports multiple draw modes (POINTS, LINES,
+/// TRIANGLES, TRIANGLE_STRIP, etc.) via the MODE enum and subs (sub-mesh ranges).
+///
+/// The key design goal: rendering abstraction without rendering dependencies. The same Builder
+/// code can produce an OpenGL VBO, an OpenCL buffer, a .obj file, or a finite-element mesh —
+/// the caller decides the output format. This is the "thin builder" pattern; MeshBuilder2 (Builder2)
+/// is the "fat builder" that adds topology editing, selection, and dynamic mesh operations on top.
+
 #include <vector>
 
 #include "fastmath.h"

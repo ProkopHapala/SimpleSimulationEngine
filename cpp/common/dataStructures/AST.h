@@ -2,6 +2,15 @@
 #ifndef AST_h
 #define AST_h
 
+/// @file AST.h
+/// @brief Abstract syntax tree as flat arrays of Nodes referencing parser tokens.
+///
+/// Nodes store parent/child indices (not pointers) into flat arrays — cache-friendly
+/// and serializable. Each Node references a ParserItem token and records its position
+/// in the tree (iparent, isub0, nsub, level, ith). The n2sub array maps node indices
+/// to their first child index. This array-of-structs layout avoids the pointer chasing
+/// that plagues tree-based ASTs during traversal and transformation passes.
+
 #include "macroUtils.h"
 #include "parsing.h"
 

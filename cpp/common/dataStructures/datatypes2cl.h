@@ -2,6 +2,17 @@
 #ifndef datatypes2cl_h
 #define datatypes2cl_h
 
+/// @file datatypes2cl.h
+/// @brief Type conversion bridge between double-precision CPU and float-precision OpenCL GPU.
+///
+/// The engine computes in double on CPU but uploads float to GPU (OpenCL devices often
+/// have limited double performance). This file provides:
+/// - pack(): convert Quat4d→Quat4f, Vec3d→Quat4f (with scalar in .w channel)
+/// - unpack(): reverse conversion, unpack_add() accumulates scalar (e.g. energy)
+/// - add_except(): remap indices during compaction, skipping a removed index (ino)
+///   — used when uploading mesh data after compactDead() removes dead elements
+/// - copy/set: bulk array operations for Quat4i/Quat4f
+
 #include "datatypes.h"
 #include "Vec3.h"
 #include "quaternion.h"

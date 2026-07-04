@@ -2,6 +2,16 @@
 #ifndef ProgramGraph_h
 #define ProgramGraph_h
 
+/// @file ProgramGraph.h
+/// @brief Scoped program graph with hashed names for a scripting language with C++ interop.
+///
+/// Each named term (Type, Function, Variable) is defined in a scope with a particular hash.
+/// Terms are identified by name + scope hash, enabling shadowing and namespace-like behavior.
+/// Supports: variable definition (`$x:Integer 10`), function definition (`$!sqrt <x:Real >y:Real {...}`),
+/// type definition (`$@Complex:Number {...}`), anonymous functions, and for-loops as
+/// broadcast functions. The design targets a language where low-level C++ callbacks
+/// coexist with high-level user-defined macros.
+
 #include "parsing.h"
 #include "AST.h"
 #include <vector>

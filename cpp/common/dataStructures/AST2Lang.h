@@ -2,6 +2,14 @@
 #ifndef AST2Lang_h
 #define AST2Lang_h
 
+/// @file AST2Lang.h
+/// @brief Symbol table and type system layer on top of AST.
+///
+/// Defines Symbol, Type, Variable, Function as named entities that can be attached to
+/// AST nodes. This is the bridge between parsing (syntactic) and semantic analysis —
+/// it resolves names to typed declarations, enabling type checking and code generation.
+/// Uses std::string and unordered_map for name lookup (not performance-critical).
+
 #include "parsing.h"
 #include "AST.h"
 

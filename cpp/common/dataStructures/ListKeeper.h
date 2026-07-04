@@ -1,3 +1,10 @@
+/// @file ListKeeper.h
+/// @brief Minimal growable slot allocator with golden-ratio growth and optional shrink.
+///
+/// A simple int array where 0 = free, nonzero = occupied. getFree() finds or allocates
+/// a free slot; growth uses the golden ratio (1.618×) to balance allocation frequency
+/// vs. memory waste. tryShrink() compacts when emptiness exceeds a threshold.
+/// Used for managing small pools of named resources (e.g. selection banks, texture slots).
 
 
 class ListKeeper{

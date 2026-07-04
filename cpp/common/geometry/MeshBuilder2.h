@@ -2,9 +2,125 @@
 #ifndef  MeshBuilder2_h
 #define  MeshBuilder2_h
 
-// ==========================
-//  Mesh::Builder2 aims to merge MeshBuilder.h, Truss.h, OMesh (in Mesh.h)  and GLMeshBuilder(in DrawOGL3.h)
-// ==========================
+/// @file MeshBuilder2.h
+/// @brief Dynamic mesh builder with static/dynamic dual-mode vertices, chunk-based polygon storage, and topology operations.
+///
+/// @section overview Overview
+///
+/// Builder2 stores mesh data in flat std::vector arrays: verts[], edges[], tris[], chunks[], strips[].
+/// No pointers between elements — everything is index-based, cache-friendly, serializable.
+/// The class merges functionality from several legacy mesh classes: MeshBuilder.h, Truss.h, OMesh, GLMeshBuilder.
+///
+/// @section data_structures Data Structures
+///
+/// @subsection vert VertT — Dual-Mode Vertex (64 bytes)
+///
+/// VertT is a union. The same 64 bytes serve two purposes:
+/// - **Static/render mode**: pos (Vec3d, 24B) + nor (Vec3d, 24B) + uv (Vec2d, 16B) for rendering.
+/// - **Dynamic/edit mode**: pos (Vec3d, 24B) + flags (int32) + uid (int32) + chunk (int32)
+///   + i0ngVert/i0ngEdge/i0ngPoly (int16 each) for mesh editing metadata.
+///
+/// Switching modes costs nothing — just reinterpret the same memory. No extra arrays, no separate type.
+/// The lo/hi (Quat4d × 2) union member provides float4-aligned access for GPU upload (export_pos).
+///
+/// @subsection edges_edges Edges and Tris
+///
+/// - edges[]: Quat4i {a, b, type/adjFace2, type/aliveFlags}. Stores edge endpoints plus optional
+///   type or adjacent face info in .w. In dynamic mode, bit 0 of .w is the alive flag.
+/// - tris[]: Quat4i {a, b, c, chunkIndex}. Triangle vertex indices plus back-reference to owning
+///   polygon chunk. In dynamic mode, bit 0 of .w doubles as alive flag.
+///
+/// @subsection chunks Chunks and Strips — Polygon Representation
+///
+/// Polygons are stored indirectly via chunks and strips:
+/// - chunks[]: Quat4i {i0_strips, i0_edges, nVerts, type}. Each chunk describes a polygon
+///   (or edge strip, or triangle strip) by indexing into the flat strips[] array.
+/// - strips[]: flat int array. For a face chunk, strips[i0..i0+n-1] = vertex indices,
+///   strips[i0+n..i0+2n-1] = edge indices. This keeps variable-length polygon data contiguous
+///   without per-polygon heap allocation.
+/// - ChunkType enum: face=0, edgestrip=1, trianglestrip=2.
+/// - polygonToTris() fan-triangulates a face chunk into tris[] with back-reference (.w = chunk index).
+///
+/// @subsection blocks Blocks
+///
+/// blocks[]: Quat4i {nVerts, nEdges, nTris, nChunks} — snapshots of array sizes at block creation.
+/// Used to track which elements belong to a complex object (e.g. girder, ring, tube).
+/// duplicateBlock() can clone a block's elements. Blocks are convenience markers, not structural.
+///
+/// @section neighbors Neighbor Storage
+///
+/// @subsection neigh_chunks NeighChunks — Chunked Neighbor Lists
+///
+/// Each vertex's neighbors are stored in fixed-size chunks (default 16 int32 = 64 bytes = 1 cache line).
+/// Chunk layout: [count, n0..n13, link]. If a vertex has >14 neighbors, an extension chunk is
+/// allocated at the end of the flat array and linked via the last slot. This avoids per-vertex
+/// heap allocation and keeps data contiguous. See NeighChunks.h.
+///
+/// Three separate NeighChunks instances: ngVerts (vertex neighbors), ngEdges (incident edges),
+/// ngPolys (incident polygons/tris). buildDynNeighbors() populates all three from edges[] and tris[].
+///
+/// @subsection buckets Buckets — Edge-of-Vertex (legacy)
+///
+/// edgesOfVerts (Buckets) provides a simpler count-offset mapping for edge-per-vertex queries,
+/// used by loadNeighbours() and related functions. This is the static-mode predecessor to NeighChunks.
+///
+/// @section editing Topology Operations
+///
+/// @subsection bevel Bevel
+///
+/// bevel_vert() creates new vertices and edges around an existing vertex to simulate beveling.
+/// bevel() applies bevel along multiple edges with configurable wedge/flat flags (BevelFlags).
+/// These are the most complex topology operations — they insert vertices, split edges, create faces.
+///
+/// @subsection extrude Extrude and Bridge
+///
+/// extrudeVertLoop() duplicates a vertex loop and connects with edges/faces.
+/// extrudeFace() extrudes a polygon along its normal.
+/// bridge_quads() / bridgeFacingPolygons() connect two polygon loops with faces.
+/// plateBetweenEdges() / plateBetweenVertStrips() fill between edge strips with subdivided plates.
+///
+/// @subsection edge_loop Edge Loop Sorting
+///
+/// sortEdgeLoop() / sortPotentialEdgeLoop() reorder a set of edges into a connected loop
+/// by matching shared vertices. Used by polygon() to extract vertex order from edge list.
+///
+/// @section selection Selection and Picking
+///
+/// Builder2 inherits SelectionBanks for multiple named selections.
+/// Selection methods: select_in_sphere/cylinder/box, pickVertex/pickEdge/pickTriangle by ray,
+/// selectRect for box selection, selectEdgesBySDF/selectVertsBySDF for predicate-based selection.
+/// Selections store ordered vertex/edge/face indices (ordered = useful for edge loops).
+///
+/// @section assertions Debug Assertions
+///
+/// The _assert() macro (from globals.h) checks invariants in DEBUGBUILD mode:
+/// - Duplicate vertex detection (findVert with RvertCollapse tolerance)
+/// - Duplicate edge/tri detection (findEdgeByVerts_brute)
+/// - Vertex index bounds checking
+/// - On failure: prints condition, line, function, file; then exits if exit_on_error is true.
+/// In release builds, _assert is a no-op (zero overhead).
+///
+/// @section dynamic_mode Dynamic Mode — Soft Remove and Compaction
+///
+/// - setDynamicMode(true): assigns UIDs, sets alive flags on existing elements.
+/// - removeVertSoft/EdgeSoft/TriSoft: clear alive bit (flags & 1). Element stays in array,
+///   all indices remain valid. No reindexing needed.
+/// - compactDead(): full garbage collection. Builds old->new index maps for verts/edges/tris,
+///   compacts all arrays, remaps every cross-reference (edges, tris, strips, chunks, tri->chunk),
+///   rebuilds neighbor lists. Call when dead elements accumulate and dense arrays are needed.
+///
+/// @section io I/O
+///
+/// - write_obj() / read_obj(): Wavefront OBJ import/export with mask for selective component loading.
+/// - export_pos/edges/tris(): flat array export for simulation (TrussDynamics) and GPU rendering.
+/// - SpaceCraft2Mesh2.h: converts Builder2 mesh to truss simulation format (.truss files).
+///
+/// @section pipeline Pipeline
+///
+/// Builder2 is used in a split pipeline:
+/// - spaceCraftMeshExport: Lua spacecraft definition -> Builder2 mesh -> .obj + .truss files
+/// - trussSimBatch: .truss file -> TrussDynamics simulation -> .xyz trajectory
+/// - spaceCraftEditor: interactive SDL/OpenGL editor using Builder2 directly
 
 
 #include <vector>
@@ -29,6 +145,7 @@
 
 #include "globals.h"
 #include "Buckets.h"
+#include "NeighChunks.h"
 
 #include "Selection.h"
 
@@ -78,14 +195,22 @@ static double RvertCollapse = 1e-3;
         };
     };
 
-
 template<typename T>
 struct VertT{ // double8
     union{
-	    struct{ 
+	    struct{  // static/render mode
             Vec3T<T> pos;
             Vec3T<T> nor;
-            Vec2T<T> uv; 
+            Vec2T<T> uv;
+        };
+        struct{  // dynamic/edit mode — reuses nor+uv bytes
+            Vec3T<T> pos_pad;   // same memory as pos, just for offset
+            int32_t  flags;     // &1=alive, &2=boundary, &4=selected, ...
+            int32_t  uid;       // unique identifier
+            int32_t  chunk;     // index of chunk to which this vertex belongs
+            int16_t  i0ngVert;  // offset into neighbor vertex index array (slot index)
+            int16_t  i0ngEdge;  // offset into neighbor edge index array
+            int16_t  i0ngPoly;  // offset into neighbor poly index array
         };
 		struct{ 
             Quat4T<T> lo;
@@ -96,7 +221,7 @@ struct VertT{ // double8
     VertT()=default;
     VertT( const Vec3T<T>& pos_, const Vec3T<T>& nor_=Vec3T<T>{0,0,0,0}, const Vec2T<T>& uv_=Vec2T<T>{0,0} ):pos(pos_),nor(nor_),uv(uv_){};
 };
-using Vert = VertT<double>; 
+using Vert = VertT<double>;
 
 class Builder2 : public SelectionBanks { public:
     //bool bnor = true;
@@ -124,6 +249,15 @@ class Builder2 : public SelectionBanks { public:
     
     //std::vector<std::unordered_set<int>> edgesOfVerts; // edges of each vertex
     Buckets edgesOfVerts;
+
+    // --- dynamic mesh neighbor lists (chunked, with overflow)
+    NeighChunks ngVerts;  // vertex -> neighbor vertex indices
+    NeighChunks ngEdges;  // vertex -> incident edge indices
+    NeighChunks ngPolys;  // vertex -> incident polygon/tri indices
+    int nextUID_vert = 0;
+    int nextUID_edge = 0;
+    int nextUID_poly = 0;
+    bool bDynamicMode = false;  // when true, verts use dynamic metadata instead of nor/uv
 
     // Edit settings
     bool bExitError    = true;
@@ -404,6 +538,20 @@ class Builder2 : public SelectionBanks { public:
     int   findMostFacingNormal(Vec3d hray, Vec2i chrange,     double cosMin=0.0, bool bTwoSide=false, double distWeight=0.0, Vec3d ray0=Vec3dZero )const;
 
     void clear();
+
+    // --- dynamic mesh mode: soft remove (flag as dead)
+    void setDynamicMode(bool b);
+    void removeVertSoft(int iv);
+    void removeEdgeSoft(int ie);
+    void removeTriSoft (int it);
+    bool isVertAlive(int iv) const { return verts[iv].flags & 1; }
+    bool isEdgeAlive(int ie) const { return edges[ie].w & 1; }
+    // build neighbor lists from current edges/tris into ngVerts/ngEdges/ngPolys
+    void buildDynNeighbors();
+    // compact: remove dead entries from neighbor lists, reindex
+    void compactDead();
+    int countAliveVerts() const;
+    int countAliveEdges() const;
 
 
     bool sortPotentialEdgeLoop( int n, Vec2i* edges, int* iverts )const;

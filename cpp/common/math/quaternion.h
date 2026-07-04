@@ -3,6 +3,24 @@
 // read also:
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/
 
+/// @file quaternion.h
+/// @brief Quaternion for rotations — but more importantly, the Quat4T union is the engine's universal 4-component container.
+///
+/// While Quat4T<double> (Quat4d) is used for actual rotation quaternions (slerp, toMatrix,
+/// fromAxisAngle), Quat4T<int> (Quat4i) is the structural backbone of Builder2:
+/// - edges[] are Quat4i {a, b, type, type/aliveFlags} — two vertex indices + metadata
+/// - tris[] are Quat4i {a, b, c, chunkIndex} — three vertex indices + back-reference
+/// - chunks[] are Quat4i {i0_strips, i0_edges, n, type} — offsets into strips array
+/// - blocks[] are Quat4i {nVerts, nEdges, nTris, nChunks} — size snapshots
+///
+/// The {lo, hi} union member (two Vec2) lets Quat4i masquerade as an edge endpoint pair
+/// via .lo.{i,j} — this is how Builder2::getEdge() and findEdgeByVerts() work.
+/// The {f, e} member (Vec3 + scalar) is used in physics for force+energy packing.
+///
+/// project_beam_to_sphere() implements trackball rotation — mapping 2D mouse position
+/// to a point on a sphere, with smooth transition from sphere to hyperbolic sheet near
+/// the rim to avoid discontinuities.
+
 #ifndef  quaternion_h
 #define  quaternion_h
 

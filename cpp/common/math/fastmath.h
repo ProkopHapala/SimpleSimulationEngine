@@ -2,6 +2,25 @@
 #ifndef  fastmath_h
 #define  fastmath_h
 
+/// @file fastmath.h
+/// @brief Fast function approximations for physics simulation hot loops.
+///
+/// The core motivation: in molecular dynamics and force-field evaluation, functions like
+/// exp(), erf(), sin/cos are called millions of times per timestep. Standard libm calls
+/// are too slow and over-precise (we need ~1e-6 relative error, not 1 ULP).
+///
+/// Key approximation strategies used:
+/// - **Chebyshev/Taylor polynomial fits** with even/odd decomposition to halve multiply count
+/// - **Repeated squaring** for exponentials: compute low-degree polynomial of x/n, then square n times
+///   (e.g. exp_p8: degree-4 poly of x/8, then 3 squarings = exp(x) to ~1e-7)
+/// - **erf(x)/x approximation** (erfx_e6, erfx_e9): fitted specifically for screened Coulomb
+///   potentials where we need erf(k*x)/x, not erf alone — avoids division singularity at x=0
+/// - **finiteExp**: compact-support exponential replacement (1-Cx)^17 * (1-Bx)^2 that goes
+///   exactly to zero at Rcut with continuous derivative — used for finite-range potentials
+///
+/// Also includes gonioApprox.h (Chebyshev sin/cos), integerOps.h (bit tricks),
+/// and macroUtils.h (SWAP, _realloc, Buf/Arr wrappers, loop macros).
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>

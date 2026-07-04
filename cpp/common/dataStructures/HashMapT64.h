@@ -1,6 +1,14 @@
 #ifndef HashMapT64_h
 #define HashMapT64_h
 
+/// @file HashMapT64.h
+/// @brief Templated 64-bit key hash map — stores arbitrary type T instead of raw pointers.
+///
+/// Same open-addressing + linear probing design as HashMap64, but the stored value type
+/// is a template parameter T. The caller must set EMPTY_O (the sentinel for empty slots)
+/// after construction, since T's empty value is type-dependent (e.g. -1 for ints,
+/// nullptr for pointers, NaN for floats).
+
 /*
 NOTES:
 

@@ -2,6 +2,23 @@
 #ifndef Table_h
 #define Table_h
 
+/// @file Table.h
+/// @brief Column-oriented table with heterogeneous types over a flat byte buffer.
+///
+/// Table provides named-column access over a raw char* data buffer. Each column stores
+/// an offset into the buffer (relative to the bind pointer), a sub-element count (e.g. 3
+/// for Vec3), and a DataType tag. This lets you iterate rows and format/parse columns
+/// by type without knowing the struct layout at compile time.
+///
+/// The motivation: simulation data (particles, mesh elements) is stored as flat arrays
+/// of POD structs for cache efficiency. But for I/O (CSV export, debugging, inspection)
+/// you need to access individual fields by name and type. Table bridges this by recording
+/// field offsets at bind time (via addColum) and providing toStr/fromStr for runtime
+/// type-dispatched formatting.
+///
+/// The _addColum / _addColum1d macros capture the field name as a string (#name) and
+/// its address, so you can register a struct's fields in one line each.
+
 #include <stdio.h>
 #include <vector>
 #include <string>

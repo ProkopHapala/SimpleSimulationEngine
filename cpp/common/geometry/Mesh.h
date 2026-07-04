@@ -2,6 +2,19 @@
 #ifndef  Mesh_h
 #define  Mesh_h
 
+/// @file Mesh.h
+/// @brief Deprecated half-edge mesh (OMesh) and the newer MeshBuilder — predecessor to MeshBuilder2.
+///
+/// OMesh uses std::vector for points, normals, triangles, edges, and polygons with soft-removal
+/// (removed_* index lists). It has edge-to-vertex and vertex-to-edge adjacency via hash maps.
+/// Marked deprecated in favor of Builder2 (MeshBuilder2.h) which uses flat arrays and Quat4i
+/// encoding for better cache performance and GPU upload.
+///
+/// Also contains MeshEdge (with crease angle for normal smoothing), Polygon (with triangulation
+/// cache), and OBJ import/export. The OBJ parser is still referenced by some tools.
+/// vertIdjk() packs three sorted vertex indices into a uint32 for triangle deduplication —
+/// the same technique Builder2 uses via its edge hash map.
+
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>

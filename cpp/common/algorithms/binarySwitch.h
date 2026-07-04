@@ -2,6 +2,22 @@
 #ifndef  binarySwitch_h
 #define  binarySwitch_h
 
+/// @file binarySwitch.h
+/// @brief Bitwise-dispatched lookup: find which level a value falls into, in O(log n) with no branches.
+///
+/// binarySwitch uses a bit-walking technique: instead of comparing against each level
+/// sequentially, it builds the result index one bit at a time from MSB to LSB. At each
+/// step, it tests `levels[i | bit]` — if the value is >= that level, it sets the bit in i.
+/// This gives O(log n) comparisons with a fixed loop count (npow iterations), making it
+/// branch-predictable and suitable for GPU/Shader code.
+///
+/// The template version (binarySwitchT<T, npow, n>) fixes the table size at compile time,
+/// so the compiler can unroll the loop entirely — zero branch mispredictions, all constants.
+///
+/// bakeSwitchTable() pre-computes a dense lookup table from a sparse mapping (xs -> ys),
+/// filling gaps with a default value. This trades memory for O(1) lookup — useful when
+/// the switch is evaluated millions of times (e.g. per-particle type dispatch in a simulation).
+
 #include <cstdint>
 
 /*

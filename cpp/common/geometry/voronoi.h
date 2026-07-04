@@ -2,6 +2,19 @@
 #ifndef voronoi_h
 #define voronoi_h
 
+/// @file voronoi.h
+/// @brief Alternative Voronoi implementation using Steven Fortune's original C code structure.
+///
+/// A second, independent Voronoi implementation based on Sahib Yar's GitHub port of Fortune's
+/// original algorithm. Uses a different memory management approach (Freelist/Freenode pool
+/// allocator) and half-edge data structure (Halfedge with left/right site pointers) rather than
+/// the beach-line BST used in Voronoi.h.
+///
+/// The two implementations coexist because they have different tradeoffs: this one uses a
+/// custom memory pool (faster for large N, no heap fragmentation) while Voronoi.h uses STL
+/// containers (easier to integrate, safer memory management). The GraphEdge output format
+/// (linked list of line segments) is simpler for downstream consumers that just need edges.
+
 // from here: https://github.com/SahibYar/Voronoi-Fortune-Algorithm
 
 #include <vector>

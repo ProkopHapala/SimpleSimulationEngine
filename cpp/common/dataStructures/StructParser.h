@@ -2,6 +2,14 @@
 #ifndef StructParser_h
 #define StructParser_h
 
+/// @file StructParser.h
+/// @brief Brace-delimited struct parser: `{ field; field; }` into ParserItem tree.
+///
+/// Configurable delimiters (default: `{}` for nesting, `;` for field separation).
+/// Same jsmn-inspired tokenization as LispParser — tokens are spans into the original
+/// string, no copying. Used for reading structured config files and serialized data
+/// where the format is simple enough to not need a full grammar.
+
 #include <vector>
 #include <cstdio>
 #include <cstring>

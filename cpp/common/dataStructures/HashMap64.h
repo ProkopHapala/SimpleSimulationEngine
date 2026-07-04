@@ -1,6 +1,15 @@
 #ifndef HashMap64_h
 #define HashMap64_h
 
+/// @file HashMap64.h
+/// @brief 64-bit key open-addressing hash map for large-scale spatial hashing.
+///
+/// Same design as HashMap.h but with uint64_t keys (box IDs). The header includes
+/// extensive notes on key width vs. spatial range: 21 bits/axis covers the Jupiter system
+/// at 1km resolution; 32 bits/axis reaches Pluto; 52 bits (double mantissa) covers 0.5
+/// light-years at 1m resolution. The practical limit is raycast efficiency — traversing
+/// >1000 boxes per ray is already super inefficient, so wider keys are rarely needed.
+
 /*
 NOTES:
 

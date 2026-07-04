@@ -5,6 +5,24 @@
 #ifndef  geom3D_h
 #define  geom3D_h
 
+/// @file geom3D.h
+/// @brief 3D computational geometry: distance queries, intersection tests, triangle/plane/box operations.
+///
+/// The 3D companion to geom2D.h. Key categories:
+/// - **Analytic geometry**: circle_3point (circumscribed circle from 3 points via the bisector
+///   method), plane from 3 points, triangle area via cross product
+/// - **Distance**: point-to-line, point-to-plane, point-to-triangle (with barycentric clipping
+///   to handle the closest-point-on-edge case)
+/// - **Intersection**: ray-triangle (Möller–Trumbore), ray-sphere, ray-AABB, segment-triangle,
+///   sphere-sphere, AABB-AABB — the building blocks of collision detection and picking
+/// - **Closest features**: closestPointOnTriangle returns the nearest point on a triangle to
+///   a query point, using the edge-by-edge projection method (not barycentric — more robust
+///   for degenerate triangles)
+///
+/// The TODO block lists desired primitive types (LineSegment, Ray, AABB, Sphere, Plane, Slab,
+/// Capsule) with multiple representations — this reflects the tension between "store endpoints"
+/// (easier to modify) and "store origin+direction" (easier to intersect).
+
 #include <vector>
 #include <math.h>
 #include <cstdlib>
