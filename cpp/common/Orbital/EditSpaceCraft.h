@@ -2,6 +2,23 @@
 #ifndef  EditSpaceCraft_h
 #define  EditSpaceCraft_h
 
+/// @file EditSpaceCraft.h
+/// @brief Lua bindings for spacecraft construction — exposes Node, Girder, Ring, Rope, Slider, Shield, etc. to Lua scripts.
+///
+/// Each `l_<ComponentName>` function is a Lua C-function that parses arguments, creates the
+/// component via **SpaceCraft::add_*** / **make_***, and pushes the component ID back to Lua.
+/// The global **theSpaceCraft** pointer and **theLua** state are set up by `initSpaceCraftingLua()`.
+///
+/// Key design:
+/// - **make_Ring2()** — constructs a ring from 4 slider-anchor points on existing girders;
+///   uses `circle_3point()` to fit the ring, then `intersect_RingGirder()` for undefined anchors
+/// - **l_Slider()** — binds a slider to a structural component at a parametric position `calong`
+/// - **SpaceCraftWorkshop** holds material catalogs (metals, stick types, panel layers) that
+///   Lua scripts reference by name string
+/// - **radiositySolver** is a global instance included here for surface thermal coupling
+///
+/// Scripts are loaded via `Lua::dofile(theLua, fname)` — typically from `data/*.lua` files.
+
 #include <string>
 #include <unordered_map>
 

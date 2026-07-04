@@ -1,6 +1,26 @@
 #ifndef  SpaceCraftComponents_h
 #define  SpaceCraftComponents_h
 
+/// @file SpaceCraftComponents.h
+/// @brief Spacecraft component class hierarchy — nodes, girders, rings, ropes, sliders, plates, tanks, thrusters.
+///
+/// All components derive from **ShipComponent** → **StructuralComponent** (has mesh ranges and nodes).
+/// **NodeLinker** (girder, rope) connects two nodes; **Plate** (shield, radiator) spans two girders;
+/// **Slider** inherits **Node** and slides along a **Path** on a structural component's side.
+///
+/// Key design:
+/// - **ComponetKind** enum maps each component type to an int for Lua dispatch and picking
+/// - **StructuralComponent** stores `pointRange`/`stickRange`/`chunkRange` — index intervals
+///   into the flat truss arrays, enabling O(1) "which component owns vertex i?" via range check
+/// - **Slider::path** is a list of truss vertex indices along the rail; `path.cur` is the
+///   interpolation parameter (float position along path, wraps for closed rings)
+/// - **Slider::move()** implements a simple PD controller: drive toward `speed` with `Kdv` stiffness,
+///   clamped by `forceMax` — this is the actuator model
+/// - **updateSlidersPaths()** finds the nearest point on each slider's rail to snap `path.cur`
+///
+/// Materials: **StickMaterial** (cross-section, wall thickness, pre-strain) and **PanelMaterial**
+/// (layered stack with area density) are stored in **SpaceCraftWorkshop** catalog.
+
 #include <stdio.h>
 #include <string.h>
 #include <string>

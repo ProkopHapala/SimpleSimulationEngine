@@ -1,3 +1,5 @@
+include_directories( ${COMMON_SDL_SRCS}/SDL2OGL )
+
 add_library( Convex2d OBJECT Convex2d.cpp )
 add_library( Voronoi  OBJECT Voronoi.cpp  )
 add_library( voronoi  OBJECT voronoi.cpp  )

@@ -36,7 +36,7 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 
-#include "MeshFileFormats.h"
+#include "MeshFileFormats.h"  // now in common/geometry/ (global include path)
 
 class MeshViewerApp : public AppSDL2OGL_3D { public:
 

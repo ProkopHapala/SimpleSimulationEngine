@@ -2,6 +2,22 @@
 #ifndef  SpaceCraftGUI_h
 #define  SpaceCraftGUI_h
 
+/// @file SpaceCraftGUI.h
+/// @brief GUI panels and picking controller for the spacecraft editor — binds component properties to editable widgets.
+///
+/// Defines **EDIT_MODE** (vertex/edge/component), **PickerUI** (ray-based picking controller),
+/// and **BoundGUI** subclasses (**GirderGUI**, **PlateGUI**) that bind spacecraft component
+/// parameters to on-screen editable text fields.
+///
+/// Key design:
+/// - **PickerUI** delegates to **Picker::pick_nearest()** — the sim's brute-force ray test
+/// - Mode cycling with `switch_mode()` rotates vertex→edge→component→vertex
+/// - **BoundGUI** uses **GUIPanelWatcher** drivers to read/write component fields live
+/// - **dir2tree()** populates a TreeView from the filesystem for Lua script browsing
+///
+/// Limitation: picking is O(n) brute-force; no spatial acceleration yet.
+/// Missing: ring/tank/thruster/gun GUI panels — only girder and plate panels exist.
+
 #include <unistd.h>
 #include <dirent.h>
 

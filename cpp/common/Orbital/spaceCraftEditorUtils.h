@@ -2,6 +2,13 @@
 #ifndef spaceCraftEditorUtils_h
 #define spaceCraftEditorUtils_h
 
+/// @file spaceCraftEditorUtils.h
+/// @brief Helper functions for the spacecraft editor — truss construction from XYZ files, grid generation.
+///
+/// Currently minimal: contains **makeTruss()** which loads a truss plan from `data/octShip.xyz`,
+/// applies an affine scale, generates girders with automatic bridging, and compiles a display list.
+/// Intended to grow with editor-specific utilities (picking acceleration, export helpers).
+
 #include "Tree.h"
 
 //#include "Truss.h"

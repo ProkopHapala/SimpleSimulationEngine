@@ -338,7 +338,8 @@ inline void triangulateStrip_parametric(
     const std::vector<int>& rowStart,
     const std::vector<int>& rowCounts,
     const std::vector<int>& rowsFlat,
-    int                 r
+    int                 r,
+    bool                bSkipRowA = false
 ){
     int offA   = rowStart[r    ];
     int offB   = rowStart[r + 1];
@@ -350,6 +351,7 @@ inline void triangulateStrip_parametric(
 
     int ia = 0;
     int ib = 0;
+    bool bFirstTri = true;
 
     while( ia < countA-1 || ib < countB-1 ){
         char choice;
@@ -370,9 +372,11 @@ inline void triangulateStrip_parametric(
             int aNext = rowsFlat[offA + ia + 1];
             int bCurr = rowsFlat[offB + ib    ];
 
-            builder.edge(aCurr,bCurr);
+            // (aCurr,bCurr) is shared with previous triangle — skip on non-first
+            if(bFirstTri) builder.edge(aCurr,bCurr);
             builder.edge(bCurr,aNext);
-            builder.edge(aCurr,aNext);
+            // Row A edges already created by previous strip (as row B) — skip if r>0
+            if(!(bSkipRowA && !bFirstTri)) builder.edge(aCurr,aNext);
 
             ++ia;
         }else{
@@ -381,12 +385,14 @@ inline void triangulateStrip_parametric(
             int bCurr = rowsFlat[offB + ib    ];
             int bNext = rowsFlat[offB + ib + 1];
 
-            builder.edge(aCurr,bCurr);
+            // (aCurr,bCurr) is shared with previous triangle — skip on non-first
+            if(bFirstTri) builder.edge(aCurr,bCurr);
             builder.edge(bCurr,bNext);
             builder.edge(aCurr,bNext);
 
             ++ib;
         }
+        bFirstTri = false;
     }
 }
 
@@ -444,18 +450,10 @@ inline void ParametricQuadPatch(
         }
     }
 
-    // Edges along each row
-    for(int i=0; i<nRows; ++i){
-        int off = rowStart[i];
-        int m   = rowCounts[i];
-        for(int j=0; j<m-1; ++j){
-            builder.edge(rowsFlat[off + j], rowsFlat[off + j + 1]);
-        }
-    }
-
+    // Row edges are created by triangulateStrip_parametric (aCurr->aNext and bCurr->bNext)
     // Parametric triangulation between successive rows (index-space only)
     for(int r=0; r<nRows-1; ++r){
-        triangulateStrip_parametric(builder, rowStart, rowCounts, rowsFlat, r);
+        triangulateStrip_parametric(builder, rowStart, rowCounts, rowsFlat, r, r>0);
     }
 }
 
@@ -669,6 +667,53 @@ void SlabTube(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec2f Rs, fl
     auto uvfunc1 = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a     ,Rs.b     ,L); };
     auto uvfunc2 = [&](Vec2f uv){ uv.y+=uv.x*dudv; uv.y*=2*M_PI; return ConeUVfunc(uv,Rs.a+up.z,Rs.b+up.z,L); };
     UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
+}
+
+// Parabolic analogue of TubeSheet: same connectivity/topology, but mapped to a paraboloid
+// r in [0, R], angle in [0, 2π], z = (L / R^2) * r^2
+// Ported from JS MeshesUV.js::ParabolaSheet
+void ParabolaSheet(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, int dirMask=0b1011, float twist=0.5, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
+    float dudv = (twist*(n.x-1.))/n.y;
+    float K = (R>0) ? L/(R*R) : 0.0f;
+    auto uvfunc = [&](Vec2f uv){ uv.y=(uv.y+uv.x*dudv)*2*M_PI; uv.x*=R; return ParabolaUVfunc(uv,K); };
+    Vec2f duv = { (UVmax.x-UVmin.x)/(n.x-1), (UVmax.y-UVmin.y)/(n.y) };
+    UV_sheet(builder,n,UVmin,duv,dirMask,stickTypes,uvfunc,false,true);
+}
+
+// Double-layer paraboloid with slab connectivity (parabolic analogue of SlabTube)
+// r in [0, R], angle in [0, 2π], z = (L / R^2) * r^2, second layer offset by up.z along +z
+// Ported from JS MeshesUV.js::ParabolaSlab_wrap
+void ParabolaSlab_wrap(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, Vec3f up, int dirMask, float twist=0.5, Quat4i stickTypes=Quat4i{0,0,0,0} ) {
+    float dudv = (twist*(n.x-1.))/n.y;
+    float K = (R>0) ? L/(R*R) : 0.0f;
+    auto uvfunc1 = [&](Vec2f uv){ float r=R*uv.x; float ang=(uv.y+uv.x*dudv)*2*M_PI; Vec2f cs; cs.fromAngle(ang); float z=K*r*r;        return Vec3f{cs.a*r, cs.b*r, z}; };
+    auto uvfunc2 = [&](Vec2f uv){ float r=R*uv.x; float ang=(uv.y+uv.x*dudv)*2*M_PI; Vec2f cs; cs.fromAngle(ang); float z=K*r*r+up.z;    return Vec3f{cs.a*r, cs.b*r, z}; };
+    UV_slab(builder,n,UVmin,UVmax,up,dirMask,stickTypes,uvfunc1,uvfunc2);
+}
+
+// Annular parabolic patch with independent inner/outer ring tessellation
+// Uses ParametricQuadPatch for variable-row connectivity, then remaps (x,y) -> paraboloid
+// Ported from JS MeshesUV.js::ParametricParabolaPatch
+inline void ParametricParabolaPatch(Builder2& builder, int nTop, int nBottom, int nRows, float R1, float R2, float L) {
+    int iv0 = builder.verts.size();
+    Vec3d p00 = {0.0, 0.0, 0.0};
+    Vec3d p01 = {0.0, 1.0, 0.0};
+    Vec3d p10 = {1.0, 0.0, 0.0};
+    Vec3d p11 = {1.0, 1.0, 0.0};
+    // Swap: row 0 (inner) gets nBottom, row nRows-1 (outer) gets nTop
+    ParametricQuadPatch(builder, nBottom, nTop, nRows, p00, p01, p10, p11);
+    int iv1 = builder.verts.size();
+    float K = (R2>0) ? L/(R2*R2) : 0.0f;
+    for(int i=iv0; i<iv1; i++) {
+        double u_rad = builder.verts[i].pos.y;  // 0..1 radial (inner -> outer)
+        double u_ang = builder.verts[i].pos.x;  // 0..1 angular
+        double r = R1 + (R2 - R1) * u_rad;
+        double ang = u_ang * 2.0 * M_PI;
+        Vec2f cs; cs.fromAngle((float)ang);
+        builder.verts[i].pos.x = cs.a * r;
+        builder.verts[i].pos.y = cs.b * r;
+        builder.verts[i].pos.z = K * r * r;
+    }
 }
 
 void QuadPanel(Builder2& builder, Vec2i n, Vec2f UVmin, Vec2f UVmax, Vec3f p00, Vec3f p01, Vec3f p10, Vec3f p11, float width, Quat4i stickTypes=Quat4i{0,0,0,0} ) {

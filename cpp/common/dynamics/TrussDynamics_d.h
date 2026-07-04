@@ -11,6 +11,7 @@
 #include "VecN.h"
 
 #include "Buckets.h"
+#include "BucketUtils.h"
 
 #include "raytrace.h"
 #include "geom3D.h"

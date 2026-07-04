@@ -409,8 +409,8 @@ void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     };
 
     int TrussDynamics_d::pick_nearest(Vec3d ray0, Vec3d hray, int& ipick, int mask, double Rmax ) {
-        if     (mask==1){ ipick=pick_point_brute((Vec3d)ray0,(Vec3d)hray,Rmax); return 1; }
-        else if(mask==2){ ipick=pick_bond_brute ( ray0, hray, Rmax );           return 2; }
+        if     (mask==1){ ipick = (pointBBs.ncell>0 && BBs) ? pick_point_bucket( pointBBs, BBs, points, ray0, hray, Rmax ) : pick_point_brute((Vec3d)ray0,(Vec3d)hray,Rmax); return 1; }
+        else if(mask==2){ ipick = (edgeBBs .ncell>0 && BBs) ? pick_bond_bucket ( edgeBBs,  BBs, bonds, points, ray0, hray, Rmax ) : pick_bond_brute ( ray0, hray, Rmax );           return 2; }
         return -1;
     };
     

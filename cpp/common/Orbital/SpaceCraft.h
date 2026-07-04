@@ -2,6 +2,25 @@
 #ifndef  SpaceCraft_h
 #define  SpaceCraft_h
 
+/// @file SpaceCraft.h
+/// @brief Central spacecraft data model — owns all components, provides ray-picking and mesh-element lookup.
+///
+/// **SpaceCraft** is the aggregate root: it owns vectors of **Node**, **Girder**, **Ring**,
+/// **Rope**, **Slider**, **Shield**, **Radiator**, **Tank**, **Thruster**, **Gun**, etc.
+/// Components are added via `add_*` / `make_*` methods (called from Lua bindings in EditSpaceCraft.h).
+///
+/// Key design decisions:
+/// - **pick()** — ray-casts against girders/ropes (line distance) and shields/radiators (quad intersection),
+///   returns closest hit with `pickedTyp` set to **ComponetKind**. Missing: rings, tanks, thrusters, guns.
+/// - **find_mesh_element()** — maps a truss vertex/edge/chunk index back to its owning component
+///   by scanning `pointRange`/`stickRange`/`chunkRange` intervals — O(n_components) linear scan.
+/// - **build_order** preserves insertion order so structural components are meshed before dependents
+///   (sliders attached to girders need the girder's mesh vertices to already exist).
+/// - **checkIntegrity()** validates bound-node pointers to catch dangling references early.
+///
+/// Used by the editor for component picking, by **SpaceCraft2Mesh2** for truss generation,
+/// and by **SpaceCraft2Truss** for dynamics export.
+
 #include <vector>
 
 #include "Vec2.h"

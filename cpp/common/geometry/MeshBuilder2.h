@@ -642,6 +642,8 @@ class Builder2 : public SelectionBanks { public:
 
     void write_obj( const char* fname, uint8_t mask = 0xFF )const;
     void read_obj( const char* fname, uint8_t mask = 0xFF );
+    void exportSVG( const char* fname, int projAxis=2 )const;
+    void exportSVGmultiView( const char* fname, int nViews, const Mat3d* rots, int projAxis=2 )const;
     
     void printSelection( bool bDetail=false )const;
     void printSelectedVerts()const;

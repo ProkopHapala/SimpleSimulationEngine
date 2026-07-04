@@ -2,6 +2,23 @@
 #ifndef  SpaceCraftDraw_h
 #define  SpaceCraftDraw_h
 
+/// @file SpaceCraftDraw.h
+/// @brief OpenGL immediate-mode rendering for spacecraft components, truss dynamics, sliders, and asteroids.
+///
+/// All drawing uses **glBegin/glEnd** immediate mode (legacy OpenGL) — no VBOs or shaders.
+/// This is intentional: the editor prioritizes rapid iteration and debug visualization
+/// over rendering performance.
+///
+/// Key functions:
+/// - **drawSpaceCraft()** — full spacecraft wireframe with component-type coloring
+/// - **drawMeshBuilder2()** — truss mesh from **Mesh::Builder2** with lighting and optional wireframe
+/// - **renderTruss()** — bond coloring by strain magnitude (red=compressed, blue=stretched)
+/// - **drawSliderPaths()** / **drawSliders()** / **drawSliderBonds()** — three layers of slider visualization
+/// - **drawPicked()** — highlights the picked component (girder line, plate contour)
+/// - **drawAsteroide()** — procedural asteroid sphere with craters (used for background objects)
+///
+/// Used by both **spaceCraftEditor** and **spaceCraftDynamics** apps for visual feedback.
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw.h"

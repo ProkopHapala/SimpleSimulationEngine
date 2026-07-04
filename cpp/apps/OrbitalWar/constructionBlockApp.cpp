@@ -59,6 +59,14 @@ Vec3f scanf_Vec3f( const char* s, const char* label=0 ){
     return v;
 }
 
+bool bHeadless = false;
+
+float scanf_float( const char* s, const char* label=0 ){
+    float v = atof(s);
+    if(label) printf("scanf_float() %s: %f\n", label, v);
+    return v;
+}
+
 
 //#include "testUtils.h"
 
@@ -190,7 +198,7 @@ class ConstructionBlockApp : public AppSDL2OGL_3D { public:
 
 };
 
-ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+ConstructionBlockApp::ConstructionBlockApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_, makeWindowTitle("ConstructionBlockApp", argc, argv).c_str() ) {
     //Lua1.init();
     fontTex       = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
@@ -592,6 +600,59 @@ int main(int argc, char *argv[]){
         TorusSheet(truss, nuv, UVmin, UVmax, Rs, dirMask, 0.0);
     }};
 
+    funcs["-ParabolaSheet"] = {6, [&](const char** ss){ 
+        printf("funcs[-ParabolaSheet]: Parabolic single-layer truss: \n"); 
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec2f UVmin = scanf_Vec2f(ss[1], "UVmin"); 
+        Vec2f UVmax = scanf_Vec2f(ss[2], "UVmax"); 
+        float R     = scanf_float(ss[3], "R");     
+        float L     = scanf_float(ss[4], "L");     
+        int dirMask = read_binary_int(ss[5]); 
+        truss.clear();
+        ParabolaSheet(truss, nuv, UVmin, UVmax, R, L, dirMask, 0.5);
+        printf("ParabolaSheet: "); truss.printSizes();
+        truss.write_obj("parabola_sheet.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("parabola_sheet.svg");
+        // Multi-view: top, front, side, 45deg
+        Mat3d rots[4] = { Mat3dIdentity, Mat3d{0,0,1, 0,1,0, -1,0,0}, Mat3d{1,0,0, 0,0,-1, 0,1,0}, Mat3d{0.7071,0,0.7071, 0,1,0, -0.7071,0,0.7071} };
+        truss.exportSVGmultiView("parabola_sheet_views.svg", 4, rots);
+    }};
+
+    funcs["-ParabolaSlab"] = {7, [&](const char** ss){ 
+        printf("funcs[-ParabolaSlab]: Parabolic double-layer slab: \n"); 
+        Vec2i nuv   = scanf_Vec2i(ss[0], "nuv");   
+        Vec2f UVmin = scanf_Vec2f(ss[1], "UVmin"); 
+        Vec2f UVmax = scanf_Vec2f(ss[2], "UVmax"); 
+        float R     = scanf_float(ss[3], "R");     
+        float L     = scanf_float(ss[4], "L");     
+        Vec3f up    = scanf_Vec3f(ss[5], "up");    
+        int dirMask = read_binary_int(ss[6]); 
+        truss.clear();
+        ParabolaSlab_wrap(truss, nuv, UVmin, UVmax, R, L, up, dirMask, -0.5);
+        printf("ParabolaSlab_wrap: "); truss.printSizes();
+        truss.write_obj("parabola_slab.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("parabola_slab.svg");
+        Mat3d rots[4] = { Mat3dIdentity, Mat3d{0,0,1, 0,1,0, -1,0,0}, Mat3d{1,0,0, 0,0,-1, 0,1,0}, Mat3d{0.7071,0,0.7071, 0,1,0, -0.7071,0,0.7071} };
+        truss.exportSVGmultiView("parabola_slab_views.svg", 4, rots);
+    }};
+
+    funcs["-ParametricParabola"] = {6, [&](const char** ss){ 
+        printf("funcs[-ParametricParabola]: Annular parabolic patch: \n"); 
+        int   nTop    = atoi(ss[0]); 
+        int   nBottom = atoi(ss[1]); 
+        int   nRows   = atoi(ss[2]); 
+        float R1      = scanf_float(ss[3], "R1"); 
+        float R2      = scanf_float(ss[4], "R2"); 
+        float L       = scanf_float(ss[5], "L");   
+        truss.clear();
+        ParametricParabolaPatch(truss, nTop, nBottom, nRows, R1, R2, L);
+        printf("ParametricParabolaPatch: "); truss.printSizes();
+        truss.write_obj("parabola_patch.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("parabola_patch.svg");
+        Mat3d rots[4] = { Mat3dIdentity, Mat3d{0,0,1, 0,1,0, -1,0,0}, Mat3d{1,0,0, 0,0,-1, 0,1,0}, Mat3d{0.7071,0,0.7071, 0,1,0, -0.7071,0,0.7071} };
+        truss.exportSVGmultiView("parabola_patch_views.svg", 4, rots);
+    }};
+
     funcs["-bevel"] = {0, [&](const char**){ 
         const int npoint      = 4;
         //const int npoint      = 7;
@@ -793,11 +854,21 @@ int main(int argc, char *argv[]){
         truss.write_obj("truss.obj", ObjMask::Verts | ObjMask::Edges | ObjMask::Polygons );
     }};
 
+    funcs["-headless"] = {0, [&](const char**){ 
+        bHeadless = true;
+        printf("funcs[-headless]: Headless mode enabled, will exit after export\n");
+    }};
+
     //if( argc<=1 ){  funcs["-parabola"].func(0); }
     //if( argc<=1 ){  funcs["-blocks"].func(0); }
     if( argc<=1 ){  funcs["-skelet"].func(0); }
 
     process_args( argc, argv, funcs );
+
+    if( bHeadless ){
+        printf("Headless mode: exiting after export.\n");
+        return 0;
+    }
 
 	//app = new ConstructionBlockApp( junk , 800, 600 );
 	app->loop( 1000000 );

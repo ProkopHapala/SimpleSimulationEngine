@@ -31,6 +31,11 @@ Fail loud — crashes with stack traces > masked bugs. Debug prints gated by ver
 * GPU/OpenCL : memory latency, gather over scatter, local memory, minimize host-device transfers. See skill:`gpu-optimize`.
 * CPU/C++ : cache hierarchy, SIMD vectorization, data-oriented design, loop optimization. See skill:`cpu-perf`.
 
+## Code Reusability & Shared Libraries
+
+- **Placement test**: "Could another app use this?" → if yes, `cpp/common/` or `cpp/common_SDL/` (global include path); if no, `cpp/apps/<AppName>/`.
+- **Never copy-paste** between apps — extract to shared lib and include. Search `common/` and `common_SDL/` before writing any new function.
+
 ## Documentation & Navigation
 
 - Before writing: search existing implementations (skill:`doc-read-navigate`)

@@ -64,6 +64,21 @@ export LD_PRELOAD
 #./$name.x -QuadSlab 10,10 0.0,0.0,0.0 86.602540378,50.0,0.0 0.0,100.0,0.0 86.602540378,150.0,0.0 0.333333,0.333333,7.0 101010111 | tee OUT-constructionBlockApp
 ./$name.x -QuadSlab 10,10 0.0,0.0,0.0 86.602540378,50.0,0.0 0.0,100.0,0.0 86.602540378,150.0,0.0 0.333333,0.333333,7.0  111010101 | tee OUT-constructionBlockApp
 
+# ====== Parabolic Mesh Generators (ported from JS MeshesUV.js)
+# Run headless: generate mesh, export .obj + .svg, exit without GUI loop
+
+# ParabolaSheet: single-layer parabolic truss (magnetic nozzle)
+# ParabolaSheet(n={nx,ny}, UVmin, UVmax, R, L, dirMask, twist)
+./$name.x -headless -ParabolaSheet 6,10 0.2,0.0 1.0,1.0 10.0 10.0 1011 | tee OUT-parabola_sheet
+
+# ParabolaSlab: double-layer parabolic with bracing (nozzle + damper structure)
+# ParabolaSlab(n={nx,ny}, UVmin, UVmax, R, L, up={ox,oy,oz}, dirMask)
+./$name.x -headless -ParabolaSlab 6,8 0.0,0.0 1.0,1.0 10.0 10.0 0.0,0.0,1.2 10001001111 | tee OUT-parabola_slab
+
+# ParametricParabola: annular patch with independent inner/outer tessellation
+# ParametricParabola(nTop, nBottom, nRows, R1, R2, L)
+./$name.x -headless -ParametricParabola 13 4 4 0.5 3.0 3.0 | tee OUT-parabola_patch
+
 
 
 

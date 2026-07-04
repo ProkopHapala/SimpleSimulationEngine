@@ -7,6 +7,7 @@
 #include "arrayAlgs.h"
 #include "raytrace.h"
 #include "testUtils.h"
+#include "MeshFileFormats.h"
 //#include <convolve2D.h>
 
 
@@ -1803,22 +1804,22 @@ int Builder2::plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs, V
     return i0;
 };
 
-int Builder2::export_pos( Vec3d* ps, int i0, int i1 )const{   if(i1<0){ i1=verts.size()-i1; };
+int Builder2::export_pos( Vec3d* ps, int i0, int i1 )const{   if(i1<0){ i1=verts.size()+i1; };
     for(int i=i0; i<=i1; i++){ ps[i]=verts[i].pos; }
     return i1-i0+1;
 }
 
-int Builder2::export_pos( float4* ps, int i0, int i1 )const{     if(i1<0){ i1=verts.size()-i1; };
+int Builder2::export_pos( float4* ps, int i0, int i1 )const{     if(i1<0){ i1=verts.size()+i1; };
     for(int i=i0; i<=i1; i++){ ps[i]=*(float4*)&verts[i].lo;}
     return i1-i0+1;
 }
 
-int Builder2::export_edges( Vec2i* eds, int i0, int i1 )const{   if(i1<0){ i1=edges.size()-i1; };
+int Builder2::export_edges( Vec2i* eds, int i0, int i1 )const{   if(i1<0){ i1=edges.size()+i1; };
     for(int i=i0; i<=i1; i++){ eds[i]=edges[i].lo; }
     return i1-i0+1;
 }
 
-int Builder2::export_tris( Quat4i* tri, int i0, int i1 )const{  if(i1<0){ i1=edges.size()-i1; };
+int Builder2::export_tris( Quat4i* tri, int i0, int i1 )const{  if(i1<0){ i1=tris.size()+i1; };
     for(int i=i0; i<=i1; i++){ tri[i]=tris[i]; }
     return i1-i0+1;
 }
@@ -2768,6 +2769,53 @@ int Builder2::checkAllPointsConnected(bool bExit,bool bPrint) const{
         if(bExit)  exit(0);
     }
     return unconnected_count;
+}
+
+void Builder2::exportSVG( const char* fname, int projAxis )const{
+    std::vector<Vec3d> positions(verts.size());
+    export_pos(positions.data());
+    std::vector<Vec2i> eds(edges.size());
+    export_edges(eds.data());
+    CMesh mesh;
+    mesh.nvert  = verts.size();
+    mesh.nedge  = edges.size();
+    mesh.ntri   = 0;
+    mesh.nfaces = 0;
+    mesh.verts  = positions.data();
+    mesh.edges  = eds.data();
+    mesh.tris   = nullptr;
+    mesh.ngons  = nullptr;
+    mesh.faces  = nullptr;
+    SVGExportOpts opts;
+    opts.showFaces = false;
+    opts.showEdges = true;
+    opts.projAxis  = projAxis;
+    writeSVG(fname, mesh, opts);
+    printf("Mesh::Builder2::exportSVG(%s) DONE\n", fname);
+}
+
+void Builder2::exportSVGmultiView( const char* fname, int nViews, const Mat3d* rots, int projAxis )const{
+    std::vector<Vec3d> positions(verts.size());
+    export_pos(positions.data());
+    std::vector<Vec2i> eds(edges.size());
+    export_edges(eds.data());
+    CMesh mesh;
+    mesh.nvert  = verts.size();
+    mesh.nedge  = edges.size();
+    mesh.ntri   = 0;
+    mesh.nfaces = 0;
+    mesh.verts  = positions.data();
+    mesh.edges  = eds.data();
+    mesh.tris   = nullptr;
+    mesh.ngons  = nullptr;
+    mesh.faces  = nullptr;
+    SVGExportOpts opts;
+    opts.showFaces = false;
+    opts.showEdges = true;
+    opts.projAxis  = projAxis;
+    opts.width     = 800 * nViews;
+    writeSVGMultiView(fname, mesh, rots, nViews, opts);
+    printf("Mesh::Builder2::exportSVGmultiView(%s) DONE\n", fname);
 }
 
 } // namespace Mesh

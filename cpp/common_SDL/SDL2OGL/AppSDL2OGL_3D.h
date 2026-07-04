@@ -13,6 +13,18 @@
 //#include "Camera.h"
 //#include "cameraOGL.h"
 
+inline std::string makeWindowTitle(const char* appName, int argc, char* argv[]) {
+    std::string title = appName;
+    if (argc > 1) {
+        title += " : ";
+        for (int i = 1; i < argc; i++) {
+            if (i > 1) title += " ";
+            title += argv[i];
+        }
+    }
+    return title;
+}
+
 class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	bool mouseSpinning = false;
 	//Quat4f qCamera;
