@@ -231,37 +231,6 @@ inline int listDirContaining( char * dirName, char * fname_contains, std::vector
     return i;
 }
 
-/*
-int dir2tree(TreeViewTree& node, char * name, int level ){
-
-    if (niters >100) return -1;
-    niters++;
-
-    if((name[0]=='.'))return 0;
-
-    for(int i=0; i<level; i++) printf("_");
-
-    node.content.caption = name;
-    DIR *dir=NULL;
-    struct dirent *ent=NULL;
-
-    if( chdir(name)==0 ){
-    //if( (dir = opendir( name )) != NULL){
-        dir = opendir( "." );
-        printf("dir '%s' | %i \n", name, level );
-        while( (ent = readdir(dir)) != NULL){
-            node.branches.push_back( TreeViewTree() );
-            dir2tree( node.branches.back(), ent->d_name, level+1 );
-        }
-        closedir(dir);
-        chdir("..");
-    }else{
-        printf("leaf '%s' | %i \n", name, level );
-    }
-    return 0;
-}
-*/
-
 template <typename Func>
 int processFileLines( const char * fname, Func func ){
     FILE * pFile;

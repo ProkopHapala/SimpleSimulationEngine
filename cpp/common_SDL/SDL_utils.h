@@ -4,6 +4,31 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <string>
+#include <unistd.h>
+#include <linux/limits.h>
+
+// Search candidate paths for a resource file, return first that exists.
+// Tries: CWD-relative, exe-relative, exe-relative/../, exe-relative/../../
+inline std::string findResource( const char* fname ){
+    if( access(fname, F_OK) == 0 ) return std::string(fname);
+    // exe-relative path
+    char exePath[PATH_MAX]; ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath)-1);
+    if( len > 0 ){
+        exePath[len] = 0;
+        std::string exeDir(exePath);
+        size_t slash = exeDir.find_last_of('/');
+        if( slash != std::string::npos ) exeDir = exeDir.substr(0, slash);
+        else exeDir = ".";
+        const char* prefixes[] = {"", "..", "../..", "../../.."};
+        for( const char* pref : prefixes ){
+            std::string p = exeDir + "/" + pref + "/" + fname;
+            if( access(p.c_str(), F_OK) == 0 ) return p;
+        }
+    }
+    return std::string(fname); // return original so error message is familiar
+}
 
 
 
@@ -37,8 +62,9 @@ float* loadDataImageFloat( char * fname, float hsc, int& nx, int& ny, int& Bytes
 
 GLuint makeTexture( char * fname ){
 
+    std::string path = findResource(fname);
     //SDL_Surface * surf = IMG_Load( fname );
-    SDL_Surface * surf = SDL_LoadBMP( fname );
+    SDL_Surface * surf = SDL_LoadBMP( path.c_str() );
     if ( surf ){
         GLuint itex=0;
         glGenTextures  ( 1, &itex );
@@ -78,8 +104,9 @@ GLuint makeTexture( char * fname ){
 
 GLuint makeTextureHard( char * fname ){
 
+    std::string path = findResource(fname);
     //SDL_Surface * surf = IMG_Load( fname );
-    SDL_Surface * surf = SDL_LoadBMP( fname );
+    SDL_Surface * surf = SDL_LoadBMP( path.c_str() );
     if ( surf ){
         GLuint itex=0;
         glGenTextures  ( 1, &itex );

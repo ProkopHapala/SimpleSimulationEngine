@@ -33,6 +33,7 @@
 #include <cmath>
 
 #include "Vec3.h"
+#include "Mat3.h"
 #include "datatypes.h"
 #include "CMesh.h"
 
@@ -104,7 +105,7 @@ struct MeshAnimation {
 
 // ========== File scanning ==========
 
-#include "GUI.h" // for TreeViewTree, TreeViewItem
+// Note: dir2tree() moved to apps/MeshViewer/ (depends on GUI.h TreeViewTree)
 
 inline bool hasSuffix(const std::string& s, const std::string& suffix) {
     return s.size() >= suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
@@ -112,44 +113,6 @@ inline bool hasSuffix(const std::string& s, const std::string& suffix) {
 
 inline bool isMeshFile(const std::string& name) {
     return hasSuffix(name, ".obj") || hasSuffix(name, ".obj+") || hasSuffix(name, ".npz") || hasSuffix(name, ".npy");
-}
-
-/// Populate a TreeViewTree from a directory. Recursively builds subdirectories.
-/// Files are included only if they are mesh files (.obj, .obj+, .npz, .npy) or if bShowAll=true.
-/// Sets path and bDir on each TreeViewItem.
-inline void dir2tree(TreeViewTree& node, const char* name, const std::string& prefix, bool bShowAll=false) {
-    node.content.caption = name;
-    std::string path = (prefix.length() == 0) ? name : (prefix + "/" + name);
-    node.content.path = path;
-    DIR* dir = opendir(path.c_str());
-    if (dir) {
-        node.content.bDir = true;
-        std::vector<std::pair<std::string, bool>> entries; // name, isDir
-        struct dirent* ent;
-        while ((ent = readdir(dir)) != nullptr) {
-            if (ent->d_name[0] == '.') continue;
-            std::string childName = ent->d_name;
-            std::string childPath = path + "/" + childName;
-            struct stat st;
-            if (stat(childPath.c_str(), &st) != 0) continue;
-            bool isDir = S_ISDIR(st.st_mode);
-            if (!isDir && !bShowAll && !isMeshFile(childName)) continue;
-            entries.push_back({childName, isDir});
-        }
-        closedir(dir);
-        std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
-            if (a.second != b.second) return a.second > b.second; // dirs first
-            return a.first < b.first;
-        });
-        for (auto& [childName, isDir] : entries) {
-            TreeViewTree* child = new TreeViewTree();
-            child->parrent = &node;
-            node.branches.push_back(child);
-            dir2tree(*child, childName.c_str(), path, bShowAll);
-        }
-    } else {
-        node.content.bDir = false;
-    }
 }
 
 // ========== OBJ+ reader ==========
@@ -217,13 +180,22 @@ inline bool readOBJPlus(const std::string& path, MeshAnimation& anim) {
             int a, b;
             if (sscanf(line, "l %d %d", &a, &b) == 2) edges.push_back({a - 1, b - 1}); // OBJ is 1-indexed
         } else if (line[0] == 'f' && line[1] == ' ') {
-            // face: f a b c  (or f a//n b//n c//n, f a/b/c ...)
-            int a, b, c;
-            if (sscanf(line, "f %d %*s %d %*s %d", &a, &b, &c) == 3 ||
-                sscanf(line, "f %d/%*s %d/%*s %d/%*s", &a, &b, &c) == 3 ||
-                sscanf(line, "f %d %d %d", &a, &b, &c) == 3) {
-                tris.push_back({a - 1, b - 1, c - 1});
-                ngons.push_back(3);
+            // Parse face with arbitrary vertex count: f v1 v2 v3 [v4 ...]
+            // Each vertex can be: v, v/vt, v//vn, v/vt/vn
+            int verts[64]; int nv = 0;
+            const char* p = line + 2;
+            while (*p && nv < 64) {
+                while (*p == ' ' || *p == '\t') p++;
+                if (!*p || *p == '\n' || *p == '\r') break;
+                int vi = 0;
+                while (*p >= '0' && *p <= '9') { vi = vi * 10 + (*p - '0'); p++; }
+                if (vi > 0) verts[nv++] = vi - 1; // OBJ is 1-indexed
+                while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++; // skip /vt/vn etc.
+            }
+            // Fan triangulate: (v0, vi, vi+1) for i=1..nv-2
+            for (int i = 1; i < nv - 1; i++) {
+                tris.push_back({verts[0], verts[i], verts[i + 1]});
+                ngons.push_back(nv);
             }
         }
     }
@@ -508,6 +480,60 @@ inline bool writeSVGMulti(const std::string& path, const CMesh** meshes, int nMe
 inline bool writeSVG(const std::string& path, const CMesh& mesh, const SVGExportOpts& opts = SVGExportOpts()) {
     const CMesh* meshes[1] = { &mesh };
     return writeSVGMulti(path, meshes, 1, opts);
+}
+
+// Write one mesh from multiple view angles into a single SVG (side-by-side layout)
+inline bool writeSVGMultiView(const std::string& path, const CMesh& mesh, const Mat3d* rots, int nRots, const SVGExportOpts& opts = SVGExportOpts()) {
+    if (nRots <= 0 || mesh.nvert == 0) return false;
+    int ax = opts.projAxis;
+    int ix = (ax == 0) ? 1 : 0;
+    int iy = (ax == 2) ? 1 : 2;
+
+    // Rotate vertices for each view, compute global bbox
+    std::vector<std::vector<Vec3d>> rotatedVerts(nRots);
+    double gminx = 1e30, gminy = 1e30, gmaxx = -1e30, gmaxy = -1e30;
+    for (int r = 0; r < nRots; r++) {
+        rotatedVerts[r].resize(mesh.nvert);
+        for (int i = 0; i < mesh.nvert; i++) {
+            Vec3d p = rots[r].dot(mesh.verts[i]);
+            rotatedVerts[r][i] = p;
+            double px = p.array[ix], py = p.array[iy];
+            if (px < gminx) gminx = px; if (px > gmaxx) gmaxx = px;
+            if (py < gminy) gminy = py; if (py > gmaxy) gmaxy = py;
+        }
+    }
+    double rangex = gmaxx - gminx; if (rangex < 1e-12) rangex = 1.0;
+    double rangey = gmaxy - gminy; if (rangey < 1e-12) rangey = 1.0;
+
+    double availW = (opts.width - 2 * opts.margin) / nRots;
+    double availH = opts.height - 2 * opts.margin;
+    double scale = (availW / rangex < availH / rangey) ? availW / rangex : availH / rangey;
+    double viewW = rangex * scale + 2 * opts.margin;
+    double viewH = rangey * scale + 2 * opts.margin;
+
+    FILE* f = fopen(path.c_str(), "w");
+    if (!f) { printf("Cannot write %s\n", path.c_str()); return false; }
+    int svgW = (int)(viewW * nRots + 0.5);
+    int svgH = (int)(viewH + 0.5);
+    fprintf(f, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\">\n", svgW, svgH);
+    fprintf(f, "<rect width=\"100%%%%\" height=\"100%%%%\" fill=\"%s\"/>\n", opts.bgColor);
+
+    for (int r = 0; r < nRots; r++) {
+        CMesh view = mesh;
+        view.verts = rotatedVerts[r].data();
+        double ox = r * viewW + opts.margin - gminx * scale;
+        double oy = opts.margin - gminy * scale;
+        SVGExportOpts vopts = opts;
+        vopts.height = svgH;
+        fprintf(f, "<g transform=\"translate(0,0)\">\n");
+        svgWriteMesh(f, view, vopts, ix, iy, scale, ox, oy, 0, 0);
+        fprintf(f, "</g>\n");
+    }
+
+    fprintf(f, "</svg>\n");
+    fclose(f);
+    printf("Wrote SVG multi-view: %s (%d views, %d verts, %d edges)\n", path.c_str(), nRots, mesh.nvert, mesh.nedge);
+    return true;
 }
 
 // ========== OBJ+ writer ==========

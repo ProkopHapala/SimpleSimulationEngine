@@ -36,7 +36,8 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 
-#include "MeshFileFormats.h"  // now in common/geometry/ (global include path)
+#include "MeshFileFormats.h"  // shared in common/geometry/
+#include "dir2tree.h"          // shared in common_SDL/SDL2OGL/
 
 class MeshViewerApp : public AppSDL2OGL_3D { public:
 
@@ -58,6 +59,7 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
     bool showEdgeNums = false;
     bool showFaceNums = false;
     bool showNormals = false;
+    bool showBackfaces = true;  // 3D: render both sides of triangles
 
     // GUI controls
     CheckBoxList* cboxes = nullptr;
@@ -89,10 +91,11 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
         cboxes->addBox("enums",  &showEdgeNums);
         cboxes->addBox("fnums",  &showFaceNums);
         cboxes->addBox("normals", &showNormals);
+        cboxes->addBox("bkface", &showBackfaces);
         gui.addPanel(cboxes);
     }
 
-    void setDir(const std::string& dir) {
+    void setDir(const std::string& dir, bool bExpandTree = true) {
         currentDir = dir;
         if (!treeView) {
             treeView = new TreeView("DirView", 5, 5, 300, HEIGHT / (fontSizeDef * 2) - 2);
@@ -105,10 +108,11 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
         // clear old tree
         for (auto* br : treeView->root.branches) delete br;
         treeView->root.branches.clear();
-        dir2tree(treeView->root, dir.c_str(), "");
+        dir2tree(treeView->root, dir.c_str(), "", false, isMeshFile);
         treeView->updateLines();
         treeView->iSelected = 0;
         treeView->redraw = true;
+        browseMode = bExpandTree;
     }
 
     void loadFile(const std::string& path) {
@@ -124,13 +128,12 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
         // Setup frame slider if multiple snapshots
         if (frameSlider) { gui.panels.erase(std::remove(gui.panels.begin(), gui.panels.end(), frameSlider), gui.panels.end()); delete frameSlider; frameSlider = nullptr; }
         if (anim.size() > 1) {
-            frameSlider = new GUIPanel("frame", 320, HEIGHT - 22*fontSizeDef, 580, HEIGHT - 20*fontSizeDef, true, true, true, true, false);
+            frameSlider = new GUIPanel("frame", 320, HEIGHT - 22*fontSizeDef, 580, HEIGHT - 20*fontSizeDef, true, true, true, true, true);
             frameSlider->setRange(0, anim.size() - 1);
             frameSlider->setValue(0);
             frameSlider->command = [this](GUIAbstractPanel* p){
                 GUIPanel* gp = (GUIPanel*)p;
                 anim.current = gp->getIntVal();
-                fitCameraToMesh();
             };
             gui.addPanel(frameSlider);
         }
@@ -161,9 +164,10 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
     virtual void drawHUD() override {
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
+        if(treeView) treeView->visible = browseMode;
         gui.draw();
         if (anim.size() > 0) drawOverlay();
-        else {
+        else if (browseMode) {
             Draw::setRGB(0x404040);
             const char* help = "Up/Down: navigate  Enter: open dir / load file  Backspace: parent  Esc: quit";
             Draw2D::drawText(help, strlen(help), {5, fontSizeDef * 2}, 0.0f, GUI_fontTex, fontSizeDef);
@@ -194,6 +198,8 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
             GLfloat lightAmb[] = {0.4f, 0.4f, 0.45f, 1.0f};
             glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb);
 
+            if(showBackfaces){ glDisable(GL_CULL_FACE); glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE); }
+            else  { glEnable(GL_CULL_FACE); glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE); }
             glBegin(GL_TRIANGLES);
             for (int i = 0; i < snap->ntri; i++) {
                 Vec3i iv = snap->tris[i];
@@ -207,22 +213,13 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
             glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
-        if (showWire) {
+        if (showWire && snap->nedge > 0) {
             glDisable(GL_DEPTH_TEST); // always draw edges on top
             glColor3f(0.1f, 0.4f, 0.1f);
             glBegin(GL_LINES);
-            if (snap->nedge > 0) {
-                for (int i = 0; i < snap->nedge; i++) {
-                    Draw3D::vertex(snap->verts[snap->edges[i].x]);
-                    Draw3D::vertex(snap->verts[snap->edges[i].y]);
-                }
-            } else if (snap->ntri > 0) {
-                for (int i = 0; i < snap->ntri; i++) {
-                    Vec3i iv = snap->tris[i];
-                    Draw3D::vertex(snap->verts[iv.a]); Draw3D::vertex(snap->verts[iv.b]);
-                    Draw3D::vertex(snap->verts[iv.b]); Draw3D::vertex(snap->verts[iv.c]);
-                    Draw3D::vertex(snap->verts[iv.c]); Draw3D::vertex(snap->verts[iv.a]);
-                }
+            for (int i = 0; i < snap->nedge; i++) {
+                Draw3D::vertex(snap->verts[snap->edges[i].x]);
+                Draw3D::vertex(snap->verts[snap->edges[i].y]);
             }
             glEnd();
             glEnable(GL_DEPTH_TEST);
@@ -305,7 +302,7 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
         }
 
         Draw::setRGB(0x404040);
-        const char* help = "RMB:orbit Arrows:rotate Wheel:zoom Space:play [:prev ]:next W:wire S:solid P:pts F:fit R:reload X:exportSVG";
+        const char* help = "RMB:orbit Arrows:rotate Wheel:zoom Space:play [:prev ]:next B:browse W:wire S:solid P:pts F:fit R:reload X:exportSVG";
         Draw2D::drawText(help, strlen(help), {320, fontSizeDef * 2}, 0.0f, GUI_fontTex, fontSizeDef);
 
         Draw::setRGB(0x505080);
@@ -384,6 +381,7 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
 
     void handleViewKey(SDL_Keycode key) {
         if (key == SDLK_SPACE)  { autoPlay = !autoPlay; printf("Auto-play: %s\n", autoPlay ? "ON" : "OFF"); return; }
+        if (key == SDLK_b)      { browseMode = !browseMode; printf("Browse: %s\n", browseMode ? "ON" : "OFF"); return; }
         // Arrow keys handled by base class keyStateHandling for rotation
         if (key == SDLK_w) { showWire = !showWire; return; }
         if (key == SDLK_s) { showSolid = !showSolid; return; }
@@ -391,8 +389,8 @@ class MeshViewerApp : public AppSDL2OGL_3D { public:
         if (key == SDLK_7) { showVertNums = !showVertNums; cboxes->syncRead(); cboxes->redraw=true; return; }
         if (key == SDLK_8) { showEdgeNums = !showEdgeNums; cboxes->syncRead(); cboxes->redraw=true; return; }
         if (key == SDLK_9) { showFaceNums = !showFaceNums; cboxes->syncRead(); cboxes->redraw=true; return; }
-        if (key == SDLK_LEFTBRACKET)  { anim.prev(); fitCameraToMesh(); if(frameSlider){frameSlider->setValue(anim.current);} printf("Frame %d/%d\n", anim.current+1, anim.size()); return; }
-        if (key == SDLK_RIGHTBRACKET) { anim.next(); fitCameraToMesh(); if(frameSlider){frameSlider->setValue(anim.current);} printf("Frame %d/%d\n", anim.current+1, anim.size()); return; }
+        if (key == SDLK_LEFTBRACKET)  { anim.prev(); if(frameSlider){frameSlider->setValue(anim.current);} printf("Frame %d/%d\n", anim.current+1, anim.size()); return; }
+        if (key == SDLK_RIGHTBRACKET) { anim.next(); if(frameSlider){frameSlider->setValue(anim.current);} printf("Frame %d/%d\n", anim.current+1, anim.size()); return; }
         if (key == SDLK_f) { fitCameraToMesh(); return; }
         if (key == SDLK_r) { if (!loadedFile.empty()) loadFile(loadedFile); return; }
 

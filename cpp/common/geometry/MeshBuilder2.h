@@ -644,6 +644,9 @@ class Builder2 : public SelectionBanks { public:
     void read_obj( const char* fname, uint8_t mask = 0xFF );
     void exportSVG( const char* fname, int projAxis=2 )const;
     void exportSVGmultiView( const char* fname, int nViews, const Mat3d* rots, int projAxis=2 )const;
+
+    std::vector<double> mapBondLengthsFromVertexSelections( const std::vector<int>& selA, const std::vector<int>& selB, double Rmax, double dR, std::vector<std::vector<Vec2i>>& groups )const;
+    void addEdgesFromPairs( const std::vector<Vec2i>& pairs, int type=-1 );
     
     void printSelection( bool bDetail=false )const;
     void printSelectedVerts()const;

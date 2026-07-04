@@ -101,21 +101,10 @@ class SpaceCraft : public CatalogItem { public:
     }
 
 	void clear(){
-        for( Node*     o : nodes    ) delete o; nodes.clear();
-        for( Rope*     o : ropes    ) delete o; ropes.clear();
-        for( Girder*   o : girders  ) delete o; girders.clear();
-        for( Ring*     o : rings    ) delete o; rings.clear();
-        for( Gun*      o : guns     ) delete o; guns.clear();
-        for( Slider*   o : sliders  ) delete o; sliders.clear();
-        for( Radiator* o : radiators) delete o; radiators.clear();
-        for( Shield*   o : shields  ) delete o; shields.clear();
-        for( Tank*     o : tanks    ) delete o; tanks.clear();
-        for( Pipe*     o : pipes    ) delete o; pipes.clear();
-        for( Thruster* o : thrusters) delete o; thrusters.clear();
-        for( Balloon*  o : balloons ) delete o; balloons.clear();
-        for( Rock*     o : rocks    ) delete o; rocks.clear();
-
         for( ShipComponent* o : components ) delete o; components.clear();
+        nodes.clear(); ropes.clear(); girders.clear(); rings.clear();
+        guns.clear(); sliders.clear(); radiators.clear(); shields.clear();
+        tanks.clear(); pipes.clear(); thrusters.clear(); balloons.clear(); rocks.clear();
         //nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
         //rocks.clear(); balloons.clear();
         //truss.clear();
@@ -124,23 +113,18 @@ class SpaceCraft : public CatalogItem { public:
     int find_mesh_element( int i, char elem_kind='v', bool bPrint=false )const{
         for(int j=0; j<components.size(); j++){
             ShipComponent* o = components[j];
-            //if( !_o->is_structural() ) continue;
-            //StructuralComponent* o = (StructuralComponent*)_o;
             Vec2i range;
-            
             switch( elem_kind ){
-                case 'v': range=o->pointRange; break; // point
-                case 'e': range=o->stickRange; break; // stick
-                case 'c': range=o->chunkRange; break; // chunk
+                case 'v': range=o->pointRange; break;
+                case 'e': range=o->stickRange; break;
+                case 'c': range=o->chunkRange; break;
             }
-            printf( "    find_mesh_element().component %i range(%i,%i) ", j, range.x, range.y ); o->print();
             if(i>=range.x && i<range.y){
-                if(bPrint) printf( "SpaceCraft::find_mesh_element(%i,'%c') -> %i %s\n", i, elem_kind, j  );
-                o->print();
+                if(bPrint){ printf( "    SpaceCraft::find_mesh_element(%i,'%c') -> component %i ", i, elem_kind, j ); o->print(); }
                 return j;
             }
         }
-        if(bPrint) printf( "WARNING: SpaceCraft::find_mesh_element(%i,'%c') element not found\n", i, elem_kind );
+        if(bPrint) printf( "WARNING: SpaceCraft::find_mesh_element(%i,'%c') element not found in %zu components\n", i, elem_kind, components.size() );
         return -1;
     }
 

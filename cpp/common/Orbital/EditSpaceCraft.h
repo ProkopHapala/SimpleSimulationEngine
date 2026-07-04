@@ -108,8 +108,11 @@ int l_Node    (lua_State * L){
     Node* o = new Node();
     //Vec3d pos;
     o->pos = Lua::getVec3(L, 1);
+    o->size = 1.0;
+    o->edge_type = 0;
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
+    theSpaceCraft->components.push_back( o  );
     if(verbosity>1) o->print();
     lua_pushnumber(L, o->id);
     return 1;
@@ -129,6 +132,7 @@ int l_BoundNode(lua_State * L){
     o->updateBound( p0 );
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
+    theSpaceCraft->components.push_back( o  );
     //if(verbosity>1) 
     o->print();
     printf(" -- boundTo: "); o->boundTo->print();
@@ -223,6 +227,7 @@ int l_Rope2 (lua_State * L){
             nd[i]->updateBound( p0 );
             nd[i]->id = theSpaceCraft->nodes.size(); 
             theSpaceCraft->nodes.push_back( nd[i] ); 
+            theSpaceCraft->components.push_back( nd[i] );
         }
         ((Node**)&(o->nodes))[i] = nd[i];
     }

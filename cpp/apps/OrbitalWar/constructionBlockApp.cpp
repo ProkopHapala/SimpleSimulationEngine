@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
+#include <array>
 #include <math.h>
 
 #include <SDL2/SDL.h>
@@ -29,6 +30,8 @@
 #include "DrawUV.h"
 #include "ConstructionBlock.h"
 #include "MeshBuilder2Draw.h"
+#include "KinematicSolver.h"
+#include "MeshFileFormats.h"
 #include "argparse.h"
 
 int read_binary_int( const char* s, const char* label=0 ){
@@ -653,7 +656,266 @@ int main(int argc, char *argv[]){
         truss.exportSVGmultiView("parabola_patch_views.svg", 4, rots);
     }};
 
-    funcs["-bevel"] = {0, [&](const char**){ 
+    funcs["-TubeSheetBond"] = {0, [&](const char**){
+        printf("funcs[-TubeSheetBond]: Recoil damper (hex outer + triangular inner) with parabolic dish\n");
+        truss.clear();
+        int dirMask = 0b1111;
+        float twist = 0.0f;
+        Quat4i stickTypes{1,0,0,0};
+
+        // --- Outer hex tube ---
+        Vec2i n1{2, 6};
+        Vec2f UVmin{0,0}, UVmax{1,1};
+        float R1 = 1.732f, L1 = 1.0f;
+        Vec2f Rs1{R1, R1};
+        int iv0_1 = truss.verts.size();
+        TubeSheet(truss, n1, UVmin, UVmax, Rs1, L1, dirMask, twist, stickTypes);
+        int nVerts1 = n1.x * n1.y;
+        std::vector<int> sel1(nVerts1);
+        for(int i=0; i<nVerts1; i++) sel1[i] = iv0_1 + i;
+
+        // --- Second tube (shifted UV window) ---
+        Vec2i n2{3, 6};
+        float R2 = 1.0f, L2 = 2.0f;
+        Vec2f Rs2{R2, R2};
+        float offX = -0.5f, offY = 0.5f;
+        float du = offX / (n2.x - 1.0f);
+        float dv = offY / (float)n2.y;
+        Vec2f UVmin2{du, dv}, UVmax2{1+du, 1+dv};
+        int iv0_2 = truss.verts.size();
+        TubeSheet(truss, n2, UVmin2, UVmax2, Rs2, L2, dirMask, twist, stickTypes);
+        int nVerts2 = n2.x * n2.y;
+        std::vector<int> sel2(nVerts2);
+        for(int i=0; i<nVerts2; i++) sel2[i] = iv0_2 + i;
+
+        // --- Bond-length analysis and connections ---
+        double Rcut = 2.0, dR = 0.01;
+        std::vector<std::vector<Vec2i>> groups;
+        auto uniqLs = truss.mapBondLengthsFromVertexSelections(sel1, sel2, Rcut, dR, groups);
+        if(!uniqLs.empty() && !groups.empty()){
+            int k = std::max(0, std::min(0, (int)uniqLs.size()-1));
+            truss.addEdgesFromPairs(groups[k], stickTypes.x);
+        }
+
+        // --- Inner triangular tube ---
+        Vec2i nTri{10, 3};
+        float clearance = 0.1f;
+        float Rtri = std::max(0.0f, R2 - clearance);
+        Vec2f RsTri{Rtri, Rtri};
+        float dvTri = 1.0f / (2.0f * nTri.y) * 0.5f;
+        float axshift = -0.9f;
+        Vec2f UVminTri{axshift, dvTri}, UVmaxTri{1+axshift, 1+dvTri};
+        TubeSheet(truss, nTri, UVminTri, UVmaxTri, RsTri, 20.0f, dirMask, 0.0f, stickTypes);
+
+        // --- Parabolic pusher-plate / plasma nozzle dish ---
+        int nRows=4, nInner=7, nOuter=25;
+        float R1dish = 1.732f, R2dish = 1.732f*6, Ldish = 3.0f*6;
+        float zShiftDish = L2*0.5f;
+        int iv0_dish = truss.verts.size();
+        ParametricParabolaPatch(truss, nOuter, nInner, nRows, R1dish, R2dish, Ldish);
+        for(int i=iv0_dish; i<(int)truss.verts.size(); i++) truss.verts[i].pos.z += zShiftDish;
+
+        printf("TubeSheetBond: "); truss.printSizes();
+        truss.write_obj("tubesheet_bond.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("tubesheet_bond.svg");
+        Mat3d rots[4] = { Mat3dIdentity, Mat3d{0,0,1, 0,1,0, -1,0,0}, Mat3d{1,0,0, 0,0,-1, 0,1,0}, Mat3d{0.7071,0,0.7071, 0,1,0, -0.7071,0,0.7071} };
+        truss.exportSVGmultiView("tubesheet_bond_views.svg", 4, rots);
+    }};
+
+    funcs["-RopesVShape"] = {0, [&](const char**){
+        printf("funcs[-RopesVShape]: Two polylines sharing a root vertex\n");
+        truss.clear();
+        int nseg = 10;
+        Vec3d A{0,0,0}, B{0,10,0}, C{10,10,0};
+        std::vector<int> vAB;
+        for(int i=0; i<=nseg; i++){ float t=(float)i/nseg; vAB.push_back(truss.vert(A*(1-t)+B*t)); }
+        for(int i=0; i<nseg; i++) truss.edge(vAB[i], vAB[i+1]);
+        std::vector<int> vAC; vAC.push_back(vAB[0]);
+        for(int i=1; i<=nseg; i++){ float t=(float)i/nseg; vAC.push_back(truss.vert(A*(1-t)+C*t)); }
+        for(int i=0; i<nseg; i++) truss.edge(vAC[i], vAC[i+1]);
+        printf("RopesVShape: "); truss.printSizes();
+        truss.write_obj("ropes_vshape.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("ropes_vshape.svg");
+    }};
+
+    funcs["-RopesParallel"] = {0, [&](const char**){
+        printf("funcs[-RopesParallel]: Two parallel polylines\n");
+        truss.clear();
+        int nseg = 10;
+        Vec3d A1{-5,0,0}, B1{-5,10,0}, A2{5,0,0}, B2{5,10,0};
+        for(auto& [P0,P1] : std::array<std::pair<Vec3d,Vec3d>,2>{{{A1,B1},{A2,B2}}}){
+            std::vector<int> vs;
+            for(int i=0; i<=nseg; i++){ float t=(float)i/nseg; vs.push_back(truss.vert(P0*(1-t)+P1*t)); }
+            for(int i=0; i<nseg; i++) truss.edge(vs[i], vs[i+1]);
+        }
+        printf("RopesParallel: "); truss.printSizes();
+        truss.write_obj("ropes_parallel.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("ropes_parallel.svg");
+    }};
+
+    funcs["-BridgeQuads"] = {0, [&](const char**){
+        printf("funcs[-BridgeQuads]: Bridge two facing quads\n");
+        truss.clear();
+        float s = 2.0f;
+        int v0=truss.vert({-s,-s,0}), v1=truss.vert({s,-s,0}), v2=truss.vert({s,s,0}), v3=truss.vert({-s,s,0});
+        int v4=truss.vert({-s,-s,10}), v5=truss.vert({s,-s,10}), v6=truss.vert({s,s,10}), v7=truss.vert({-s,s,10});
+        truss.bridge_quads({v0,v1,v2,v3}, {v4,v5,v6,v7}, 4, {0,1,2,3}, {1,1,1,1}, true);
+        printf("BridgeQuads: "); truss.printSizes();
+        truss.write_obj("bridge_quads.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("bridge_quads.svg");
+    }};
+
+    funcs["-BridgeQuadsTwisted"] = {0, [&](const char**){
+        printf("funcs[-BridgeQuadsTwisted]: Bridge two quads with 45deg twist\n");
+        truss.clear();
+        float s = 2.0f; float ang = M_PI/4; float c=cos(ang), sn=sin(ang);
+        int v0=truss.vert({-s,-s,0}), v1=truss.vert({s,-s,0}), v2=truss.vert({s,s,0}), v3=truss.vert({-s,s,0});
+        int v4=truss.vert({-s*c-(-s)*sn, -s*sn+(-s)*c, 10});
+        int v5=truss.vert({s*c-(-s)*sn, s*sn+(-s)*c, 10});
+        int v6=truss.vert({s*c-s*sn, s*sn+s*c, 10});
+        int v7=truss.vert({-s*c-s*sn, -s*sn+s*c, 10});
+        truss.bridge_quads({v0,v1,v2,v3}, {v4,v5,v6,v7}, 6, {0,1,2,3}, {1,1,0,0}, true);
+        printf("BridgeQuadsTwisted: "); truss.printSizes();
+        truss.write_obj("bridge_quads_twisted.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("bridge_quads_twisted.svg");
+    }};
+
+    funcs["-ParametricQuadPatch"] = {0, [&](const char**){
+        printf("funcs[-ParametricQuadPatch]: Variable-row triangulated patch\n");
+        truss.clear();
+        float s = 5.0f;
+        Vec3d p00{-s,0,-s}, p01{-s,0,s}, p10{s,0,-s}, p11{s,0,s};
+        ParametricQuadPatch(truss, 8, 20, 8, p00, p01, p10, p11);
+        printf("ParametricQuadPatch: "); truss.printSizes();
+        truss.write_obj("quad_patch.obj", (uint8_t)(ObjMask::Verts | ObjMask::Edges));
+        truss.exportSVG("quad_patch.svg");
+    }};
+
+    funcs["-KinematicTest"] = {0, [&](const char**){
+        printf("funcs[-KinematicTest]: damper demo — dish slides along triangular girder spine\n");
+        truss.clear();
+
+        int dirMask = 0b1111;
+        Quat4i stickTypes{1,0,0,0};
+
+        // --- Inner triangular girder (ship spine) — body 0, fixed ---
+        // 3-sided cross-section, long along Z
+        Vec2i nTri{10, 3};             // 10 axial, 3 circumferential (triangle)
+        float R_girder = 0.9f;
+        float L_girder = 20.0f;
+        // Rotate triangle by half-segment via UV shift (like JS version)
+        float dvTri = 1.0f / (2.0f * 3) * 0.5f;
+        Vec2f UVminTri{0.0f, dvTri}, UVmaxTri{1.0f, 1.0f + dvTri};
+        TubeSheet(truss, nTri, UVminTri, UVmaxTri, Vec2f{R_girder, R_girder}, L_girder, dirMask, 0.0f, stickTypes);
+        int nTubeVerts = (int)truss.verts.size();
+
+        // --- Parabolic pusher-plate dish — body 1, slides along girder ---
+        int nRows=4, nInner=7, nOuter=25;
+        float R1dish = 1.732f;         // inner hole radius (matches outer hex ring)
+        float R2dish = 1.732f * 6;     // outer dish radius
+        float Ldish  = 3.0f * 6;       // axial height
+        float zShiftDish = 1.0f;       // start near back of girder
+        int iv0_dish = truss.verts.size();
+        ParametricParabolaPatch(truss, nOuter, nInner, nRows, R1dish, R2dish, Ldish);
+        for(int i=iv0_dish; i<(int)truss.verts.size(); i++) truss.verts[i].pos.z += zShiftDish;
+
+        printf("KinematicTest base mesh: "); truss.printSizes();
+
+        // --- Setup kinematic system ---
+        KinematicSystem ks;
+        ks.poses.resize(2);
+        ks.poses[0] = KinematicPose{Vec3d{0,0,0}, Mat3dIdentity, true};   // girder fixed
+        ks.poses[1] = KinematicPose{Vec3d{0,0,0}, Mat3dIdentity, false};  // dish free
+
+        // 3 slider constraints: paths derived from actual girder vertices
+        // TubeSheet vertex layout (UV_slab_verts): idx[iy*n.x + ix], ix=axial(0..n.x-1), iy=circumferential(0..n.y-1)
+        // Each rail = one circumferential side (fixed iy), varying ix along axial direction
+        // This is exactly how Girder::sideToPath() works in SpaceCraftComponents.h
+        int iv0_girder = 0;  // girder is first in truss
+        std::vector<Vec3d>* pathVerts = new std::vector<Vec3d>();
+        pathVerts->reserve(nTubeVerts);
+        for(int i = 0; i < nTubeVerts; i++) pathVerts->push_back(truss.verts[i].pos);
+
+        for(int s = 0; s < 3; s++){
+            int iy = s;  // circumferential index = rail side
+            std::vector<int>* pathIndices = new std::vector<int>(nTri.x);
+            for(int ix = 0; ix < nTri.x; ix++) (*pathIndices)[ix] = iy * nTri.x + ix;
+
+            KinematicConstraint c;
+            c.type = ConstraintType::Slider;
+            c.bodyA = 1;  // dish
+            c.bodyB = -1; // path is world-fixed (girder is fixed)
+            // Dish attachment point: at same (x,y) as the first vertex of this rail, z=0 in dish-local
+            Vec3d railStart = truss.verts[iv0_girder + (*pathIndices)[0]].pos;
+            c.lposA = Vec3d{railStart.x, railStart.y, 0};
+            c.pathIndices = *pathIndices;
+            c.pathClosed = false;
+            c.pathVerts = pathVerts;
+            c.sliderParamIndex = s;
+            ks.constraints.push_back(c);
+
+            printf("  rail %d: iy=%d, %d verts, start=(%.3f,%.3f,%.3f)\n", s, iy, (int)pathIndices->size(), railStart.x, railStart.y, railStart.z);
+        }
+
+        // All 3 sliders start at same t (dish at z=zShiftDish)
+        ks.sliderParams.resize(3);
+        double t0 = zShiftDish / L_girder;
+        for(int s = 0; s < 3; s++) ks.sliderParams[s] = t0;
+
+        printf("KinematicSystem: %d bodies, %d constraints, %d sliders, %d unknowns, %d equations\n",
+               ks.nBodies(), (int)ks.constraints.size(), ks.nSliders(), ks.nUnknowns(), ks.nEquations());
+
+        // --- Sweep: dish slides along girder rails ---
+        int nSteps = 36;
+        MeshAnimation anim;
+        int nV = (int)truss.verts.size();
+        int nE = (int)truss.edges.size();
+        int nSliderEdges = (int)ks.constraints.size();
+        // Rail path visualization: nPathPts-1 segments per rail (open path)
+        int nRailVerts = 0, nRailEdges = 0;
+        for(auto& c : ks.constraints){
+            nRailVerts += (int)c.pathIndices.size();
+            nRailEdges += (int)c.pathIndices.size() - 1;
+        }
+        double tStart = 0.05, tEnd = 0.85;
+        ks.sweepSolveRange(tStart, tEnd, nSteps, [&](int step, const std::vector<KinematicPose>& poses){
+            printf("  step %d: dish pos=(%.3f,%.3f,%.3f)\n", step, poses[1].pos.x, poses[1].pos.y, poses[1].pos.z);
+
+            MeshSnapshot* snap = new MeshSnapshot();
+            snap->alloc(nV + nSliderEdges * 2 + nRailVerts, nE + nSliderEdges + nRailEdges, 0);
+            for(int i=0; i<nTubeVerts; i++) snap->verts[i] = truss.verts[i].pos;
+            for(int i=iv0_dish; i<nV; i++) snap->verts[i] = localToWorld(poses[1], truss.verts[i].pos);
+            for(int i=0; i<nE; i++){ snap->edges[i].x = truss.edges[i].lo.a; snap->edges[i].y = truss.edges[i].lo.b; }
+            int vi = nV, ei = nE;
+            // Rail paths (static lines showing where sliders should be)
+            for(int s = 0; s < (int)ks.constraints.size(); s++){
+                const auto& c = ks.constraints[s];
+                int vStart = vi;
+                for(int j = 0; j < (int)c.pathIndices.size(); j++){
+                    snap->verts[vi] = (*c.pathVerts)[c.pathIndices[j]];
+                    if(j > 0) snap->edges[ei++] = {vi - 1, vi};
+                    vi++;
+                }
+                if(c.pathClosed) snap->edges[ei++] = {vi - 1, vStart};  // close the loop
+            }
+            // Slider connection lines: dish attachment point -> current path point
+            for(int s = 0; s < (int)ks.constraints.size(); s++){
+                const auto& c = ks.constraints[s];
+                Vec3d dishPoint = localToWorld(poses[1], c.lposA);
+                Vec3d pathPoint = bsplineInterpolate(ks.sliderParams[s], c.pathIndices, c.pathClosed, *c.pathVerts);
+                snap->verts[vi]   = dishPoint;
+                snap->verts[vi+1] = pathPoint;
+                snap->edges[ei]   = {vi, vi+1};
+                vi += 2; ei++;
+            }
+            anim.snapshots.push_back((CMesh*)snap);
+        }, 200, 1e-4, true);
+
+        writeOBJPlus("kinematic_anim.obj+", anim);
+        printf("KinematicTest: done, wrote kinematic_anim.obj+ (%d frames)\n", anim.size());
+    }};
+
+    funcs["-bevel"] = {0, [&](const char**){
         const int npoint      = 4;
         //const int npoint      = 7;
         Vec3d nodes[npoint] = {

@@ -22,6 +22,8 @@ We develop rigorous scientific software where debuggability, physical consistenc
 ## Debugging & Testing
 
 Fail loud — crashes with stack traces > masked bugs. Debug prints gated by verbosity. Tests in `tests/` with ref_data regression. Numerical correctness via parity checks vs reference/analytical/physical invariants. See skill:`test-runner`, skill:`visual-debug`, skill:`gpu-debug`, skill:`numerical-parity`,
+- **Test scripts**: `tests_bash/apps/*.sh` — recompile, preload ASan (`LD_PRELOAD=$(g++ -print-file-name=libasan.so)`), run.
+- **Refactoring discipline**: Before refactoring, run each old file, show plots/results to USER for review. Identify useful features from each version. Reproduce carefully. Only delete old files after explicit USER approval. Never delete plots — they are the main results the USER reviews.
 
 ## Performance & Languages
 

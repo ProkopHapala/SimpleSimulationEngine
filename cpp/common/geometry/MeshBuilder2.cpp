@@ -2818,4 +2818,42 @@ void Builder2::exportSVGmultiView( const char* fname, int nViews, const Mat3d* r
     printf("Mesh::Builder2::exportSVGmultiView(%s) DONE\n", fname);
 }
 
+std::vector<double> Builder2::mapBondLengthsFromVertexSelections( const std::vector<int>& selA, const std::vector<int>& selB, double Rmax, double dR, std::vector<std::vector<Vec2i>>& groups )const{
+    std::vector<double> uniqLs;
+    groups.clear();
+    if(selA.empty() || selB.empty()) return uniqLs;
+    double R2 = Rmax * Rmax;
+    for(int ia : selA){
+        const Vec3d& pa = verts[ia].pos;
+        for(int ib : selB){
+            const Vec3d& pb = verts[ib].pos;
+            double l2 = (pa - pb).norm2();
+            if(l2 > R2) continue;
+            double L = sqrt(l2);
+            Vec2i key{ia, ib};
+            // binary search for insertion / merge
+            int lo = 0, hi = uniqLs.size();
+            while(lo < hi){
+                int mid = (lo + hi) >> 1;
+                double diff = L - uniqLs[mid];
+                if(fabs(diff) <= dR){
+                    groups[mid].push_back(key);
+                    goto found;
+                }
+                if(diff < 0) hi = mid; else lo = mid + 1;
+            }
+            uniqLs.insert(uniqLs.begin() + lo, L);
+            groups.insert(groups.begin() + lo, std::vector<Vec2i>{key});
+            found:;
+        }
+    }
+    return uniqLs;
+}
+
+void Builder2::addEdgesFromPairs( const std::vector<Vec2i>& pairs, int type ){
+    for(const Vec2i& p : pairs){
+        edge(p.a, p.b, type);
+    }
+}
+
 } // namespace Mesh

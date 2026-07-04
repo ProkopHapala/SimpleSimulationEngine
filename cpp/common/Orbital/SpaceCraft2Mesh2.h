@@ -39,7 +39,7 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
     printf( "exportSim() START nvert=%i nedge=%i \n", np, nb );
-    mesh.checkAllPointsConnected(true, true);
+    mesh.checkAllPointsConnected(false, true);
     int* nneighs = new int[ np ];
     //printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
@@ -91,8 +91,8 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
         }
 
         //printf( "e.w %i \n", e.w );
-        if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
-        if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size(%i)\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
+        if(e.w<0){ printf( "WARNING in exportSim() mesh.edges[%i].type=%i — skipping\n", i, e.w ); continue; }
+        if(e.w>=(int)shop.stickMaterials.vec.size()){ printf( "WARNING in exportSim() mesh.edges[%i].type=%i > stickMaterials.size(%i) — skipping\n", i, e.w, (int)shop.stickMaterials.vec.size() ); continue; }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
         stickTypes.insert(e.w);
         // l0, kPress, kPull, damping
@@ -139,7 +139,8 @@ void exportSim( TrussDynamics_d& sim, const Builder2& mesh, const SpaceCraftWork
         }
     }
 
-    sim.checkMasses();
+    sim.checkMasses(1e-9, false);
+    for(int i=0; i<sim.nPoint; i++){ if(sim.points[i].w < 1e-9) sim.points[i].w = 1.0; }
 
     sim.cleanForce();
     sim.cleanVel();
@@ -210,8 +211,8 @@ void exportSim( TrussDynamics_f& sim, const Builder2& mesh, const SpaceCraftWork
         }
         
         //printf( "e.w %i \n", e.w );
-        if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
-        if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
+        if(e.w<0){ printf( "WARNING in exportSim() mesh.edges[%i].type=%i — skipping\n", i, e.w ); continue; }
+        if(e.w>=(int)shop.stickMaterials.vec.size()){ printf( "WARNING in exportSim() mesh.edges[%i].type=%i > stickMaterials.size() — skipping\n", i, e.w ); continue; }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
 
 
@@ -239,9 +240,9 @@ void exportSim( TrussDynamics_f& sim, const Builder2& mesh, const SpaceCraftWork
             sim.strain[i] = 0;
         }
     }
+    for(int i=0; i<sim.nPoint; i++){ if(sim.points[i].w < 1e-9f) sim.points[i].w = 1.0f; }
     sim.cleanForce();
     sim.cleanVel();
-    //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
     printf( "exportSim_f()  DONE! \n" );
     delete [] nneighs;
     //exit(0);
@@ -420,6 +421,7 @@ void nodeBlock_to_mesh(Node* o, Builder2& mesh, SpaceCraft* craft) {
     o->pointRange = {pre_verts_size, (int)mesh.verts.size()};
     o->stickRange = {pre_edges_size, (int)mesh.edges.size()};
     o->chunkRange = {pre_chunks_size, (int)mesh.chunks.size()};
+    if(o->boundTo == 0){ o->ivert = pre_verts_size; } // anchor vertex for ropes/caps
     printf("nodeBlock_to_mesh() end iv0=%i ie0=%i ic0=%i \n", o->pointRange.x, o->stickRange.x, o->chunkRange.x );
 }
 

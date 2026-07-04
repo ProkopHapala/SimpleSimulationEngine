@@ -14,6 +14,9 @@
 #include "Tree.h"
 #include "LuaHelpers.h"
 #include "argparse.h"
+#include "Solids.h"
+#include "BucketUtils.h"
+#include "SpaceCraftDraw.h"
 
 namespace SpaceCrafting {
 
@@ -40,6 +43,7 @@ public:
     PlateGUI*  plateGui  = nullptr;
     PickerUI   picker;
     DropDownList* lstLuaFiles = nullptr;
+    CheckBoxList* dbgBoxes = nullptr;
 
     // === Editor state
     EDIT_MODE edit_mode = EDIT_MODE::component;
@@ -49,6 +53,17 @@ public:
     int picked_block = -1;
     bool bSmoothLines = true;
     bool bWireframe = true;
+    bool bVertexNumbers = false;
+    bool bDebugSliders  = false;
+    bool bHover         = false;
+    bool bBBoxDebug     = false;
+    bool bPolyWireframe = false;
+    bool bShowHelp      = false;
+    int  hoverPicked    = -1;
+    bool bDragging      = false;
+    int  dragVertex     = -1;
+    Vec3d p_debug{ 100.0, 0.0, 0.0 };
+    char str_tmp[8096];
 
     class OnSelectLuaShipScript : public GUIEventCallback { 
     public:
@@ -79,6 +94,15 @@ public:
         lstLuaFiles = new DropDownList("lua files", 20, HEIGHT-100, 200, 5); 
         gui.addPanel(lstLuaFiles);
         lstLuaFiles->setCommand([this](GUIAbstractPanel* panel){ onSelectLuaShipScript.GUIcallback(panel); });
+
+        // --- Debug toggle checkboxes
+        dbgBoxes = new CheckBoxList( 5, 5, 160, fontSizeDef*2 );
+        dbgBoxes->addBox( "Vertex nums [N]", &bVertexNumbers );
+        dbgBoxes->addBox( "Debug sliders [B]", &bDebugSliders  );
+        dbgBoxes->addBox( "Hover [H]",        &bHover         );
+        dbgBoxes->addBox( "BBox debug [V]",   &bBBoxDebug     );
+        dbgBoxes->addBox( "Wireframe [P]",    &bPolyWireframe );
+        gui.addPanel( dbgBoxes );
 
         // Load ship files list using Tree functionality
         TreeView* tvDir = new TreeView("DirView", 20, HEIGHT-400, 200, 20);
@@ -125,77 +149,185 @@ public:
     }
 
     virtual void draw() override {
+        glLineWidth(1.0); // reset line width (may be stale from previous frame)
+        if(bPolyWireframe){ glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); } else { glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); }
         SpaceCraftDynamicsApp::draw(); // Call parent's draw first
-        
-        // Additional editor-specific drawing
-        if(edit_mode == EDIT_MODE::component) {
-            if(compGui) compGui->draw();
-        } else if(edit_mode == EDIT_MODE::edge) {
-            if(girderGui) girderGui->draw();
-        } else if(edit_mode == EDIT_MODE::vertex) {
-            if(plateGui) plateGui->draw();
+
+        // --- Update spatial buckets for picking (if initialized)
+        if(_sim){
+            if(_sim->pointBBs.ncell>0) updatePointBBs( _sim->pointBBs, _sim->BBs, _sim->points,            true );
+            if(_sim->edgeBBs .ncell>0) updateEdgeBBs ( _sim->edgeBBs,  _sim->BBs, _sim->bonds, _sim->points, false );
         }
-        
-        // Draw picking interface
-        if(picked >= 0) {
+
+        // --- Debug sliders
+        if(bDebugSliders && _sim) debug_sliders();
+
+        // --- BBox debug visualization
+        if(bBBoxDebug && _sim){
+            picked_block = _sim->pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
+            renderPickedBBox( picked_block, *_sim );
+        }
+
+        // --- Vertex numbering overlay
+        if(bVertexNumbers && _sim){
+            glDisable(GL_DEPTH_TEST);
+            glColor3f(0.0,0.0,0.0);
+            for(int i=0; i<_sim->nPoint; i++){ Draw3D::drawInt( _sim->points[i].f, i, fontTex, 0.02 ); }
+            glEnable(GL_DEPTH_TEST);
+        }
+
+        // --- Draw sliders
+        if(_sim){
+            glLineWidth(5.0);
+            glColor3f(0.0,0.5,1.0); drawSliderBonds( *_sim );
+            glColor3f(1.0,0.0,1.0); drawSliders    ( *theSpaceCraft, *_sim );
+            glLineWidth(3.0);
+            glColor3f(0.0,0.5,0.0); drawSliderPaths( *theSpaceCraft, *_sim );
+            glLineWidth(1.0);
+        }
+
+        // --- Picking visualization
+        if(_sim){
+            picker.hray = (Vec3d)(cam.rot.c);
+            picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+            glLineWidth(5.0);
+            if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3d p = *(Vec3d*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
+            else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( _sim->points[b.x].f, _sim->points[b.y].f ); } }
+            glLineWidth(1.0);
+        }
+
+        // --- Hover highlight
+        if(bHover && hoverPicked>=0 && _sim){
+            glColor3f(1.0,0.5,0.0);
+            if     (picker.edit_mode == EDIT_MODE::vertex){ Draw3D::drawPointCross( _sim->points[hoverPicked].f, 8.0 ); }
+            else if(picker.edit_mode == EDIT_MODE::edge  ){ int2 b = _sim->bonds[hoverPicked]; Draw3D::drawLine( _sim->points[b.x].f, _sim->points[b.y].f ); }
+        }
+
+        // --- Drag feedback
+        if(bDragging && dragVertex >= 0 && _sim){
+            glColor3f(1.0,0.0,0.0);
+            Draw3D::drawPointCross( _sim->points[dragVertex].f, 12.0 );
+        }
+
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_LIGHTING);
+        if( (picker.picked>=0) && (edit_mode==EDIT_MODE::component) ){
             glColor3f(0,1.0,0);
-            if(_sim) drawPicked(*theSpaceCraft, picked);
+            drawPicked( *theSpaceCraft, picked );
         }
     }
 
     virtual void drawHUD() override {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  // reset wireframe so text/GUI renders correctly
         SpaceCraftDynamicsApp::drawHUD();
-        gui.draw();
-        
-        // Draw editor mode info
-        char str[256];
-        const char* mode_name = "unknown";
-        switch(edit_mode) {
-            case EDIT_MODE::component: mode_name = "Component"; break;
-            case EDIT_MODE::vertex:    mode_name = "Vertex";    break;
-            case EDIT_MODE::edge:      mode_name = "Edge";      break;
+
+        if(dbgBoxes) dbgBoxes->syncRead();  // sync checkboxes with keyboard-toggled bools
+
+        // --- Status line
+        if(_sim){
+            sprintf(str_tmp, "time=%10.5f[s] mass=%g cog(%g,%g,%g) vcog(%g,%g,%g) L(%g,%g,%g) torq(%g,%g,%g) |F|=%g \n", _sim->time, _sim->mass, _sim->cog.x,_sim->cog.y,_sim->cog.z, _sim->vcog.x,_sim->vcog.y,_sim->vcog.z, _sim->L.x,_sim->L.y,_sim->L.z, _sim->torq.x,_sim->torq.y,_sim->torq.z, _sim->F_residual );
+            Draw::drawText( str_tmp, fontTex, fontSizeDef,  {WIDTH,HEIGHT-20}  );
         }
-        sprintf(str, "Edit Mode: %s", mode_name);
-        Draw::drawText(str, fontTex, fontSizeDef, {WIDTH,HEIGHT-20});
+
+        // --- Mode + debug state line
+        const char* modeNames[] = {"?","vertex","edge","?","component"};
+        int modeIdx = (int)picker.edit_mode;
+        const char* modeName = (modeIdx>=0 && modeIdx<=4) ? modeNames[modeIdx] : "?";
+        sprintf(str_tmp, "mode=%s picked=%i hover=%s nums=%s sliders=%s bbox=%s wire=%s \n",
+            modeName, picker.picked,
+            bHover?"on":"off", bVertexNumbers?"on":"off", bDebugSliders?"on":"off",
+            bBBoxDebug?"on":"off", bPolyWireframe?"on":"off" );
+        Draw::drawText( str_tmp, fontTex, fontSizeDef,  {WIDTH,HEIGHT-40}  );
+
+        // --- Help overlay
+        if(bShowHelp){
+            sprintf(str_tmp,
+                "=== Key Shortcuts (F1 to close) ===\n"
+                "M     - cycle pick mode (vertex/edge/component)\n"
+                "N     - toggle vertex numbering\n"
+                "B     - toggle slider debug viz\n"
+                "H     - toggle hover highlight\n"
+                "V     - toggle bbox debug viz\n"
+                "P     - toggle wireframe/fill\n"
+                "L     - reload Lua ship script\n"
+                "Space - pause/resume simulation\n"
+                "KP_0  - clear velocities\n"
+                "[ ]   - cycle bbox blocks\n"
+                "LMB   - pick / drag vertex (in vertex mode)\n"
+                "RMB   - rotate camera\n"
+                "Wheel - zoom\n"
+                "F1    - toggle this help\n"
+            );
+            Draw::drawText( str_tmp, fontTex, fontSizeDef, {200, HEIGHT-40} );
+        }
+
+        gui.draw();
     }
 
     virtual void eventHandling(const SDL_Event& event) override {
         SpaceCraftDynamicsApp::eventHandling(event);
-        gui.onEvent(mouseX, mouseY, event);
-        
+        // Note: gui.onEvent already called by base class
+
         switch(event.type) {
+        case SDL_KEYDOWN:
+            switch(event.key.keysym.sym) {
+                case SDLK_LEFTBRACKET  : if(_sim) circ_inc(picked_block, _sim->edgeBBs.ncell ); break;
+                case SDLK_RIGHTBRACKET : if(_sim) circ_dec(picked_block, _sim->edgeBBs.ncell ); break;
+                case SDLK_m: picker.switch_mode(); break;
+                case SDLK_F1: bShowHelp = !bShowHelp; break;
+                case SDLK_n: bVertexNumbers = !bVertexNumbers; break;
+                case SDLK_b: bDebugSliders  = !bDebugSliders;  break;
+                case SDLK_h: bHover         = !bHover;         break;
+                case SDLK_v: bBBoxDebug     = !bBBoxDebug;     break;
+                case SDLK_p: bPolyWireframe  = !bPolyWireframe;  if(bPolyWireframe){ glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); } else { glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); } break;
+                case SDLK_l: onSelectLuaShipScript.GUIcallback(lstLuaFiles); break;
+                case SDLK_KP_0: if(_sim) _sim->cleanVel(); break;
+            }
+            break;
         case SDL_MOUSEBUTTONDOWN:
             if(event.button.button == SDL_BUTTON_LEFT) {
-                mouse_ray0 = (Vec3d)cam.pos;
-                mouse_hray = (Vec3d)cam.rot.c;  // Forward direction from camera                
-                if(edit_mode == EDIT_MODE::component && _mesh) {
-                    // Configure picker ray before picking and ensure picker backend is valid
-                    picker.ray0 = mouse_ray0;
-                    picker.hray = mouse_hray;
-                    if(picker.picker) {
-                        picker.pick(); // Use picker's built-in pick function
+                picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+                picker.hray = (Vec3d)(cam.rot.c);
+                if(picker.picker) {
+                    picker.pick();
+                    if(picker.edit_mode == EDIT_MODE::vertex && picker.picked >= 0){
+                        bDragging  = true;
+                        dragVertex = picker.picked;
                     }
                 }
             }
             break;
-        case SDL_KEYDOWN:
-            switch(event.key.keysym.sym) {
-                case SDLK_m: picker.switch_mode(); break;
-                case SDLK_l: onSelectLuaShipScript.GUIcallback(lstLuaFiles); break;
+        case SDL_MOUSEBUTTONUP:
+            if(event.button.button == SDL_BUTTON_LEFT) {
+                bDragging  = false;
+                dragVertex = -1;
             }
+            break;
+        case SDL_MOUSEMOTION:
+            if(bDragging && dragVertex >= 0 && _sim){
+                Vec3d hray = (Vec3d)(cam.rot.c);
+                Vec3d ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+                Vec3d p0   = _sim->points[dragVertex].f;
+                double t   = (p0 - ray0).dot(hray);
+                _sim->points[dragVertex].f = ray0 + hray * t;
+            }
+            if(bHover && !bDragging && _sim){
+                picker.hray = (Vec3d)(cam.rot.c);
+                picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+                if     (picker.edit_mode == EDIT_MODE::vertex){ hoverPicked = (_sim->pointBBs.ncell>0 && _sim->BBs) ? pick_point_bucket( _sim->pointBBs, _sim->BBs, _sim->points, picker.ray0, picker.hray, picker.Rmax ) : _sim->pick_point_brute(picker.ray0, picker.hray, picker.Rmax); }
+                else if(picker.edit_mode == EDIT_MODE::edge  ){ hoverPicked = (_sim->edgeBBs .ncell>0 && _sim->BBs) ? pick_bond_bucket ( _sim->edgeBBs,  _sim->BBs, _sim->bonds, _sim->points, picker.ray0, picker.hray, picker.Rmax ) : _sim->pick_bond_brute (picker.ray0, picker.hray, picker.Rmax); }
+                else { hoverPicked = -1; }
+            } else { hoverPicked = -1; }
             break;
         }
     }
 
     virtual void keyStateHandling(const Uint8 *keys) override {
         SpaceCraftDynamicsApp::keyStateHandling(keys);
-        
+
         if(keys[SDL_SCANCODE_1]) edit_mode = EDIT_MODE::component;
         if(keys[SDL_SCANCODE_2]) edit_mode = EDIT_MODE::vertex;
         if(keys[SDL_SCANCODE_3]) edit_mode = EDIT_MODE::edge;
-        
-        if(keys[SDL_SCANCODE_W]) bWireframe = !bWireframe;
-        if(keys[SDL_SCANCODE_L]) bSmoothLines = !bSmoothLines;
     }
 
     void reloadShip(const char* fname) {
@@ -204,11 +336,58 @@ public:
             // Initialize simulators using the mesh built from the Lua ship
             simulator->initSimulators();
 
-            // Setup sliders and dynamic control, analogously to spaceCraftEditor.cpp and spaceCraftDynamics.cpp
+            // Setup sliders and dynamic control
             for( Ring* o : theSpaceCraft->rings ){ o->updateSlidersPaths( true, true, simulator->sim.points ); }
             sliders2edgeverts( *theSpaceCraft, simulator->sim );
             simulator->sim.user_update = SpaceCraftControl;
+            simulator->sim.updateInveriants(false);
         }
+    }
+
+    void debug_sliders(){
+        printf( "============= debug_sliders() \n" );
+        glLineWidth(5.0);
+        Draw3D::drawPointCross( p_debug, 30.0 );
+        uint32_t colors[4]{ 0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00};
+        for( Slider* o: theSpaceCraft->sliders){
+            o->print(); printf(" - boundTo:");
+            o->boundTo->print();
+            int side = o->boundTo->nearSide(p_debug);
+            printf(" - side: %i \n", side );
+            glBegin(GL_LINES);
+            Draw::setRGB( colors[side] );
+            for(int i=0; i<5; i++){
+                Vec3d p;
+                o->boundTo->pointAlong( 0.2*i+0.1, side, &p );
+                glVertex3d( p.x, p.y, p.z );
+                glVertex3d( p_debug.x, p_debug.y, p_debug.z  );
+            }
+            glEnd();
+            for(int side=0; side<4; side++ ){
+                glBegin(GL_LINE_STRIP);
+                Draw::setRGB( colors[side] );
+                for(int i=0; i<5; i++){
+                    Vec3d p;
+                    o->boundTo->pointAlong( 0.2*i+0.1, side, &p );
+                    glVertex3d( p.x, p.y, p.z );
+                }
+                glEnd();
+            }
+        }
+        glLineWidth(1.0);
+    }
+
+    void renderPickedBBox( int picked_block, TrussDynamics_d& sim ){
+        if(picked_block>=0){
+            glPointSize(5);
+            glLineWidth(3);
+            Quat8d bb = sim.BBs[picked_block];
+            glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+            glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
+            glColor3f( 1.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointChunks,         sim.points );
+            glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
+        }
+        glLineWidth(1);
     }
 };
 

@@ -391,3 +391,27 @@ Helper functions: `init_hessian`, `accum_vertex_hessian` (3×3 Hessian assembly 
 | GUI | `SpaceCraftGUI.h` | `MeshGenTestGUI.js` | — | — |
 | Construction docs | — | — | — | — |
 | Construction problems | `SpaceCraftConstructionProblems.md` | — | — | — |
+| Nuclear propulsion | — | — | `doc/python/Burn1D/` (implosion, neutron_diffusion, euler_tube, pulsejet, wave_tube) | — |
+
+---
+
+## 14. Nuclear Propulsion Solvers (Burn1D)
+
+**Purpose**: 1D solvers for compressible flow, combustion, and nuclear physics — directly applicable to nuclear-powered spacecraft (Orion-style pusher plate, nuclear thermal rockets, fusion drives).
+
+### Python (`doc/python/Burn1D/`)
+
+Each solver chain is split into `_solver.py` (compute), `_plotting.py` (visualization), and a thin CLI script.
+
+- **`implosion_solver.py` / `implosion.py`** — Spherical implosion with Numba-accelerated staggered grid (Von Neumann-Richtmyer). Models material layers (gas/pusher/tamper), EOS (ideal gas + radiation), artificial viscosity, DT fusion rate (Bosch-Hale), neutron diffusion. **Directly relevant**: nuclear pulse propulsion (Orion drive), fusion drive compression dynamics.
+- **`neutron_diffusion_solver.py` / `neutron_diffusion.py`** — Multi-group neutron diffusion with implosion hydrodynamics, burnup/depletion, k_eff tracking. Models fuel/moderator/reflector layers with macroscopic cross-sections. **Directly relevant**: reactor criticality analysis for nuclear thermal rockets, radiation shielding design.
+- **`euler_tube_solver.py` / `euler_tube.py`** — 1D Euler equations with well-balanced Rusanov flux, Hermite geometry, propeller source term. **Relevant**: nozzle flow in nuclear thermal rockets, propellant feed lines.
+- **`pulsejet_solver.py` / `pulsejet.py`** — Lagrangian 1D pulsejet with 5-species combustion, diffusion, dynamic topology. **Relevant**: pulse propulsion dynamics, combustion chamber modeling.
+- **`wave_tube_solver.py` / `wave_tube.py`** — Lagrangian acoustic wave with velocity Verlet, energy conservation. **Relevant**: pressure wave propagation in propellant lines.
+
+### Spacecraft Application Roadmap
+1. **Implosion solver** → Orion pusher plate impulse modeling, fusion drive compression
+2. **Neutron diffusion** → Reactor shielding design, criticality safety for space reactors
+3. **Euler tube** → Nozzle and propellant line flow analysis
+4. **Pulsejet** → Pulse propulsion cycle analysis
+5. **Future**: Couple these 1D solvers with `TrussDynamics` for structural response to nuclear impulses

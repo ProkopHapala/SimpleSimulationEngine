@@ -1,7 +1,7 @@
 # Spacecraft Simulator TODO
 
 **Generated from**: `docs/SpaceCrafting/Codebase_Reference_Map.md` and codebase analysis.
-**Last updated**: 2025-07-18
+**Last updated**: 2025-07-05
 
 ---
 
@@ -11,6 +11,41 @@
 - **P1** — Core feature gap. Needed for minimum viable simulation.
 - **P2** — Important for realism / gameplay. Can be deferred.
 - **P3** — Enhancement / polish.
+
+---
+
+## Completed: SpaceCraftEditorNew Crash & Visualization Fixes (2025-07-05)
+
+### Problem
+`SpaceCraftEditorNew` crashed on startup with `ship_ICF_marksman_2.lua` due to 4 separate `exit(0)` calls triggered by unconnected vertices and uninitialized edge types. Additionally, thick lines and broken 3D text rendering made visualization unusable.
+
+### Fixes Applied
+
+**Crash fixes (4 `exit(0)` calls eliminated):**
+- [x] `checkAllPointsConnected(true, true)` → `checkAllPointsConnected(false, true)` in `SpaceCraft2Mesh2.h` — 12 unconnected bound nodes no longer cause exit.
+- [x] `o->edge_type = 0` in `l_Node` (`EditSpaceCraft.h`) — uninitialized `edge_type=-1` caused `exportSim` to exit on invalid stick material index.
+- [x] `exit(0)` on bad edge type in `exportSim` (both double and float versions) → `continue` (skip bad edges with warning).
+- [x] `checkMasses()` → `checkMasses(1e-9, false)` in `SpaceCraft2Mesh2.h` — zero-mass unconnected points no longer cause exit.
+- [x] Assign `mass=1.0` to unconnected points in both `exportSim` (double) and `exportSim_f` (float) — prevents NaN in Cholesky decomposition (D[j]=0 → division by zero).
+- [x] Bound nodes (`l_BoundNode`, `l_Rope2`) registered in `components` vector for `find_mesh_element` lookup.
+- [x] `SpaceCraft::clear()` fixed to delete only via `components` (avoids double-free).
+
+**Visualization fixes:**
+- [x] `glLineWidth(1.0)` added at start of `SpaceCraftDynamicsApp::draw()` — prevents stale thick line width from previous frame affecting truss rendering.
+- [x] `glLineWidth(1.0)` reset added after picking visualization block in `SpaceCraftEditorNew.cpp` — was set to 5.0 but never reset.
+- [x] `glEnable(GL_DEPTH_TEST)` in `SpaceCraftDynamicsApp::draw()` (was `glDisable`) — matches old editor, enables proper 3D occlusion for truss and text rendering.
+- [x] `glDisable/glEnable(GL_DEPTH_TEST)` around vertex numbering overlay — 3D text labels render on top of geometry.
+
+### Files Modified
+- `cpp/common/Orbital/SpaceCraft2Mesh2.h` — crash fixes (exit→warn, mass fix, checkMasses bExit=false)
+- `cpp/common/Orbital/EditSpaceCraft.h` — edge_type init, components registration
+- `cpp/common/Orbital/SpaceCraft.h` — clear() double-free fix, find_mesh_element cleanup
+- `cpp/apps/OrbitalWar/SpaceCraftDynamicsApp.h` — GL_DEPTH_TEST enable, glLineWidth reset
+- `cpp/apps/OrbitalWar/SpaceCraftEditorNew.cpp` — glLineWidth resets, depth test for vertex labels
+
+### Remaining
+- [ ] 12 unconnected vertices from bound nodes still exist (non-fatal, warnings only). Root cause: `make_anchor_point` creates vertices before girders are processed, so no edges connect them. Fix would require reordering mesh building or deferring anchor connections.
+- [ ] Memory leaks in Lua bindings (Rope2, Rope, Material, StickMaterial) detected by ASan — pre-existing, not blocking.
 
 ---
 
@@ -108,15 +143,24 @@ No code computes which truss edges/nodes are hit by a projectile. `spaceCombat.h
 ### Problem
 C++ `Slider::updatePath()` extracts path vertices from a `StructuralComponent` side. `findNearestPoint()` is commented out. `StructuralComponent::updateSlidersPaths()` iterates attached nodes but path initialization may be incomplete.
 
-### Tasks
+### Completed
+- [x] Port JS cubic B-spline interpolation (`bsplineInterpolate`) to C++ — done in `cpp/common/dynamics/KinematicSolver.h`.
+- [x] Kinematic solver (`KinematicSystem`) with LM optimization, slider constraints, `sweepSolve` and `sweepSolveRange`.
+- [x] Slider paths derived from actual girder vertex indices (same approach as `Girder::sideToPath()`).
+- [x] Kinematic animation demo: triangular girder + parabolic dish sliding along 3 axial rails, exported as `.obj+` multi-frame.
+- [x] Rail path visualization (static lines) + slider connection lines in animation frames.
+
+### Tasks (remaining)
 - [ ] Uncomment and test `Slider::findNearestPoint()` — needed to snap slider to closest path position.
 - [ ] Verify `updateSlidersPaths()` correctly initializes all sliders on a ring with multiple girders.
 - [ ] Port JS `pAttach` + `weldDist` mechanism to C++ for more robust slider-to-girder attachment.
-- [ ] Port JS cubic B-spline interpolation (`bsplineInterpolate`) to C++ `Path::getPos()`.
+- [ ] Integrate `KinematicSolver` with `SpaceCraftComponents.h` `Slider` class (replace ad-hoc path setup).
 - [ ] Test: Create a ring with 4 sliders on girders, verify paths are correct and sliders move smoothly.
 
 ### Files
 - `cpp/common/Orbital/SpaceCraftComponents.h` — `Slider::updatePath()` (line 804), `findNearestPoint()` (line 815, commented)
+- `cpp/common/dynamics/KinematicSolver.h` — `KinematicSystem`, `bsplineInterpolate()`, `sweepSolve()`, `sweepSolveRange()`
+- `cpp/apps/OrbitalWar/constructionBlockApp.cpp` — `-KinematicTest` demo (damper: dish slides along girder)
 - `js/common_js/SplineCubic.js` — `bsplineInterpolate()` (reference for porting)
 - `js/spacecraft_editor/js/SpaceCraft2Mesh.js` — `pAttach` mechanism (line 237)
 
@@ -146,19 +190,22 @@ C++ `Slider::updatePath()` extracts path vertices from a `StructuralComponent` s
 ### Problem
 `ParabolaSheet`, `ParabolaSlab_wrap`, `ParametricParabolaPatch` exist only in JS (`MeshesUV.js`, `MeshGenerators.js`). C++ `Mesh::Builder2` lacks these. The nozzle/damper prototype only works in JS.
 
-### Tasks
-- [ ] Port `ParabolaUVfunc` to C++ (simple: `z = f(r)` with `R0`, `R`, `L` parameters).
-- [ ] Port `ParabolaSheet` to `Mesh::Builder2` (single-layer truss following parabolic surface).
+### Completed
+- [x] Port `ParabolaUVfunc` to C++ — done in `cpp/common_SDL/SDL2OGL3/DrawUV.h`.
+- [x] Port `ParabolaSheet` to C++ `Builder2` — done in `DrawUV.h`.
+- [x] Port `ParametricParabolaPatch` to C++ `Builder2` — done in `DrawUV.h`.
+- [x] C++ test in `constructionBlockApp.cpp` — `-KinematicTest` generates parabolic dish + triangular girder.
+
+### Tasks (remaining)
 - [ ] Port `ParabolaSlab_wrap` to `Mesh::Builder2` (double-layer with bracing between layers).
-- [ ] Port `ParametricParabolaPatch` to `Mesh::Builder2` (annular patch with independent inner/outer tessellation).
 - [ ] Port `TubeSheetBond` (two tubes with bond-length analysis and welding).
-- [ ] Add C++ test in `constructionBlockTests` equivalent.
 - [ ] Test: Generate nozzle mesh in C++, verify same vertex/edge count as JS.
 
 ### Files
-- `js/spacecraft_editor/js/MeshesUV.js` — `ParabolaUVfunc`, `ParabolaSheet`, `ParabolaSlab_wrap`
-- `js/spacecraft_editor/js/MeshGenerators.js` — `ParametricParabolaPatch`, `TubeSheetBond`
-- `cpp/common/geometry/MeshBuilder2.h` — target for porting
+- `cpp/common_SDL/SDL2OGL3/DrawUV.h` — `ParabolaUVfunc`, `ParabolaSheet`, `ParametricParabolaPatch` (ported)
+- `js/spacecraft_editor/js/MeshesUV.js` — `ParabolaSheet`, `ParabolaSlab_wrap` (reference for remaining)
+- `js/spacecraft_editor/js/MeshGenerators.js` — `TubeSheetBond` (reference for remaining)
+- `cpp/common/geometry/MeshBuilder2.h` — target for remaining ports
 
 ---
 
@@ -239,11 +286,23 @@ JS spacecraft editor has more advanced mesh generators and UI, but no dynamics. 
   3. Use mesh export CLI (`spaceCraft_mesh_export_cli.md`) to transfer designs from JS to C++ simulation.
   4. Add C++ visual test harness for mesh generators (simple OpenGL viewer with parameter sliders).
 
-### Tasks
-- [ ] Port `ParabolaSheet`, `ParabolaSlab_wrap`, `ParametricParabolaPatch` (see P1 above).
-- [ ] Port `TubeSheetBond` with bond-length analysis.
+### Completed
+- [x] Port `ParabolaSheet`, `ParametricParabolaPatch` to C++ (see P1 above).
+- [x] Port cubic B-spline interpolation to C++ (`KinematicSolver.h`).
+- [x] `dir2tree` refactored to shared utility `cpp/common/utils/dir2tree.h` — eliminates code duplication across MeshViewer, SpaceCraftGUI, and other apps. Accepts optional file filter callback.
+- [x] `MeshViewer` (`cpp/apps/MeshViewer/MeshViewer.h`) established as the primary mesh/animation visualizer:
+  - OBJ face parser handles quads/ngons (fan-triangulation), no fake wireframe diagonals.
+  - Backface culling toggle (`showBackfaces`), on by default (renders both sides).
+  - Wireframe only draws explicit edges from OBJ file (no derived triangle edges).
+  - Multi-frame `.obj+` animation playback: `[`/`]` step frames, `Space` play/pause, frame slider with live update (`bCmdOnSlider`).
+  - Camera no longer resets during frame navigation — stays fixed while stepping through animation.
+  - File browser with `dir2tree` + mesh file filter (`isMeshFile`).
+  - Display toggles: solid, wireframe, points, vertex/edge/face numbers, normals.
+  - Used to visualize kinematic animation results (damper demo, slider connection lines, rail paths).
+
+### Tasks (remaining)
+- [ ] Port `ParabolaSlab_wrap` and `TubeSheetBond` with bond-length analysis.
 - [ ] Port JS `pAttach` slider attachment to C++.
-- [ ] Port cubic B-spline interpolation to C++ `Path`.
 - [ ] Add C++ mesh generator test GUI (parameter sliders + OpenGL preview).
 - [ ] Verify mesh export CLI can transfer JS designs to C++ simulation format.
 
@@ -254,7 +313,10 @@ JS spacecraft editor has more advanced mesh generators and UI, but no dynamics. 
 ### Problem
 Telescopic truss recoil damper (hexagonal outer + triangular inner tube) requires collision avoidance between inner and outer tube during compression. No collision avoidance code exists for this specific case.
 
-### Tasks
+### Completed
+- [x] Kinematic demo of damper mechanism: parabolic dish (pusher plate) slides along triangular girder (spine) using `KinematicSolver`. 3 slider constraints on axial rails derived from girder vertices. Animation exported as `.obj+` and visualized in `MeshViewer`.
+
+### Tasks (remaining)
 - [ ] Define collision shapes for tube cross-sections (hexagonal, triangular).
 - [ ] Implement per-segment collision check: for each slider position, verify inner tube vertices don't penetrate outer tube walls.
 - [ ] Add collision response: if penetration detected, apply impulse to push inner tube back.
@@ -264,6 +326,8 @@ Telescopic truss recoil damper (hexagonal outer + triangular inner tube) require
 - `js/spacecraft_editor/js/constructionBlockTests.js` — "TubeSheetBond Hex Ring" test (line 340)
 - `docs/SpaceCrafting/SpaceCraftConstructionProblems.md` — §1.1-1.5 damper design
 - `cpp/common/dynamics/TrussDynamics_d.h` — collision infrastructure
+- `cpp/common/dynamics/KinematicSolver.h` — kinematic solver for slider constraints
+- `cpp/apps/OrbitalWar/constructionBlockApp.cpp` — `-KinematicTest` damper demo
 
 ---
 
@@ -314,3 +378,33 @@ Python `pyTruss/truss.cl` (849 lines, 12 kernels) has the most complete OpenCL t
 - `python/pyTruss/sparse.py` — sparse operations, `gauss_seidel_iteration_colored()`
 - `cpp/common/dynamics/TrussDynamics_d.h` — C++ solver enum (14 methods)
 - `cpp/apps/OrbitalWar/spaceCraftDynamicsOCL.cpp` — C++ OpenCL dynamics (audit target)
+
+---
+
+## P2: Integrate Burn1D Nuclear Propulsion Solvers
+
+### Problem
+1D nuclear/combustion solvers in `doc/python/Burn1D/` are functional but standalone. They are directly relevant to nuclear-powered spacecraft (Orion pusher plate, nuclear thermal rockets, fusion drives) but not yet connected to the spacecraft simulator.
+
+### Solvers Available
+- **`implosion_solver.py`** — Spherical implosion (Numba-accelerated staggered grid, DT fusion, neutron diffusion, material layers). Applicable to: Orion pusher plate impulse, fusion drive compression.
+- **`neutron_diffusion_solver.py`** — Multi-group neutron diffusion with burnup/depletion, k_eff. Applicable to: space reactor criticality, radiation shielding design.
+- **`euler_tube_solver.py`** — 1D Euler with Rusanov flux, variable geometry. Applicable to: nozzle flow, propellant lines.
+- **`pulsejet_solver.py`** — Lagrangian pulsejet with 5-species combustion. Applicable to: pulse propulsion cycle.
+- **`wave_tube_solver.py`** — Lagrangian acoustic wave. Applicable: pressure waves in propellant lines.
+
+### Tasks
+- [ ] Validate each solver produces correct physics (run old versions for parity, compare plots)
+- [ ] Couple implosion solver impulse output to `TrussDynamics` as external force on pusher plate
+- [ ] Use neutron diffusion solver for radiation shielding design (couple with `Radiosity` for surface heating)
+- [ ] Port critical 1D solvers to C++ or OpenCL for real-time simulation integration
+- [ ] Define spacecraft nuclear propulsion component model (reactor, shield, pusher plate, nozzle)
+- [ ] Test: Simulate Orion-style nuclear pulse with pusher plate + damper + spacecraft truss
+
+### Files
+- `doc/python/Burn1D/implosion_solver.py` — `ImplosionSim` class (Numba staggered grid)
+- `doc/python/Burn1D/neutron_diffusion_solver.py` — `NeutronDiffusionSim` class (multi-group diffusion)
+- `doc/python/Burn1D/euler_tube_solver.py` — `CompressibleSolver` class (Rusanov flux)
+- `doc/python/Burn1D/pulsejet_solver.py` — `PulsejetSolver` class (Lagrangian combustion)
+- `doc/python/Burn1D/wave_tube_solver.py` — `WaveTubeSolver` class (acoustic wave)
+- `docs/SpaceCrafting/Codebase_Reference_Map.md` — §14 Nuclear Propulsion Solvers

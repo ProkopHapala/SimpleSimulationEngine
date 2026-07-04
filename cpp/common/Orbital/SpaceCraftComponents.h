@@ -266,7 +266,7 @@ class ShipComponent : public Object { public:
     int    shape;
     int    face_mat=-1;
     Vec3d  pos;
-    double size;
+    double size=1.0;
     // Mat3d  rot; // currently we don't need this but maybe later?
     //int    edge_mat=-1;
     //int    p0; // anchor node

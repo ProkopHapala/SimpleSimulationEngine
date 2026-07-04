@@ -13,6 +13,8 @@
 #include "SpaceCraftDraw.h"
 #include "TrussDynamics_d.h"
 #include "TrussDynamics_f.h"
+#include "Solids.h"
+#include "BucketUtils.h"
 //#include "OCL_Orb.h"
 
 namespace SpaceCrafting {
@@ -117,13 +119,18 @@ class SpaceCraftSimulator { public:
 
 void SpaceCraftSimulator::reloadShip( const char* fname ){
     printf("#### START reloadShip('%s')\n", fname );
-    theSpaceCraft->clear();                       
-    //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
+    theSpaceCraft->clear();
     if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
     printf( "Lua::dofile(%s) DONE \n", fname );
     theSpaceCraft->checkIntegrity();
+    // Set up nodeMeshes for BuildCraft_blocks: octahedron with quad plane faces (not triangular faces)
+    // bridgeFacingPolygons/bridge_quads requires quad chunks (4 verts per face)
+    if( theSpaceCraft->nodeMeshes.size() == 0 ){
+        CMesh oct = (CMesh){Solids::Octahedron_nverts, Solids::Octahedron_nedges, Solids::Octahedron_ntris, Solids::Octahedron_nplanes, Solids::Octahedron_verts, Solids::Octahedron_edges, Solids::Octahedron_tris, Solids::Octahedron_planes, Solids::Octahedron_planeVs};
+        theSpaceCraft->nodeMeshes.push_back(oct);
+    }
     mesh.clear();
-    BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+    BuildCraft_blocks( mesh, *theSpaceCraft, 30.0 );
     mesh.printSizes();
     printf("#### END reloadShip() \n");
 };
@@ -133,7 +140,9 @@ void SpaceCraftSimulator::initSimulators( double dt, Vec3d p0, Vec3d omega ){
     to_TrussDynamics_f( sim_f, mesh, fixPoints.size(), fixPoints.data() );
     //sim.cleanVel( Quat4d{0.0,1.0,0.0,0.0} );
     //sim.addAngularVelocity( p0, Vec3fZ*0.01 );
-
+    // Build spatial buckets for accelerated picking
+    Mesh::makeBBoxes( *theSpaceCraft, sim );
+    Mesh::makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
 }
 
 void SpaceCraftSimulator::initSimDefault(){
