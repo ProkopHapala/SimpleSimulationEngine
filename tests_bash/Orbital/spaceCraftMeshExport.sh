@@ -37,3 +37,10 @@ export LD_PRELOAD
     -o ship_ICF_marksman_2.obj \
     -t ship_ICF_marksman_2.truss \
     -v 1 | tee OUT-spaceCraftMeshExport
+
+# Sketch LOD from OBJ import
+./$name.x -s data/ship_sketch_from_obj.lua \
+    -lod sketch \
+    -o ship_sketch_from_obj.obj \
+    -g ship_sketch_from_obj_tags.obj \
+    -v 1 | tee OUT-spaceCraftMeshExport-sketch

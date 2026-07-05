@@ -1,6 +1,21 @@
 #ifndef SpaceCraft2Mesh_blocks_h
 #define SpaceCraft2Mesh_blocks_h
 
+/// @file SpaceCraft2Mesh_blocks.h
+/// @brief Simplified **BuildCraft_blocks** for headless truss export — nodes + girders + ropes + rings only.
+///
+/// **WARNING**: duplicate of `SpaceCraft2Mesh2.h::BuildCraft_blocks` with different wiring (no sliders,
+/// radiators, welds). Used by `spaceCraftMeshExport` CLI — do not unify without explicit review.
+///
+/// Sketch-imported girders still carrying `DEFERRED_*` are skipped in `girder_to_mesh` / `rope_to_mesh`
+/// with a warning — call `fulfillTag` in Lua before `-lod blocks`.
+///
+/// Open issues / caveats:
+/// - **Not the editor mesh path** — **SpaceCraft2Mesh2.h** includes sliders, octahedron blocks, more components.
+/// - **`slider_to_mesh` uses `boundTo->pointRange`** — fails if host girder mesh not built yet (**build_order** TODO).
+/// - **Shields/radiators/thrusters/tanks** not meshed here — sketch plates visible only via **BuildCraft_sketch**.
+/// - **`checkSpaceCraftMesh`** may report unconnected verts for bound/slider anchor topology — not always a bug.
+
 #include <vector>
 
 #include "Vec2.h"
@@ -25,7 +40,9 @@ inline void node_to_mesh(Node* o, Builder2& mesh) {
     }
 }
 
+/// @brief Tessellate one girder into truss sticks; no-op with warning if `isDeferred()` after OBJ import.
 inline void girder_to_mesh(Girder* o, Builder2& mesh) {
+    if(o->isDeferred()){ printf("WARNING girder_to_mesh[%i] tag='%s' deferred — skipped in blocks LOD\n", o->id, o->sketchTag); return; }
     o->update_nodes();
     mesh.block();
     mesh.girder1(o->nodes.x->pos, o->nodes.y->pos, o->up, o->nseg, o->wh.a, o->st);
@@ -58,6 +75,7 @@ inline void slider_to_mesh(Slider* o, Builder2& mesh) {
 }
 
 inline void rope_to_mesh(Rope* o, Builder2& mesh) {
+    if(isDeferredI(o->nseg) || isDeferredF(o->thick)){ printf("WARNING rope_to_mesh[%i] tag='%s' deferred — skipped in blocks LOD\n", o->id, o->sketchTag); return; }
     o->update_nodes();
     mesh.block();
     Quat4i& b = mesh.blocks.back();
@@ -89,6 +107,7 @@ inline int checkSpaceCraftMesh(const Builder2& mesh, const SpaceCraft& craft, bo
     return unconnected_count;
 }
 
+/// @brief High-res truss mesh path for CLI — structural sticks only, no plates/sliders.
 inline void BuildCraft_blocks( Builder2& mesh, SpaceCraft& craft, double max_size=-1, double node_scale=1.0 ){
     printf( "### BuildCraft_blocks() [standalone-truss]\n" );
     if(max_size>0){ mesh.max_size=max_size; };

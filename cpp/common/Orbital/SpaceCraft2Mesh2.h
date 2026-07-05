@@ -2,6 +2,20 @@
 #ifndef  SpaceCraft2Mesh2_h
 #define  SpaceCraft2Mesh2_h
 
+/// @file SpaceCraft2Mesh2.h
+/// @brief Full **BuildCraft_blocks** for editor/dynamics — girders, sliders, radiators, welds, etc.
+///
+/// **WARNING**: `BuildCraft_blocks` here differs from **SpaceCraft2Mesh_blocks.h** (CLI variant).
+/// Sketch LOD export lives in **SpaceCraftFromOBJ.h** (`BuildCraft_sketch`), not in this file.
+///
+/// Open issues / caveats:
+/// - **Canonical path for interactive sim** — changing this file does not fix CLI export divergence.
+/// - **`updateSlidersPaths` + `sideToPath`** must run after girder/ring blocks exist — see ring loop in
+///   **BuildCraft_blocks**; wrong order breaks slider rails (**SpaceCraftComponents.h**).
+/// - **Shields/radiators/thrusters/tanks** still TODO in mesh loop (commented blocks at file end).
+/// - **Sketch-imported ships** need `fulfillTag` before this builder; deferred girders divide-by-zero risk
+///   if guards removed.
+
 #include <vector>
 #include "Vec2.h"
 #include "Vec3.h"

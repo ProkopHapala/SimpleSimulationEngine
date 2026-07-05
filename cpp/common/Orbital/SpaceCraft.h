@@ -17,9 +17,22 @@
 /// - **build_order** preserves insertion order so structural components are meshed before dependents
 ///   (sliders attached to girders need the girder's mesh vertices to already exist).
 /// - **checkIntegrity()** validates bound-node pointers to catch dangling references early.
+/// - **Sketch / OBJ path**: `add_*Deferred`, `fulfillTagGirders`, `findGirderByNodes` support partial
+///   import via **SpaceCraftFromOBJ.h** — SpaceCraft remains SSOT for both Lua and OBJ inputs.
 ///
 /// Used by the editor for component picking, by **SpaceCraft2Mesh2** for truss generation,
 /// and by **SpaceCraft2Truss** for dynamics export.
+///
+/// Open issues / caveats:
+/// - **`build_order` is documented but not wired** — `registerComponent` only pushes `components`; mesh builders
+///   iterate typed vectors in fixed order. Sliders/rings attached after `fromObj` need host mesh built first
+///   (`pointRange`/`stickRange`) or `sideToPath` / `slider_to_mesh` will fail.
+/// - **Sketch-imported components** can exist logically before high-res params exist — always `fulfillTag` then
+///   `-lod blocks`; deferred girders are warn-skipped in CLI **SpaceCraft2Mesh_blocks**.
+/// - **`findGirderByNodes` is O(n)** — fine for sketch sizes; may need a map if imports grow large.
+/// - **`setGirderParams` uses DEFERRED_* as “leave unchanged”** — easy to mis-call with partial tables.
+/// - **No import-group handle** — `fromObj` returns id lists only; no move/rotate of whole imported chunk yet.
+/// - **`pick()` / `find_mesh_element()`** assume high-res `pointRange` populated — not meaningful on sketch LOD.
 
 #include <vector>
 
@@ -416,6 +429,144 @@ int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const 
     return o->id;
 }
 
+// --- component registry (TODO: also push to build_order for insertion-order mesh build)
+/// TODO: wire `build_order` — sliders/rings need host mesh (`pointRange`) before dependents mesh.
+void registerComponent( ShipComponent* o ){
+    components.push_back( o );
+    // TODO: build_order.push_back( o );
+}
+
+// --- sketch / OBJ import helpers (see SpaceCraftFromOBJ.h) ---
+
+/// @brief Lookup undirected girder by endpoint node ids — used when inferring plates from quad faces.
+int findGirderByNodes( int na, int nb )const{
+    for( int i=0; i<(int)girders.size(); i++ ){
+        Girder* g = girders[i];
+        int a = g->nodes.x->id, b = g->nodes.y->id;
+        if( (a==na && b==nb) || (a==nb && b==na) ) return i;
+    }
+    return -1;
+}
+
+/// @brief Create girder with topology only; `sketchTag` + DEFERRED_* until Lua sets workshop params.
+int add_GirderDeferred( int p0, int p1, const char* tag ){
+    if( p0<0 || p0>=(int)nodes.size() || p1<0 || p1>=(int)nodes.size() ){
+        printf("ERROR add_GirderDeferred() nodes (%i,%i) out of bounds\n", p0, p1); return -1;
+    }
+    Girder* o = new Girder();
+    o->nodes.x = nodes[p0]; o->nodes.y = nodes[p1];
+    o->up = Vec3d{ DEFERRED_F(), DEFERRED_F(), DEFERRED_F() };
+    o->nseg = DEFERRED_I; o->mseg = DEFERRED_I;
+    o->wh = Vec2d{ DEFERRED_F(), DEFERRED_F() };
+    o->st = Quat4i{ DEFERRED_I, DEFERRED_I, DEFERRED_I, DEFERRED_I };
+    o->face_mat = DEFERRED_I;
+    if(tag){ strncpy( o->sketchTag, tag, SKETCH_TAG_LEN-1 ); o->sketchTag[SKETCH_TAG_LEN-1]=0; }
+    o->id = (int)girders.size();
+    if(bPrint) o->print();
+    girders.push_back( o );
+    registerComponent( o );
+    return o->id;
+}
+
+/// @brief Create rope segment from sketch import; thick/nseg deferred like girders.
+int add_RopeDeferred( int p0, int p1, const char* tag ){
+    if( p0<0 || p0>=(int)nodes.size() || p1<0 || p1>=(int)nodes.size() ){
+        printf("ERROR add_RopeDeferred() nodes (%i,%i) out of bounds\n", p0, p1); return -1;
+    }
+    Rope* o = new Rope();
+    o->nodes.x = nodes[p0]; o->nodes.y = nodes[p1];
+    o->thick = DEFERRED_F(); o->nseg = DEFERRED_I; o->face_mat = DEFERRED_I;
+    if(tag){ strncpy( o->sketchTag, tag, SKETCH_TAG_LEN-1 ); o->sketchTag[SKETCH_TAG_LEN-1]=0; }
+    o->id = (int)ropes.size();
+    if(bPrint) o->print();
+    ropes.push_back( o );
+    registerComponent( o );
+    return o->id;
+}
+
+/// @brief Shield from sketch quad — spans default to full girder length `{0,1}`.
+int add_ShieldFromSketch( int g1, int g2, const char* tag, const Vec2d& g1span={0,1}, const Vec2d& g2span={0,1} ){
+    Shield* o = new Shield();
+    o->g1 = g1; o->g2 = g2; o->g1span = g1span; o->g2span = g2span;
+    o->face_mat = DEFERRED_I;
+    if(tag){ strncpy( o->sketchTag, tag, SKETCH_TAG_LEN-1 ); o->sketchTag[SKETCH_TAG_LEN-1]=0; }
+    o->id = (int)shields.size();
+    if(bPrint) o->print();
+    shields.push_back( o );
+    registerComponent( o );
+    return o->id;
+}
+
+/// @brief Radiator from sketch quad — same span defaults as shield; temperature may stay deferred.
+int add_RadiatorFromSketch( int g1, int g2, const char* tag, const Vec2d& g1span={0,1}, const Vec2d& g2span={0,1}, double temperature=DEFERRED_F() ){
+    Radiator* o = new Radiator();
+    o->g1 = g1; o->g2 = g2; o->g1span = g1span; o->g2span = g2span;
+    o->temperature = temperature; o->face_mat = DEFERRED_I;
+    if(tag){ strncpy( o->sketchTag, tag, SKETCH_TAG_LEN-1 ); o->sketchTag[SKETCH_TAG_LEN-1]=0; }
+    o->id = (int)radiators.size();
+    if(bPrint) o->print();
+    radiators.push_back( o );
+    registerComponent( o );
+    return o->id;
+}
+
+bool setNodePos( int id, const Vec3d& p ){
+    if( id<0 || id>=(int)nodes.size() ){ printf("ERROR setNodePos(%i)\n", id); return false; }
+    nodes[id]->pos = p; return true;
+}
+
+/// @brief Patch girder fields; pass DEFERRED_* for any field that should remain unchanged.
+bool setGirderParams( int gid, const Vec3d& up, int nseg, int mseg, const Vec2d& wh, const Quat4i& st ){
+    if( gid<0 || gid>=(int)girders.size() ){ printf("ERROR setGirderParams(%i)\n", gid); return false; }
+    Girder* o = girders[gid];
+    if(!isDeferredF(up.x)) o->up = up;
+    if(!isDeferredI(nseg)) o->nseg = nseg;
+    if(!isDeferredI(mseg)) o->mseg = mseg;
+    if(!isDeferredF(wh.x)) o->wh = wh;
+    if(!isDeferredI(st.x)) o->st = st;
+    return true;
+}
+
+bool setPlateSpans( int kind, int pid, const Vec2d& g1span, const Vec2d& g2span ){
+    Plate* o = 0;
+    if( kind==(int)ComponetKind::Shield && pid>=0 && pid<(int)shields.size() ) o = shields[pid];
+    else if( kind==(int)ComponetKind::Radiator && pid>=0 && pid<(int)radiators.size() ) o = radiators[pid];
+    if(!o){ printf("ERROR setPlateSpans(kind=%i,pid=%i)\n", kind, pid); return false; }
+    o->g1span = g1span; o->g2span = g2span; return true;
+}
+
+/// @brief Apply girder params to every component whose `sketchTag` matches (Lua `fulfillTag`).
+int fulfillTagGirders( const char* tag, const Vec3d& up, int nseg, int mseg, const Vec2d& wh, const Quat4i& st ){
+    int n=0;
+    for( Girder* o : girders ){
+        if( strncmp(o->sketchTag, tag, SKETCH_TAG_LEN)!=0 ) continue;
+        setGirderParams( o->id, up, nseg, mseg, wh, st ); n++;
+    }
+    return n;
+}
+
+/// @brief Debug listing of components still carrying DEFERRED_* / unresolved plate fields.
+void printDeferred()const{
+    int n=0;
+    printf("#------ SpaceCraft deferred fields\n");
+    for( Girder* o : girders ){
+        if(!o->isDeferred()) continue;
+        printf("  Girder[%i] tag='%s' nseg=%i mseg=%i up(%g,%g,%g) wh(%g,%g)\n", o->id, o->sketchTag, o->nseg, o->mseg, o->up.x,o->up.y,o->up.z, o->wh.x,o->wh.y); n++;
+    }
+    for( Rope* o : ropes ){
+        if( !isDeferredI(o->nseg) && !isDeferredF(o->thick) ) continue;
+        printf("  Rope[%i] tag='%s' nseg=%i thick=%g\n", o->id, o->sketchTag, o->nseg, o->thick); n++;
+    }
+    for( Shield* o : shields ){
+        if( o->g1>=0 && o->g2>=0 && !isDeferredI(o->face_mat) ) continue;
+        printf("  Shield[%i] tag='%s' g1=%i g2=%i\n", o->id, o->sketchTag, o->g1, o->g2); n++;
+    }
+    for( Radiator* o : radiators ){
+        if( o->g1>=0 && o->g2>=0 && !isDeferredF(o->temperature) ) continue;
+        printf("  Radiator[%i] tag='%s' g1=%i g2=%i T=%g\n", o->id, o->sketchTag, o->g1, o->g2, o->temperature); n++;
+    }
+    printf("#------ deferred count: %i\n", n);
+}
 
 /*
 int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d along, Vec2i sides ){

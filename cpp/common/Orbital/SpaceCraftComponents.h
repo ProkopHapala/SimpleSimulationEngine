@@ -17,6 +17,21 @@
 /// - **Slider::move()** implements a simple PD controller: drive toward `speed` with `Kdv` stiffness,
 ///   clamped by `forceMax` — this is the actuator model
 /// - **updateSlidersPaths()** finds the nearest point on each slider's rail to snap `path.cur`
+/// - **Sketch LOD / OBJ import**: `sketchTag` stores `usemtl` workshop tokens; `DEFERRED_*` sentinels
+///   mark fields unset until Lua fulfills them — `Girder::isDeferred()` gates high-res mesh build
+///
+/// Open issues / caveats:
+/// - **`sideToPath` is strict and calls `exit(0)` on mismatch** — **Girder** requires tessellated mesh
+///   (`pointRange` set), `nseg` matching vertex count/4, and **`mseg==4`**. Deferred or sketch-only girders
+///   will crash if a **Slider** calls `updatePath` → `sideToPath` before blocks mesh build + `fulfillTag`.
+/// - **Ring::sideToPath** likewise requires `pointRange` and `nseg` consistent with meshed wheel.
+/// - **`updateSlidersPaths`** needs live truss vertex buffer `ps` and correct `bSelf`/`bShared` — ordering
+///   between ring mesh, girder mesh, and slider path update is easy to get wrong (see **SpaceCraft2Mesh2**).
+/// - **Bound nodes** (`Node::boundTo`, `calong`, `along.y` side index) depend on `nearSide` / `pointAlong` —
+///   attaching sliders to OBJ-imported girders before spans/up are set gives wrong rail geometry.
+/// - **Slider on Ring** — `path.closed=true`; PBC / `findNearestPoint` still has open TODOs in **Path**.
+/// - **Plate `face_mat` / radiator `temperature`** can remain deferred after OBJ import — no mesh path yet in
+///   CLI **BuildCraft_blocks** (shields/radiators not tessellated there).
 ///
 /// Materials: **StickMaterial** (cross-section, wall thickness, pre-strain) and **PanelMaterial**
 /// (layered stack with area density) are stored in **SpaceCraftWorkshop** catalog.
@@ -26,6 +41,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cmath>
 
 #include "datatypes.h"
 #include "Vec2.h"
@@ -41,6 +57,13 @@
 namespace SpaceCrafting{
 
 const int NAME_LEN = 16;
+const int SKETCH_TAG_LEN = 64;  ///< longer than NAME_LEN — workshop tokens e.g. `radiator:LithiumHeatPipe`
+
+/// Sentinels for partial OBJ/sketch import — visible in debug (`printDeferred`); must resolve before blocks LOD.
+constexpr int DEFERRED_I = -1;
+inline double DEFERRED_F(){ return NAN; }
+inline bool isDeferredI(int v){ return v == DEFERRED_I; }
+inline bool isDeferredF(double v){ return std::isnan(v); }
 
 class BodyPose{ public:
     Vec3d pos;
@@ -268,10 +291,10 @@ class ShipComponent : public Object { public:
     int    face_mat=-1;
     Vec3d  pos;
     double size=1.0;
+    char   sketchTag[SKETCH_TAG_LEN] = "";  ///< OBJ `usemtl kind:WorkshopType` — batch-filled via `fulfillTag`
     // Mat3d  rot; // currently we don't need this but maybe later?
     //int    edge_mat=-1;
     //int    p0; // anchor node
-    // char name[NAME_LEN];
 	double mass;           // [kg]
 	//RigidBody pose;
     Vec2i pointRange{-1,-1}; // index of start and end in Truss
@@ -488,6 +511,13 @@ class Girder : public NodeLinker { public:
     }
     virtual int component_kind()const override { return (int)ComponetKind::Girder; };
 
+    /// True while cross-section / tessellation params still carry DEFERRED_* — skip in BuildCraft_blocks.
+    /// WARNING: Slider::updatePath → sideToPath will exit(0) if called while deferred or before mesh build.
+    bool isDeferred()const{
+        return isDeferredI(nseg) || isDeferredI(mseg) || isDeferredF(up.x) || isDeferredF(wh.x)
+            || isDeferredI(st.x) || isDeferredI(st.y) || isDeferredI(st.z) || isDeferredI(st.w);
+    }
+
     virtual double rotMat( Mat3d& rot)const override{
         rot.c = nodes.y->pos - nodes.x->pos;
         double length = rot.c.normalize();
@@ -531,6 +561,7 @@ class Girder : public NodeLinker { public:
         //printf( "Girder::pointAlong(c=%g) i=%i side=%i nseg=%i (nv/4)=%i \n", c, i, side, nseg, pointRange.y-pointRange.x );
         return ip; 
     };
+    /// Rail vertex indices for one cross-section side — requires meshed `pointRange`, `nseg`, and `mseg==4`.
     virtual int sideToPath( int side, int*& inds, bool bAlloc=true, int nmax=-1 ) const override{
         //printf( "Girder::sideToPath() side=%i inds=%li \n", side, (long)inds );
         int i0 = pointRange.x;
@@ -822,6 +853,7 @@ class Slider : public Node { public:
     }
     virtual int component_kind() const override { return (int)ComponetKind::Slider; };
 
+    /// Builds slider rail from host `sideToPath` — host must already be tessellated (not sketch-deferred).
     void updatePath( StructuralComponent* o, int side=-1 ){
         //printf("Slider[%i]::updatePath()\n", id );
         // print();

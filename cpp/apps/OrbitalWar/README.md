@@ -23,7 +23,7 @@ Spacecraft design, construction, and combat simulation. The flagship application
 - **SpaceCraftEditorNew.cpp** — newer version of the spacecraft editor
 - **spaceCraftDynamics.cpp** — spacecraft dynamics simulation (truss physics, weapons, damage)
 - **spaceCraftDynamicsOCL.cpp** — GPU-accelerated (OpenCL) spacecraft dynamics
-- **spaceCraftMeshExport.cpp** — headless mesh export to `.obj`/`.truss`
+- **spaceCraftMeshExport.cpp** — headless mesh export: `-lod sketch|blocks`, `-o` OBJ, `-svg` 4-view wireframe, `-g` tagged sketch OBJ, `-t` truss (blocks only)
 - **constructionBlockApp.cpp** — block-based spacecraft construction demo
 - **SolarSystemMap.cpp** — solar system map viewer
 - **orbitEditor.cpp** — orbital trajectory editor

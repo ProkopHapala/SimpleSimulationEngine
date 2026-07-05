@@ -16,6 +16,17 @@
 /// - **SpaceCraftWorkshop** holds material catalogs (metals, stick types, panel layers) that
 ///   Lua scripts reference by name string
 /// - **radiositySolver** is a global instance included here for surface thermal coupling
+/// - **Sketch / OBJ import** (`fromObj`, `fromObjString`, `fulfillTag`, `printDeferred`) — thin Lua
+///   wrappers over **SpaceCraftFromOBJ.h**; opts table supports `{pos, rot, scale, base}` transform
+///
+/// Open issues / caveats:
+/// - **`BoundNode` / `Slider` after `fromObj`**: host girder must be fulfilled and meshed before slider paths work
+///   (**Girder::sideToPath** needs `pointRange`, `nseg`, `mseg==4`) — see **SpaceCraftComponents.h**.
+/// - **`make_Ring2` / `intersect_RingGirder`**: anchor nodes on girders assume real geometry; fragile with
+///   deferred or axis-aligned sketch imports.
+/// - **No Lua `fulfillTagRopes` / `setRopeParams`** — OBJ ropes stay deferred until added.
+/// - **`l_Girder` vs `fulfillTag`**: full **Girder()** sets all fields; sketch path splits layout (OBJ) vs params (Lua).
+/// - **Rope pre-strain** TODO in **l_Rope2** — slack ropes in dynamics if unset.
 ///
 /// Scripts are loaded via `Lua::dofile(theLua, fname)` — typically from `data/*.lua` files.
 
@@ -24,6 +35,7 @@
 
 #include "LuaHelpers.h"
 #include "SpaceCraft.h"
+#include "SpaceCraftFromOBJ.h"
 //#include "LuaClass.h"
 
 #include "TriangleRayTracer.h"
@@ -450,6 +462,139 @@ int l_Balloon     (lua_State * L){
 //int l_Tank    (lua_State * L){ return 0; };
 //int l_Radiator(lua_State * L){ return 0; };
 
+static void pushIntVec( lua_State* L, const std::vector<int>& v ){
+    lua_newtable(L);
+    for(size_t i=0;i<v.size();i++){ lua_pushinteger(L, v[i]); lua_rawseti(L, -2, (int)i+1); }
+}
+
+static void pushObjImportResult( lua_State* L, const ObjImportResult& r ){
+    lua_newtable(L);
+    pushIntVec(L, r.nodes);     lua_setfield(L, -2, "nodes");
+    pushIntVec(L, r.girders);   lua_setfield(L, -2, "girders");
+    pushIntVec(L, r.ropes);     lua_setfield(L, -2, "ropes");
+    pushIntVec(L, r.shields);   lua_setfield(L, -2, "shields");
+    pushIntVec(L, r.radiators); lua_setfield(L, -2, "radiators");
+}
+
+static ObjImportOpts parseObjImportOpts( lua_State* L, int idx ){
+    ObjImportOpts o;
+    if(!lua_istable(L, idx)) return o;
+    lua_getfield(L, idx, "pos");
+    if(lua_istable(L, -1)) o.pos = Lua::getVec3(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "scale");
+    if(lua_isnumber(L, -1)) o.scale = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "rot");
+    if(lua_istable(L, -1)){
+        Vec3d e = Lua::getVec3(L, -1);
+        o.rot.fromEuler(e.x, e.y, e.z);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "base");
+    if(lua_isstring(L, -1)) strncpy(o.basePath, lua_tostring(L, -1), sizeof(o.basePath)-1);
+    lua_pop(L, 1);
+    return o;
+}
+
+static void parseGirderParamTable( lua_State* L, int idx, Vec3d& up, int& nseg, int& mseg, Vec2d& wh, Quat4i& st ){
+    up = Vec3d{ DEFERRED_F(), DEFERRED_F(), DEFERRED_F() };
+    nseg = mseg = DEFERRED_I;
+    wh = Vec2d{ DEFERRED_F(), DEFERRED_F() };
+    st = Quat4i{ DEFERRED_I, DEFERRED_I, DEFERRED_I, DEFERRED_I };
+    if(!lua_istable(L, idx)) return;
+    lua_getfield(L, idx, "up");
+    if(lua_istable(L, -1)) up = Lua::getVec3(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "nseg");
+    if(lua_isnumber(L, -1)) nseg = (int)lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "mseg");
+    if(lua_isnumber(L, -1)) mseg = (int)lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "wh");
+    if(lua_istable(L, -1)) wh = Lua::getVec2(L, -1);
+    lua_pop(L, 1);
+    lua_getfield(L, idx, "st");
+    if(lua_istable(L, -1)) st = Lua::getVec4i(L, -1);
+    lua_pop(L, 1);
+}
+
+// --- OBJ sketch import Lua bindings (SpaceCraftFromOBJ.h) ---
+
+/// Lua: `fromObj(path [, {pos, rot, scale, base}])` → `{nodes, girders, ropes, shields, radiators}`
+int l_fromObj( lua_State* L ){
+    const char* path = Lua::getString(L, 1);
+    ObjImportOpts opts = (lua_gettop(L)>=2 && lua_istable(L, 2)) ? parseObjImportOpts(L, 2) : ObjImportOpts{};
+    char resolved[512];
+    resolveObjPath(path, opts.basePath[0] ? opts.basePath : 0, resolved, sizeof(resolved));
+    ObjImportResult res;
+    if(!importOBJToSpaceCraft(*theSpaceCraft, resolved, opts, res)) return 0;
+    pushObjImportResult(L, res);
+    return 1;
+}
+
+/// Lua: `fromObjString(objText [, opts])` — inline OBJ in script (multiline `[[...]]`).
+int l_fromObjString( lua_State* L ){
+    const char* text = Lua::getString(L, 1);
+    ObjImportOpts opts = (lua_gettop(L)>=2 && lua_istable(L, 2)) ? parseObjImportOpts(L, 2) : ObjImportOpts{};
+    ObjImportResult res;
+    if(!importOBJStringToSpaceCraft(*theSpaceCraft, text, opts, res)) return 0;
+    pushObjImportResult(L, res);
+    return 1;
+}
+
+int l_setNodePos( lua_State* L ){
+    int id = Lua::getInt(L, 1);
+    Vec3d p = Lua::getVec3(L, 2);
+    theSpaceCraft->setNodePos(id, p);
+    return 0;
+}
+
+int l_setGirderParams( lua_State* L ){
+    int gid = Lua::getInt(L, 1);
+    Vec3d up; int nseg, mseg; Vec2d wh; Quat4i st;
+    if(lua_istable(L, 2)) parseGirderParamTable(L, 2, up, nseg, mseg, wh, st);
+    else{
+        up = Lua::getVec3(L, 2); nseg = Lua::getInt(L, 3); mseg = Lua::getInt(L, 4);
+        wh = Lua::getVec2(L, 5); st = Lua::getVec4i(L, 6);
+    }
+    theSpaceCraft->setGirderParams(gid, up, nseg, mseg, wh, st);
+    return 0;
+}
+
+int l_setPlateSpans( lua_State* L ){
+    int kind = Lua::getInt(L, 1);
+    int pid  = Lua::getInt(L, 2);
+    Vec2d g1span = Lua::getVec2(L, 3);
+    Vec2d g2span = Lua::getVec2(L, 4);
+    theSpaceCraft->setPlateSpans(kind, pid, g1span, g2span);
+    return 0;
+}
+
+/// Lua: `fulfillTag("girder:GS1_long", {up, nseg, mseg, wh, st})` — batch-resolve deferred girders by tag.
+int l_fulfillTag( lua_State* L ){
+    const char* tag = Lua::getString(L, 1);
+    Vec3d up; int nseg, mseg; Vec2d wh; Quat4i st;
+    parseGirderParamTable(L, 2, up, nseg, mseg, wh, st);
+    int n = theSpaceCraft->fulfillTagGirders(tag, up, nseg, mseg, wh, st);
+    lua_pushnumber(L, n);
+    return 1;
+}
+
+int l_printDeferred( lua_State* L ){
+    (void)L;
+    theSpaceCraft->printDeferred();
+    return 0;
+}
+
+/// Lua: `exportSketchOBJ(path)` — topology OBJ with workshop `usemtl` tokens (not truss mesh).
+int l_exportSketchOBJ( lua_State* L ){
+    const char* path = Lua::getString(L, 1);
+    writeSpaceCraftSketchOBJ(path, *theSpaceCraft);
+    return 0;
+}
+
 void initSpaceCraftingLua(){
     if(theLua){ lua_close(theLua); theLua=0; }
     theLua = luaL_newstate();
@@ -475,6 +620,14 @@ void initSpaceCraftingLua(){
     lua_register(L, "Shield",   l_Shield   );
     lua_register(L, "Balloon",  l_Balloon  );
     lua_register(L, "Rock",     l_Rock     );
+    lua_register(L, "fromObj",       l_fromObj       );
+    lua_register(L, "fromObjString", l_fromObjString );
+    lua_register(L, "setNodePos",    l_setNodePos    );
+    lua_register(L, "setGirderParams", l_setGirderParams );
+    lua_register(L, "setPlateSpans", l_setPlateSpans );
+    lua_register(L, "fulfillTag",    l_fulfillTag    );
+    lua_register(L, "printDeferred", l_printDeferred );
+    lua_register(L, "exportSketchOBJ", l_exportSketchOBJ );
 }
 
 }; // namespace SpaceCrafting

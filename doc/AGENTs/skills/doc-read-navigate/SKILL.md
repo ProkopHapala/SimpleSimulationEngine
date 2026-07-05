@@ -1,6 +1,6 @@
 ---
 name: doc-read-navigate
-description: Before writing new code — search existing implementations, topical audits, READMEs to avoid duplication
+description: Before writing new code — search existing implementations, topical audits, READMEs, file-header caveats
 ---
 
 ## Before You Write — Check What Exists
@@ -9,12 +9,14 @@ description: Before writing new code — search existing implementations, topica
 2. **Search CODEMAP.md** (if exists): file locations and module relationships
 3. **Grep codebase**: search for function/class names matching your planned implementation
 4. **Read README.md** in the target folder — may describe what's already there
+5. **Read file/module headers** you will extend — especially **Open issues / caveats** (design rationale, duplicate variants, ordering deps, known limitations)
 
 ## Decision
 
 - **Found exact match**: reuse it. Don't duplicate.
 - **Found similar**: generalize it instead of writing new. If generalization risks breaking existing code: **stop and report for approval**.
-- **Found nothing**: proceed, but remember to document the new topic post-implementation (see `doc-task-summary` skill).
+- **Found duplicate variants** (noted in headers/caveats): use the one your app already uses; don't unify without approval.
+- **Found nothing**: proceed, but document post-implementation (see `doc-task-summary` skill).
 
 ## Separation of Concerns Check
 
@@ -31,3 +33,4 @@ If you need plotting/debugging: check for shared utilities first (e.g., `pyBall/
 - `doc/AGENTs/skills/` — task-specific skills (debugging, OpenCL, parity, etc.)
 - `doc/AGENTs/protocols/` — domain-specific protocols (forcefields, topology, QM)
 - `README.md` in any folder — local index of contents
+- **Source file headers** — essence, design notes, and caveats at top of modules you touch
