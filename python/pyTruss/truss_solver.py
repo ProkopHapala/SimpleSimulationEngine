@@ -1,11 +1,18 @@
+# === AUTO-DOC BEGIN ===
 """
-Truss dynamics solver module.
+@brief CPU truss dynamics solver — VBD, Jacobi, Gauss-Seidel, momentum, and Chebyshev backends.
 
-Provides implicit Euler time-stepping with pluggable solver backends:
-- Vertex Block Descent (VBD)
-- Projective Dynamics (dense/iterative)
-- Jacobi/Gauss-Seidel
+The **TrussSolver** class manages implicit Euler time-stepping with pluggable linear solvers.
+Key methods: **solve_vbd** (Vertex Block Descent — local per-vertex minimization, no global
+system assembly), **solve_iterative_momentum** (Jacobi/GS with heavy-ball acceleration), and
+**solve_iterative_chebyshev** (Jacobi/GS with Chebyshev 3-term recurrence). Sub-methods
+`jacobi_diff`, `gs_diff`, `jacobi_fly`, `gs_fly` differ in how the local update is computed:
+"diff" solves for displacements, "fly" updates positions directly using predicted positions.
+**run_solver_suite** runs multiple solvers on the same problem for convergence comparison.
+The SOLVERS dict maps solver names to factory functions, used by `run_vbd_cloth.py` and
+`run_solver_debug.py` for CLI-driven solver selection.
 """
+# === AUTO-DOC END ===
 
 import csv
 import math

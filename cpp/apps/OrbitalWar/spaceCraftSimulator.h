@@ -86,6 +86,7 @@ void to_TrussDynamics_f(TrussDynamics_f& sim, Mesh::Builder2& mesh, int nfix=0, 
 
 // =======================================================================
 class SpaceCraftSimulator { public:
+    virtual ~SpaceCraftSimulator(){ sim.dealloc(); sim_f.dealloc(); }
 
     Mesh::Builder2 mesh;
     TrussDynamics_d sim;

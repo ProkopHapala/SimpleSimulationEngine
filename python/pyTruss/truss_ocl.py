@@ -1,10 +1,23 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Original monolithic OpenCL GPU solver for Projective Dynamics and VBD.
+
+Implements **TrussSolverOCL** with multiple GPU kernels: Jacobi, colored Gauss-Seidel,
+Vertex Block Descent (VBD), and a displacement-based diff solver. Also includes VBD chunk
+packing (`build_vbd_chunks`) for workgroup-sized batches respecting neighbor limits. This is
+the legacy GPU path — `truss_solver_ocl.py` wraps its VBD-serial kernel, while
+`truss_solver_ocl_new.py` is the refactored successor using OpenCLBase. Kept for reference
+and comparison; new code should use `truss_solver_ocl_new.py`.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 import pyopencl as cl
 import os
 import matplotlib.pyplot as plt
 
 from sparse import (
-    build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
+    build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays, build_rest_length_dense,
     linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative, color_graph,
     gauss_seidel_iteration_colored
 )
@@ -14,21 +27,6 @@ from truss import Truss
 
 VBD_WORKGROUP_SIZE = 32
 VBD_NEIGHBOR_LIMIT = 128
-
-
-def build_rest_length_dense(neigh_lists, bonds, l0s, n_max):
-    """Dense rest-length table matching the padded neighbor layout."""
-    print("truss_ocl.build_rest_length_dense()")
-    assert len(bonds) == len(l0s), "bonds and l0s must have identical length"
-    pair_rest = {}
-    for (ia, ib), rest in zip(bonds, l0s):
-        pair_rest[(int(ia), int(ib))] = float(rest)
-        pair_rest[(int(ib), int(ia))] = float(rest)
-    rest_dense = np.zeros((len(neigh_lists), n_max), dtype=np.float32)
-    for vid, neigh in enumerate(neigh_lists):
-        for jj, nj in enumerate(neigh):
-            rest_dense[vid, jj] = pair_rest[(vid, nj)]
-    return rest_dense
 
 
 def build_vbd_chunks(padded_neighs, color_groups, chunk_size=VBD_WORKGROUP_SIZE, neighbor_limit=VBD_NEIGHBOR_LIMIT):

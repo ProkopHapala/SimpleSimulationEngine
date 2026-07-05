@@ -1,3 +1,15 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Convergence test for iterative linear solvers with Chebyshev and momentum acceleration.
+
+Generates a random diagonally-dominant SPD matrix (or loads one from .npy), then compares
+convergence of plain Jacobi/GS vs Chebyshev-accelerated and momentum-accelerated variants
+using the `solve_iterative` framework from `IterativeLinearSolvers.py`. Plots error vs
+iteration on a semilogy chart. CLI controls matrix size, diagonal dominance, spectral
+radius estimate, Chebyshev delay, and momentum schedule parameters.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 import argparse
 
@@ -73,6 +85,8 @@ if __name__ == "__main__":
     parser.add_argument('--b-last',         type=float, default=0.0,  help='Momentum mixing value for final iteration.')
     parser.add_argument('--b-istart',       type=int,   default=5,    help='Momentum mixing start iteration (inclusive).')
     parser.add_argument('--b-iend',         type=int,   default=-1,   help='Momentum mixing end iteration (inclusive, -1 for auto).')
+    parser.add_argument("--noshow", action="store_true", help="Skip plt.show() for headless execution.")
+    parser.add_argument("--savefig", type=str, default="", help="Path to save the plot.")
     args = parser.parse_args()
 
     # --- 1. System Setup: Generate or load the matrix A ---
@@ -157,6 +171,7 @@ if __name__ == "__main__":
         plt.ylabel('Error (log scale)')
         plt.grid(True, which='both', linestyle='--')
         plt.legend()
-        plt.show()
+        if not args.noshow: plt.show()
+        if args.savefig: plt.savefig(args.savefig, dpi=150)
     except ImportError:
         print("\nMatplotlib not found. Please install it (`pip install matplotlib`) to see the convergence plot.")

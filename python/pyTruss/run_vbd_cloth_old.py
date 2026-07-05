@@ -1,58 +1,43 @@
 # === AUTO-DOC BEGIN ===
 """
-@brief CLI runner for cloth/truss simulation — CPU + old GPU (truss_solver_ocl) backends.
+@brief Legacy CLI runner — uses original monolithic GPU solver (truss_ocl.py).
 
-Builds a 2D grid truss, runs implicit Euler time-stepping with a selectable solver
-(VBD, Jacobi, Gauss-Seidel, momentum, Chebyshev on CPU; VBD-serial on GPU), and plots
-before/after comparison. Supports `--anchor-mode` (left/both/none) for boundary conditions,
-`--test-coloring` for graph coloring visualization. Uses the "old" GPU backend
-(`truss_solver_ocl.py`). For the refactored GPU backend, use `run_vbd_cloth_new.py`.
+Earliest version of the cloth simulation runner, using `truss_ocl.TrussSolverOCL` directly
+(the monolithic GPU solver with Jacobi, GS, VBD, and diff methods). Superseded by
+`run_vbd_cloth.py` (old GPU wrapper) and `run_vbd_cloth_new.py` (new GPU wrapper). Kept
+for reference and comparison with newer backends.
 """
 # === AUTO-DOC END ===
 
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm
 
 from truss        import Truss
-
+from truss_ocl    import TrussSolverOCL
 from truss_solver import TrussSolver, get_solver
 import truss_solver as truss_solver_module
-
-# from   truss_solver_bak3 import TrussSolver, get_solver
-# import truss_solver_bak3 as     truss_solver_module
-
-from truss_solver_ocl import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
 import truss_solver_ocl as truss_solver_ocl_module
-from plot_utils   import plot_truss, plot_graph_coloring
-
-
-CPU_SOLVER_CHOICES = set(truss_solver_module.SOLVERS.keys())
-GPU_SOLVER_CHOICES = set(truss_solver_ocl_module.SOLVERS.keys())
-ALL_SOLVER_CHOICES = tuple(sorted(CPU_SOLVER_CHOICES | GPU_SOLVER_CHOICES))
-
+from plot_utils   import plot_truss
 
 '''
-python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 100 --niter 10 --stiffness 10000.0 --cpu 1 --anchor-mode left
-python run_vbd_cloth.py --nx 4 --ny 0 --nsteps 100 --niter 10 --stiffness 10000.0 --cpu 1 --anchor-mode lef
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 100 --niter 10 --stiffness 1000000.0--cpu 1 --anchor-mode left
 
-python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 1000.0 --cpu 1 --anchor-mode left 
-python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0  --cpu 1 --anchor-mode left 
-python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0   --cpu 1 --anchor-mode left 
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 1000.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0 --cpu 1 --anchor-mode both 
 
 python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 1000.0 --cpu 1 --anchor-mode both 
-python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0  --cpu 1 --anchor-mode both 
-python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0   --cpu 1 --anchor-mode both 
-
+python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 100.0 --cpu 1 --anchor-mode both 
+python run_vbd_cloth.py --nx 3 --ny 0 --nsteps 10 --niter 10 --stiffness 10.0 --cpu 1 --anchor-mode both 
 
 '''
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser( description="Run a simple Vertex Block Descent step on a cloth-like truss grid." )
-    parser.add_argument("--nx",            type=int,   default=1, help="Number of cells in the X direction (grid has nx+1 points).")
+    parser.add_argument("--nx",            type=int,   default=2, help="Number of cells in the X direction (grid has nx+1 points).")
     parser.add_argument("--ny",            type=int,   default=0, help="Number of cells in the Y direction (grid has ny+1 points).")
-    parser.add_argument("--dt",            type=float, default=0.05, help="Simulation time step (seconds).")
+    parser.add_argument("--dt",            type=float, default=0.1, help="Simulation time step (seconds).")
     parser.add_argument("--mass",          type=float, default=1.0, help="Mass assigned to interior grid vertices.")
     parser.add_argument("--anchor-mass",   type=float, default=1.0e+6, help="Mass assigned to fixed corner vertices (handled by Truss.build_grid_2d).")
     parser.add_argument("--edge",          type=float, default=1.0, help="Rest length of grid edges (meters).")
@@ -60,31 +45,25 @@ if __name__ == "__main__":
     parser.add_argument("--diag-stiffness",type=float, default=0.0, help="Spring stiffness for diagonal edges (if >0).")
     parser.add_argument("--gravity",       type=float, nargs=3, default=(0.0, -9.81, 0.0), help="Gravity vector (m/s^2).")
     parser.add_argument("--extra-accel",   type=float, nargs=3, default=(0.0, 0.0, 0.0), help="Additional acceleration applied to all vertices (m/s^2).")
-    parser.add_argument("--nsteps",        type=int,   default=10, help="Number of simulation time steps.")
+    parser.add_argument("--nsteps",        type=int,   default=100, help="Number of simulation time steps.")
     parser.add_argument("--niter",         type=int,   default=10, help="Number of VBD solver iterations per step.")
     parser.add_argument("--det-eps",       type=float, default=1e-6, help="Determinant threshold for skipping ill-conditioned Hessians.")
-    parser.add_argument("--solver",        type=str,   default="vbd", choices=ALL_SOLVER_CHOICES,help=f"Solver name (shared choice). Available: {', '.join(ALL_SOLVER_CHOICES)}.")
+    parser.add_argument("--solver",        type=str,   default="vbd", help="Solver name (vbd, pd, jacobi, etc.).")
     parser.add_argument("--verbose",       type=int,   default=1, help="Print iteration progress from the solver.")
     parser.add_argument("--no-pin",        type=int,   default=0, help="Do not pin the default corner vertices; treat all vertices as free.")
     parser.add_argument("--no-plot",       type=int,   default=0, help="Skip plotting the initial and final grids.")
     parser.add_argument("--savefig",       type=str,   default="run_vbd_cloth.png", help="Path to save the comparison plot instead of displaying it.")
     parser.add_argument("--serial",        type=int,   default=1, help="Use OpenCL serial VBD kernel (simpler, for debugging).")
-    parser.add_argument("--cpu",           type=int,   default=1, help="Run NumPy reference VBD solver.")
+    parser.add_argument("--cpu",           type=int,   default=0, help="Run NumPy reference VBD solver.")
     parser.add_argument("--compare",       type=int,   default=0, help="Run both CPU and GPU solvers and report differences.")
     parser.add_argument("--chain",         type=int,   default=0, help="Treat the grid as a 1D chain (forces ny=0).")
     parser.add_argument("--anchor-mode",   type=str,   default="left", choices=["none", "left", "right", "both"], help="Override endpoint anchoring.")
     parser.add_argument("--track",         type=str,   default="all", help="Comma-separated vertex indices to plot trajectories for (CPU solver only).")
-    parser.add_argument("--verb",          type=int,   default=0, help="Diagnostic verbosity: 0=off, 1=per step, 2=per solver iteration.")
-    parser.add_argument("--test-coloring", type=int,   default=0, help="Run graph coloring test and plotting before simulation.")
-    parser.add_argument("--color-seed",    type=int,   default=-1, help="Seed for graph coloring RNG (negative for random).")
-    parser.add_argument("--noshow",        action="store_true",        help="Skip plt.show() for headless execution (still saves figures).")
+    parser.add_argument("--verb",          type=int,   default=2, help="Diagnostic verbosity: 0=off, 1=per step, 2=per solver iteration.")
     args = parser.parse_args()
 
+    solver = TrussSolverOCL()
     truss = Truss()
-
-    verb_level = max(0, int(args.verb))
-    truss_solver_module.set_verbosity(verb_level)
-    truss_solver_ocl_module.set_verbosity(verb_level)
 
     ny_effective = 0 if bool(args.chain) else args.ny
     truss.build_grid_2d(
@@ -96,23 +75,6 @@ if __name__ == "__main__":
         k=args.stiffness,
         k_diag=args.diag_stiffness,
     )
-
-    coloring_enabled = bool(args.test_coloring)
-    coloring_seed = None if args.color_seed < 0 else int(args.color_seed)
-    vertex_colors = np.array([], dtype=int)
-    color_partitions = []
-    if coloring_enabled:
-        vertex_colors, color_partitions = truss.color_graph(seed=coloring_seed)
-        truss.verify_graph_coloring(vertex_colors)
-        n_colors = 0 if vertex_colors.size == 0 else int(vertex_colors.max()) + 1
-        print(f"Graph coloring succeeded: {n_colors} colors")
-        print(f"  partition sizes: {[len(part) for part in color_partitions]}")
-        if not bool(args.no_plot) and vertex_colors.size:
-            fig_color, ax_color = plt.subplots(figsize=(6, 6))
-            plot_graph_coloring(truss, vertex_colors, color_partitions, ax=ax_color)
-            plt.tight_layout()
-        if not args.noshow: plt.show()
-        exit()
 
     anchor_mode = args.anchor_mode.lower()
     if anchor_mode not in {"none", "left", "right", "both"}:
@@ -155,34 +117,19 @@ if __name__ == "__main__":
                         raise ValueError(f"track vertex index {idx} out of range (0..{len(truss.points)-1})")
 
     run_cpu = bool(args.cpu or args.compare)
-    run_gpu = not bool(args.cpu and not args.compare)
-
-    solver_name = args.solver
-    if run_cpu and solver_name not in CPU_SOLVER_CHOICES:
-        raise ValueError(f"CPU solver '{solver_name}' not available; choices: {sorted(CPU_SOLVER_CHOICES)}")
-    if run_gpu:
-        gpu_solver_set = GPU_SOLVER_CHOICES
-        # Allow serial flag to switch the kernel variant automatically when selecting generic VBD.
-        desired_gpu_solver = solver_name
-        if desired_gpu_solver == "vbd" and bool(args.serial) and "vbd_serial" in gpu_solver_set:
-            desired_gpu_solver = "vbd_serial"
-        if desired_gpu_solver not in gpu_solver_set:
-            raise ValueError(f"GPU solver '{solver_name}' not available; GPU provides: {sorted(gpu_solver_set)}")
-    else:
-        desired_gpu_solver = None
+    run_gpu = True  # GPU path is always available; compare mode runs both
 
     cpu_positions = cpu_velocities = None
     gpu_positions = gpu_velocities = None
     cpu_traj = gpu_traj = None
 
+    verb_level = max(0, int(args.verb))
+    truss_solver_module.set_verbosity(verb_level)
+    truss_solver_ocl_module.set_verbosity(verb_level)
+
     if run_cpu:
         solver_callback = get_solver(args.solver)
-        solver_config = {'verbose': args.verbose}
-        if args.solver in {"vbd", "vbd_serial"}:
-            solver_config.update({'niter': args.niter, 'det_eps': args.det_eps})
-        elif args.solver in {"momentum", "jacobi_diff", "jacobi_diff_cpu", "gs_diff", "gs_diff_cpu",
-                             "jacobi_fly", "jacobi_fly_cpu", "gs_fly", "gs_fly_cpu"}:
-            solver_config['niter'] = args.niter
+        solver_config = {'niter': args.niter, 'det_eps': args.det_eps, 'verbose': args.verbose}
         cpu_solver = TrussSolver(
             truss,
             dt=args.dt,
@@ -198,30 +145,18 @@ if __name__ == "__main__":
     if run_gpu:
         if run_cpu:
             truss.points = initial_points.copy()
-        gpu_solver_name = desired_gpu_solver if desired_gpu_solver is not None else solver_name
-        gpu_solver_callback = get_solver_ocl(gpu_solver_name)
-        gpu_config = {"verbose": args.verbose}
-        if gpu_solver_name in {"vbd", "vbd_serial"}:
-            gpu_config.update({
-                "niter": args.niter,
-                "det_eps": args.det_eps,
-                "serial": bool(args.serial) if gpu_solver_name == "vbd" else True,
-            })
-        elif gpu_solver_name in {"jacobi_diff"}:
-            gpu_config.update({"niter": args.niter})
-        elif gpu_solver_name in {"jacobi_fly"}:
-            gpu_config.update({"niter": args.niter})
-        gpu_solver = TrussSolverOCLGPU(
+        gpu_positions, gpu_velocities, gpu_traj = solver.run_vbd_timesteps(
             truss,
+            nsteps=args.nsteps,
             dt=args.dt,
-            gravity=total_accel.astype(np.float64),
-            solver=gpu_solver_callback,
-            solver_config=gpu_config,
+            gravity=total_accel,
             fixed_points=fixed_points,
+            niter=args.niter,
+            det_eps=args.det_eps,
+            serial=bool(args.serial),
             track_indices=track_indices,
-            verbose=int(args.verbose),
+            bPrint=bool(args.verbose),
         )
-        gpu_positions, gpu_velocities, gpu_traj = gpu_solver.run(args.nsteps)
 
     if bool(args.compare) and run_cpu and gpu_positions is not None:
         diff_pos = gpu_positions - cpu_positions
@@ -284,5 +219,5 @@ if __name__ == "__main__":
         plt.tight_layout()
         if args.savefig:
             plt.savefig(args.savefig)
-        if not args.noshow: plt.show()
+        plt.show()
 

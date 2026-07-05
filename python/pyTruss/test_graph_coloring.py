@@ -1,5 +1,19 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Test script for graph coloring on 2D grid trusses.
+
+Builds a grid truss, constructs a point-neighbor adjacency list, runs `color_graph` from
+`sparse.py`, and visualizes the coloring using `plot_utils.plot_truss`. The coloring
+partitions vertices into independent sets — used by parallel Gauss-Seidel solvers to
+update all vertices of one color simultaneously without data races. Includes a local
+`build_point_neighbor_list` helper (point-indexed, distinct from `sparse.build_neighbor_list`
+which is bond-indexed).
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 from truss import Truss
 from sparse import color_graph
 import plot_utils as pu
@@ -51,5 +65,13 @@ def test_truss_coloring(nx=5, ny=5):
     return fig
 
 if __name__ == "__main__":
-    fig = test_truss_coloring(nx=5, ny=5)
-    plt.show()
+    parser = argparse.ArgumentParser(description="Test graph coloring on a 2D grid truss.")
+    parser.add_argument("--nx", type=int, default=5)
+    parser.add_argument("--ny", type=int, default=5)
+    parser.add_argument("--savefig", type=str, default="", help="Path to save the plot.")
+    parser.add_argument("--noshow", action="store_true", help="Skip plt.show() for headless execution.")
+    args = parser.parse_args()
+    fig = test_truss_coloring(nx=args.nx, ny=args.ny)
+    if args.savefig:
+        fig.savefig(args.savefig, dpi=150)
+    if not args.noshow: plt.show()

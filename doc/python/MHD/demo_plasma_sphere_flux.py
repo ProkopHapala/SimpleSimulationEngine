@@ -1,3 +1,15 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Flux-conserving spherical plasma shell: many coaxial loops on a sphere surface.
+
+Approximates a spherical plasma shell with N coaxial loops at varying (r,z) on the sphere.
+Combines a seed SC coil, parabolic cage rings, and plasma loops. The sphere's position
+and radius are interpolated between initial and final states, and currents are solved at
+each step to conserve flux. Reuses run_coil_motion_flux from demo_coil_motion_flux and
+adds plot_B_profiles overlays for axial/radial B-field scans.
+"""
+# === AUTO-DOC END ===
+
 """Flux-conserving spherical plasma shell demo.
 
 This script constructs a configuration consisting of
@@ -78,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("--no-Bprofiles", action="store_true",  help="Disable 1D B-field profiles (axial and radial)")
     parser.add_argument("--bg-mode", choices=["hsv", "mag"], default="mag", help="Background: hsv (direction hue, magnitude value) or mag (brightness only)")
 
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
+
     args = parser.parse_args()
 
     sc_line    = generate_sc_seed_coil(args.sc_r, args.sc_z, sc_current=args.sc_current, coil_type="SC")
@@ -91,7 +105,7 @@ if __name__ == "__main__":
     data = genfromtxt(StringIO(data_str), dtype=str)
 
     # Run flux-conserving solve without geometry; we reconstruct geometry here to overlay profiles.
-    res = run_coil_motion_flux(data, n_steps=args.steps, plot_timeseries=not args.no_timeseries, plot_geom=False, bg_mode=args.bg_mode)
+    res = run_coil_motion_flux(data, n_steps=args.steps, plot_timeseries=not args.no_timeseries, plot_geom=False, bg_mode=args.bg_mode, noshow=args.noshow)
 
     types = res["types"]; R0 = res["R0"]; z0 = res["z0"]; I0 = res["I0"]; R1 = res["R1"]; z1 = res["z1"]; I_final = res["I_final"]
 
@@ -109,4 +123,10 @@ if __name__ == "__main__":
             # No geometry: just overlay into a fresh axes using final state
             plot_B_profiles(R1, z1, I_final, float(args.z0), axes=None, show_separate=True)
 
-    plt.tight_layout(); plt.show()
+    plt.tight_layout()
+    if args.noshow:
+        for n in plt.get_fignums():
+            plt.figure(n); plt.savefig(f'demo_plasma_sphere_flux_{n}.png', dpi=150, bbox_inches='tight')
+        plt.close('all')
+    else:
+        plt.show()

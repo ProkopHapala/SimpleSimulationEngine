@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""CPU-only solver debugging utility for truss solvers.
-
-Builds a static truss configuration, applies a controlled perturbation, and
-runs selected solver(s) with per-iteration logging enabled. Produces trajectory
-and convergence plots to aid debugging of solver behavior.
+# === AUTO-DOC BEGIN ===
 """
+@brief CPU-only solver debugging utility — controlled perturbation, per-iteration logging, convergence plots.
+
+Builds a static truss, applies a controlled displacement perturbation, and runs selected solver(s)
+with per-iteration logging. Supports `--solver-suite` to compare multiple solvers in one run
+(produces overlay convergence plot + optional CSV). `--ref-solver` compares against a reference
+solver. `--print-linear-matrix` / `--save-linear-matrix-npy` dump the assembled linearized system
+for debugging. Used to produce `solver_suite.png` comparing VBD, GS-diff, Jacobi-diff, Jacobi-fly, GS-fly.
+"""
+# === AUTO-DOC END ===
 
 import argparse
 from typing import Dict, List, Optional, Tuple
@@ -241,7 +246,7 @@ def _plot_results(base: np.ndarray, displacement: np.ndarray, vertices: List[int
     fig.tight_layout()
     if args.savefig:
         fig.savefig(args.savefig, dpi=150)
-    plt.show()
+    if not args.noshow: plt.show()
 
 
 def _print_summary(results: Dict[str, Dict[str, object]]) -> None:
@@ -308,6 +313,7 @@ if __name__ == "__main__":
     parser.add_argument("--print-linear-matrix", action="store_true", help="Print the assembled linearized solver matrix (Jacobi/GS diff).")
     parser.add_argument("--save-linear-matrix-npy", type=str, default="", help="Path to save the linearized solver matrix via np.save.")
     parser.add_argument("--save-linear-matrix-txt", type=str, default="", help="Path to save the linearized solver matrix via np.savetxt.")
+    parser.add_argument("--noshow", action="store_true", help="Skip plt.show() for headless execution (still saves figures).")
 
     args = parser.parse_args()
 

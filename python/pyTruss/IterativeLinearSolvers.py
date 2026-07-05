@@ -1,4 +1,32 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Modular iterative linear solvers with Chebyshev and momentum acceleration.
+
+Provides single-step functions (**jacobi_step**, **gauss_seidel_step**) and a general
+**solve_iterative** framework that accepts any step function + optional accelerator. The
+Chebyshev accelerator uses the standard 3-term recurrence with a delayed start (parameter S)
+and requires the spectral radius rho of the iteration matrix, estimated via power iteration
+in **estimate_spectral_radius**. The momentum accelerator uses a heavy-ball formulation with
+a ramped bmix schedule. Design: step functions are stateless and composable — the caller
+controls iteration count, initial guess, and acceleration policy. This module is used by
+`test_Chebyshev_accel.py`, `projective_dynamics_iterative.py`, and
+`test_Jacobi_Chebyshev_convergence.py`.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
+
+def estimate_spectral_radius(A, x0=None, n_iter=10):
+    """Estimate spectral radius of A using power iteration."""
+    if x0 is None: x0 = np.random.rand(A.shape[0])
+    x = x0.copy()
+    for _ in range(n_iter):
+        x      = A @ x
+        x_next = A @ x
+        eK1    = np.dot(x_next, x)
+        eK2    = np.dot(x, x)
+        rho    = np.sqrt(abs(eK1 / eK2))
+    return min(rho, 0.9992)
 
 def get_iteration_matrix(A, method='jacobi'):
     """

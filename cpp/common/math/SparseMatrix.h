@@ -32,6 +32,7 @@ class SparseMatrix { public:
         _realloc0(inds,n*m , -1  );
         _realloc0(vals,n*m , (T)0 );
     }
+    void dealloc(){ _dealloc(nng); _dealloc(inds); _dealloc(vals); n=0; m=0; }
 
     __attribute__((pure)) 
     __attribute__((hot)) 

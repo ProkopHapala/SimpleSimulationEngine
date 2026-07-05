@@ -206,6 +206,18 @@ class TrussDynamics_f : public Picker { public:
     }
 
     inline void reallocFixed(){ _realloc0( kFix, nPoint, 0.0f ); }
+
+    void dealloc(){
+        _dealloc(points); _dealloc(forces); _dealloc(vel); _dealloc(impuls); _dealloc(bvec);
+        _dealloc(kFix); _dealloc(params); _dealloc(kngs); _dealloc(neighs); _dealloc(neighBs); _dealloc(neighB2s);
+        _dealloc(PDmat); _dealloc(LDLT_L); _dealloc(LDLT_D); _dealloc(neighsLDLT);
+        _dealloc(ps_cor); _dealloc(ps_pred); _dealloc(linsolve_b); _dealloc(linsolve_yy);
+        _dealloc(bparams); _dealloc(bonds); _dealloc(strain); _dealloc(maxStrain);
+        _dealloc(BBs); _dealloc(faces); _dealloc(edgeVertBonds);
+        Lsparse.dealloc(); LsparseT.dealloc(); PDsparse.dealloc();
+        pointBBs.dealloc(); edgeBBs.dealloc(); faceBBs.dealloc(); pointChunks.dealloc();
+        nPoint=0; nBonds=0; nBBs=0; nFaces=0; nEdgeVertBonds=0;
+    }
     inline void cleanForce (){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero;   } };
     inline void cleanVel   (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero;   } };
     inline void cleanImpuls(){ for (int i=0; i<nPoint; i++){ impuls[i]=Quat4fZero;   } };

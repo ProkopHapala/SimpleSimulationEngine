@@ -1,3 +1,22 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Shared core library for axisymmetric MHD coil/plasma simulations.
+
+All B-field kernels (field_loop_rz, field_dipole_rz), vector potentials (Aphi_loop_rz,
+Aphi_dipole_rz), flux functions (psi_loop_rz, psi_dipole_rz), inductance matrices
+(build_inductance_matrix), flux-conservation solver (solve_flux_conserving), Lorentz
+force (compute_lorentz_force_loop), and geometry generators (parabolic nozzle, sphere,
+disk, tube, driver, projectile) live here. Every demo script imports from this module.
+
+Key design: elliptic integrals use scipy.special.ellipk/ellipe (parameter m = k^2,
+not modulus k). The flux-conservation solver partitions coils into "unknown" and
+"fixed-current" subsets, solving K_unknown @ I_unknown = Phi0 - K_fixed @ I_fixed.
+Self-inductance uses the thin-wire log approximation L = mu0*R*(ln(8R/r_wire) - 1.75).
+
+Used by: all demo_*.py, check_B_*.py, fast_eliptke_Abramowitz.py, vector_potential_coil.py.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 from scipy.special import ellipk, ellipe
 
@@ -457,3 +476,120 @@ def coil_dipole_energy(a, z0, I, m, z_m):
     """
     Bz_at_dip = coil_axis_Bz(a, z0, I, z_m)
     return -m * float(Bz_at_dip)
+
+
+# --- Flux function (Psi = r * A_phi) ---
+
+def psi_loop_rz(a, z0, I, r_grid, z_grid, eps=1e-12):
+    """Flux function Psi = r * A_phi for a circular current loop.
+
+    Contours of Psi are magnetic field lines. The flux between two points
+    is 2*pi*(Psi2 - Psi1).
+    """
+    Aphi = Aphi_loop_rz(a, z0, I, r_grid, z_grid, eps=eps)
+    r = np.asarray(r_grid, dtype=float)
+    r_safe = np.where(r < eps, eps, r)
+    return r_safe * Aphi
+
+
+def psi_dipole_rz(m, z_m, r_grid, z_grid, eps=1e-12):
+    """Flux function Psi = r * A_phi for an axial point dipole.
+
+    Psi = (mu0 * m / 4pi) * r^2 / (r^2 + dz^2)^(3/2)
+    """
+    Aphi = Aphi_dipole_rz(m, z_m, r_grid, z_grid, eps=eps)
+    r = np.asarray(r_grid, dtype=float)
+    r_safe = np.where(r < eps, eps, r)
+    return r_safe * Aphi
+
+
+# --- Lorentz force ---
+
+def compute_lorentz_force_loop(idx_target, rs, zs, I):
+    """Lorentz force on loop idx_target from all other loops.
+
+    F_r = I * (2*pi*r) * Bz_others
+    F_z = I * (2*pi*r) * (-Br_others)
+
+    Returns (Fr, Fz) in Newtons.
+    """
+    r_p = rs[idx_target]
+    z_p = zs[idx_target]
+    I_p = I[idx_target]
+    if I_p == 0.0 or r_p <= 0.0:
+        return 0.0, 0.0
+    Br_tot = 0.0
+    Bz_tot = 0.0
+    for j in range(len(rs)):
+        if j == idx_target:
+            continue
+        a = rs[j]
+        zc = zs[j]
+        Ij = I[j]
+        if Ij == 0.0 or a <= 0.0:
+            continue
+        Br_j, Bz_j = field_loop_rz(a, zc, Ij, np.array([[r_p]]), np.array([[z_p]]))
+        Br_tot += float(Br_j[0, 0])
+        Bz_tot += float(Bz_j[0, 0])
+    L_len = 2.0 * np.pi * r_p
+    Fr = I_p * L_len * Bz_tot
+    Fz = I_p * L_len * (-Br_tot)
+    return Fr, Fz
+
+
+# --- Numerical curl of A_phi ---
+
+def compute_numerical_B_from_A(a, z0, I, r_vals, z_fixed, dr=1e-5, dz=1e-5):
+    """Compute B = curl(A) via finite differences for a circular loop.
+
+    Br = -dA/dz,  Bz = (1/r) * d(r*A)/dr
+    """
+    r_grid, z_grid = np.meshgrid(r_vals, [z_fixed - dz, z_fixed, z_fixed + dz])
+    A_phi = Aphi_loop_rz(a, z0, I, r_grid, z_grid)
+    dA_dz = (A_phi[2, :] - A_phi[0, :]) / (2 * dz)
+    Br_num = -dA_dz
+    r_A = r_grid * A_phi
+    r_A_mid = r_A[1, :]
+    r_vals_mid = r_grid[1, :]
+    d_rA_dr = np.gradient(r_A_mid, r_vals_mid)
+    Bz_num = np.divide(d_rA_dr, r_vals_mid, out=np.zeros_like(d_rA_dr), where=r_vals_mid != 0)
+    return Br_num, Bz_num
+
+
+# --- Gauss-gun geometry builders ---
+
+def build_driver_tube(n_drive=4, r_drive=1.0, z_start=0.0, z_end=None, i_drive=1.0e6):
+    """Generate driver tube coil positions and initial currents.
+
+    Returns R_drive, Z_drive, I_drive : 1D ndarrays of length n_drive.
+    """
+    if z_end is None:
+        length = r_drive * max(1, (n_drive - 1))
+        z_end = z_start + length
+    Z_drive = np.linspace(z_start, z_end, n_drive)
+    R_drive = np.full_like(Z_drive, float(r_drive))
+    I_drive = np.full_like(Z_drive, float(i_drive))
+    return R_drive, Z_drive, I_drive
+
+
+def build_projectile_disk(n_disk=1, r_inner=0.9, r_outer=0.9):
+    """Generate projectile disk ring radii (outermost first).
+
+    Returns r_disk : 1D ndarray of length n_disk.
+    """
+    if n_disk <= 1:
+        return np.array([r_outer], dtype=float)
+    return np.linspace(r_outer, r_inner, n_disk)
+
+
+def build_geometry_vectors(R_drive, Z_drive, r_disk, z_proj):
+    """Assemble global radius/axial arrays for driver + projectile loops."""
+    n_drive = R_drive.size
+    n_disk = r_disk.size
+    rs = np.empty(n_drive + n_disk, dtype=float)
+    zs = np.empty_like(rs)
+    rs[:n_drive] = R_drive
+    zs[:n_drive] = Z_drive
+    rs[n_drive:] = r_disk
+    zs[n_drive:] = z_proj
+    return rs, zs

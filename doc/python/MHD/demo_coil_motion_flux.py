@@ -1,3 +1,15 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Flux-conserving coil motion: all coils move linearly, currents solved to conserve flux.
+
+Reads a coil configuration, linearly interpolates each coil from (R0,z0) to (R1,z1), and
+at each step solves K(t) @ I(t) = Phi0 for flux-conserving currents. Default geometry is
+a parabolic nozzle with SC seed + cage rings + plasma armature. Prints flux conservation
+table (rel err ~1e-16 for SC/cage, ~1e-12 for plasma). Also reused by
+demo_plasma_sphere_flux via run_coil_motion_flux with noshow parameter.
+"""
+# === AUTO-DOC END ===
+
 """Flux-conserving coil motion demo.
 
 This script reads a set of coaxial coils, linearly moves each coil from
@@ -88,7 +100,7 @@ def parse_coils(data):
     )
 
 
-def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True, bg_mode="hsv"):
+def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True, bg_mode="hsv", noshow=False):
     """Simulate flux-conserving evolution of a set of coils moving in (R,z).
 
     Scenario:
@@ -157,7 +169,12 @@ def run_coil_motion_flux(data, n_steps=50, plot_timeseries=True, plot_geom=True,
     if plot_geom:
         # Geometry figure: initial vs final positions and currents
         fig, axes = plot_coil_geometry( types, R0, z0, I0, R1, z1, currents[-1], title="Coil geometry (initial vs final)", bg_mode=bg_mode, )
-        plt.show()
+        if noshow:
+            for n in plt.get_fignums():
+                plt.figure(n); plt.savefig(f'demo_coil_motion_flux_{n}.png', dpi=150, bbox_inches='tight')
+            plt.close('all')
+        else:
+            plt.show()
 
     # Return basic information that other demos can reuse (geometry, final currents, and axes if available).
     return { "types": types, "R0": R0, "z0": z0,"R1": R1,"z1": z1,"I0": I0,"I_final": currents[-1],"fig": fig,"axes": axes,}
@@ -210,6 +227,7 @@ if __name__ == "__main__":
     parser.add_argument( "--no-geometry",   action="store_true", help="Disable geometry plot (initial vs final coils)", )
     #parser.add_argument( "--bg-mode", choices=["hsv", "mag"], default="hsv", help="Background: hsv (direction hue, magnitude value) or mag (brightness only)" )
     parser.add_argument( "--bg-mode", choices=["hsv", "mag"], default="mag", help="Background: hsv (direction hue, magnitude value) or mag (brightness only)" )
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
     args = parser.parse_args()
 
     if args.coils_file is None:
@@ -224,6 +242,4 @@ if __name__ == "__main__":
     else:
         data = np.genfromtxt(args.coils_file, dtype=str)
 
-    run_coil_motion_flux( data, n_steps=args.steps, plot_timeseries=not args.no_timeseries, plot_geom=not args.no_geometry, bg_mode=args.bg_mode )
-
-    plt.show()
+    run_coil_motion_flux( data, n_steps=args.steps, plot_timeseries=not args.no_timeseries, plot_geom=not args.no_geometry, bg_mode=args.bg_mode, noshow=args.noshow )

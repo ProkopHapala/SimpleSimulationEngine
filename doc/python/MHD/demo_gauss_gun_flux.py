@@ -1,58 +1,21 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Coilgun accelerator: driver tube coils + projectile disk with sequential switching.
+
+Models a Gauss-gun where pre-magnetized driver coils are sequentially switched off as the
+projectile passes, and the projectile disk conserves flux. Force is computed via energy
+gradient Fz = -dW/dz (finite difference), using Verlet integration for position. The
+switching logic deactivates driver coils when the projectile crosses their z-position.
+Geometry builders (build_driver_tube, build_projectile_disk) are in inductance_core.
+"""
+# === AUTO-DOC END ===
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from inductance_core import build_inductance_matrix, magnetic_energy
+from inductance_core import build_inductance_matrix, magnetic_energy, build_driver_tube, build_projectile_disk, build_geometry_vectors
 from MHD_plots import plot_coil_geometry
-
-
-def build_driver_tube(n_drive=4, r_drive=1.0, z_start=0.0, z_end=None, i_drive=1.0e6):
-    """Generate driver tube coil positions and initial currents.
-
-    By default, coils are spaced roughly by one barrel radius along z.
-
-    Returns
-    -------
-    R_drive, Z_drive, I_drive : 1D ndarrays of length n_drive
-    """
-    if z_end is None:
-        # Space coils by approximately one barrel radius
-        length = r_drive * max(1, (n_drive - 1))
-        z_end = z_start + length
-    Z_drive = np.linspace(z_start, z_end, n_drive)
-    R_drive = np.full_like(Z_drive, float(r_drive))
-    I_drive = np.full_like(Z_drive, float(i_drive))
-    return R_drive, Z_drive, I_drive
-
-
-def build_projectile_disk(n_disk=1, r_inner=0.9, r_outer=0.9):
-    """Generate projectile disk ring radii.
-
-    By default, outer projectile radius is ~0.9 * barrel radius (assuming
-    r_drive=1.0). Radii are ordered from outermost to innermost so proj_1 is
-    the largest ring.
-
-    Returns
-    -------
-    r_disk : 1D ndarray of length n_disk
-    """
-    # Start from outer radius and go inward so the first index is the largest ring
-    if n_disk <= 1:
-        return np.array([r_outer], dtype=float)
-    return np.linspace(r_outer, r_inner, n_disk)
-
-
-def build_geometry_vectors(R_drive, Z_drive, r_disk, z_proj):
-    """Assemble global radius/axial arrays for driver + projectile loops."""
-    n_drive = R_drive.size
-    n_disk = r_disk.size
-    rs = np.empty(n_drive + n_disk, dtype=float)
-    zs = np.empty_like(rs)
-    rs[:n_drive] = R_drive
-    zs[:n_drive] = Z_drive
-    rs[n_drive:] = r_disk
-    zs[n_drive:] = z_proj
-    return rs, zs
 
 
 def compute_initial_flux(R_drive, Z_drive, I_drive0, r_disk, z_proj0):
@@ -332,7 +295,12 @@ def plot_gauss_gun_results(res, args):
 
     plot_coil_geometry(types, R0, z0_arr, I0, R1, z1_arr, I_final, bg_mode="mag", title="Gauss-gun: initial vs final geometry")
 
-    plt.show()
+    if getattr(args, 'noshow', False):
+        for n in plt.get_fignums():
+            plt.figure(n); plt.savefig(f'demo_gauss_gun_flux_{n}.png', dpi=150, bbox_inches='tight')
+        plt.close('all')
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -357,6 +325,7 @@ if __name__ == "__main__":
     parser.add_argument("--dz-fd", type=float, default=1e-4, help="Finite-difference step for force evaluation")
     parser.add_argument("--exit-margin", type=float, default=0.5, help="Margin beyond last driver coil to stop simulation")
 
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
     args = parser.parse_args()
 
     res = run_gauss_gun_sim(args)

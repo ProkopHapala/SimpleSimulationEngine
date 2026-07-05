@@ -280,6 +280,7 @@ class MultiPanel : public GUIAbstractPanel { public:
     virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui )override;
 
     virtual bool showAsContextMenu( int x, int y){ visible=!visible; moveTo(x,y); return visible; };
+    virtual ~MultiPanel(){ for(GUIPanel* p : subs) delete p; subs.clear(); }
 
     void toggleOpen();
 
@@ -595,6 +596,7 @@ class BoundGUI:public MultiPanel,public BindLoader{ public:
         }
         return bChanged;
     }
+    virtual ~BoundGUI(){ delete[] drivers; }
 };
 
 

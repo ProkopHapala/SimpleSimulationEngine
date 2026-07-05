@@ -1,3 +1,22 @@
+# === AUTO-DOC BEGIN ===
+# @file test_eulerian_fluid.py
+# @brief CLI demo driver for the EulerianImpactFluid solver — uranium projectile impacting liquid hydrogen.
+#
+# Sets up a 2D domain with a circular uranium projectile (phi>0) moving at 5000 m/s
+# through liquid hydrogen (phi<0), both at initial pressure p0. Uses isobaric
+# smooth initialization via heaviside(phi) so that rho_a*, E, and velocity are
+# consistent at the material interface — mismatched init was a major source of
+# NaNs and pressure collapse (see EulerianImpacFluid_debug_presure.md).
+#
+# **CLI**: argparse with flags for grid size, dt, steps/frame, redistance interval,
+# snapshot interval, and which diagnostic fields to plot. Animates with matplotlib
+# FuncAnimation; saves PNG snapshots periodically.
+#
+# **Stability**: CFL-limited by the mixture sound speed (~4400 m/s in H2, ~2540 m/s
+# in U). With dx=0.01, dt must be < ~2e-8 for stability. Default dt=1e-7 is for
+# quick visualization; use dt=1e-8 with --steps 10 for stable production runs.
+# === AUTO-DOC END ===
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +42,7 @@ EPS = 1e-9
 
 # -------------------------------------------------------------------------
 def heaviside(phi, dx):
+    """Smoothed cubic-Hermite Heaviside — maps level-set phi to volume fraction alpha in [0,1]."""
     epsilon = 1.5 * dx
     x = (phi + epsilon) / (2.0 * epsilon)
     x = np.clip(x, 0.0, 1.0)
@@ -31,6 +51,7 @@ def heaviside(phi, dx):
 # Pretty print initial regions (SI units)
 # -------------------------------------------------------------------------
 def summarize_region(label, rho1, rho2, vx, vy, p0):
+    """Print EOS-derived properties (alpha, sound speed, energy) for an initial region in SI units."""
     rho_total = rho1 + rho2
     alpha1 = rho1 / (rho_total + EPS) if rho_total > 0 else 0.0
     alpha2 = 1.0 - alpha1
@@ -59,15 +80,17 @@ parser = argparse.ArgumentParser(description="Eulerian impact fluid demo (PyOpen
 parser.add_argument("-W", "--width",  type=int, default=256)
 parser.add_argument("-H", "--height", type=int, default=128)
 parser.add_argument("-x", "--dx",     type=float, default=0.01)
-# Stable defaults from tested run: dt=1e-8, 10 substeps per frame
-parser.add_argument("-t", "--dt",     type=float, default=1e-7)
+# CFL-adaptive dt: --cfl 0.3 with 2nd-order MUSCL+RK2 (RK2 has wider stability region)
+parser.add_argument("-t", "--dt",     type=float, default=5e-7)
+parser.add_argument("--cfl",    type=float, default=0.3, help="CFL number for adaptive dt (0=use fixed --dt)")
 parser.add_argument("-n", "--steps",  type=int, default=10, help="steps per frame")
-parser.add_argument("-r", "--redist", type=int, default=20, help="frames between redistance")
+parser.add_argument("-r", "--redist", type=int, default=10, help="frames between redistance")
 parser.add_argument("-s", "--snap",   type=int, default=1000, help="frames between saved PNGs")
 parser.add_argument("-f", "--frames", type=int, default=200)
 parser.add_argument("-p", "--prefix", type=str, default="snapshot_frame")
 parser.add_argument("--p0", type=float, default=1e9, help="initial target pressure (Pa)")
 parser.add_argument("-F", "--fields", type=str, default="density,phi,pressure,energy,speed,sound", help="Comma-separated fields to plot: density,phi,pressure,energy,speed,sound")
+parser.add_argument("--noshow", action="store_true", help="Run headless: no animation window, save PNGs only")
 args = parser.parse_args()
 
 width, height = args.width, args.height
@@ -125,7 +148,7 @@ E = internal_e + ke
 solver.initialize(rho_a1, rho_a2, ru, rv, E, phi)
     
 # Run one step with dt=0 to populate pressure/sound diagnostics at t=0
-solver.step(0.0)
+solver.step(0.0, b_diagnostics=True)
 solver.queue.finish() # Ensure GPU is done before reading back for t=0 plot
 
 step_counter = 0
@@ -195,9 +218,27 @@ for ax, (title, arr, cmap) in zip(axes, plot_data):
     artists[title] = (im, cbar)
 
 def update(frame):
-    global step_counter
-    for _ in range(num_steps_per_frame):
-        solver.step(dt)
+    """Animation callback: advance N substeps, redistance periodically, update plot images, print diagnostics, check for NaNs."""
+    global step_counter, dt
+    # CFL-adaptive dt: recompute from previous frame's wave speed
+    if args.cfl > 0:
+        if frame > 0:
+            c_max = solver.get_max_wave_speed()
+            dt = min(args.cfl * dx / (c_max + 1e-6), args.dt)
+        else:
+            c_max = float(sound_init.max())
+            u_max = float(np.sqrt(vel_sq_init).max())
+            dt = min(args.cfl * dx / (c_max + u_max + 1e-6), args.dt)
+    
+    # Determine if we need full data this frame
+    need_data = (frame % snapshot_every == 0) or (frame % redistance_every == 0) or (frame % 10 == 0)
+    if not args.noshow:
+        need_data = True
+    
+    # Run substeps: skip diagnostics on all but last step (if needed)
+    for i in range(num_steps_per_frame):
+        b_diag = (i == num_steps_per_frame - 1) and need_data
+        solver.step(dt, b_diagnostics=b_diag)
         step_counter += 1
     
     # Redistance every few frames to keep phi stable
@@ -205,6 +246,11 @@ def update(frame):
         print(f"[redistance] frame={frame} step={step_counter} iterations=5")
         solver.redistance(iterations=5)
         
+    if not need_data:
+        if frame % 5 == 0:
+            print(f"frame={frame} step={step_counter} dt={dt:.3e}")
+        return []
+    
     data = solver.get_data()
     density = np.clip(data['rho_a1'] + data['rho_a2'], 1e-6, None)  # floor to avoid div/neg issues
     ru64 = np.nan_to_num(data['ru'], copy=False).astype(np.float64); rv64 = np.nan_to_num(data['rv'], copy=False).astype(np.float64); density64 = density.astype(np.float64)
@@ -262,7 +308,8 @@ def update(frame):
             idx = np.argwhere(nan_mask_p)[0]
             print(f"NaN in pressure at {idx}, value={pressure[tuple(idx)]}")
         # Stop animation updates to avoid flooding
-        ani.event_source.stop()
+        if ani is not None:
+            ani.event_source.stop()
     
     if frame % snapshot_every == 0:
         fname = f"{snapshot_prefix}{frame:04d}.png"
@@ -271,5 +318,14 @@ def update(frame):
     
     return [im for im, _ in artists.values()]
 
-ani = FuncAnimation(fig, update, frames=args.frames, interval=50, blit=False)
-plt.show()
+ani = None
+if args.noshow:
+    for frame in range(args.frames):
+        update(frame)
+    # Always save final frame
+    fname = f"{snapshot_prefix}final.png"
+    fig.savefig(fname, dpi=150)
+    print(f"[snapshot] saved {fname}")
+else:
+    ani = FuncAnimation(fig, update, frames=args.frames, interval=50, blit=False)
+    plt.show()

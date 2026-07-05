@@ -1,5 +1,18 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Matplotlib visualization utilities for truss structures and graph coloring.
+
+**plot_truss** renders points and bonds as a LineCollection with optional per-bond stiffness
+coloring and per-node RGBA colors. **plot_graph_coloring** overlays graph coloring partitions
+with annotated color IDs. Used by `run_vbd_cloth.py`, `run_vbd_cloth_new.py`, and
+`test_graph_coloring.py`. Design: all functions accept an optional `ax` parameter for
+composable subplot layouts.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.collections import LineCollection
 
 def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_color='b', point_size=20, color_by_stiffness=False, cmap='viridis',  show_colorbar=True, ks=None, label=None, node_colors=None, margin=0.2):
@@ -47,4 +60,20 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
     #ax.set_xlim(points[:, 0].min()-margin, points[:, 0].max()+margin)
     #ax.set_ylim(points[:, 1].min()-margin, points[:, 1].max()+margin)
     #ax.autoscale()
+    return ax
+
+def plot_graph_coloring(truss, vertex_colors, partitions, ax=None, cmap_name="tab20"):
+    """Plot truss with vertices colored by graph coloring partition."""
+    if len(vertex_colors) == 0:
+        return ax
+    if ax is None:
+        ax = plt.gca()
+    n_colors = int(vertex_colors.max()) + 1
+    palette = cm.get_cmap(cmap_name, n_colors)(np.linspace(0.0, 1.0, n_colors))
+    node_colors = palette[vertex_colors.astype(int)]
+    ax = plot_truss(truss.points, truss.bonds, ax=ax, edge_color='0.3', edge_alpha=0.5, point_size=60, node_colors=node_colors)
+    for color_id, verts in enumerate(partitions):
+        p = truss.points[verts[0], :2]
+        ax.text(p[0], p[1], str(color_id), color='k', fontsize=10, ha='center', va='center')
+    ax.set_title("Graph coloring (color id annotated)")
     return ax

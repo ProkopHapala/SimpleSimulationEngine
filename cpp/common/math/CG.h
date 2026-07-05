@@ -101,6 +101,7 @@ class CGsolver{ public:
         _realloc0(Ad,   n*m, 0.0 );
         _realloc0(z,    n*m, 0.0 );
     }
+    void dealloc(){ _dealloc(invD); _dealloc(res); _dealloc(d); _dealloc(Ad); _dealloc(z); _dealloc(alpha); _dealloc(beta); _dealloc(err); _dealloc(err2); }
 
     void initDiagPrecond( double* A, double safe=0.0 ){
         for (int i=0; i<n; i++ ) invD[i] = 1.0/( A[i*n+i] );

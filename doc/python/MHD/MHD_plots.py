@@ -1,8 +1,60 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Plotting utilities for MHD coil/plasma simulations in the (r,z) meridional plane.
+
+Provides make_background_rgb (HSV direction+magnitude or magma colormap field coloring),
+plot_coil_geometry (side-by-side initial/final coil states with B-field background and
+streamlines), and plot_B_profiles (axial Bz + radial Br/Bz/|B| overlays). All functions
+accept arrays of coil radii, positions, and currents and call inductance_core.field_loop_rz
+for field computation.
+
+Used by: demo_coil_motion_flux.py, demo_plasma_sphere_flux.py, demo_gauss_gun_flux.py,
+demo_dipole_gemini2.py, demo_diamagnetic_dipole_bubble.py.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 
 from inductance_core import field_loop_rz
+
+
+def make_background_rgb(Br, Bz, bg_mode="hsv", B_ref=None):
+    """Construct RGB background from Br,Bz field components.
+
+    Parameters
+    ----------
+    Br, Bz : ndarray
+        Radial and axial B-field components on a grid.
+    bg_mode : {"hsv", "mag"}
+        HSV encodes direction (hue) and magnitude (value).
+        MAG encodes magnitude only via magma colormap.
+    B_ref : float or None
+        Reference |B| for normalization. If None, uses 1% of max.
+
+    Returns
+    -------
+    rgb : ndarray, shape Br.shape + (3,)
+    """
+    Bmag = np.sqrt(Br * Br + Bz * Bz)
+    if B_ref is None or B_ref <= 0.0:
+        B_ref = 0.01 * np.max(Bmag)
+        if B_ref <= 0.0:
+            B_ref = 1.0
+    Bmag_norm = np.clip(Bmag / B_ref, 0.0, 1.0)
+    phi = np.arctan2(Bz, Br)
+
+    if bg_mode.lower() == "hsv":
+        hue = (phi + np.pi) / (2 * np.pi)
+        sat = np.ones_like(hue)
+        val = Bmag_norm
+        hsv = np.stack([hue, sat, val], axis=-1)
+        rgb = hsv_to_rgb(hsv)
+    else:
+        cmap = plt.cm.magma
+        rgb = cmap(Bmag_norm)[..., :3]
+    return rgb
 
 
 def plot_coil_geometry( types, R0,  z0, I0, R1, z1, I_final, bg_mode="hsv", title="Coil geometry (initial vs final)" ):
@@ -62,21 +114,7 @@ def plot_coil_geometry( types, R0,  z0, I0, R1, z1, I_final, bg_mode="hsv", titl
             Br_i_abs, Bz_i = field_loop_rz(a, zc, I, np.abs(Rg), Zg)
             Br += np.sign(Rg) * Br_i_abs
             Bz += Bz_i
-        Bmag = np.sqrt(Br * Br + Bz * Bz)
-        B_ref = 0.01 * np.max(Bmag)  # damp dominant field to reveal weaker structures
-        if B_ref <= 0.0:
-            B_ref = 1.0
-        Bmag_norm = np.clip(Bmag / B_ref, 0.0, 1.0)
-        phi = np.arctan2(Bz, Br)  # direction in (r,z)
-        if bg_mode == "hsv":
-            hue = (phi + np.pi) / (2 * np.pi)
-            sat = np.ones_like(hue)
-            val = Bmag_norm
-            hsv = np.stack([hue, sat, val], axis=-1)
-            rgb = hsv_to_rgb(hsv)
-        else:
-            cmap = plt.cm.magma
-            rgb = cmap(Bmag_norm)[..., :3]
+        rgb = make_background_rgb(Br, Bz, bg_mode=bg_mode)
         return Br, Bz, rgb
 
     Br_init, Bz_init, rgb_initial = make_field_and_rgb(R0, z0, I0)

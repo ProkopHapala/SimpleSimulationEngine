@@ -45,7 +45,72 @@
 
 ### Remaining
 - [ ] 12 unconnected vertices from bound nodes still exist (non-fatal, warnings only). Root cause: `make_anchor_point` creates vertices before girders are processed, so no edges connect them. Fix would require reordering mesh building or deferring anchor connections.
-- [ ] Memory leaks in Lua bindings (Rope2, Rope, Material, StickMaterial) detected by ASan — pre-existing, not blocking.
+- [x] Memory leaks fixed — see "Memory Leak Fixes" section below.
+
+---
+
+## Completed: Memory Leak Fixes (2025-07-05)
+
+### Problem
+`SpaceCraftEditorNew` had no destructors or deallocation logic. ASan reported **187802 bytes leaked in 591 allocations**. Major sources: `TrussDynamics_d`/`TrussDynamics_f` raw arrays (48MB), Lua binding objects not registered in `components`, global `lua_State` never closed, GUI panels/panels not deleted, `SpaceCraft`/`SpaceCraftSimulator` not destructed.
+
+### Root Causes
+1. **No `delete app`** in `main()` — entire app object tree leaked.
+2. **No destructors** on classes owning raw `new[]` arrays: `TrussDynamics_d`, `TrussDynamics_f`, `SparseMatrix`, `SparseMatrix2`, `Buckets`, `CGsolver`.
+3. **Missing `components.push_back`** in 10 Lua binding functions (`l_Rope2`, `l_Weld`, `l_Radiator`, `l_Shield`, `l_Tank`, `l_Thruster`, `l_Gun`, `l_Rock`, `l_Balloon`, `l_Slider`) — objects allocated with `new` but never registered for deletion by `SpaceCraft::clear()`.
+4. **Double `initSpaceCraftingLua()`** — called in both `SpaceCraftDynamicsApp` and `SpaceCraftEditorNew` constructors; second call overwrote `theLua` pointer, leaking the first `lua_State`.
+5. **No destructors** on `PTree`, `Dict`, `MultiPanel`, `BoundGUI`, `Path`, `SpaceCraft`, `SpaceCraftSimulator`, `SpaceCraftDynamicsApp`.
+6. **`workshop` is a global** (not heap-allocated) — `~SpaceCraft` must not `delete` the borrowed `workshop` pointer.
+
+### Fixes Applied
+
+**Destructors added:**
+- `~PTree()` in `Tree.h` — recursively deletes branch pointers.
+- `~Dict()` in `containers.h` — deletes all owned `T*` in `vec`.
+- `~MultiPanel()` in `GUI.h` — deletes all `GUIPanel*` in `subs`.
+- `~BoundGUI()` in `GUI.h` — `delete[] drivers`.
+- `~Path()` in `SpaceCraftComponents.h` — frees `ps` if not shared (`sharedFrom==0`).
+- `~SpaceCraft()` in `SpaceCraft.h` — calls `clear()` (workshop is borrowed, not deleted).
+- `~SpaceCraftSimulator()` in `spaceCraftSimulator.h` — calls `sim.dealloc()` + `sim_f.dealloc()`.
+- `~SpaceCraftDynamicsApp()` in `SpaceCraftDynamicsApp.h` — `delete simulator`.
+- `~SpaceCraftEditorNew()` in `SpaceCraftEditorNew.cpp` — `lua_close(theLua)` + `delete theSpaceCraft`.
+
+**`dealloc()` methods added (for raw-array classes):**
+- `TrussDynamics_d::dealloc()` — frees 25+ raw arrays + nested `SparseMatrix`/`SparseMatrix2`/`Buckets`/`CGsolver`.
+- `TrussDynamics_f::dealloc()` — same for float version.
+- `SparseMatrix::dealloc()` — frees `nng`, `inds`, `vals`.
+- `SparseMatrix2::dealloc()` — frees `nngs`, `i0s`, `vals`, `inds`.
+- `CGsolver::dealloc()` — frees `invD`, `res`, `d`, `Ad`, `z`, `alpha`, `beta`, `err`, `err2`.
+- `Buckets::dealloc()` — frees `cellNs`, `cellI0s`, `cell2obj`, `obj2cell`.
+
+**Ownership fixes (missing `components.push_back`):**
+- `EditSpaceCraft.h` — Added `components.push_back(o)` to `l_Rope2`, `l_Weld`, `l_Radiator`, `l_Shield`, `l_Tank`, `l_Thruster`, `l_Gun`, `l_Rock`, `l_Balloon`, `l_Slider`.
+- `SpaceCraft.h` — Added `components.push_back` for Slider nodes in `make_Ring2`.
+
+**Other fixes:**
+- `delete app` after `app->loop()` in `SpaceCraftEditorNew.cpp:main()`.
+- Guard against double `initSpaceCraftingLua()` — close existing `theLua` before creating new state.
+- `virtual` destructor on `SpaceCraftSimulator` (deleted through base pointer in `~SpaceCraftDynamicsApp`).
+
+### Files Modified
+- `cpp/apps/OrbitalWar/SpaceCraftEditorNew.cpp` — `delete app`, `~SpaceCraftEditorNew` destructor
+- `cpp/apps/OrbitalWar/SpaceCraftDynamicsApp.h` — `~SpaceCraftDynamicsApp` destructor
+- `cpp/apps/OrbitalWar/spaceCraftSimulator.h` — `~SpaceCraftSimulator` destructor
+- `cpp/common/Orbital/SpaceCraft.h` — `~SpaceCraft` destructor, `components.push_back` in `make_Ring2`
+- `cpp/common/Orbital/SpaceCraftComponents.h` — `~Path` destructor
+- `cpp/common/Orbital/EditSpaceCraft.h` — `components.push_back` in 10 Lua bindings, double-init guard
+- `cpp/common/dataStructures/Tree.h` — `~PTree` destructor
+- `cpp/common/dataStructures/Buckets.h` — `dealloc()` method
+- `cpp/common/utils/containers.h` — `~Dict` destructor
+- `cpp/common/dynamics/TrussDynamics_d.h` — `dealloc()` method
+- `cpp/common/dynamics/TrussDynamics_f.h` — `dealloc()` method
+- `cpp/common/math/SparseMatrix.h` — `dealloc()` method
+- `cpp/common/math/SparseMatrix2.h` — `dealloc()` method
+- `cpp/common/math/CG.h` — `dealloc()` method
+- `cpp/common_SDL/SDL2OGL/GUI.h` — `~MultiPanel`, `~BoundGUI` destructors
+
+### Result
+ASan leak report: **187802B / 591 allocs → 141748B / 196 allocs**. Remaining leaks are exclusively from `iris_dri.so` (Mesa OpenGL driver internals, 9216B direct + ~132KB indirect) — not application code.
 
 ---
 

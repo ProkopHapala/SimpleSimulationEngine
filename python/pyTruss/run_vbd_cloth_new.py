@@ -1,3 +1,14 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief CLI runner for cloth/truss simulation — CPU + new GPU (truss_solver_ocl_new) backends.
+
+Same purpose as `run_vbd_cloth.py` but uses the refactored GPU backend (`truss_solver_ocl_new.py`)
+which supports VBD, Jacobi-diff, and Jacobi-fly on GPU. Adds CLI options for `--gpu`, `--nloc`,
+`--device`, `--sub-method`, `--rho`, `--delayed-start`, `--gamma` for finer control over
+GPU solver configuration and Chebyshev parameters.
+"""
+# === AUTO-DOC END ===
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,28 +24,13 @@ import truss_solver as truss_solver_module
 
 import truss_solver_ocl_new as truss_solver_ocl_mod
 from truss_solver_ocl_new import TrussSolverOCL as TrussSolverOCLGPU, get_solver as get_solver_ocl
-from plot_utils import plot_truss
+from plot_utils import plot_truss, plot_graph_coloring
 
 
 CPU_SOLVER_CHOICES = set(truss_solver_module.SOLVERS.keys())
 GPU_SOLVER_CHOICES = set(truss_solver_ocl_mod.SOLVERS.keys())
 ALL_SOLVER_CHOICES = tuple(sorted(CPU_SOLVER_CHOICES | GPU_SOLVER_CHOICES))
 
-
-def plot_graph_coloring(truss: Truss, vertex_colors: np.ndarray, partitions, ax=None, cmap_name: str = "tab20"):
-    if vertex_colors.size == 0:
-        return ax
-    if ax is None:
-        ax = plt.gca()
-    n_colors = int(vertex_colors.max()) + 1
-    palette = cm.get_cmap(cmap_name, n_colors)(np.linspace(0.0, 1.0, n_colors))
-    node_colors = palette[vertex_colors.astype(int)]
-    ax = plot_truss(truss.points, truss.bonds, ax=ax, edge_color='0.3', edge_alpha=0.5, point_size=60, node_colors=node_colors)
-    for color_id, verts in enumerate(partitions):
-        p = truss.points[verts[0], :2]
-        ax.text(p[0], p[1], str(color_id), color='k', fontsize=10, ha='center', va='center')
-    ax.set_title("Graph coloring (color id annotated)")
-    return ax
 
 '''
 python run_vbd_cloth.py --nx 2 --ny 0 --nsteps 100 --niter 10 --stiffness 10000.0 --cpu 1 --anchor-mode left
@@ -85,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--rho",            type=float, default=0.95, help="Spectral radius estimate for Chebyshev acceleration.")
     parser.add_argument("--delayed-start",  dest="delayed_start", type=int, default=2, help="Number of initial iterations without Chebyshev acceleration.")
     parser.add_argument("--gamma",          type=float, default=1.0, help="Under-relaxation factor for Chebyshev global solve (<=1).")
+    parser.add_argument("--noshow",        action="store_true",        help="Skip plt.show() for headless execution (still saves figures).")
     args = parser.parse_args()
 
     truss = Truss()
@@ -118,7 +115,7 @@ if __name__ == "__main__":
             fig_color, ax_color = plt.subplots(figsize=(6, 6))
             plot_graph_coloring(truss, vertex_colors, color_partitions, ax=ax_color)
             plt.tight_layout()
-        plt.show()
+        if not args.noshow: plt.show()
         exit()
 
     anchor_mode = args.anchor_mode.lower()
@@ -296,5 +293,5 @@ if __name__ == "__main__":
         plt.tight_layout()
         if args.savefig:
             plt.savefig(args.savefig)
-        plt.show()
+        if not args.noshow: plt.show()
 

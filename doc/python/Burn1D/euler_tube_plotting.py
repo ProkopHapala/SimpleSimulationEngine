@@ -11,9 +11,11 @@ def setup_figure(solver, prop_config, args):
     ax_u = fig.add_subplot(gs[2, 0], sharex=ax_geom)
     ax_rho = fig.add_subplot(gs[1, 1], sharex=ax_geom)
     ax_hist = fig.add_subplot(gs[2, 1])
-    ax_geom.plot(solver.x, np.sqrt(solver.A / np.pi) * 2, 'k-', lw=2)
-    ax_geom.fill_between(solver.x, np.sqrt(solver.A / np.pi) * 2, color='gray', alpha=0.3)
-    ax_geom.set_ylabel("Diameter (m)")
+    r = np.sqrt(solver.A / np.pi)
+    ax_geom.plot(solver.x, r, 'k-', lw=2)
+    ax_geom.plot(solver.x, -r, 'k-', lw=2)
+    ax_geom.fill_between(solver.x, r, -r, color='gray', alpha=0.3)
+    ax_geom.set_ylabel("Radius (m)")
     ax_geom.set_title("Tube Geometry")
     if args.prop_force != 0:
         ax_geom.axvspan(prop_config['x_start'], prop_config['x_end'], color='red', alpha=0.3, label='Propeller')
@@ -57,7 +59,7 @@ def set_fixed_limits(ax_p, ax_rho, ax_u, p0, rho0, u0):
 
 def update_plot(solver, prop_config, args, fig, ax_geom, ax_p, ax_u, ax_rho, ax_hist, ax_hist2,
                 line_p, line_u, line_rho, line_mass, line_eng, history_t, history_mass, history_energy, dt_sim):
-    rho, u, p, T = solver.get_primitive()
+    rho, u, p, T, Y_fuel = solver.get_primitive()
     line_p.set_data(solver.x, p)
     line_u.set_data(solver.x, u)
     line_rho.set_data(solver.x, rho)
@@ -79,11 +81,13 @@ def update_plot(solver, prop_config, args, fig, ax_geom, ax_p, ax_u, ax_rho, ax_
     plt.pause(0.001)
 
 def save_snapshot(solver, filename='euler_tube.png'):
-    rho, u, p, T = solver.get_primitive()
+    rho, u, p, T, Y_fuel = solver.get_primitive()
     fig, axes = plt.subplots(3, 1, figsize=(10, 10))
-    axes[0].plot(solver.x, np.sqrt(solver.A / np.pi) * 2, 'k-', lw=2)
-    axes[0].fill_between(solver.x, np.sqrt(solver.A / np.pi) * 2, color='gray', alpha=0.3)
-    axes[0].set_ylabel("Diameter (m)")
+    r = np.sqrt(solver.A / np.pi)
+    axes[0].plot(solver.x, r, 'k-', lw=2)
+    axes[0].plot(solver.x, -r, 'k-', lw=2)
+    axes[0].fill_between(solver.x, r, -r, color='gray', alpha=0.3)
+    axes[0].set_ylabel("Radius (m)")
     axes[0].set_title(f"Tube Geometry | t={solver.t:.4f}s")
     axes[1].plot(solver.x, p, 'b-', label='Pressure')
     axes[1].plot(solver.x, u, 'g-', label='Velocity')

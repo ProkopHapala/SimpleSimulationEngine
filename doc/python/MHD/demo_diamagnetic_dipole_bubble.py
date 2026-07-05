@@ -1,8 +1,21 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Static field visualization of SC coil + axial dipole (diamagnetic bubble).
+
+Computes Br/Bz from field_loop_rz + field_dipole_rz on a 2D grid, renders HSV background
+via MHD_plots.make_background_rgb, and overlays Psi contours (separatrix). Includes
+check_Aphi_vs_B which verifies curl(A) reproduces B at a sample point via finite
+differences, and run_Aphi_profile_tests for radial A_phi consistency. This is the
+diagnostic/visualization counterpart to demo_dipole_gemini's analytic separatrix approach.
+"""
+# === AUTO-DOC END ===
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
 from inductance_core import field_loop_rz, field_dipole_rz, Aphi_loop_rz, Aphi_dipole_rz, MU0
+from MHD_plots import make_background_rgb
 
 
 def compute_fields_coil_plus_dipole(r_grid, z_grid, a_coil, z_coil, I_coil, m_dipole, z_dipole):
@@ -24,30 +37,6 @@ def compute_fields_coil_plus_dipole(r_grid, z_grid, a_coil, z_coil, I_coil, m_di
     Br = Br_c + Br_d
     Bz = Bz_c + Bz_d
     return Br, Bz, Br_c, Bz_c, Br_d, Bz_d
-
-
-def make_background_rgb(Br, Bz, bg_mode="hsv", B_ref=None):
-    """Construct RGB background from Br,Bz as in MHD_plots.plot_coil_geometry."""
-    Bmag = np.sqrt(Br * Br + Bz * Bz)
-    if B_ref is None or B_ref <= 0.0:
-        B_ref = 0.01 * np.max(Bmag)
-        if B_ref <= 0.0:
-            B_ref = 1.0
-    Bmag_norm = np.clip(Bmag / B_ref, 0.0, 1.0)
-    phi = np.arctan2(Bz, Br)
-
-    if bg_mode.lower() == "hsv":
-        from matplotlib.colors import hsv_to_rgb
-
-        hue = (phi + np.pi) / (2 * np.pi)
-        sat = np.ones_like(hue)
-        val = Bmag_norm
-        hsv = np.stack([hue, sat, val], axis=-1)
-        rgb = hsv_to_rgb(hsv)
-    else:
-        cmap = plt.cm.magma
-        rgb = cmap(Bmag_norm)[..., :3]
-    return rgb
 
 
 def check_Aphi_vs_B(a_coil, z_coil, I_coil, m_dipole, z_dipole):
@@ -149,7 +138,6 @@ def run_Aphi_profile_tests(a_coil, z_coil, I_coil, m_dipole, z_dipole, r_max, n_
 
     fig.suptitle(f"Aphi consistency test at z0={z0:.3f}")
     plt.tight_layout()
-    plt.show()
 
 
 def run_demo(args):
@@ -232,7 +220,6 @@ def run_demo(args):
         ax.legend(loc="best")
 
     plt.tight_layout()
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -257,6 +244,7 @@ if __name__ == "__main__":
     parser.add_argument("--highlight-separatrix", type=int, default=1, help="Highlight separatrix via psi=r*Aphi contour from on-axis Bz=0 in front of coil")
     parser.add_argument("--verify-A",             type=int, default=1, help="Numerically verify that curl(Aphi) matches Br,Bz at one sample point")
     parser.add_argument("--test-Aphi-profiles",   type=int, default=1, help="Run radial profile tests comparing direct B vs curl(Aphi) for coil and dipole")
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
 
     args = parser.parse_args()
     if args.verify_A:
@@ -264,3 +252,9 @@ if __name__ == "__main__":
     if args.test_Aphi_profiles:
         run_Aphi_profile_tests(args.r_coil, args.z_coil, args.i_coil, args.m_dipole, args.z_dipole, args.r_max, args.n_r)
     run_demo(args)
+    if args.noshow:
+        for n in plt.get_fignums():
+            plt.figure(n); plt.savefig(f'demo_diamagnetic_dipole_bubble_{n}.png', dpi=150, bbox_inches='tight')
+        plt.close('all')
+    else:
+        plt.show()

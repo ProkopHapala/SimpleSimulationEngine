@@ -1,3 +1,18 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Sparse linear algebra and iterative solvers for truss/cloth systems.
+
+Provides both dense-matrix and sparse-neighbor-list formulations of **Jacobi**, **Gauss-Seidel**
+(with graph coloring for parallelism), and a general **linsolve_iterative** framework with
+momentum mixing. Key design: neighbor lists are stored as per-vertex arrays of (neighbor_index,
+stiffness) pairs, converted to dense padded arrays via `neighs_to_dense_arrays` for GPU upload.
+`build_rest_length_dense` produces the matching rest-length table. `color_graph` implements
+greedy graph coloring for parallel GS. The sparse formulation avoids assembling the full A matrix
+when only neighbor structure is needed — critical for large trusses where A is O(N^2) but the
+neighbor list is O(N * max_neighbors).
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 
 def jacobi_iteration(A, b, x):
@@ -103,6 +118,20 @@ def neighs_to_dense_arrays(neighs, kngs, n_max):
         neighs_[i,:ni] = ngi
         kngs_  [i,:ni] = kngs[i]
     return neighs_, kngs_, nis
+
+def build_rest_length_dense(neigh_lists, bonds, l0s, n_max):
+    """Dense rest-length table matching the padded neighbor layout."""
+    assert len(bonds) == len(l0s), "bonds and l0s must have identical length"
+    pair_rest = {}
+    for (ia, ib), rest in zip(bonds, l0s):
+        ia = int(ia); ib = int(ib); val = float(rest)
+        pair_rest[(ia, ib)] = val
+        pair_rest[(ib, ia)] = val
+    rest_dense = np.zeros((len(neigh_lists), n_max), dtype=np.float32)
+    for vid, neigh in enumerate(neigh_lists):
+        for jj, nj in enumerate(neigh):
+            rest_dense[vid, jj] = pair_rest[(vid, int(nj))]
+    return rest_dense
 
 def make_Aii( neighs, kngs, Aii0=None ):
     n = len(neighs)

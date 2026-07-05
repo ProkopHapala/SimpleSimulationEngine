@@ -1,10 +1,23 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief OpenCL GPU solver wrapper — VBD-serial kernel via standalone OCLRuntime.
+
+Thin adapter that exposes the VBD-serial kernel from `truss_ocl.py` through a
+**TrussSolverOCL** class with a `run(nsteps)` interface. Uses a manually created
+**OCLRuntime** (context + queue) rather than inheriting from OpenCLBase. Only implements
+the `vbd_serial` solver. The SOLVERS dict and `get_solver` factory provide CLI-driven
+selection for `run_vbd_cloth.py`. This is the "old" GPU backend — prefer
+`truss_solver_ocl_new.py` which uses OpenCLBase and supports more solver types.
+"""
+# === AUTO-DOC END ===
+
 import os
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pyopencl as cl
 
-from sparse import build_neighbor_list, neigh_stiffness, neighs_to_dense_arrays
+from sparse import build_neighbor_list, neigh_stiffness, neighs_to_dense_arrays, build_rest_length_dense
 from truss import Truss
 
 
@@ -19,24 +32,6 @@ def set_verbosity(level: int) -> None:
 def _print_state(tag: str, positions: np.ndarray, velocities: np.ndarray) -> None:
     print(f"{tag} positions:\n{positions}")
     print(f"{tag} velocities:\n{velocities}")
-
-
-def build_rest_length_dense(neigh_lists: List[List[int]], bonds: np.ndarray, l0s: np.ndarray, n_max: int) -> np.ndarray:
-    """Dense rest-length table matching the padded neighbor layout."""
-    print("truss_solver_ocl.build_rest_length_dense()")
-    assert len(bonds) == len(l0s), "bonds and l0s must have identical length"
-    pair_rest: Dict[tuple[int, int], float] = {}
-    for (ia, ib), rest in zip(bonds, l0s):
-        ia = int(ia)
-        ib = int(ib)
-        val = float(rest)
-        pair_rest[(ia, ib)] = val
-        pair_rest[(ib, ia)] = val
-    rest_dense = np.zeros((len(neigh_lists), n_max), dtype=np.float32)
-    for vid, neigh in enumerate(neigh_lists):
-        for jj, nj in enumerate(neigh):
-            rest_dense[vid, jj] = pair_rest[(vid, int(nj))]
-    return rest_dense
 
 
 class OCLRuntime:

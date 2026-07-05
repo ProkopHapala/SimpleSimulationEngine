@@ -1,3 +1,15 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Coupled nozzle+dipole: seed coil + parabolic cage rings + moving plasma dipole.
+
+Solves the coupled system [I_cage, m_dipole] simultaneously at each plasma position:
+cage coils conserve initial flux (K_cage @ I_cage = Phi0), while the dipole moment is
+solved to enforce Psi_total = 0 at the plasma boundary (separatrix condition). Uses the
+Psi = 2*pi*r*A_phi convention (vs demo_dipole_gemini's r*A_phi). The coupling matrix
+includes dipole-to-cage flux and cage-to-surface Psi cross-terms.
+"""
+# === AUTO-DOC END ===
+
 """
 Hybrid Simulation: Superconducting Nozzle with a Diamagnetic Dipole Bubble.
 
@@ -40,14 +52,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize, hsv_to_rgb
 
 from inductance_core import build_inductance_matrix, calc_mutual_inductance, Aphi_loop_rz, Aphi_dipole_rz, generate_parabolic_rings, MU0
+from MHD_plots import make_background_rgb
 
 # --- HELPER: Flux Function Psi ---
 # Psi = 2 * pi * r * A_phi
-# (Note: In axisymmetry, contours of Psi are field lines. Difference in Psi is Flux.)
 
 def calc_Psi_loop(r_eval, z_eval, r_src, z_src, I_src):
     """Calculate Flux Function Psi at (r,z) due to a loop source."""
-    # Aphi returns Vector Potential. Psi = 2*pi*r*Aphi
     A = Aphi_loop_rz(r_src, z_src, I_src, np.array([r_eval]), np.array([z_eval]))
     return 2 * np.pi * r_eval * A[0]
 
@@ -221,16 +232,7 @@ class DipoleNozzleSimulation:
         denom = np.where(np.abs(Rg) < eps, eps, Rg)
         Br = -dPsi_dz / denom
         Bz = dPsi_dr / denom
-        Bmag = np.sqrt(Br * Br + Bz * Bz)
-        B_ref = np.percentile(Bmag, 95)
-        if B_ref <= 0.0:
-            B_ref = 1.0
-        B_norm = np.clip(Bmag / B_ref, 0.0, 1.0)
-        hue = (np.arctan2(Bz, Br) + np.pi) / (2 * np.pi)
-        sat = np.ones_like(hue)
-        val = B_norm
-        hsv = np.stack([hue, sat, val], axis=-1)
-        rgb = hsv_to_rgb(hsv)
+        rgb = make_background_rgb(Br, Bz, bg_mode="hsv")
         
         # 5. Plot background and streamlines like the existing nozzle demo
         ax.imshow(rgb, extent=(z_min, z_max, -r_max, r_max), origin="lower", aspect="equal", alpha=0.8)
@@ -267,7 +269,12 @@ class DipoleNozzleSimulation:
         ax.legend(loc='upper right', fontsize=8)
         
         plt.tight_layout()
-        plt.show()
+        if self.args.noshow:
+            for n in plt.get_fignums():
+                plt.figure(n); plt.savefig(f'demo_dipole_gemini2_{n}.png', dpi=150, bbox_inches='tight')
+            plt.close('all')
+        else:
+            plt.show()
 
 # --- MAIN ---
 
@@ -296,7 +303,7 @@ if __name__ == "__main__":
     # Sim settings
     parser.add_argument("--steps", type=int, default=50,  help="Simulation steps")
     parser.add_argument("--no-plot", action="store_true", help="Skip plotting")
-    
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
     args = parser.parse_args()
     
     sim = DipoleNozzleSimulation(args)

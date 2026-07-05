@@ -1,6 +1,20 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Fast polynomial approximation for elliptic integrals K(m), E(m) — Abramowitz & Stegun 17.3.
+
+Provides fast_ellip_ke (Horner-form polynomial, error < 2e-8) and field_loop_rz_fast which
+uses it instead of scipy.special.ellipk/ellipe for hot-loop B-field evaluation. The demo
+compares fast vs reference (scipy) field on a 2D grid and 1D cuts. This is the only file
+using the Abramowitz approximation — all other scripts use the scipy-based kernels from
+inductance_core directly.
+"""
+# === AUTO-DOC END ===
+
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.special import ellipk, ellipe
+
+from inductance_core import field_loop_rz as field_loop_rz_ref, MU0
 
 
 def fast_ellip_ke(m):
@@ -46,29 +60,7 @@ def field_loop_rz_fast(a, z0, I, r_grid, z_grid, eps=1e-12):
     m = (4.0 * a * r_safe) / denom
     K, E = fast_ellip_ke(m)
 
-    factor = 4e-7 * np.pi * I / np.sqrt(denom)  # MU0/(2pi)=2e-7*2pi -> 4e-7*pi
-    alpha2 = a * a + r_safe * r_safe + z_rel * z_rel
-    beta2 = (a - r_safe) ** 2 + z_rel * z_rel
-
-    Br = factor * (z_rel / r_safe) * (-K + (alpha2 / beta2) * E)
-    Bz = factor * (K + ((a * a - r_safe * r_safe - z_rel * z_rel) / beta2) * E)
-    Br = np.where(r < eps, 0.0, Br)
-    return Br, Bz
-
-
-def field_loop_rz_ref(a, z0, I, r_grid, z_grid, eps=1e-12):
-    """Reference thin-loop Br,Bz using scipy ellipk/ellipe (mirrors inductance_core)."""
-    r = np.asarray(r_grid, dtype=float)
-    z = np.asarray(z_grid, dtype=float)
-    z_rel = z - z0
-    r_safe = np.where(r < eps, eps, r)
-
-    denom = (a + r_safe) ** 2 + z_rel ** 2
-    m = (4.0 * a * r_safe) / denom
-    K = ellipk(m)
-    E = ellipe(m)
-
-    factor = 4e-7 * np.pi * I / np.sqrt(denom)
+    factor = MU0 * I / (2.0 * np.pi * np.sqrt(denom))  # MU0*I/(2*pi)
     alpha2 = a * a + r_safe * r_safe + z_rel * z_rel
     beta2 = (a - r_safe) ** 2 + z_rel * z_rel
 
@@ -143,8 +135,16 @@ def demo_compare():
         ax.grid(True, alpha=0.3)
         ax.legend()
     plt.tight_layout()
-    plt.show()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Compare fast Abramowitz elliptic KE approximation vs scipy")
+    parser.add_argument("--noshow", action="store_true", help="Save figures to PNG instead of displaying")
+    args = parser.parse_args()
     demo_compare()
+    if args.noshow:
+        for n in plt.get_fignums():
+            plt.figure(n); plt.savefig(f'fast_eliptke_Abramowitz_{n}.png', dpi=150, bbox_inches='tight')
+        plt.close('all')
+    else:
+        plt.show()

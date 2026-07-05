@@ -155,6 +155,7 @@ int l_Slider(lua_State * L){
     o->print();
     printf(" - boundTo:"); o->boundTo->print();
     theSpaceCraft->sliders.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -255,6 +256,7 @@ int l_Rope2 (lua_State * L){
     }
     //if(verbosity>1) o->print();
     theSpaceCraft->ropes.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -324,6 +326,7 @@ int l_Weld    (lua_State * L){
     o->id     = theSpaceCraft->welds.size();
     if(verbosity>1) o->print();
     theSpaceCraft->welds.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -341,6 +344,7 @@ int l_Radiator (lua_State * L){
     o->id   = theSpaceCraft->radiators.size();
     if(verbosity>1) o->print();
     theSpaceCraft->radiators.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -357,6 +361,7 @@ int l_Shield (lua_State * L){
     o->id   = theSpaceCraft->shields.size();
     if(verbosity>1) o->print();
     theSpaceCraft->shields.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -373,6 +378,7 @@ int l_Tank (lua_State * L){
     o->id   = theSpaceCraft->tanks.size();
     if(verbosity>1) o->print();
     theSpaceCraft->tanks.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -389,6 +395,7 @@ int l_Thruster (lua_State * L){
     o->id   = theSpaceCraft->thrusters.size();
     if(verbosity>1) o->print();
     theSpaceCraft->thrusters.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -402,6 +409,7 @@ int l_Gun     (lua_State * L){
     o->id   = theSpaceCraft->guns.size();
     if(verbosity>1) o->print();
     theSpaceCraft->guns.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -417,6 +425,7 @@ int l_Rock     (lua_State * L){
     o->id   = theSpaceCraft->rocks.size();
     if(verbosity>1) o->print();
     theSpaceCraft->rocks.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -432,6 +441,7 @@ int l_Balloon     (lua_State * L){
     o->id   = theSpaceCraft->balloons.size();
     if(verbosity>1) o->print();
     theSpaceCraft->balloons.push_back( o );
+    theSpaceCraft->components.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -441,6 +451,7 @@ int l_Balloon     (lua_State * L){
 //int l_Radiator(lua_State * L){ return 0; };
 
 void initSpaceCraftingLua(){
+    if(theLua){ lua_close(theLua); theLua=0; }
     theLua = luaL_newstate();
     lua_State  * L = theLua;
     luaL_openlibs(L);

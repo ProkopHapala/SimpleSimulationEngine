@@ -44,6 +44,8 @@ class SpaceCraft : public CatalogItem { public:
 
     SpaceCraftWorkshop* workshop = 0;
 
+    ~SpaceCraft(){ clear(); }  // workshop is borrowed (global), not owned — don't delete
+
     std::vector<int>       LODs;  // levels of detail for OpenGL rendering
 
     int defaultNodeMesh    = 0;
@@ -396,7 +398,7 @@ int make_Ring2(const int* gs, const float* cs, const Vec3d& p0, int nseg, const 
         nd[i]->boundTo = getStructuralComponent(gs[i], (int)ComponetKind::Girder);
         if (cs[i] > 0) { nd[i]->calong = cs[i]; nd[i]->updateBound(p0); } else { nd[i]->calong = -1.0; }
         nd[i]->id = nodes.size();
-        nodes.push_back(nd[i]); sliders.push_back(nd[i]);
+        nodes.push_back(nd[i]); sliders.push_back(nd[i]); components.push_back(nd[i]);
         nd[i]->icontrol = icontrol;
         ((Slider**)&(o->nodes))[i] = nd[i];
     }

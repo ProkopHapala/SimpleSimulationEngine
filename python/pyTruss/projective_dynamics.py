@@ -1,3 +1,18 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Core Projective Dynamics (PD) system assembly — matrix, RHS, and time integration.
+
+Builds the sparse PD system matrix A (mass + stiffness terms) and right-hand side b (inertial
+prediction + spring rest-length projection) for the implicit Euler step used in cloth/truss
+simulation. **make_pd_matrix** assembles A from neighbor lists; **make_pd_rhs** computes b
+from current positions, predicted positions, and rest lengths. **solve_pd** is the main
+time-stepping loop using direct (np.linalg.solve) per-coordinate solves. **makeSparseSystem**
+provides an alternative sparse formulation. The matrix A is symmetric positive definite for
+stable configurations — this is the mathematical foundation that iterative solvers in
+`sparse.py` and `projective_dynamics_iterative.py` approximate.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 #from sparse import build_neighbor_list
 import sparse

@@ -1,3 +1,17 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Truss data structure — points, bonds, masses, stiffness, and fixed-point constraints.
+
+The **Truss** class is the single source of truth for truss geometry and physical parameters.
+All solvers (CPU, GPU, iterative, direct) consume a Truss instance and read/write its `points`
+array. Design: stores bonds as (i,j) index pairs + per-bond stiffness `ks`, with `masses`
+per-point and `fixed` as a set of constrained vertex indices. `build_grid_2d` is a convenience
+factory for regular grids; `get_pd_quantities` and `get_rest_lengths` provide pre-computed
+data needed by Projective Dynamics solvers. The class is intentionally lightweight — no solver
+logic lives here.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Set

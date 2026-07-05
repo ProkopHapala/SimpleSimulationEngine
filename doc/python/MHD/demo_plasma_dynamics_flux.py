@@ -1,3 +1,15 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Dynamic single-plasma-coil with explicit Euler: inertia + Lorentz + gas pressure + hoop stress.
+
+Treats the plasma as a moving mass point with (r,z) dynamics. At each step: solve flux-conserving
+currents, compute Lorentz force via compute_lorentz_force_loop, add adiabatic gas pressure
+(P ~ V^-gamma) and magnetic self-pressure (hoop stress ~ I^2/r), then integrate position/velocity
+with explicit Euler. Outputs trajectory, energy (kinetic+magnetic), and current history. Uses
+1st-order integration — energy drift expected for long runs; consider Verlet/RK4 for production.
+"""
+# === AUTO-DOC END ===
+
 """Dynamic plasma-coil demo with flux-conserving currents.
 
 This script is a dynamic counterpart to ``demo_coil_motion_flux.py``.
@@ -44,6 +56,7 @@ from inductance_core import (
     compute_flux,
     magnetic_energy,
     field_loop_rz,
+    compute_lorentz_force_loop,
 )
 
 
@@ -98,45 +111,6 @@ def setup_system(with_cage: bool = True):
     mass = 0.1  # arbitrary mass for visualization [kg]
     v0 = np.array([1000.0, 0.0])  # initial (vr, vz) [m/s]
     return types, rs, zs, I0, movable_idx, mass, v0
-
-
-def compute_force_on_plasma(idx_plasma, types, rs, zs, I):
-    """Compute Lorentz force on plasma coil from other coils.
-
-    We use the standard thin-loop expression:
-
-        F_r = I_plasma * (2*pi*r_plasma) * Bz_total
-        F_z = I_plasma * (2*pi*r_plasma) * (-Br_total)
-
-    where (Br_total, Bz_total) is the magnetic field at the plasma loop
-    center due to all *other* coils.
-    """
-    r_p = rs[idx_plasma]
-    z_p = zs[idx_plasma]
-    I_p = I[idx_plasma]
-
-    if I_p == 0.0 or r_p <= 0.0:
-        return 0.0, 0.0
-
-    Br_tot = 0.0
-    Bz_tot = 0.0
-    for j in range(len(types)):
-        if j == idx_plasma:
-            continue
-        a = rs[j]
-        zc = zs[j]
-        Ij = I[j]
-        if Ij == 0.0 or a <= 0.0:
-            continue
-        # field_loop_rz works on arrays; call it on scalars via 0-d arrays
-        Br_j, Bz_j = field_loop_rz(a, zc, Ij, np.array([[r_p]]), np.array([[z_p]]))
-        Br_tot += float(Br_j[0, 0])
-        Bz_tot += float(Bz_j[0, 0])
-
-    L_len = 2.0 * np.pi * r_p
-    Fr = I_p * L_len * Bz_tot
-    Fz = I_p * L_len * (-Br_tot)
-    return Fr, Fz
 
 
 def run_plasma_dynamics(
@@ -211,7 +185,7 @@ def run_plasma_dynamics(
 
         # 4) Compute forces on plasma coil
         # 4a) Lorentz force from external fields
-        Fr_ext, Fz_ext = compute_force_on_plasma(idx_p, types, rs, zs, I)
+        Fr_ext, Fz_ext = compute_lorentz_force_loop(idx_p, rs, zs, I)
 
         # 4b) Gas pressure force (outward), adiabatic P ~ (V0/V)^gamma
         r_p = float(rs[idx_p])
@@ -325,11 +299,17 @@ def main():
     parser.add_argument( "--gamma-gas", type=float, default=5.0 / 3.0, help="Polytropic index gamma for gas pressure (default: 5/3)", )
     parser.add_argument( "--L-eff", type=float, default=1.0, help="Effective axial length of plasma ring for pressure model (default: 1.0)", )
     parser.add_argument( "--mag-self-coeff", type=float, default=1e-7, help="Coefficient for magnetic self-pressure term ~ coeff * I^2 / r (default: 1e-7)", )
+    parser.add_argument( "--noshow", action="store_true", help="Save figures to PNG instead of displaying" )
     args = parser.parse_args()
 
     res = run_plasma_dynamics( with_cage=not args.no_cage, dt=args.dt, n_steps=args.steps, P0=args.P0, gamma_gas=args.gamma_gas, L_eff=args.L_eff, mag_self_coeff=args.mag_self_coeff, )
     plot_results(res)
-    plt.show()
+    if args.noshow:
+        for n in plt.get_fignums():
+            plt.figure(n); plt.savefig(f'demo_plasma_dynamics_flux_{n}.png', dpi=150, bbox_inches='tight')
+        plt.close('all')
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":

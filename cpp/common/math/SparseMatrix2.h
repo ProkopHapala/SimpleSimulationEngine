@@ -17,6 +17,8 @@ class SparseMatrix2 { public:
     T*   vals =0; // folded non-zero values in the matrix 
     int* inds =0; // folded column-index (j) for each non-zero value
 
+    void dealloc(){ _dealloc(nngs); _dealloc(i0s); _dealloc(vals); _dealloc(inds); n=0; ntot=0; }
+
     __attribute__((hot)) 
     void dot_dens_vector(const T* v, T* out) const {
         for (int i=0; i<n; i++){ // iteratie over rows

@@ -178,6 +178,7 @@ class Path{ public:
     double cur=0.5; // position along the path
     bool   closed=false; // is it line point-to-point or closed loop? 
     Path*  sharedFrom=0; // if this path is shared from another path, the data pointers like ps are not owned by this path
+    ~Path(){ if(!sharedFrom) _dealloc(ps); }
 
     inline void   realloc(int n_){ printf("Path::realoc(%i)\n",n_); n=n_; _realloc(ps,n); }
     inline void   fold(){ if(cur<0){ cur+=n; }else if(cur>=n){ cur-=n; } } // this works only for closed paths

@@ -37,6 +37,11 @@ void SpaceCraftControl(double dt){
 
 class SpaceCraftEditorNew : public SpaceCraftDynamicsApp {
 public:
+    ~SpaceCraftEditorNew(){
+        if(theLua){ lua_close(theLua); theLua=0; }
+        if(theSpaceCraft){ delete theSpaceCraft; theSpaceCraft=0; }
+    }
+
     // === Editor-specific GUI elements
     BoundGUI*  compGui   = nullptr;
     GirderGUI* girderGui = nullptr;
@@ -410,6 +415,6 @@ int main(int argc, char *argv[]) {
     process_args( argc, argv, funcs );
 
     app->loop(1000000);
-    
+    delete app;
     return 0;
 }

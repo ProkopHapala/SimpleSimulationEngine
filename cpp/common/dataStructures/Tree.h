@@ -37,6 +37,7 @@ template<typename T>
 class PTree : public TreeGen<T,PTree<T>*> { public:
     PTree<T>* parrent;
     T content;
+    ~PTree(){ for(PTree<T>* br : this->branches) delete br; this->branches.clear(); }
 };
 
 

@@ -49,6 +49,7 @@ class Dict{ public:
         auto it = map.find( mat->name );
         if( it == map.end() ){ int i=vec.size(); vec.push_back(mat); map.insert({mat->name,i}); return i; }else{ if(bDel)delete vec[it->second]; vec[it->second] = mat; return -1; }
     }
+    ~Dict(){ for(T* o : vec) delete o; vec.clear(); map.clear(); }
 };
 
 

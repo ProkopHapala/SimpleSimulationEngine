@@ -147,6 +147,7 @@ def assemble_elements(elems: list, eps_front: float, eps_back: float, face_heat_
         'rho_front': rho_f,
         'rho_back': rho_b,
         'heat_in': heat_in,
+        'face_id': face_ids,
         # compatibility placeholder (not used in 3D functions below)
         'length': np.ones(n, dtype=np.float64),
         # optional visualization payload

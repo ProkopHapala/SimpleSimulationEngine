@@ -57,6 +57,10 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     // === Functions
 
+    virtual ~SpaceCraftDynamicsApp(){
+        delete simulator; simulator=0;
+    }
+
 	virtual void draw   () override;
 	virtual void drawHUD() override;
 	//virtual void mouseHandling( );

@@ -1,30 +1,20 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Projective Dynamics with iterative (Jacobi / Chebyshev-accelerated) linear solvers.
+
+Thin wrapper over `projective_dynamics.py` (system assembly) and shared solver components
+from `sparse.py` + `IterativeLinearSolvers.py`. **solve_pd_jacobi** runs the PD time-stepping
+loop with plain Jacobi inner solves; **solve_pd_chebyshev** adds Chebyshev acceleration using
+a spectral radius estimate from power iteration. Both solve per-coordinate (x, y, z) independently
+since the PD system matrix is the same for all coordinates. This is the reference iterative PD
+implementation — compare against `truss_solver.py` which has more solver variants.
+"""
+# === AUTO-DOC END ===
+
 import numpy as np
-from projective_dynamics import build_neighbor_list, make_pd_matrix, make_pd_rhs, update_velocity
-
-def jacobi_iteration(A, b, x):
-    Aii = np.diag(A)
-    Ax = A @ x
-    return (b - (Ax - Aii*x) ) / Aii
-
-def estimate_spectral_radius(A, x0, n_iter=10):
-    """Estimate spectral radius using power iteration"""
-    x      = x0.copy()
-    for _ in range(n_iter):
-        x      = A @ x
-        x_next = A @ x
-        eK1    = np.dot(x_next, x)
-        eK2    = np.dot(x, x)
-        rho    = np.sqrt( abs( eK1 / eK2 ) )
-    return min(rho, 0.9992)  # Cap at 0.9992 as suggested in paper
-
-def calculate_omega(k, rho, prev_omega, delay_start=10):
-    """Calculate Chebyshev weight"""
-    if k < delay_start:
-        return 1.0
-    elif k == delay_start:
-        return 2.0 / (2.0 - rho**2)
-    else:
-        return 4.0 / (4.0 - rho**2 * prev_omega)
+from projective_dynamics import make_pd_matrix, make_pd_rhs, update_velocity
+from sparse import build_neighbor_list, jacobi_iteration
+from IterativeLinearSolvers import estimate_spectral_radius, chebyshev_omega_update
 
 def solve_pd_jacobi(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100, 
                    inner_iter=50, gravity=np.array([0, -9.81, 0]), 
@@ -32,7 +22,7 @@ def solve_pd_jacobi(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
     """Solve the system using projective dynamics with Jacobi iterations"""
     n_points = len(points)
     neighbs = build_neighbor_list(bonds, n_points)
-    A, Mt = make_pd_matrix(neighbs, bonds, masses, dt, ks)
+    A = make_pd_matrix(neighbs, bonds, masses, dt, ks)
     
     # Initialize
     pos = points.copy()
@@ -57,7 +47,7 @@ def solve_pd_jacobi(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
         for i in range(3):
             x = pos_pred[:, i].copy()  # Use predicted position as initial guess
             for j in range(inner_iter):
-                x = jacobi_iteration(A, b[:, i], x, fixed_points)
+                x, _ = jacobi_iteration(A, b[:, i], x)
             pos_cor[:, i] = x
         
         # Apply fixed point constraints
@@ -84,7 +74,7 @@ def solve_pd_chebyshev(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
     """Solve the system using projective dynamics with Chebyshev-accelerated Jacobi iterations"""
     n_points = len(points)
     neighbs = build_neighbor_list(bonds, n_points)
-    A, Mt = make_pd_matrix(neighbs, bonds, masses, dt, ks)
+    A = make_pd_matrix(neighbs, bonds, masses, dt, ks)
     
     # Initialize
     pos = points.copy()
@@ -93,7 +83,7 @@ def solve_pd_chebyshev(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
     l0s = np.array([np.linalg.norm(points[j] - points[i]) for i, j in bonds])
     
     # Estimate spectral radius for Chebyshev acceleration
-    rho = estimate_spectral_radius(A, np.random.rand(n_points))
+    rho = estimate_spectral_radius(A)
     
     # Main simulation loop
     for itr in range(n_iter):
@@ -116,10 +106,10 @@ def solve_pd_chebyshev(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
             
             for k in range(inner_iter):
                 # Perform Jacobi iteration
-                x_new = jacobi_iteration(A, b[:, i], x, fixed_points)
+                x_new, _ = jacobi_iteration(A, b[:, i], x)
                 
                 # Apply Chebyshev acceleration
-                omega_next = calculate_omega(k, rho, omega)
+                omega_next = chebyshev_omega_update(k, rho, S=10, prev_omega=omega)
                 x_accel = omega_next * (x_new - x) + x
                 
                 # Update for next iteration
@@ -149,11 +139,13 @@ def solve_pd_chebyshev(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100,
 
 # Example usage
 if __name__ == "__main__":
-    from projective_dynamics import build_grid_2d
+    from truss import Truss
     
     # Create a simple 5x5 grid
     nx, ny = 5, 5
-    bonds, points, masses, ks, fixed = build_grid_2d(nx, ny)
+    truss = Truss()
+    truss.build_grid_2d(nx=nx, ny=ny, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
     velocity = np.zeros_like(points)
     
     # Run simulation with Jacobi solver

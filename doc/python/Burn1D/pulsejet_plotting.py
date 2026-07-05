@@ -42,15 +42,20 @@ def setup_figure_engine(solver, args):
     line_v, = ax_vel.plot([], [], 'k-', lw=1)
     ax_vel.grid(True, alpha=0.3)
     ax_mom = fig.add_subplot(gs[4, :])
-    ax_mom.set_title("Total Momentum")
+    ax_mom.set_title("Total Momentum & Thrust")
     ax_mom.set_xlabel("Time (s)")
-    line_mom, = ax_mom.plot([], [], 'k-', lw=1.5)
+    line_mom, = ax_mom.plot([], [], 'k-', lw=1.5, label='Momentum')
+    ax_thrust = ax_mom.twinx()
+    line_thrust, = ax_thrust.plot([], [], 'r-', lw=1, label='Thrust (N)')
+    ax_mom.legend(loc='upper left')
+    ax_thrust.legend(loc='upper right')
     ax_mom.grid(True)
     plt.tight_layout()
-    return fig, ax_geo, ax_spec, ax_thermo, ax_vel, ax_mom, lc_elements, l_fuel, l_n2, l_o2, l_prod, line_p, line_t, line_rho, line_v, line_mom
+    return fig, ax_geo, ax_spec, ax_thermo, ax_vel, ax_mom, lc_elements, l_fuel, l_n2, l_o2, l_prod, line_p, line_t, line_rho, line_v, line_mom, ax_thrust, line_thrust
 
 def update_plot_engine(solver, args, fig, ax_geo, ax_spec, ax_thermo, ax_vel, ax_mom,
-                       lc_elements, l_fuel, l_n2, l_o2, l_prod, line_p, line_t, line_rho, line_v, line_mom):
+                       lc_elements, l_fuel, l_n2, l_o2, l_prod, line_p, line_t, line_rho, line_v, line_mom,
+                       ax_thrust=None, line_thrust=None):
     centers, rho, p, t, Y, vols, m_t = solver.get_state()
     if solver.sim_time >= solver.inject_start:
         phase = (solver.sim_time - solver.inject_start) % solver.inject_period
@@ -81,18 +86,29 @@ def update_plot_engine(solver, args, fig, ax_geo, ax_spec, ax_thermo, ax_vel, ax
     line_p.set_data(centers, p / P_ATM)
     line_t.set_data(centers, t / 300.0)
     line_rho.set_data(centers, rho)
-    y_min = np.min([np.min(p / P_ATM), np.min(t / 300.0), np.min(rho)])
-    y_max = np.max([np.max(p / P_ATM), np.max(t / 300.0), np.max(rho)])
-    pad = 0.1 * max(1e-3, y_max - y_min)
-    ax_thermo.set_ylim(y_min - pad, y_max + pad)
+    p_norm = p / P_ATM
+    t_norm = t / 300.0
+    all_vals = np.concatenate([p_norm, t_norm, rho])
+    all_vals = all_vals[np.isfinite(all_vals)]
+    if len(all_vals) > 0:
+        y_min, y_max = all_vals.min(), all_vals.max()
+        pad = 0.1 * max(1e-3, y_max - y_min)
+        ax_thermo.set_ylim(y_min - pad, y_max + pad)
     v_elem = 0.5 * (solver.nodes_v[:-1] + solver.nodes_v[1:])
     line_v.set_data(centers, v_elem)
     if solver.hist_time:
         line_mom.set_data(solver.hist_time, solver.hist_momentum)
         ax_mom.set_xlim(0, max(solver.hist_time[-1], 0.05))
         vals = np.array(solver.hist_momentum)
+        vals = vals[np.isfinite(vals)]
         if len(vals) > 5:
-            ax_mom.set_ylim(np.min(vals), np.max(vals))
+            ax_mom.set_ylim(vals.min(), vals.max())
+    if ax_thrust is not None and line_thrust is not None and solver.hist_time:
+        line_thrust.set_data(solver.hist_time, solver.hist_thrust)
+        thrust_vals = np.array(solver.hist_thrust)
+        thrust_vals = thrust_vals[np.isfinite(thrust_vals)]
+        if len(thrust_vals) > 5:
+            ax_thrust.set_ylim(thrust_vals.min(), thrust_vals.max())
 
 def setup_figure_inertia(solver):
     fig = plt.figure(figsize=(12, 10))

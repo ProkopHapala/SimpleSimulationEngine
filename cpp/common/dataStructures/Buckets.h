@@ -33,6 +33,8 @@ class Buckets{ public:
     bool bPrintInvalidEntries=true;
     bool bExitOnInvalidEntries=true;
 
+    void dealloc(){ _dealloc(cellNs); _dealloc(cellI0s); _dealloc(cell2obj); _dealloc(obj2cell); ncell=0; nobj=0; nobjSize=-1; }
+
 
     inline void clean(){ for(int k=0; k<ncell; k++ ){ cellNs[k]=0; } }
     inline void cleanO2C( int icell=-1 ){ for(int i=0; i<nobj; i++ ){ obj2cell[i]=icell; } }

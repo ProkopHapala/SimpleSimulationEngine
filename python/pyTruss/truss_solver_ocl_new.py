@@ -1,3 +1,17 @@
+# === AUTO-DOC BEGIN ===
+"""
+@brief Refactored OpenCL GPU solver — VBD, Jacobi-diff, Jacobi-fly via OpenCLBase.
+
+Inherits from **OpenCLBase** (shared with pyMolecular) for context/queue/buffer management
+and kernel loading. Supports multiple GPU linear solvers: VBD (vertex-local), Jacobi-diff
+(displacement formulation), and Jacobi-fly (position formulation). Buffers are pre-allocated
+in `_allocate_buffers` and static data uploaded once in `_upload_static_data` — no per-step
+allocation. The SOLVERS dict and `get_solver` factory mirror the CPU solver interface in
+`truss_solver.py`, enabling `run_vbd_cloth_new.py` to select GPU solvers via CLI. Kernel
+source is in `truss.cl`.
+"""
+# === AUTO-DOC END ===
+
 import os, sys
 import numpy as np
 import pyopencl as cl
@@ -6,7 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'pyMolecular'))
 from OCL.OpenCLBase import OpenCLBase
 from OCL import clUtils as clu  # ensures package initialisation for other modules using OpenCLBase
-from sparse import build_neighbor_list, neigh_stiffness, neighs_to_dense_arrays
+from sparse import build_neighbor_list, neigh_stiffness, neighs_to_dense_arrays, build_rest_length_dense
 from truss import Truss
 
 VERBOSITY = 0
@@ -47,21 +61,18 @@ class TrussSolverOCL(OpenCLBase):
         if VERBOSITY >= 1:
             print(f"TrussSolverOCL init: {self.n_points} points, {len(self.bonds)} bonds, n_max={self.n_max}")
 
+    KERNEL_MAX_NEIGHBORS = 16
+
     def _prepare_topology(self):
         if len(self.bonds) == 0: raise ValueError("Truss must have at least one bond")
         neighbs             = build_neighbor_list(self.bonds, self.n_points)
         neighs, kngs, n_max = neigh_stiffness(neighbs, self.bonds, self.ks)
-        padded_neighs, padded_kngs, _ = neighs_to_dense_arrays(neighs, kngs, n_max)
         self.neigh_lists, self.n_max  = neighs, n_max
+        n_padded = max(n_max, self.KERNEL_MAX_NEIGHBORS)
+        padded_neighs, padded_kngs, _ = neighs_to_dense_arrays(neighs, kngs, n_padded)
         self.neighs_dense             = padded_neighs.astype(np.int32, copy=True)
         self.kngs_dense               = padded_kngs.astype(np.float32, copy=True)
-        pair_rest = {}
-        for (ia, ib), rest in zip(self.bonds, self.rest_lengths): 
-            pair_rest[(int(ia), int(ib))] = pair_rest[(int(ib), int(ia))] = float(rest)
-        self.rest_dense = np.zeros((self.n_points, n_max), dtype=np.float32)
-        for vid, neigh in enumerate(neighs):
-            for jj, nj in enumerate(neigh): 
-                self.rest_dense[vid, jj] = pair_rest[(vid, int(nj))]
+        self.rest_dense               = build_rest_length_dense(neighs, self.bonds, self.rest_lengths, n_padded)
         self.Aii = np.array([np.sum(k) for k in kngs], dtype=np.float32)
 
     def _allocate_buffers(self):
@@ -71,9 +82,10 @@ class TrussSolverOCL(OpenCLBase):
         self.buffer_dict['pos_f'] = self.buffer_dict['pos']
         self.create_buffer('pos_d',     self.n_points * 4 * ds, mf.READ_WRITE)
         self.create_buffer('y_pred',    self.n_points * 4 * fs, mf.READ_WRITE)
-        self.create_buffer('neighs',    self.n_points * self.n_max * i_s,  mf.READ_ONLY)
-        self.create_buffer('kngs',      self.n_points * self.n_max * fs, mf.READ_ONLY)
-        self.create_buffer('l0s',       self.n_points * self.n_max * fs, mf.READ_ONLY)
+        n_stride = max(self.n_max, self.KERNEL_MAX_NEIGHBORS)
+        self.create_buffer('neighs',    self.n_points * n_stride * i_s,  mf.READ_ONLY)
+        self.create_buffer('kngs',      self.n_points * n_stride * fs, mf.READ_ONLY)
+        self.create_buffer('l0s',       self.n_points * n_stride * fs, mf.READ_ONLY)
         self.buffer_dict['l0ngs'] = self.buffer_dict['l0s']
         self.buffer_dict['rest_lengths'] = self.buffer_dict['l0s']
         self.create_buffer('Aii_buf',   self.n_points * fs, mf.READ_WRITE)
@@ -88,6 +100,8 @@ class TrussSolverOCL(OpenCLBase):
         self.vel_host = np.zeros((self.n_points, 4), dtype=np.float32)
         self.buffer_dict['x'] = self.buffer_dict['pos']
         self.buffer_dict['y'] = self.buffer_dict['y_pred']
+        self.buffer_dict['x_in']  = self.buffer_dict['dp']
+        self.buffer_dict['x_out'] = self.buffer_dict['x_sol']
 
     def _upload_static_data(self):
         self.toGPU('neighs', self.neighs_dense.flatten())
@@ -153,8 +167,11 @@ class TrussSolverOCL(OpenCLBase):
             pos_d[:, :3] = self.x; 
             pos_d[:, 3]  = self.masses
             self.toGPU('pos_d', pos_d)
+            saved_pos = self.buffer_dict.get('pos')
+            self.buffer_dict['pos'] = self.buffer_dict['pos_d']
             args = self.generate_kernel_args('precompute_dRHS_d', bPrint=False)
             self.prg.precompute_dRHS_d(self.queue, self.sz_global, self.sz_loc, *args)
+            self.buffer_dict['pos'] = saved_pos
         else:
             args = self.generate_kernel_args('precompute_dRHS', bPrint=False)
             self.prg.precompute_dRHS(self.queue, self.sz_global, self.sz_loc, *args)
@@ -172,9 +189,12 @@ class TrussSolverOCL(OpenCLBase):
         self.prg.jacobi_fly(self.queue, self.sz_global, self.sz_loc, *args); self.queue.finish()
 
     def run_jacobi_diff(self, niter: int = 10):
-        self.kernel_params['nIters'] = np.int32(niter); 
-        args = self.generate_kernel_args('jacobi_iteration_diff_serial', bPrint=False)
-        self.prg.jacobi_iteration_diff_serial(self.queue, self.sz_global, self.sz_loc, *args); self.queue.finish()
+        for _ in range(niter):
+            self.buffer_dict['x_in']  = self.buffer_dict['dp']
+            self.buffer_dict['x_out'] = self.buffer_dict['x_sol']
+            args = self.generate_kernel_args('jacobi_iteration_diff_serial', bPrint=False)
+            self.prg.jacobi_iteration_diff_serial(self.queue, self.sz_single, None, *args); self.queue.finish()
+            self.buffer_dict['dp'], self.buffer_dict['x_sol'] = self.buffer_dict['x_sol'], self.buffer_dict['dp']
 
     def download_positions(self):
         self.fromGPU('pos_f', self.pos_host); return self.pos_host[:, :3].astype(np.float64)
@@ -226,7 +246,7 @@ def solve_jacobi_fly(solver: TrussSolverOCL, config: Dict[str, Any]) -> np.ndarr
 def solve_jacobi_diff(solver: TrussSolverOCL, config: Dict[str, Any]) -> np.ndarray:
     niter        = int (config.get('niter', 10))
     dt           = solver.dt
-    use_double   = bool(config.get('use_double', True))
+    use_double   = bool(config.get('use_double', False))
     y_pred       = solver.x + dt * solver.v + (dt * dt) * solver.gravity
     solver.upload_positions(y_pred)
     solver.kernel_params['dt'] = np.float32(dt); 
