@@ -1,3 +1,7 @@
+/// @file SimplexGrid.h
+/// @brief Hash-based spatial grid on triangular lattice — stores `SimplexField<NODE,TILE>` objects per simplex cell.
+/// Each rhombus cell splits into hi/lo triangles; `simplexIndex()` determines which triangle a point falls in.
+/// Uses `HashMap<OBJECT>` (open addressing, Knuth hash) from `temp/HashMap.h` for bucket storage.
 
 #ifndef  SimplexGrid_h
 #define  SimplexGrid_h

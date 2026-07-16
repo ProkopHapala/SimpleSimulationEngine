@@ -2,6 +2,15 @@
 #ifndef DynamicOpt_h
 #define DynamicOpt_h
 
+/// @file DynamicOpt.h
+/// @brief Dynamics-based numerical optimization: LeapFrog, Gradient Descent, MD, and FIRE.
+///
+/// DynamicOpt manages positions, velocities, forces, and inverse masses for N-dimensional
+/// optimization. Supports multiple integration strategies: LeapFrog (symplectic), GD (overdamped
+/// velocity), MD (molecular dynamics with damping), and FIRE (Fast Inertial Relaxation Engine —
+/// adaptive dt and damping based on force-velocity alignment). Includes force/velocity clamping
+/// for stability. Used throughout the codebase as the standard local optimizer.
+
 //#include <cstddef>
 #include <math.h>
 #include "macroUtils.h"

@@ -1,3 +1,6 @@
+/// @file clustering3D.h
+/// @brief Simple distance-based clustering: `ClusterMap` assigns points to nearest cluster center within radius R; `ClusterBox` grows a bounding box to fit new points if within R.
+/// `ClusterMap` creates new cluster when no existing center is within R. `ClusterBox` expands BBox incrementally, rejecting points that would exceed R.
 
 #ifndef  clustering2D_h
 #define  clustering2D_h

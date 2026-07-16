@@ -1,4 +1,9 @@
-﻿#ifndef  Buckets3D_h
+﻿/// @file Buckets3D.h
+/// @brief Bounded 3D cell list with PBC wrapping and 26-neighbor search — combines `Buckets` (sort-based cell list) with `CubeGridRuler`.
+/// `pointsToCells()` sorts points into cells via `obj2cell[]`; `getNeighbors()` gathers all points in 26 surrounding cells.
+/// Used for N-body and molecular dynamics neighbor search.
+
+#ifndef  Buckets3D_h
 #define  Buckets3D_h
 
 #include "integerOps.h"

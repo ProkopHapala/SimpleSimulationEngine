@@ -1,3 +1,5 @@
+/// @file temp/GridMap2D.h
+/// @brief Older generic `GridMap2D` template with `forward_list` storage — predecessor of the current `GridMap2D.h` in parent dir.
 
 #ifndef  GridMap2D_h
 #define  GridMap2D_h

@@ -1,3 +1,6 @@
+/// @file TileBuffer2D.h
+/// @brief Fixed-capacity 2D tile buffer `TileBuffer2D<OBJECT,NX,NY,M>` — stack-allocated, compile-time sizes, M objects per cell.
+/// Sphere-overlap insertion places object into all cells it touches using fractional position. No dynamic allocation — fast for small grids.
 
 #ifndef  TileBuffer2D_h
 #define  TileBuffer2D_h

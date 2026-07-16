@@ -1,3 +1,8 @@
+/// @file SphereSampling.h
+/// @brief Icosahedral and octahedral sphere mappings for efficient spherical function representation and barycentric interpolation.
+/// Icosahedral: 20 triangular faces with precomputed edge planes, vertices, and face-to-vertex tables for point-in-face lookup.
+/// Octahedral: minimal experimental mapping. Used for angular sampling in radiation transport and rendering.
+
 #ifndef  SphereSampling_h
 #define  SphereSampling_h
 

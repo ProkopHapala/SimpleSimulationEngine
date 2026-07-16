@@ -1,4 +1,9 @@
-﻿#ifndef  grids3D_h
+﻿/// @file grids3D.h
+/// @brief Header-only 3D grid rulers: `CubeGridRuler` (bounded, PBC wrapping) and `CubeGridRulerUnbound` (64-bit interleaved key, range ±2^20).
+/// `CubeGridRulerUnbound` interleaves x/y/z bits into a single 64-bit key for hash-based spatial indexing (used by `HashMap3D`).
+/// Provides `overlap_Sphere()` and `overlap_BBox()` to enumerate all cells overlapping a sphere or bounding box.
+
+#ifndef  grids3D_h
 #define  grids3D_h
 
 /*

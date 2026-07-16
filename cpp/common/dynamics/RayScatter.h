@@ -2,6 +2,16 @@
 #ifndef RayScatter_h
 #define RayScatter_h
 
+/// @file RayScatter.h
+/// @brief Monte Carlo ray scattering: trace rays through meshes with stochastic scattering events.
+///
+/// ScatterMaterial defines mean free path and angular scattering distribution (isotropic vs.
+/// Henyey-Greenstein-like forward/backward peak). RayPath evaluates the probability of a ray
+/// path considering distance attenuation and scattering events. RayScatterWorld manages multiple
+/// meshes and materials, tracing rays through the scene and stochastically sampling scattering
+/// angles at each interaction. Used for neutron transport, light scattering in participating media,
+/// and radiation shielding calculations.
+
 #include "Vec3.h"
 #include "geom3D.h"
 #include "raytrace.h"

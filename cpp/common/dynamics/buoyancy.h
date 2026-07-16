@@ -2,6 +2,14 @@
 #ifndef buoyancy_h
 #define buoyancy_h
 
+/// @file buoyancy.h
+/// @brief Buoyancy force and moment calculation for 2D convex hulls.
+///
+/// integrate_moment() computes the moment of submerged volume for a 2D convex polygon below
+/// a waterline. buoy_moment_2D() combines this with the center of gravity to produce the net
+/// buoyant moment, enabling simulation of floating object stability (metacentric height).
+/// The integration is exact for convex polygons — no numerical quadrature needed.
+
 #include "fastmath.h"
 #include "Vec2.h"
 //#include "VecN.h"

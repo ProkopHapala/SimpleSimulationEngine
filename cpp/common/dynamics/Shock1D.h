@@ -2,6 +2,16 @@
 #ifndef Shock1D_h
 #define Shock1D_h
 
+/// @file Shock1D.h
+/// @brief 1D shock wave simulation with planar, cylindrical, or spherical symmetry.
+///
+/// Models shock propagation through layered materials (implosion, shaped charges, explosions).
+/// ShockMaterial defines EOS parameters (bulk modulus, gamma, reference density). ShockVolume
+/// tracks pressure and volume per cell with adiabatic and isochoric (heat addition) updates.
+/// ShockSystem1D manages layered cells with moving boundaries; get_dR() computes geometric
+/// derivatives for COG tracking under different symmetry assumptions. SYMMETRY macro selects
+/// planar (1), cylindrical (2), or spherical (3) geometry.
+
 #include "fastmath.h"
 
 

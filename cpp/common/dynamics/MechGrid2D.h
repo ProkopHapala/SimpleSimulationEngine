@@ -2,6 +2,14 @@
 #ifndef MechGrid2D_h
 #define MechGrid2D_h
 
+/// @file MechGrid2D.h
+/// @brief Multi-material mechanical grid: pressure-to-force conversion and momentum update.
+///
+/// MechGrid2D stores per-cell material type, pressure, mass, and momentum on a rectangular grid.
+/// s_edge marks material boundaries. pressure2force() converts pressure differences between
+/// adjacent cells into forces; updateMomentum() applies those forces to update cell momentum.
+/// Simpler than MechEuler2D — no advection or thermodynamics, just the pressure-momentum coupling.
+
 #include "fastmath.h"
 #include "Vec2.h"
 //#include "Vec3.h"

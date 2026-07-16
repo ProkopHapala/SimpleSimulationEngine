@@ -2,6 +2,14 @@
 #ifndef SoftPolyLine3D_h
 #define SoftPolyLine3D_h
 
+/// @file SoftPolyLine3D.h
+/// @brief 3D deformable polyline with radial (spring), angular (bending), and torsion forces.
+///
+/// 3D counterpart to SoftPolyLine2D. Each segment has a forward direction (fws) and an up
+/// vector (ups) to track orientation in 3D. Angular forces use cross products to compute
+/// torque between consecutive segments; torsion stiffness (kts) resists twist. The up vectors
+/// are re-orthogonalized each step via Gram-Schmidt (project out forward component).
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"

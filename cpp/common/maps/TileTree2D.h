@@ -1,3 +1,8 @@
+/// @file TileTree2D.h
+/// @brief Two-level sparse tile tree: `TileTree2D<OBJECT,POWER,NX,NY>` with `LeafTile2D` leaves allocated on demand.
+/// Top-level grid has `NX×NY` super-tiles; each super-tile contains `2^POWER × 2^POWER` sub-cells. Null super-tiles skipped (sparse).
+/// `TileTree2D_d` adds real-space coordinate mapping (origin, step, bounds).
+
 #ifndef  TileTree2D_h
 #define  TileTree2D_h
 

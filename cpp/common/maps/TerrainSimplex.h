@@ -1,3 +1,8 @@
+/// @file TerrainSimplex.h
+/// @brief Terrain on **triangular/simplex** grid with hydraulic erosion, droplet erosion, and rain/evaporation simulation.
+/// `genTerrainNoise()` generates multi-octave fractal terrain. `flow_errosion_step()` simulates water flow eroding ground and depositing sediment.
+/// `droplet_step()` simulates individual water droplets moving downhill. `raster_line()` does DDA ray traversal across triangular grid.
+
 #ifndef TerrainSimplex_h
 #define TerrainSimplex_h
 

@@ -1,3 +1,7 @@
+/// @file HashMap2D.h
+/// @brief 2D spatial hash map using `UHALF` (16-bit) cell indices with `MAP_OFFSET` for signed coords — extends `HashMap<OBJECT>` with open addressing.
+/// Cell key = `(iy<<16)+ix` (Knuth multiplicative hash). Supports insert/find/remove by position or integer index, and bucket object retrieval.
+/// Used by `TerrainRBF` and `NBodyWorld2D` for spatial queries.
 
 #ifndef  HashMap2D_h
 #define  HashMap2D_h

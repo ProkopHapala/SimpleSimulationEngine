@@ -1,3 +1,5 @@
+/// @file AeroSurf.cpp
+/// @brief Implementation of AeroSurface polar model and force application.
 
 #include <cstdio>
 #include <cstdlib>

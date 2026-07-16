@@ -1,6 +1,16 @@
 #ifndef SphereGaussSeidel_h
 #define SphereGaussSeidel_h
 
+/// @file SphereGaussSeidel.h
+/// @brief Iterative sphere packing solver using Gauss-Seidel relaxation with directional neighbor search.
+///
+/// SphereGaussSeidel resolves overlaps between spheres by iteratively adjusting positions: for each
+/// sphere, it finds the nearest non-overlapping position by searching along directions categorized
+/// by assignCubicFace (6 face directions, 12 edge directions, 8 corner directions). eval_errors()
+/// computes total overlap; update_pos() moves one sphere to reduce overlap. The Gauss-Seidel
+/// approach (update one sphere at a time, immediately using updated positions) converges faster
+/// than Jacobi for packing problems. Used for initial placement of particle systems and mesh generation.
+
 #include "Vec3.h"
 #include "fastmath.h"
 #include "sweep.h"

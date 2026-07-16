@@ -12,6 +12,7 @@ Molecular mechanics forcefield (`MMFF.h`) for soft-body molecular simulation, an
 
 | Language | Location | Status | Notes |
 |----------|----------|--------|-------|
+| C++ | `cpp/common/dynamics/Forces.h` | active | Pairwise force kernels: LJ, Morse, Coulomb, spring, repulsion, angular terms. Smoothstep cutoffs (r^2-based). Foundation for molecular dynamics force evaluation |
 | C++ | `cpp/common/dynamics/MMFF.h` | active | MMFF forcefield implementation |
 | C++ | `cpp/common/dynamics/MolecularWorld.h` | active | Rigid-body molecular dynamics (coarse-grained) |
 | C++ | `cpp/apps/MolecularEditor/` | active | Rigid-body MD editor with Lua scripting |

@@ -1,3 +1,7 @@
+/// @file TerrainRBF.h
+/// @brief Terrain from **Radial Basis Functions** — scattered RBF control points queried via `HashMap2D` spatial hash.
+/// `getVal()` sums contributions from all RBFs in the query cell. `insertRBF()` registers an RBF in the spatial hash for O(1) local lookup.
+/// Unlike grid-based terrain, this produces smooth surfaces from arbitrary control point placement.
 
 #ifndef  TerrainRBF_h
 #define  TerrainRBF_h

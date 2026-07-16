@@ -1,3 +1,5 @@
+/// @file AeroCraft.cpp
+/// @brief Implementation of AeroCraft and Propeler classes.
 
 #include <math.h>
 #include <cstdlib>

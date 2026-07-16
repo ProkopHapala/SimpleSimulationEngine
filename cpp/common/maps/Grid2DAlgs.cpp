@@ -1,3 +1,6 @@
+/// @file Grid2DAlgs.cpp
+/// @brief Implements `bisecNoise()` — recursive midpoint displacement terrain generation with PBC on power-of-2 grids.
+
 #include "Grid2DAlgs.h"
 
 void bisecNoise( int npow, double * hs, double frndMin, double frndMax ){

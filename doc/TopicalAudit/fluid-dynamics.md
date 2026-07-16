@@ -19,6 +19,14 @@ Fluid dynamics implementations span Eulerian compressible flow (5-equation multi
 | C++ | `cpp/sketches_SDL/3D/test_Electromagnetic.cpp` | active | 2D grid-based electromagnetic solver with Poisson solver (iterative + FFT). `solvePoisson()`, `solvePoissonFFT()`, `dampDens()`. |
 | JS | `docs/BiotSavart/AeroPotentialFlow_simulation_javascript.md` | doc | Design doc for JavaScript potential flow simulation |
 | JS | `docs/BiotSavart/MHD_Plasma_Nozzle_webgl.md` | doc | MHD plasma nozzle — see `mhd-plasma.md` |
+| C++ | `cpp/common/dynamics/MechEuler2D.h` | active | 2D Eulerian multi-material fluid: per-cell molar amounts, temperature, pressure, velocity. Advection + cohesion to limit interface diffusion. |
+| C++ | `cpp/common/dynamics/MechGrid2D.h` | active | Multi-material rectangular grid: pressure-to-force conversion and momentum update. Simpler than MechEuler2D (no advection/thermodynamics). |
+| C++ | `cpp/common/dynamics/MechMesh2D.h` | active | Visco-elastic simulation on arbitrary triangular meshes. Per-triangle pressure/volume/internal energy. Builder class and edge-swap optimization. |
+| C++ | `cpp/common/dynamics/MechPIC2D.h` | active | 2D Particle-In-Cell: mass/velocity on particles, pressure on grid. P2G deposit, EOS, G2P force interpolation, Lagrangian advection. |
+| C++ | `cpp/common/dynamics/MechPIC2D_Temperature.h` | active | PIC with temperature: thermodynamic state on both particles and cells. Heat conduction and convection. |
+| C++ | `cpp/common/dynamics/CompressiveParticles.h` | active | Compressible sphere particles with adiabatic EOS, overlap forces, pressure-driven radius dynamics. For granular flow and compaction. |
+| C++ | `cpp/common/dynamics/Shock1D.h` | active | 1D shock waves with planar/cylindrical/spherical symmetry. Layered materials, adiabatic + isochoric EOS. For implosion, shaped charges, explosions. |
+| C++ | `cpp/common/dynamics/SuperSonic2D.h` | active | Oblique shock relations (theta-beta-Mach) with polynomial lookup tables for fast supersonic flow deflection solving. |
 | Doc | `doc/Continum_Mechanics_Solver.md` | doc | Continuum mechanics solver design document |
 
 ## Sub-topics
@@ -63,3 +71,11 @@ In `test_Electromagnetic.cpp`:
 - `test_Electromagnetic.cpp` is a sketch — not production code
 - No coupling between Eulerian fluid and potential flow methods
 - See `continuum-mechanics-impact.md` and `aerodynamics-hydrodynamics.md` for additional open issues
+
+## Related Audits
+
+- **`continuum-mechanics-impact.md`** — Detailed deep-dive into the Eulerian compressible multi-material solver (5-equation model, level set, OpenCL kernels). Also contains a comprehensive **Algorithm Review: Heterogeneous Material Simulation Methods** covering level set, VOF, CLSVOF, Ghost Fluid, PIC, FLIP, MPM, SPH, LBM, phase field, and more with pros/cons and implementation status.
+- **`parallel-particle-cell.md`** — Grid infrastructure (`CubeGridRuler`), cell lists, neighbor search. Relevant for PIC/SPH methods that use the same grid infrastructure for particle-to-grid deposition.
+- **`aerodynamics-hydrodynamics.md`** — Potential flow / vortex methods for aerodynamics. Complementary regime (incompressible, irrotational) to the compressible Eulerian solver.
+- **`soft-body-truss-dynamics.md`** — Lagrangian elastic dynamics. Different paradigm: structural mechanics vs. fluid mechanics.
+- **`collision-detection.md`** — Broad-phase collision detection (hash grid, sweep-and-prune). Relevant for particle-based fluid methods.

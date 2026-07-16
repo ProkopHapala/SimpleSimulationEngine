@@ -2,6 +2,15 @@
 #ifndef EFF_h
 #define EFF_h
 
+/// @file CompressiveParticles.h
+/// @brief Compressible sphere particles with adiabatic EOS, overlap forces, and pressure-driven radius dynamics.
+///
+/// CompressiveParticles models soft spheres where each particle has a radius that changes under
+/// compression via adiabatic EOS (compressAdiabat). Pair forces arise from overlap (penalty force
+/// proportional to penetration depth). Wall collisions apply similar forces against boundaries.
+/// moveMD() integrates both position and radius. Particle properties (radius, moles) can be set
+/// from density or molar amount. Suitable for granular flow and compaction simulations.
+
 #include "fastmath.h"
 //#include "Vec2.h"
 #include "Vec3.h"

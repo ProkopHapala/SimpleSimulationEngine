@@ -1,3 +1,6 @@
+/// @file GridIndex2D.h
+/// @brief Base class for 2D grid index arithmetic — integer (ix,iy)↔linear-i conversion with PBC wrapping and clamping.
+/// All 2D rulers and grid algorithms inherit from this to share `i2ip()`, `ip2i()`, `wrap_index()`, `fetchWraped()`.
 
 #ifndef GridIndex2D_h
 #define GridIndex2D_h

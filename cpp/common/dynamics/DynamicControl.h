@@ -2,6 +2,14 @@
 #ifndef DynamicControl_h
 #define DynamicControl_h
 
+/// @file DynamicControl.h
+/// @brief First and second-order dynamical controllers for feedback-driven parameter tuning.
+///
+/// DynamicControl drives a control variable x toward a target based on observed output y and
+/// setpoint y0. First-order mode: simple proportional-derivative response. Second-order mode:
+/// adds integral-like term for faster convergence and zero steady-state error. Used for
+/// auto-tuning simulation parameters (e.g. relaxation rates, time steps) based on residuals.
+
 #include <cstddef>
 #include <math.h>
 

@@ -1,4 +1,6 @@
 
+/// @file SimplexGrid.cpp
+/// @brief Implementation stub for `SimplexGrid` — currently empty, all logic is in the header.
 
 #include <stdlib.h>
 #include <stdio.h>

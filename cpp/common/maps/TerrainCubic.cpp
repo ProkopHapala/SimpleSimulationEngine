@@ -1,4 +1,6 @@
 
+/// @file TerrainCubic.cpp
+/// @brief Implements `TerrainCubic::getVal()` (bicubic Hermite), `rayLine()` (horizon raytracing), and `renderRect()` (OpenGL mesh).
 
 #include <stdlib.h>
 #include <stdio.h>

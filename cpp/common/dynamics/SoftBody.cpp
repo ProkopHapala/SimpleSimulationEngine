@@ -1,3 +1,5 @@
+/// @file SoftBody.cpp
+/// @brief Implementation of SoftBody bond/kink force evaluation, integration, and rendering.
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>

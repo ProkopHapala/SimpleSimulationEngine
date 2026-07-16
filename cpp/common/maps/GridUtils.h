@@ -1,3 +1,6 @@
+/// @file GridUtils.h
+/// @brief Brute-force Coulomb interaction between two rotated 3D charge-density grids — O(N₁·N₂) with softening.
+/// `coulombGrid_brute()` sums q_i·q_j/|r_ij| over all voxel pairs with optional damping to avoid singularity at zero distance.
 
 #ifndef GridUtils_h
 #define GridUtils_h

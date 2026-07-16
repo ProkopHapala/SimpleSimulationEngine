@@ -1,3 +1,8 @@
+/// @file Fluid2D.h
+/// @brief 2D stable fluid solver (Stam-style) on square grid — diffuse, advect, pressure projection with multiple boundary conditions.
+/// `fluidStep_orig/simplified/minimal()` offer different integration variants. `pressureBlur()` solves Poisson via Gauss-Seidel relaxation.
+/// Boundary modes: zero, reflect, absorb, periodic. Extends `Grid2DAlg`.
+
 #ifndef Fluid2D_h
 #define Fluid2D_h
 

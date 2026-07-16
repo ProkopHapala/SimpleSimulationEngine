@@ -1,3 +1,5 @@
+/// @file TerrainRBF.cpp
+/// @brief Implements `TerrainRBF::getVal()` (sum RBF contributions via spatial hash), `insertRBF()`, `renderRect()`.
 
 #include <stdlib.h>
 #include <stdio.h>

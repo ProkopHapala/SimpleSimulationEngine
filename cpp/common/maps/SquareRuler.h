@@ -2,6 +2,10 @@
 // Look also here
 // common/maps/  Ruler2DFast
 // common/maps/  CubeGridRuler
+/// @file SquareRuler.h
+/// @brief Square-lattice 2D ruler with **bicubic Hermite spline** interpolation using a 4×4 stencil.
+/// `getValue_cubic()` and `getDeriv()` use `Spline_Hermite::val2D/dval2D` with central-difference derivatives.
+/// Ray marching (`rayStart`/`rayStep`) is **not implemented** — empty stubs. `sampleLine()` works by repeated point evaluation.
 
 #ifndef  SquareRuler_h
 #define  SquareRuler_h

@@ -1,3 +1,6 @@
+/// @file Ruler2DFast.h
+/// @brief Fast square-lattice ruler with per-axis step and **rasterization helpers** — sphere→cell overlap, Bresenham line, scanline triangle.
+/// `insertSegment()` and `insertTriangle()` return index lists (no storage); `GridMap2D` specializations use the same algorithms to insert into tile storage.
 
 #ifndef  Ruler2DFast_h
 #define  Ruler2DFast_h

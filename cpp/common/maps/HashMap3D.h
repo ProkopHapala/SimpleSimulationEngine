@@ -1,3 +1,6 @@
+/// @file HashMap3D.h
+/// @brief Unbounded 3D spatial hash combining `CubeGridRulerUnbound` (64-bit interleaved cell key) with `HashMap64` (open addressing).
+/// `isOld[]` paint array deduplicates objects spanning multiple cells during collision queries. Used for broad-phase collision detection.
 
 #ifndef  HashMap3D_h
 #define  HashMap3D_h

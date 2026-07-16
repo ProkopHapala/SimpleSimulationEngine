@@ -1,3 +1,9 @@
+/// @file PathFinder.h
+/// @brief Multi-source Dijkstra on 2D grid with asymmetric height cost — `PathFinder` extends `Grid2DAlg`.
+/// `heightCost(dh) = ch2*dh² + chplus*dh` (uphill) or `chminus*dh` (downhill). `path_step()` propagates frontier contour.
+/// `findConnections()` detects watershed boundary passes between basins. `track()` backtracks path from endpoint to center.
+/// Supports 4/6/8 neighbors via `Grid2DAlgs`.
+
 #ifndef PathFinder_h
 #define PathFinder_h
 

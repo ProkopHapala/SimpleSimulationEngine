@@ -1,3 +1,8 @@
+/// @file Body.cpp
+/// @brief Implementation of RigidBody integration steps and SpringConstrain force application.
+///
+/// Based on: An Introduction to Physically Based Modeling — Rigid Body Simulation I:
+/// Unconstrained Rigid Body Dynamics (Witkin & Baraff).
 
 // according to
 // An Introduction to Physically Based Modeling:

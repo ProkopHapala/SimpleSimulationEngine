@@ -1,3 +1,7 @@
+/// @file TrussBuilder.h
+/// @brief Grid-based 3D truss/structure builder — nodes at integer (ix,iy,iz) positions, bonds via `unordered_map`, converts to `SoftBody` for physics.
+/// `insertBox(mask)` creates a box of nodes and bonds with selective face/edge inclusion via bitmask.
+/// 64-bit node IDs via `xyz2id()`. `removeNodesWithoutBond()` cleans up dangling nodes. File I/O for persistence.
 
 #ifndef  TrussBuilder_h
 #define  TrussBuilder_h

@@ -1,3 +1,5 @@
+/// @file Body2D.cpp
+/// @brief Implementation of RigidBody2D integration and SpringConstrain2D force application.
 
 //#include <SDL2/SDL.h>
 //#include <SDL2/SDL_opengl.h>

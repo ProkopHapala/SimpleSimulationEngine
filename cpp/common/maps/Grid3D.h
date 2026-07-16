@@ -1,3 +1,6 @@
+/// @file Grid3D.h
+/// @brief Templated 3D grid with compile-time dimensions `Grid3D<TILE,OBJECT,NX,NY,NZ>` — stack-allocated, sparse sphere-overlap insertion.
+/// Each cell holds a `TILE` (typically a vector) of objects; `pos2box()` converts world coords to cell indices + fractional position.
 
 #ifndef  Grid3D_h
 #define  Grid3D_h

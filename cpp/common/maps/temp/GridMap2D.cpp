@@ -1,3 +1,5 @@
+/// @file temp/GridMap2D.cpp
+/// @brief Implements older `GridMap2D` — `init()`, `makeStatic()`, `insertTriangle()`, `insertLine()`.
 
 #include "GridMap2D.h" // THE HEADER
 

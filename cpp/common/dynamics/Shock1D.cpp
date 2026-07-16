@@ -1,3 +1,5 @@
+/// @file Shock1D.cpp
+/// @brief Implementation of ShockSystem1D force evaluation, movement, and update steps.
 
 #include "Shock1D.h" // THE HEADER
 

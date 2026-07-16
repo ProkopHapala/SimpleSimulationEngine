@@ -2,6 +2,14 @@
 #ifndef SoftPolyLine2D_h
 #define SoftPolyLine2D_h
 
+/// @file SoftPolyLine2D.h
+/// @brief 2D deformable polyline with radial (spring) and angular (bending) forces.
+///
+/// Models a chain of points connected by springs (radial forces restore rest length) and
+/// angular springs (bending forces restore rest angles between consecutive segments). Uses
+/// complex-number arithmetic for 2D rotations (set_udiv_cmplx for angle reference). Includes
+/// radialConstrain for hard length constraints and dpmin for point-to-polyline distance.
+
 #include "fastmath.h"
 #include "Vec2.h"
 

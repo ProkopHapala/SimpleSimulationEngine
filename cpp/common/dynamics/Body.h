@@ -1,6 +1,15 @@
 #ifndef Body3D_h
 #define Body3D_h
 
+/// @file Body.h
+/// @brief 3D rigid body dynamics: point masses, kinematic bodies, and full rigid bodies with rotation.
+///
+/// Defines the core body hierarchy: KinematicBody (local-to-world transform only),
+/// PointBody (mass + position + velocity + force), and RigidBody (adds angular momentum,
+/// rotation matrix, torque, and inertia tensor). Multiple rotation integration variants
+/// are provided (matrix-based, quaternion-based, Taylor expansion) trading accuracy for speed.
+/// SpringConstrain applies spring forces between two rigid bodies at local-space attachment points.
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>

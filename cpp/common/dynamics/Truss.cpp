@@ -1,3 +1,5 @@
+/// @file Truss.cpp
+/// @brief Implementation of Truss builders: panels, girders, cylinders, and vertex/edge picking.
 
 #include "Truss.h"
 

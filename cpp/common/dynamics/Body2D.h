@@ -1,6 +1,14 @@
 #ifndef Body2D_h
 #define Body2D_h
 
+/// @file Body2D.h
+/// @brief 2D rigid body dynamics: point masses and rigid bodies with scalar rotation.
+///
+/// 2D counterparts to Body.h. Rotation is a scalar angle (phi) with (cos, sin) pair,
+/// eliminating the need for quaternions or rotation matrices. RigidBody2D integrates
+/// position and rotation with Taylor-expansion rotation update. SpringConstrain2D
+/// applies spring forces between two 2D rigid bodies.
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>

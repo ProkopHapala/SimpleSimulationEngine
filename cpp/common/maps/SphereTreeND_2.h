@@ -1,3 +1,6 @@
+/// @file SphereTreeND_2.h
+/// @brief Second iteration of N-dimensional sphere tree — `SphereNodeND` with parent pointer and branch index list.
+/// `searchOp()` checks distance against radius threshold, tracks nearest found. Closer to working than `SphereTreeND.h` but still experimental with debug prints.
 
 #ifndef  SphereTreeND_2_h
 #define  SphereTreeND_2_h

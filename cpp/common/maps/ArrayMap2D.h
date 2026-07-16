@@ -1,3 +1,7 @@
+/// @file ArrayMap2D.h
+/// @brief Fixed-size 2D array map `ArrayMap2D<OBJECT,NX,NY>` — stack-allocated, compile-time dimensions, direct index by position.
+/// Simplest possible grid map: no sparsity, no dynamic allocation. `getPointer(x,y)` returns cell at world coordinates.
+
 #ifndef  ArrayMap2D_h
 #define  ArrayMap2D_h
 

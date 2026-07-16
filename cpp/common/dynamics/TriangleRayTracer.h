@@ -1,6 +1,16 @@
 #ifndef TriangleRayTracer_h
 #define TriangleRayTracer_h
 
+/// @file TriangleRayTracer.h
+/// @brief Triangle mesh ray tracing: surface element subdivision and occlusion queries.
+///
+/// TriangleRayTracer manages a collection of Triangle3D obstacles and SurfElements. It subdivides
+/// triangles into smaller surface elements (trinagleToElements, trinagleToElements2, trapezElements)
+/// for finer-grained coupling calculations. getOcclusion() checks whether the line segment between
+/// two points is blocked by any triangle — the key operation for radiosity and scattering solvers
+/// that need to determine mutual visibility between surface elements. Base class for Radiosity and
+/// Scattering.
+
 #include "Vec3.h"
 #include "Mat3.h"
 #include "geom3D.h"

@@ -1,3 +1,8 @@
+/// @file SimplexRuler.h
+/// @brief Triangular/hexagonal 2D ruler with **barycentric interpolation** and full **DDA ray marcher** across 3 edge families (a,b,c).
+/// `simplexIndex()` maps (x,y)→(ia,ib,da,db) with triangle flip when da+db>1. `getValue()` does linear barycentric interp, `getDeriv()` returns analytic gradient.
+/// `rayStart/rayStep` implement grid traversal returning which edge was crossed — used for terrain horizon raytracing.
+/// `hexIndex()` extends to hexagonal cells (center + 6 neighbors) for hex-grid applications.
 
 #ifndef  SimplexRuler_h
 #define  SimplexRuler_h

@@ -1,3 +1,7 @@
+/// @file Grid.h
+/// @brief 3D `GridShape` with `Mat3d` cell lattice vectors — voxel volume, grid↔Cartesian transforms, and 1D data cuts.
+/// Unlike `CubicRuler`, this stores the full cell matrix (3 vectors) enabling anisotropic/non-orthogonal voxels.
+/// `cut1D()` extracts a line slice through a 3D data array along an arbitrary direction.
 
 #ifndef Grid_h
 #define Grid_h

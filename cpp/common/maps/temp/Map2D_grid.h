@@ -1,3 +1,6 @@
+/// @file temp/Map2D_grid.h
+/// @brief Experimental two-level tiled grid — power-of-2 super-tiles containing `MapTile2D` leaves, sparse allocation.
+
 class Map2D_grid{
 	public:
 	int pow;

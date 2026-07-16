@@ -2,6 +2,16 @@
 #ifndef AeroSurf_h
 #define AeroSurf_h
 
+/// @file AeroSurf.h
+/// @brief 3D aerodynamic surface with polar drag/lift model and force application to rigid body.
+///
+/// AeroSurface inherits from KinematicBody and models a flat panel with area, span, and sweep.
+/// polarModel() computes CD (drag coefficient) and CL (lift coefficient) from angle of attack
+/// using a piecewise model: linear lift slope up to stall angle, then cosine rolloff. The drag
+/// polar includes induced drag (proportional to CL^2). applyForce() computes the aerodynamic
+/// force from relative air velocity and applies it to the parent RigidBody at the surface's
+/// local position, including the moment from the offset.
+
 #include "fastmath.h"
 #include "Vec3.h"
 

@@ -1,3 +1,7 @@
+/// @file CityGeneration.h
+/// @brief `QuadNode` — recursive quad-tree subdivision for procedural city blocks with jittered split lines and road insets.
+/// `split(n, jitter)` divides a quad into sub-quads with random split positions. `inset()` shrinks quad inward to create road margins.
+/// `splitRecursive()` applies random subdivision counts and insets at each level for organic city layout.
 
 #ifndef  CityGeneration_h
 #define  CityGeneration_h

@@ -1,3 +1,7 @@
+/// @file DistanceHierarchy.h
+/// @brief Distance-based hierarchical tree for nearest-neighbor and range queries — each node has a pivot and cutoff radius `Rcut`.
+/// `findCloserThan()` prunes subtrees where `dist(query, pivot) > Rcut + Rmax`. `deepestContainer()` finds smallest enclosing node.
+/// Experimental; template parameter `T` must support `dist()`.
 
 #ifndef  DistanceHierarchy_h
 #define  DistanceHierarchy_h

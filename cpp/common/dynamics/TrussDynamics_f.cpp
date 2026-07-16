@@ -2,6 +2,9 @@
 #ifndef  TrussDynamics_f_cpp
 #define  TrussDynamics_f_cpp
 
+/// @file TrussDynamics_f.cpp
+/// @brief Implementation of TrussDynamics_f: float-precision projective dynamics solvers and integration.
+
 #include <stdio.h>
 #include <string.h>
 

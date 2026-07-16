@@ -1,3 +1,7 @@
+/// @file grids2D.h
+/// @brief Loop subdivision surface on a 2D square grid with periodic boundary conditions (PBC).
+/// `subdivideLoopGrid()` doubles grid resolution using Loop scheme weights: c_para=3/8, c_perp=1/8, c_on=5/8, c_off=1/16.
+/// Currently only works with PBC; non-PBC version is commented out.
 
 #ifndef  grids2d_h
 #define  grids2d_h

@@ -2,6 +2,15 @@
 #ifndef OptRandomWalk_h
 #define OptRandomWalk_h
 
+/// @file OptRandomWalk.h
+/// @brief Stochastic optimization via random walk with directional bias toward improving moves.
+///
+/// Maintains current (X), best (Xbest), and directional (Xdir) solution vectors. At each step,
+/// mutate() generates a candidate by perturbing X with random noise biased by Xdir. If the
+/// candidate has lower energy, it becomes the new current solution and the direction is updated.
+/// The bias gradually shifts from pure random exploration to directed exploitation. Simple but
+/// effective for low-dimensional problems where gradient information is unavailable.
+
 //#include <cstddef>
 #include <math.h>
 #include "macroUtils.h"

@@ -1,3 +1,5 @@
+/// @file Fluid2D.cpp
+/// @brief Implements Stam stable fluid solver — diffuse (Gauss-Seidel), advect (semi-Lagrangian), pressure projection.
 
 #include "Fluid2D.h"  // THE HEADER
 

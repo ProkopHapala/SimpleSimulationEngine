@@ -2,6 +2,15 @@
 #ifndef MechPIC2D_h
 #define MechPIC2D_h
 
+/// @file MechPIC2D.h
+/// @brief 2D Particle-In-Cell (PIC) simulation: material on particles, pressure on grid cells.
+///
+/// MechPIC2D stores mass, position, and velocity per particle, and pressure per grid cell.
+/// Each step: particles deposit mass and momentum to cells (P2G), cell pressure is computed
+/// from EOS, pressure gradient forces are interpolated back to particles (G2P), and particles
+/// are moved (moveMD). This hybrid approach combines the accuracy of grid-based pressure
+/// solving with the advection stability of Lagrangian particles.
+
 #include "macroUtils.h"
 
 #include "fastmath.h"

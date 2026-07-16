@@ -1,3 +1,7 @@
+/// @file CityGeneration2.h
+/// @brief Binary and strip-based quad subdivision for city generation — `QuadSpliter<Fcond,Fleaf>` template and `splitOpen()` strip layout.
+/// `QuadSpliter` alternates split direction at each level, calls `fcond()` to decide splitting and `fleaf()` for leaf quads.
+/// `splitOpen()` divides a quad into strips with road+sidewalk+plot layout controlled by `mask` (which sub-plots to create).
 
 #ifndef  CityGeneration2_h
 #define  CityGeneration2_h
@@ -21,6 +25,11 @@ class QuadNodeBin{ public:
 */
 
 class Quad2d{ public:
+
+
+
+
+
     Vec2d p00,p01,p10,p11;
     inline void set( const Vec2d& p00_, const Vec2d& p01_, const Vec2d& p10_, const Vec2d& p11_ ){  p00=p00_; p01=p01_; p10=p10_; p11=p11_; };
 };

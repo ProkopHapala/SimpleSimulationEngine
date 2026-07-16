@@ -2,6 +2,14 @@
 #ifndef appliedPhysics_h
 #define appliedPhysics_h
 
+/// @file appliedPhysics.h
+/// @brief Physical constants and utility functions: gravity, energy, solar radiation, rocket propulsion.
+///
+/// Defines constants (g, Rgas, astronomical units) and helper functions: kinetic energy from
+/// mass and velocity, solar radiation pressure at a given distance, gun energy from projectile
+/// mass and muzzle velocity, and the Tsiolkovsky rocket equation (delta-v from exhaust velocity
+/// and mass ratio). Used across multiple simulation apps for quick physical estimates.
+
 #include "fastmath.h"
 #include "Vec3.h"
 

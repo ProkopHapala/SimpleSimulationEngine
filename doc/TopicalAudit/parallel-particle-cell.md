@@ -88,3 +88,13 @@ GPU (`spacecraft.cl` `getTrussForces`):
 - No GPU-side cell list construction — all neighbor lists built on CPU then uploaded
 - `MolecularDynamics` assumes all systems use same MMFF parameters (`self.mmff_list = [mmff] * nSystems`)
 - No periodic boundary support in GPU truss kernels (only in `CubeGridRuler::ixyz2i_wrap`)
+
+## Related Audits
+
+- **`continuum-mechanics-impact.md`** — Eulerian compressible multi-material solver with level set. Uses fixed Cartesian grids (same `CubeGridRuler` infrastructure). Contains a comprehensive **Algorithm Review: Heterogeneous Material Simulation Methods** covering PIC, FLIP, MPM, SPH and their implementation status.
+- **`fluid-dynamics.md`** — Overview of all fluid dynamics implementations. References this audit for grid infrastructure.
+- **`aerodynamics-hydrodynamics.md`** — Potential flow / vortex methods. Uses particle-based vortex filaments that could benefit from cell-list neighbor search.
+- **`soft-body-truss-dynamics.md`** — Truss/mass-spring dynamics. GPU truss kernels (`getTrussForces`, `updateJacobi_neighs`) use the neighbor-list infrastructure documented here.
+- **`collision-detection.md`** — Broad-phase collision detection using `BroadSpaceMapHash` (built on `CubeGridRuler`) and `HashMap2D`.
+- **`projective-dynamics.md`** — GPU projective dynamics solver using `OCL_Orb` and neighbor-list kernels documented here.
+- **`spatial-hashing.md`** / **`grids-rulers.md`** — Detailed documentation of spatial hash maps and grid rulers.

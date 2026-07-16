@@ -2,6 +2,15 @@
 #ifndef SchroedingerLeapFrog_h
 #define SchroedingerLeapFrog_h
 
+/// @file SchroedingerLeapFrog.h
+/// @brief Leapfrog integrator for the 1D time-independent Schrödinger equation.
+///
+/// Solves the 1D Schrödinger equation -psi'' + V(x)*psi = E*psi using a leapfrog (Verlet-like)
+/// integration scheme. potential() defines V(x); eval_potential() samples it on a grid. integrate()
+/// and integrate_buff() propagate the wavefunction from left to right given an energy E. evalResidua()
+/// checks boundary condition matching; scanResidua() sweeps over energy values to find eigenvalues
+/// (resonances where the residual crosses zero). Used for quantum mechanical bound state calculations.
+
 //  Schroedinger eqution
 //  dd Y    = (E-V) Y
 //  d( dY ) = (E-V) Y

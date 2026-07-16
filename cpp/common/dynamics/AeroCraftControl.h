@@ -2,6 +2,15 @@
 #ifndef AeroCraftControl_h
 #define AeroCraftControl_h
 
+/// @file AeroCraftControl.h
+/// @brief Automatic flight control: altitude hold, roll stabilization, and control surface management.
+///
+/// SurfControl wraps an AeroSurface and manages its rotation angle with min/max limits for
+/// control authority. AeroCraftControler coordinates multiple SurfControl instances (ailerons,
+/// rudder, elevator) to provide closed-loop stabilization: it senses the craft's roll, pitch,
+/// and altitude error, then adjusts control surface deflections to maintain the desired attitude
+/// and altitude. PID-like gains tune the response.
+
 #include "fastmath.h"
 #include "Body.h"
 #include "AeroSurf.h"

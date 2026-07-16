@@ -2,6 +2,15 @@
 #ifndef AeroCraft_h
 #define AeroCraft_h
 
+/// @file AeroCraft.h
+/// @brief Aircraft model: rigid body with multiple aerodynamic surfaces and propellers.
+///
+/// AeroCraft inherits from RigidBody and manages an array of AeroSurface panels (wings, tail,
+/// control surfaces) and Propeler objects. Each AeroSurface contributes lift and drag based on
+/// its local angle of attack and air velocity; the Propeler model computes thrust from power,
+/// area, and efficiency. applyAeroForces() aggregates all surface forces and applies them to
+/// the rigid body at the correct local positions.
+
 #include "fastmath.h"
 #include "Body.h"
 #include "AeroSurf.h"

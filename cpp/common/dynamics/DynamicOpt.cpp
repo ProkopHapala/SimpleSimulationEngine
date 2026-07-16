@@ -1,3 +1,5 @@
+/// @file DynamicOpt.cpp
+/// @brief Implementation of DynamicOpt integration methods: LeapFrog, GD, MD, and FIRE.
 
 #include "DynamicOpt.h" // THE HEADER
 

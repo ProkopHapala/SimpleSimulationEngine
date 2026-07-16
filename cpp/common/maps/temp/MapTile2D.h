@@ -1,3 +1,6 @@
+/// @file temp/MapTile2D.h
+/// @brief Experimental marching-squares contour rendering — 16-case triangulation lookup for quad cells based on corner values.
+/// `render_block()` uses a 4-bit code from corner signs to select triangulation. OpenGL display list based. Has index bug (`iy` instead of `ix`).
 
 
 	void render_1( Vec2f p1, Vec2f p2, Vec2f p3 ){

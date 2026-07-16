@@ -1,3 +1,6 @@
+/// @file AABBTree3D.h
+/// @brief Dynamic AABB tree for broad-phase collision detection — experimental, with two designs: `AABBNode3D` (template, fixed-capacity) and `AABBNode6` (6-branch, SoA layout).
+/// `AABBNode6` uses `subs[6]` with leaf flag in 6th slot; designed for cache-friendly traversal. Neither design is fully implemented (insert/split incomplete).
 
 #ifndef  AABBTree3D_h
 #define  AABBTree3D_h

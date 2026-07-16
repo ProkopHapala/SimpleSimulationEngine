@@ -1,3 +1,10 @@
+/// @file Chain2D.h
+/// @brief 2D chain with fixed-length constraints via iterative relaxation.
+///
+/// Simple chain of points connected by fixed-length segments. The move() method propagates
+/// position changes from a pivot point outward, enforcing distance constraints sequentially.
+/// Includes a draw() method for OpenGL visualization.
+
 class Chain2D{
 	public:
 	int n;

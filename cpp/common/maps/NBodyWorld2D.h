@@ -1,12 +1,7 @@
-
-/*
-
-TO DO :
-  - We have to make NBodyWorld independent of Particle2D class ( do it general for any derived type of PointBody2D );
-    - this would require to remove arrays Particle*[i] which dereferencing depend on on sizeof(Particle2D)
-
-*/
-
+/// @file NBodyWorld2D.h
+/// @brief 2D N-body particle simulation with `HashMap2D` spatial hash — Lennard-Jones-like forces, string forces, convergence tracking.
+/// `pairwiseForce()` uses soft repulsion + attraction within cutoff radius `r2max=4`. `Particle2D` carries charge and convergence counter.
+/// TODO: generalize from `Particle2D` to any `PointBody2D` subclass (currently tightly coupled).
 
 #ifndef NBodyWorld2D_h
 #define NBodyWorld2D_h

@@ -1,3 +1,6 @@
+/// @file GridMap2D.h
+/// @brief Templated 2D grid map with tile-based object storage — specializations rasterize **segments** (Bresenham) and **triangles** (scanline) into cells.
+/// Generic template stores objects by bounding-box overlap; `Segment2d` spec uses DDA line walk; `Triangle2d` spec uses up/down scanline pass with edge interpolation.
 
 #ifndef  GridMap2D_h
 #define  GridMap2D_h

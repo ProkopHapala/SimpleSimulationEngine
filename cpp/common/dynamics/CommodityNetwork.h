@@ -2,6 +2,17 @@
 #ifndef CommodityNetwork_h
 #define CommodityNetwork_h
 
+/// @file CommodityNetwork.h
+/// @brief Economic simulation: cities, factories, trade routes, and transport vehicles.
+///
+/// Models a commodity economy with production (Factory + Technology converting inputs to outputs),
+/// transport (Car carrying goods along Road between cities), and price dynamics (supply/demand
+/// adjusting prices). CommodityType defines goods with density, transport weight, and price bounds.
+/// City stores goods, factories, resources, and roads. Road evaluates trade profitability between
+/// two cities. Car loads profitable cargo, transports it, and unloads. Economy.step() advances
+/// all cities (prices, production, extraction) and cars (movement) each tick. Originally developed
+/// for the LandCraft game.
+
 // see:  SimpleSimulationEngine/cpp/apps/LandCraft/Economy.h
 
 

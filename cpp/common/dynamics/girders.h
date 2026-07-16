@@ -1,6 +1,14 @@
 
+/// @file girders.h
+/// @brief Construction and OpenGL rendering of 3D girder structures from points and bonds.
+///
+/// makeGirder_Type1() generates the geometry (points, bonds, bond types) for a specific girder
+/// pattern — two parallel rails with cross-bracing, parameterized by length, width, and orientation.
+/// drawGirder() renders the structure using OpenGL, coloring bonds by type (rail vs. cross-brace).
+/// Used by Truss-based apps to build complex structures from repeated girder modules.
+
 // girder composed of two elements
-void makeGirder_Type1( 
+void makeGirder_Type1(
 	int n, double length, double width, const Vec3d& dir, const Vec3d& up, const Vec3d& side,
 	int& npoints, int& nbonds, Vec3d*& points, int*& bonds, int*& bondTypes 
  ){

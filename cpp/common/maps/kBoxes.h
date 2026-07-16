@@ -1,3 +1,7 @@
+/// @file kBoxes.h
+/// @brief k-means-inspired spatial partitioning for broad-phase collision — groups N bodies into K~√N bounding boxes to reduce pairwise tests.
+/// Construction assigns each body to the box that minimizes combined-box cost; collision phase tests K² box pairs then internal pairs.
+/// Supports box dissolution/recreation for dynamic scenes and sweep-and-prune along dominant axis.
 
 #ifndef  kBoxes_h
 #define  kBoxes_h

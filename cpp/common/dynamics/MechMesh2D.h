@@ -2,6 +2,15 @@
 #ifndef MechMesh2D_h
 #define MechMesh2D_h
 
+/// @file MechMesh2D.h
+/// @brief Visco-elastic simulation on arbitrary triangular meshes with volume/pressure forces.
+///
+/// MechMesh2D manages vertices, edges, and triangles of an unstructured mesh. Each triangle
+/// stores pressure, volume, and internal energy; forces on vertices arise from internal energy
+/// gradients and volume changes (elastic response). getForces() assembles vertex forces from
+/// triangle contributions; updateVerts() integrates motion. Includes a Builder class for mesh
+/// construction and trySwapEdge() for topology optimization (Delaunay-like edge flips).
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"

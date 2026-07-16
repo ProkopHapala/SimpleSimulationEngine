@@ -1,3 +1,7 @@
+/// @file SphereTreeND.h
+/// @brief N-dimensional sphere tree for nearest-neighbor search in high-D spaces — experimental, with multiple design sketches.
+/// Motivation: in high dimensions, grid-based hashing suffers from exponential neighbor count; sphere tree adapts to data density.
+/// Includes notes on connection to neural networks (dynamic RBF placement = growing neural topology). Mostly commented-out pseudocode.
 
 #ifndef  SphereTreeND_h
 #define  SphereTreeND_h

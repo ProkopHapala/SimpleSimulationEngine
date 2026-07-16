@@ -1,3 +1,6 @@
+/// @file TerrainCubic.h
+/// @brief Terrain heightfield on square grid with **bicubic Hermite** interpolation — `getVal()`, horizon `rayLine()`, OpenGL `renderRect()`.
+/// Extends `Map2D`; uses `Spline_Hermite::val2D` for smooth C¹ surface. `rayLine()` traces terrain horizon for visibility.
 
 #ifndef  TerrainCubic_h
 #define  TerrainCubic_h

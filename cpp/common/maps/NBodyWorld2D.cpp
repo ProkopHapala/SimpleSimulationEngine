@@ -1,3 +1,5 @@
+/// @file NBodyWorld2D.cpp
+/// @brief Implements `NBodyWorld2D` — particle integration, spatial hash rebuild, force evaluation, convergence checking.
 
 #include "NBodyWorld2D.h" // THE HEADER
 

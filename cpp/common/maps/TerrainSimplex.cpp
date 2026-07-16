@@ -1,3 +1,5 @@
+/// @file TerrainSimplex.cpp
+/// @brief Implements `TerrainSimplex` — `raster_line()` (DDA across triangular grid), erosion, noise generation.
 
 #include "TerrainSimplex.h"  // THE HEADER
 

@@ -13,6 +13,8 @@ Optimization methods across the repo: FIRE (Fast Inertial Relaxation Engine) as 
 | Language | Location | Status | Notes |
 |----------|----------|--------|-------|
 | C++ | `cpp/common/dynamics/DynamicOpt.h` / `.cpp` | active | FIRE optimizer: `move_FIRE()`, `move_GD()`, `move_MD()`, `move_LeapFrog()`. Adaptive dt (finc/fdec/falpha), damping schedule, force/velocity limits. `bindArrays()` for zero-copy. `optimize()` convergence loop. |
+| C++ | `cpp/common/dynamics/OptRandomWalk.h` | active | Stochastic random walk with directional bias toward improving moves. For low-dimensional problems without gradient information. |
+| C++ | `cpp/common/dynamics/DynamicControl.h` | active | First and second-order dynamical controllers for feedback-driven parameter tuning (PD and integral-like response). |
 | C++ | `cpp/common/dynamics/TrussDynamics_d.cpp` | active | `FIRE_update()` — inline FIRE variant for OpenMP parallel truss relaxation. Uses cosine similarity threshold (cs<0.02) instead of vf<0. `run_omp()` with `#pragma omp` parallelization. |
 | C++ | `cpp/common/math/lineSearch.h` | active | `LineSearch` class: Regula Falsi with Illinois algorithm correction. Bounded/unbounded modes. Linear extrapolation for ray-marching style extension. Used for root finding (ray-shape intersection). |
 | C++ | `cpp/common/math/optimizer_random.h` | active | `OptimizerRandom` — random perturbation + accept/reject. `OptimizerRandom_2` — with momentum term and decay. Stochastic global optimization. |

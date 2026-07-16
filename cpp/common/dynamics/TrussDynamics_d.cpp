@@ -2,6 +2,9 @@
 #ifndef  TrussDynamics_d_cpp
 #define  TrussDynamics_d_cpp
 
+/// @file TrussDynamics_d.cpp
+/// @brief Implementation of TrussDynamics_d: projective dynamics solvers, collision, and integration.
+
 #include <stdio.h>
 #include <string.h>
 

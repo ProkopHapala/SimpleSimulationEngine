@@ -2,6 +2,14 @@
 #ifndef  TrussDynamics_f_h
 #define  TrussDynamics_f_h
 
+/// @file TrussDynamics_f.h
+/// @brief Single-precision truss dynamics — float counterpart to TrussDynamics_d.h.
+///
+/// Mirror of TrussDynamics_d with float types (Quat4f, Vec3f, float) for GPU upload and
+/// memory-constrained scenarios. Same projective dynamics solver structure (Cholesky, CG,
+/// Jacobi, Gauss-Seidel) but with float arithmetic. The impuls[] buffer (absent in the double
+/// version) accumulates correction impulses from the linear solver step.
+
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Mat3.h"

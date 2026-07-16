@@ -1,3 +1,9 @@
+/// @file TerrainHydraulics.h
+/// @brief `HydraulicGrid2D` — water flow simulation on square grid with river tracing and lake detection.
+/// `relaxWaterRasterX/Y()` iteratively levels water surface along scanlines. `gatherRain()` finds river sources from flow accumulation sinks.
+/// `findAllRivers()` traces rivers from source to mouth via contour propagation. `Lake` struct tracks connected water bodies above ground level.
+/// Used by `LandCraft` for terrain generation and water simulation.
+
 #ifndef TerrainHydraulics_h
 #define TerrainHydraulics_h
 

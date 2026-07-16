@@ -1,3 +1,7 @@
+/// @file PointCloudComparator.h
+/// @brief Point cloud registration and comparison — matches corresponding points between two clouds using spatial hashing and plane-wave descriptors.
+/// `getPlaneWaveDescriptor()` computes rotation-invariant feature vector via sawtooth-sine of plane wave projections (alternative to spherical harmonics).
+/// Uses Hungarian algorithm for optimal assignment. `overlap_j[]` stores best-match distance per point.
 
 #ifndef  PointCloudComparator_h
 #define  PointCloudComparator_h

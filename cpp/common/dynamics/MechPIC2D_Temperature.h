@@ -2,6 +2,14 @@
 #ifndef MechPIC2D_Temperature_h
 #define MechPIC2D_Temperature_h
 
+/// @file MechPIC2D_Temperature.h
+/// @brief 2D PIC simulation with temperature: thermodynamic state on both particles and cells.
+///
+/// Extends MechPIC2D with temperature tracking. Particles carry molar amount and velocity;
+/// cells store temperature and molar count. updateCellThermodynamics() interpolates particle
+/// properties to cells and computes temperature from internal energy. moveMD() advects
+/// particles with thermal velocity components, enabling heat conduction and convection.
+
 #include "macroUtils.h"
 
 #include "fastmath.h"

@@ -1,3 +1,8 @@
+/// @file Grid2DAlgs.h
+/// @brief `Grid2DAlg` — extends `GridIndex2D` with neighbor stencil (4/6/8) and terrain noise generation.
+/// `initNeighs_6()` selects 6 of 8 square neighbors for hex-like connectivity on square grid (approximation — true hex needs simplex grid).
+/// `bisecNoise()` generates fractal terrain via recursive midpoint displacement with PBC.
+
 #ifndef Grid2DAlgs_h
 #define Grid2DAlgs_h
 

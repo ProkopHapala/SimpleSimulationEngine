@@ -1,6 +1,14 @@
 #ifndef AeroSurf2D_h
 #define AeroSurf2D_h
 
+/// @file AeroSurf2D.h
+/// @brief 2D aerodynamic surface with simplified polar drag/lift model.
+///
+/// 2D counterpart to AeroSurf. Inherits from KinematicBody2D. Uses a compact polar model with
+/// parameters CD0 (zero-lift drag), dCD (drag slope), dCL (lift slope), sStall (stall onset),
+/// wStall (stall width). The polarModel() function computes CD and CL from the cosine and sine
+/// of the angle of attack, capturing the essential physics with fewer parameters than the 3D version.
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>

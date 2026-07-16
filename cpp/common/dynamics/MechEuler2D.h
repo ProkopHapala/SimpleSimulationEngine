@@ -2,6 +2,15 @@
 #ifndef MechEuler2D_h
 #define MechEuler2D_h
 
+/// @file MechEuler2D.h
+/// @brief 2D Eulerian fluid simulation with multi-material advection on a regular grid.
+///
+/// MechEuler2D tracks multiple materials per cell (molar amounts, temperature, pressure, velocity)
+/// on a fixed Eulerian grid. Each step: updateCellThermodynamics computes pressure from EOS,
+/// accelerate2 applies pressure gradient forces to velocity, advec2 advects material and momentum.
+/// Cohesion functions prevent numerical diffusion at material interfaces by redistributing
+/// mixed-cell content back toward pure material cells.
+
 #include "fastmath.h"
 #include "Vec2.h"
 //#include "Vec3.h"

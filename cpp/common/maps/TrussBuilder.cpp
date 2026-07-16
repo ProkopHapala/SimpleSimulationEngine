@@ -1,3 +1,5 @@
+/// @file TrussBuilder.cpp
+/// @brief Implements `TrussBuilder` — node/bond insertion via `unordered_map`, `toSoftBody()` conversion, file I/O.
 
 #include <iostream>
 #include <fstream>

@@ -2,6 +2,15 @@
 #ifndef balistics_h
 #define balistics_h
 
+/// @file balistics.h
+/// @brief Armor penetration and ricochet models for projectile impact simulations.
+///
+/// Defines a Material struct (density, strength) and functions for: kinetic energy of a
+/// projectile, flat-incidence penetration depth (De Marre-like formula), ricochet angle
+/// threshold, and oblique-incidence penetration with angle correction. These are simplified
+/// engineering models suitable for game-level or approximate simulation, not detailed terminal
+/// ballistics.
+
 #include <math.h>
 #include "fastmath.h"
 #include "Vec2.h"

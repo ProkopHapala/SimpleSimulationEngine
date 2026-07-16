@@ -2,6 +2,14 @@
 #ifndef SoftBody_h
 #define SoftBody_h
 
+/// @file SoftBody.h
+/// @brief Deformable body simulation via mass-spring system with bonds and angular kink forces.
+///
+/// SoftBody models a set of particles connected by bonds (springs with rest length and stiffness)
+/// and kinks (angular springs between consecutive bonds enforcing rest angles). BondType defines
+/// per-bond parameters (stiffness, damping, rest length); Bond stores connectivity and type.
+/// SoftBodyLinearized extends this for small-deformation linear elasticity problems.
+
 #include "fastmath.h"
 #include "Vec3.h"
 

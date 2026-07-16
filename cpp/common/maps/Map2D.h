@@ -1,3 +1,6 @@
+/// @file Map2D.h
+/// @brief Minimal 2D grid stub with origin offset (`x0,y0`), step, and index conversion — base for **TerrainCubic**.
+/// Unlike `GridIndex2D`, this carries real-space origin so `getIx(x) = invStep*(x-x0)`.
 
 #ifndef  Map2D_h
 #define  Map2D_h

@@ -1,4 +1,13 @@
 
+/// @file ODEintegrator.h
+/// @brief Generic ODE integrators: forward Euler and adaptive Runge-Kutta-Fehlberg 4(5).
+///
+/// ODEintegrator is a base class storing state (Y, dY) and providing a virtual evalDeriv()
+/// that subclasses override. ODEintegrator_RKF45 implements the adaptive RKF45 method with
+/// error estimation from the difference between 4th and 5th order solutions. The time step
+/// is adjusted based on relative error vs. tolerance — if error is too large, the step is
+/// rejected and dt is reduced; if error is small, dt is increased for efficiency.
+
 typedef void (*ODEderivFunc)( double t, int n, double * Ys, double * dYs );
 
 class ODEderivObject{ public:

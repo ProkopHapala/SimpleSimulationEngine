@@ -1,4 +1,7 @@
 
+/// @file temp/HashMap.h
+/// @brief Open-addressing hash map with Knuth multiplicative hash — base class for `HashMap2D` and `SimplexGrid`.
+/// `hits[]` tracks collision count per slot so `getAllInBox()` can stop early — key optimization over naive open addressing.
 
 template <class TYPE1 > class HashMap{
 	public:

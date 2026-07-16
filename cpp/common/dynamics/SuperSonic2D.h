@@ -2,6 +2,15 @@
 #ifndef SuperSonic2D_h
 #define SuperSonic2D_h
 
+/// @file SuperSonic2D.h
+/// @brief Oblique shock relations and lookup tables for supersonic flow deflection.
+///
+/// Implements the theta-beta-Mach relation for oblique shocks: given Mach number M, shock angle
+/// beta, and heat capacity ratio k, computes flow deflection angle theta, pressure/density/
+/// temperature ratios across the shock, and downstream Mach number. The Solver class precomputes
+/// polynomial interpolation tables (sin(theta) -> sin(beta)) for a range of Mach numbers, enabling
+/// fast lookup during 2D supersonic flow simulation. SScell stores per-cell velocity and pressure.
+
 /*
 
 https://en.wikipedia.org/wiki/Oblique_shock

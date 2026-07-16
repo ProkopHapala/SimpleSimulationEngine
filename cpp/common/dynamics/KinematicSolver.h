@@ -1,6 +1,15 @@
 #ifndef KinematicSolver_h
 #define KinematicSolver_h
 
+/// @file KinematicSolver.h
+/// @brief Newton-Raphson constraint solver for assemblies of rigid bodies with anchor and slider joints.
+///
+/// Given N rigid bodies (6 DOF each: 3 position + 3 rotation) and M constraints, solves for
+/// body poses satisfying all constraints. Constraint types: Anchor (coincident points on two
+/// bodies) and Slider (point constrained to a B-spline path). Uses Levenberg-Marquardt with
+/// numerical Jacobian and line search. Slider parameters (t along path) are free unknowns,
+/// adding to the state vector. sweepSolve() iterates slider parameters through a full cycle.
+
 #include <math.h>
 #include <stdio.h>
 #include <vector>

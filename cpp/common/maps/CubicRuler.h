@@ -1,3 +1,7 @@
+/// @file CubicRuler.h
+/// @brief 3D cubic lattice ruler with arbitrary `Mat3d` basis — maps between world coords and (i,j,k) grid indices.
+/// Supports non-orthogonal cells via matrix inverse. 27-neighbor stencil (6 faces + 12 edges + 8 vertices).
+/// No interpolation or ray marching (unlike `SimplexRuler` which has both).
 
 #ifndef  CubicRuller_h
 #define  CubicRuller_h

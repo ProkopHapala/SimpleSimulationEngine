@@ -2,6 +2,15 @@
 #ifndef Radiosity_h
 #define Radiosity_h
 
+/// @file Radiosity.h
+/// @brief Matrix-based radiosity solver for flux transport on triangle meshes with occlusion.
+///
+/// Radiosity inherits from TriangleRayTracer (for geometric coupling and occlusion) and LinSolver
+/// (for the linear system). makeCouplingMatrix() computes view factors between surface elements,
+/// accounting for occlusion via ray tracing. step_Direct() solves the radiosity equation
+/// (B = E + R*B*F) to determine steady-state flux distribution across surfaces. Used for
+/// thermal radiation and light transport simulations.
+
 #include "Vec3.h"
 #include "Mat3.h"
 #include "geom3D.h"

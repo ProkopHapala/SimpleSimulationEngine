@@ -1,3 +1,5 @@
+/// @file AeroSurf2D.cpp
+/// @brief Implementation of AeroSurf2D polar model and 2D aerodynamic force calculation.
 
 
 /*

@@ -2,6 +2,16 @@
 #ifndef RBodyConfDyn_h
 #define RBodyConfDyn_h
 
+/// @file RBodyConfDyn.h
+/// @brief Configuration space exploration of a rigid body via molecular dynamics with repulsion from visited states.
+///
+/// Explores the 6-DOF configuration space (position + quaternion rotation) of a single rigid body
+/// using DynamicOpt. Two force fields guide the search: (1) repulsion from previously stored
+/// configurations (to avoid revisiting), (2) gradient of an external objective function. Mutations
+/// (near/far) generate new starting points. The configuration database is a simple array — future
+/// versions could use spatial hashing for faster neighbor queries. Designed for sampling diverse
+/// docking poses or contact configurations.
+
 /*
 
 Module for efficient exploration of configuration space of one R body with 6 DOFs (pos,rot)

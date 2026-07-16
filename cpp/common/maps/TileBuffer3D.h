@@ -1,3 +1,6 @@
+/// @file TileBuffer3D.h
+/// @brief Fixed-capacity 3D tile buffer `TileBuffer3D<OBJECT,NX,NY,NZ,M>` — stack-allocated, compile-time sizes, M objects per cell.
+/// Sphere-overlap insertion places object into all 26 neighboring cells it touches using fractional position (same pattern as `Grid3D` and `TileBuffer2D`).
 
 #ifndef  TileBuffer3D_h
 #define  TileBuffer3D_h

@@ -1,8 +1,10 @@
 
-/**
- * @file Truss.h
- * @brief Truss class stores mechanical structures composed of sticks (girders) and ropes (cables). It can be used for simulating bridges, cranes, spaceships, etc.
- */
+/// @file Truss.h
+/// @brief Mechanical structures composed of nodes and edges (girders/cables) for bridges, cranes, spaceships.
+///
+/// Truss stores points, edges (with cross-sectional area and type), and faces. Provides builders
+/// for panels, girders, and cylinders. Edge types distinguish rigid girders from flexible cables.
+/// Used as the topology layer by TrussDynamics_d/f which handle the actual physics integration.
 
 #ifndef  Truss_h
 #define  Truss_h

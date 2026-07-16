@@ -2,6 +2,16 @@
 #ifndef  TrussDynamics_d_h
 #define  TrussDynamics_d_h
 
+/// @file TrussDynamics_d.h
+/// @brief Double-precision truss dynamics with projective dynamics solvers (Cholesky, CG, Jacobi, Gauss-Seidel).
+///
+/// The main physics engine for truss/soft-body simulation. Stores points (position+mass as Quat4d),
+/// bonds (spring parameters), velocities, and forces. Supports multiple linear solver backends for
+/// the projective dynamics step: dense Cholesky (LDLT), sparse Cholesky, conjugate gradient, and
+/// iterative methods (Jacobi, Gauss-Seidel with momentum variants). Includes collision detection
+/// via bounding boxes and buckets, edge-vertex constraints, rotating frame forces, and FIRE
+/// (Fast Inertial Relaxation Engine) for minimization. The float counterpart is TrussDynamics_f.h.
+
 #include "datatypes.h"
 #include "Vec2.h"
 #include "Vec3.h"

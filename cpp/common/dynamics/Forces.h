@@ -2,6 +2,14 @@
 #ifndef Forces_h
 #define Forces_h
 
+/// @file Forces.h
+/// @brief Pairwise force kernels: Lennard-Jones, Morse, Coulomb, spring, repulsion, and angular terms.
+///
+/// All force functions are free inline functions taking displacement vectors and parameters,
+/// returning energy and accumulating force. Includes smoothstep/R4/R8 cutoff functions
+/// that depend only on r^2 (avoiding sqrt), box-confinement forces, and angular (cosine-based)
+/// bond-angle terms. The REQ2PLQ helper converts (R, Energy, Charge) to Morse (P, L, Q) form.
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"

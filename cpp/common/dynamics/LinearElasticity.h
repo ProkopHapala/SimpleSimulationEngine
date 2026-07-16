@@ -2,6 +2,14 @@
 #ifndef LinearElasticity_h
 #define LinearElasticity_h
 
+/// @file LinearElasticity.h
+/// @brief Assembly of 3D global stiffness matrix for linear elasticity from bond/edge connectivity.
+///
+/// Given a set of links (bonds) with stiffnessness and point positions, build_stiffness_matrix_3D()
+/// assembles the global stiffness matrix K where each bond contributes a 6x6 block (3 DOF per node).
+/// The resulting matrix can be used for static solve (K x = f) or modal analysis. This is the
+/// linearized counterpart to the nonlinear SoftBody/TrussDynamics spring forces.
+
 #include "Vec3.h"
 #include "Mat3.h"
 

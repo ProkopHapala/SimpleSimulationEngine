@@ -1,3 +1,6 @@
+/// @file temp/GridMap2D_Line.h
+/// @brief Older `GridMap2D` with `forward_list` storage and `insertLine()` — has undefined variables (broken, do not use).
+/// `makeStatic()` converts dynamic `forward_list` to static array for faster iteration after all insertions done.
 
 #include <forward_list>
 

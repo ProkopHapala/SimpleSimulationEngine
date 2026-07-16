@@ -1,3 +1,5 @@
+/// @file TerrainHydraulics.cpp
+/// @brief Implements `HydraulicGrid2D` — droplet erosion, water relaxation, river tracing, and lake detection.
 
 #include "TerrainHydraulics.h"  // THE HEADER
 #include <limits>
