@@ -75,6 +75,9 @@ target_link_libraries( test_Texture ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBR
 add_executable       ( test_SSAO test_SSAO.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_SSAO ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_SDFFont test_SDFFont.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+target_link_libraries( test_SDFFont ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} SDL2_ttf)
+
 add_executable       ( meshviewer meshviewer.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( meshviewer ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -85,7 +88,7 @@ target_link_libraries( test_ScreenOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_L
 add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} ${_COMMON_SHADERS_} )
 
 add_custom_command(
-    TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_ScreenOGL3 test_MeshOGL3 test_Instances meshviewer
+    TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_SDFFont test_ScreenOGL3 test_MeshOGL3 test_Instances meshviewer
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
     #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources

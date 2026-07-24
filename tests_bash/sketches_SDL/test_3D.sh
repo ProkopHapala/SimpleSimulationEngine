@@ -33,7 +33,8 @@ args=""
 #name=test_SphereTree            # 3D Diffusion-limited aggregation (DLA) using CubicRuler.h and std::unordered_multimap<int_fast64_t,int>  grid;
 #name=test_Stick                 # dynamics of straight sticks hitting a sphere using MMFF.h
 #name=test_TrussBuilder          # Create Truss by keyboard input [KP_1-7] using TrussBuilder.h and export it to SoftBody.h by and run simulation [SPACE], [k,l] to save/load from file
-name=test_VortexLattice         # PotentialFlow.h to calculate velocity field of vortex lattice for flow around wing (represented by lift-line), contains function for numerical integration of velocity field (to verify analytical formulas)
+#name=test_VortexLattice         # PotentialFlow.h to calculate velocity field of vortex lattice for flow around wing (represented by lift-line), contains function for numerical integration of velocity field (to verify analytical formulas)
+name=test_Zome                  # demo of ZomeTool-like rigid construction system using Zome.h (nodes, slots, struts, grow operations)
 
 
 

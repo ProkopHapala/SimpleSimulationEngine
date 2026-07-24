@@ -50,6 +50,7 @@ One file per topic, following the format defined in `doc/AGENTs/skills/doc-audit
     - [LandCraft (2D World Sim)](landcraft.md)
 - **[Applications](#applications)** — end-user apps, games, and interactive tools
   - [Spacecraft Design, Construction & Combat](spacecraft-design-combat.md)
+  - [ZomeTool Construction Set](zome-construction-set.md)
   - [Combat Models (Melee, Damage, Aero, Land)](combat-models.md)
   - [LandTactics (Tactical Sim)](land-tactics.md)
   - [FormationTactics (Battle Sim)](formation-tactics.md)
@@ -130,6 +131,7 @@ One file per topic, following the format defined in `doc/AGENTs/skills/doc-audit
 | Topic | Audit File | Status | Key Entry Points |
 |-------|-----------|--------|-----------------|
 | Spacecraft Design, Construction & Combat | [spacecraft-design-combat.md](spacecraft-design-combat.md) | created | `cpp/common/Orbital/SpaceCraft.h`, `cpp/common/Orbital/SpaceCraftComponents.h`, `cpp/apps/OrbitalWar/`, `docs/SpaceCrafting/SpaceCrafting_new.md`, `docs/SpaceCrafting/SpaceCraftConstructionProblems.md`, `docs/SpaceTactics/SpaceTactics.md`, `encyclopedia/space_warfare/`, `js/spacecraft_editor/` |
+| ZomeTool Construction Set | [zome-construction-set.md](zome-construction-set.md) | created | `cpp/common/geometry/Zome.h`, `cpp/sketches_SDL/3D/test_Zome.cpp`, `doc/ideas/ZomeToolGeometryConstructionSet.md` |
 | Combat Models (Melee, Damage, Aero, Land) | [combat-models.md](combat-models.md) | created | `cpp/common/CombatModels/AirCombatModel.h`, `cpp/apps/AeroCombat/`, `cpp/apps/FormationTactics/`, `cpp/apps/LandTactics/`, `cpp/apps/Tanks/`, `docs/FormationTactics/DamagePhysicsModel.md`, `docs/FormationTactics/PolearmsPhysicsModel.md`, `docs/LandTactics/AirCombatModel.md` |
 | LandTactics (Tactical Sim) | [land-tactics.md](land-tactics.md) | created | `cpp/apps/LandTactics/`, `docs/LandTactics/` (8 files) |
 | FormationTactics (Battle Sim) | [formation-tactics.md](formation-tactics.md) | created | `cpp/apps/FormationTactics/`, `docs/FormationTactics/` (DamagePhysicsModel, PolearmsPhysicsModel) |

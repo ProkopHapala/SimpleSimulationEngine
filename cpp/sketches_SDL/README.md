@@ -67,6 +67,7 @@ Interactive SDL2/OpenGL applications demonstrating engine features. Each `test_*
 - **test_TrussBuilder** — create truss by keyboard input [KP_1-7] using TrussBuilder.h, export to SoftBody.h and run simulation [SPACE], [k,l] save/load
 - **test_SphereGaussSeidel** — SphereGaussSeidel.h to quickly pack boxes close to each other
 - **test_Stick** — dynamics of straight sticks hitting a sphere using MMFF.h
+- **test_Zome** — interactive ZomeTool-like 3D construction editor with 62-slot icosahedral nodes, discrete angular shell grow (mouse wheel), two-node connection check, ray-picking
 
 ## Molecular — `Molecular/`
 

@@ -25,6 +25,7 @@ args=""
 #name=test_OrbitalRayMarch  # orbital ray-marching demo
 #name=test_Texture          # basic textured rendering
 #name=test_SSAO             # SSAO demo
+#name=test_SDFFont          # SDF font rendering demo (crisp text at any zoom)
 #name=test_ScreenOGL3       # ScreenSDL2OGL3 demo
 #name=test_MeshOGL3         # mesh rendering demo
 name=meshviewer            # generic mesh viewer using MeshRenderOGL3
